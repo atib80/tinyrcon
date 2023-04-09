@@ -33,9 +33,6 @@
 *.out
 *.app
 
-*.json
-
-
 # custom folders to ignore
 /build
 /debug
