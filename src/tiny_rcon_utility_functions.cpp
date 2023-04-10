@@ -949,17 +949,14 @@ void parse_tiny_cod2_rcon_tool_config_file(const char *configFileName)
   if (json_resource["rcon_server_ip_address"].exists()) {
     data_line = json_resource["rcon_server_ip_address"].as_str();
     strip_leading_and_trailing_quotes(data_line);
-    main_app.get_game_server().set_configuration_server_ip_address(data_line);
     main_app.get_game_server().set_server_ip_address(std::move(data_line));
   } else {
     found_missing_config_setting = true;
-    main_app.get_game_server().set_configuration_server_ip_address("185.158.113.146");
     main_app.get_game_server().set_server_ip_address("185.158.113.146");
   }
 
   if (json_resource["rcon_port"].exists()) {
     const int port_number{ json_resource["rcon_port"].as<int>() };
-    main_app.get_game_server().set_configuration_server_port(port_number);
     main_app.get_game_server().set_server_port(static_cast<uint_least16_t>(port_number));
   } else {
     found_missing_config_setting = true;
@@ -969,11 +966,9 @@ void parse_tiny_cod2_rcon_tool_config_file(const char *configFileName)
   if (json_resource["rcon_password"].exists()) {
     data_line = json_resource["rcon_password"].as_str();
     strip_leading_and_trailing_quotes(data_line);
-    main_app.get_game_server().set_configuration_rcon_password(data_line);
     main_app.get_game_server().set_rcon_password(std::move(data_line));
   } else {
     found_missing_config_setting = true;
-    main_app.get_game_server().set_configuration_rcon_password("abc123");
     main_app.get_game_server().set_rcon_password("abc123");
   }
 
@@ -4326,9 +4321,10 @@ bool delete_temporary_game_file() noexcept
 size_t print_colored_text(HWND re_control, const char *text, const bool print_to_richedit_control, const bool log_to_file, const bool is_log_current_date_time)
 {
   const char *message{ text };
-  const size_t text_len = strlen(text);
+  const size_t text_len{ stl::helper::len(text) };
   const char *last = text + text_len;
   size_t printed_chars_count{};
+  const bool is_last_char_new_line{ text != nullptr && text_len > 0 && text[text_len - 1] == '\n' };
 
   if (print_to_richedit_control) {
     lock_guard lg{ print_data_mutex };
@@ -4385,6 +4381,11 @@ size_t print_colored_text(HWND re_control, const char *text, const bool print_to
     if (!msg.empty()) {
       append(re_control, msg.c_str());
       msg.clear();
+    }
+
+    if (!is_last_char_new_line) {
+      append(re_control, "\n");
+      ++printed_chars_count;
     }
   }
 
@@ -5514,7 +5515,7 @@ void process_button_save_changes_click_event(HWND hwnd)
 
   if (!is_invalid_entry) {
 
-    Edit_GetText(app_handles.hwnd_server_port, msg_buffer, std::size(msg_buffer));    
+    Edit_GetText(app_handles.hwnd_server_port, msg_buffer, std::size(msg_buffer));
     if (int number{}; stl::helper::len(msg_buffer) > 0 && is_valid_decimal_whole_number(msg_buffer, number)) {
       new_port = static_cast<uint_least16_t>(number);
     } else {
@@ -5601,7 +5602,7 @@ void process_button_test_connection_click_event(HWND)
   }
 
 
-  Edit_GetText(app_handles.hwnd_server_port, msg_buffer, std::size(msg_buffer));  
+  Edit_GetText(app_handles.hwnd_server_port, msg_buffer, std::size(msg_buffer));
   int number{};
   if (stl::helper::len(msg_buffer) > 0 && is_valid_decimal_whole_number(msg_buffer, number)) {
     new_port = static_cast<uint_least16_t>(number);
@@ -5971,7 +5972,7 @@ bool initialize_and_verify_server_connection_settings()
     main_app.set_game_name(result.second);
     if (result.first) {
       main_app.set_is_connection_settings_valid(true);
-      print_colored_text(app_handles.hwnd_re_messages_data, "^3Initializing network settings for communicating with the game server.\n", true, true, true); 
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3Initializing network settings for communicating with the game server.\n", true, true, true);
       print_colored_text(app_handles.hwnd_re_messages_data, "^2Initializing network settings has completed.\n", true, true, true);
     } else {
       show_error(app_handles.hwnd_main_window, "Failed to establish test connection with the specified game server!\nPlease verify your game server's IP address, port and rcon password settings.", 0);

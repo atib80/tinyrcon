@@ -267,15 +267,12 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       parse_banned_ip_addresses_file();
       print_colored_text(app_handles.hwnd_re_messages_data, "^2Finished parsing ^1banned_ip_addresses.txt ^3file.\n", true, true, true);
 
-      // configure game server's settings and check the validity, correctness of user specified game server's settings before initializing app's network settings
       if (!initialize_and_verify_server_connection_settings()) {
         PostQuitMessage(0);
       }
 
-      // print_colored_text(app_handles.hwnd_banned_players_data, "^2Displaying permanently banned players' data.\n", true, true, true);
-      // display_permanently_banned_ip_addresses();
       display_tempbanned_players_remaining_time_period();
-      // }
+
 
       for (auto &temp_banned_player_data : main_app.get_game_server().get_tempbanned_players_to_unban()) {
 

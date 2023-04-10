@@ -37,8 +37,6 @@ struct player_data
   const char *country_code{};
   int pid;
   int score{};
-  int row_index{};
-  bool is_ignore_player_data{ true };
 };
 
 class alignas(size_t) game_server
@@ -46,16 +44,6 @@ class alignas(size_t) game_server
 public:
   game_server() : players_data(64, player_data{})
   {
-  }
-
-  [[nodiscard]] const std::string &get_configuration_server_ip_address() const noexcept
-  {
-    return configuration_ip_address;
-  }
-
-  void set_configuration_server_ip_address(string new_server_ip_address) noexcept
-  {
-    configuration_ip_address = std::move(new_server_ip_address);
   }
 
   [[nodiscard]] const std::string &get_server_ip_address() const noexcept
@@ -66,13 +54,6 @@ public:
   void set_server_ip_address(string new_server_ip_address) noexcept
   {
     ip_address = std::move(new_server_ip_address);
-  }
-
-  [[nodiscard]] int get_configuration_server_port() const noexcept { return configuration_port; }
-
-  void set_configuration_server_port(const int newServerPort) noexcept
-  {
-    configuration_port = newServerPort;
   }
 
   [[nodiscard]] uint_least16_t get_server_port() const noexcept { return port; }
@@ -136,16 +117,6 @@ public:
   void set_game_mod_name(string new_game_mod_name) noexcept
   {
     game_mod_name = std::move(new_game_mod_name);
-  }
-
-  void set_configuration_rcon_password(string new_rcon_password) noexcept
-  {
-    configuration_rcon_password = std::move(new_rcon_password);
-  }
-
-  [[nodiscard]] const string &get_configuration_rcon_password() const noexcept
-  {
-    return configuration_rcon_password;
   }
 
   void set_rcon_password(string new_rcon_password) noexcept
@@ -703,13 +674,11 @@ private:
   unordered_map<int, player_data> warned_players_data;
   string short_version{ "1.0" };
   string ip_address{ "127.0.0.1" };
-  string configuration_ip_address{ "127.0.0.1" };
   string sv_hostname{ "CoD2Host" };
   string game_name{ "unknown" };
   string rcon_password{
     "abc123"
   };
-  string configuration_rcon_password{ "abc123" };
   string private_slot_password{
     "abc123"
   };
@@ -744,7 +713,6 @@ private:
   string header_player_geoinfo_color{ "^3" };
   string data_player_geoinfo_color{ "^3" };
   std::atomic<size_t> check_for_banned_players_time_period{ 5 };
-  int configuration_port{ 28960 };
   int max_number_of_players{ 64 };
   int max_private_clients{};
   int current_number_of_players{};
