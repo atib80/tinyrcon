@@ -875,15 +875,15 @@ size_t find_longest_player_country_city_info_length(
   if (0 == number_of_players_to_process)
     return 0;
 
-  size_t country_len = strlen(players[0].country_name);
-  size_t region_len = strlen(players[0].region);
-  size_t city_len = strlen(players[0].city);
+  size_t country_len = len(players[0].country_name);
+  size_t region_len = len(players[0].region);
+  size_t city_len = len(players[0].city);
 
   size_t max_geodata_info_length = (country_len != 0 ? country_len : region_len) + city_len + 2;
   for (size_t i{ 1 }; i < number_of_players_to_process; ++i) {
-    country_len = strlen(players[i].country_name);
-    region_len = strlen(players[i].region);
-    city_len = strlen(players[i].city);
+    country_len = len(players[i].country_name);
+    region_len = len(players[i].region);
+    city_len = len(players[i].city);
     const size_t current_player_geodata_info_length = (country_len != 0 ? country_len : region_len) + city_len + 2;
     max_geodata_info_length = std::max(current_player_geodata_info_length, max_geodata_info_length);
   }
@@ -1449,7 +1449,7 @@ bool temp_ban_player_ip_address(player_data &pd)
     return false;
   }
 
-  if (strlen(pd.country_name) == 0) {
+  if (pd.country_name == nullptr || len(pd.country_name) == 0) {
     convert_guid_key_to_country_name(
       main_app.get_connection_manager().get_geoip_data(),
       pd.ip_address,
@@ -1536,7 +1536,7 @@ bool global_ban_player_ip_address(player_data &pd)
     return false;
   }
 
-  if (strlen(pd.country_name) == 0) {
+  if (pd.country_name == nullptr || len(pd.country_name) == 0) {
     convert_guid_key_to_country_name(
       main_app.get_connection_manager().get_geoip_data(),
       pd.ip_address,
@@ -3024,7 +3024,7 @@ void display_temporarily_banned_ip_addresses()
       oss << next_color << " | ";
       log << " | ";
       char buffer2[256];
-      snprintf(buffer2, std::size(buffer2), "%s, %s", (strlen(bp.country_name) != 0 ? bp.country_name : bp.region), bp.city);
+      snprintf(buffer2, std::size(buffer2), "%s, %s", (len(bp.country_name) != 0 ? bp.country_name : bp.region), bp.city);
       char reason[33];
       strncpy_s(reason, 33, bp.reason, len(bp.reason));
       reason[32] = 0;
@@ -3143,7 +3143,7 @@ void display_permanently_banned_ip_addresses()
       oss << next_color << " | ";
       log << " | ";
       char buffer2[256];
-      snprintf(buffer2, std::size(buffer2), "%s, %s", (strlen(bp.country_name) != 0 ? bp.country_name : bp.region), bp.city);
+      snprintf(buffer2, std::size(buffer2), "%s, %s", (len(bp.country_name) != 0 ? bp.country_name : bp.region), bp.city);
       char reason[33];
       strncpy_s(reason, 33, bp.reason, len(bp.reason));
       reason[32] = 0;
@@ -4477,7 +4477,7 @@ void set_rich_edit_control_colors(HWND richEditCtrl, const COLORREF fg_color, co
   cf.dwMask = CFM_CHARSET | CFM_FACE | CFM_COLOR | CFM_BACKCOLOR | CFM_WEIGHT;// I'm setting only the style information
   strcpy_s(cf.szFaceName, font_face_name);
   cf.wWeight = 800;
-  cf.bCharSet = DEFAULT_CHARSET;
+  cf.bCharSet = RUSSIAN_CHARSET;
   cf.crTextColor = fg_color;
   cf.crBackColor = bg_color;
   SendMessage(richEditCtrl, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&cf);
@@ -4930,8 +4930,8 @@ void clear_players_data_in_players_grid(HWND hgrid, const size_t start_row, cons
 {
 
   static char buffer[256];
-
-  for (size_t i{ start_row }; i < last_row; ++i) {
+  bool is_found_an_empty_cell{};
+  for (size_t i{ start_row }; i < last_row && !is_found_an_empty_cell; ++i) {
     for (size_t j{}; j < cols; ++j) {
       if (6 == j) {
         SGITEM item{};
@@ -4940,9 +4940,11 @@ void clear_players_data_in_players_grid(HWND hgrid, const size_t start_row, cons
         item.lpCurValue = (LPARAM)0;
         SimpleGrid_SetItemData(hgrid, &item);
       } else {
-        const string cell_text{ GetCellContents(hgrid, i, j) };
-        if (cell_text.empty())
-          return;
+        if (!is_found_an_empty_cell) {
+          const string cell_text{ GetCellContents(hgrid, i, j) };
+          if (cell_text.empty())
+            is_found_an_empty_cell = true;
+        }
         PutCell(hgrid, i, j, "");
       }
     }

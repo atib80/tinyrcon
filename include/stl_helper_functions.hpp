@@ -1688,10 +1688,10 @@ size_t str_index_of(const T &src,
     if (std::has_facet<std::ctype<char_type>>(loc)) {
       const auto &f = std::use_facet<std::ctype<char_type>>(loc);
 
-      std::transform(std::cbegin(src_lc), std::cend(src_lc), std::begin(src_lc), [&f](const auto ch) { return f.tolower(ch); });
+      std::transform(std::cbegin(src_sv), std::cend(src_sv), std::begin(src_lc), [&f](const auto ch) { return f.tolower(ch); });
       needle_lc = f.tolower(needle);
     } else {
-      std::transform(std::cbegin(src_lc), std::cend(src_lc), std::begin(src_lc), [](const auto ch) {
+      std::transform(std::cbegin(src_sv), std::cend(src_sv), std::begin(src_lc), [](const auto ch) {
         return static_cast<char_type>(std::tolower(ch));
       });
 
@@ -1714,13 +1714,13 @@ size_t str_index_of(const T &src,
 
     if (std::has_facet<std::ctype<char_type>>(loc)) {
       const auto &f = std::use_facet<std::ctype<char_type>>(loc);
-      std::transform(std::cbegin(src_lc), std::cend(src_lc), std::begin(src_lc), [&f](const auto ch) { return f.tolower(ch); });
-      std::transform(std::cbegin(needle_lc), std::cend(needle_lc), std::begin(needle_lc), [&f](const auto ch) { return f.tolower(ch); });
+      std::transform(std::cbegin(src_sv), std::cend(src_sv), std::begin(src_lc), [&f](const auto ch) { return f.tolower(ch); });
+      std::transform(std::cbegin(needle_sv), std::cend(needle_sv), std::begin(needle_lc), [&f](const auto ch) { return f.tolower(ch); });
     } else {
-      std::transform(std::cbegin(src_lc), std::cend(src_lc), std::begin(src_lc), [](const auto ch) {
+      std::transform(std::cbegin(src_sv), std::cend(src_sv), std::begin(src_lc), [](const auto ch) {
         return static_cast<char_type>(std::tolower(ch));
       });
-      std::transform(std::cbegin(needle_lc), std::cend(needle_lc), std::begin(needle_lc), [](const auto ch) {
+      std::transform(std::cbegin(needle_sv), std::cend(needle_sv), std::begin(needle_lc), [](const auto ch) {
         return static_cast<char_type>(std::tolower(ch));
       });
     }
@@ -1775,13 +1775,13 @@ std::vector<size_t> str_find_all_of(const T &src,
 
   if (std::has_facet<std::ctype<char_type>>(loc)) {
     const auto &f = std::use_facet<std::ctype<char_type>>(loc);
-    std::transform(std::cbegin(src_lc), std::cend(src_lc), std::begin(src_lc), [&f](const auto ch) { return f.tolower(ch); });
-    std::transform(std::cbegin(needle_lc), std::cend(needle_lc), std::begin(needle_lc), [&f](const auto ch) { return f.tolower(ch); });
+    std::transform(std::cbegin(src_sv), std::cend(src_sv), std::begin(src_lc), [&f](const auto ch) { return f.tolower(ch); });
+    std::transform(std::cbegin(needle_sv), std::cend(needle_sv), std::begin(needle_lc), [&f](const auto ch) { return f.tolower(ch); });
   } else {
     std::transform(
-      std::cbegin(src_lc), std::cend(src_lc), std::begin(src_lc), [](const auto ch) { return static_cast<char_type>(std::tolower(ch)); });
+      std::cbegin(src_sv), std::cend(src_sv), std::begin(src_lc), [](const auto ch) { return static_cast<char_type>(std::tolower(ch)); });
     std::transform(
-      std::cbegin(needle_lc), std::cend(needle_lc), std::begin(needle_lc), [](const auto ch) { return static_cast<char_type>(std::tolower(ch)); });
+      std::cbegin(needle_sv), std::cend(needle_sv), std::begin(needle_lc), [](const auto ch) { return static_cast<char_type>(std::tolower(ch)); });
   }
 
   src_sv = src_lc;
@@ -2341,7 +2341,7 @@ template<typename ContainerType,
   typename KeyType,
   typename = std::enable_if_t<
     has_find_member_function_v<ContainerType, KeyType>>>
-bool has_key(const ContainerType &container, KeyType &&key)
+inline bool has_key(const ContainerType &container, KeyType &&key)
 {
   return std::cend(container) != container.find(std::forward<KeyType>(key));
 }
@@ -2350,7 +2350,7 @@ template<
   typename ContainerType,
   typename ValueType,
   typename = std::enable_if_t<!is_container_adapter_type_v<ContainerType> && (has_key_type_v<ContainerType> || has_value_type_v<ContainerType> || has_mapped_type_v<ContainerType>)>>
-bool has_value(const ContainerType &container, const ValueType &value)
+inline bool has_value(const ContainerType &container, const ValueType &value)
 {
   if constexpr (has_mapped_type_v<ContainerType>) {
     return std::any_of(std::cbegin(container), std::cend(container), [&value](const auto &p) { return p.second == value; });
@@ -2372,7 +2372,7 @@ template<typename T,
   typename U,
   typename =
     std::enable_if_t<check_equality_v<T, std::remove_reference_t<U>>>>
-bool has_value(const std::array<T, N> &container, U &&value)
+inline bool has_value(const std::array<T, N> &container, U &&value)
 {
   if constexpr (is_operator_less_than_defined_v<T>) {
     if (std::is_sorted(std::cbegin(container), std::cend(container)))
@@ -2387,7 +2387,7 @@ template<typename T,
   typename U,
   typename =
     std::enable_if_t<check_equality_v<T, std::remove_reference_t<U>>>>
-bool has_value(const T (&arr)[N], U &&value)
+inline bool has_value(const T (&arr)[N], U &&value)
 {
   if constexpr (is_operator_less_than_defined_v<T>) {
     if (std::is_sorted(arr, arr + N))
@@ -2399,7 +2399,7 @@ bool has_value(const T (&arr)[N], U &&value)
 
 template<typename ContainerType,
   typename = std::enable_if_t<has_key_type_v<ContainerType> && has_value_type_v<ContainerType> && has_mapped_type_v<ContainerType>>>
-bool has_kv_pair(const ContainerType &container,
+inline bool has_kv_pair(const ContainerType &container,
   const typename ContainerType::value_type &key_value_pair)
 {
   auto first_item_iter_pos{ container.equal_range(key_value_pair.first) };
@@ -2420,7 +2420,7 @@ template<typename ForwardIterType,
   typename = std::enable_if_t<std::is_convertible_v<
     std::remove_reference_t<ItemType>,
     typename std::iterator_traits<ForwardIterType>::value_type>>>
-bool has_item(const ForwardIterType first,
+inline bool has_item(const ForwardIterType first,
   const ForwardIterType last,
   ItemType &&item)
 {
@@ -2438,7 +2438,7 @@ template<typename T,
   typename = std::enable_if_t<
     (is_char_array_type_v<T> || is_char_pointer_type_v<T> || is_valid_string_type_v<T> || is_valid_string_view_type_v<T>)&&(is_char_array_type_v<U> || is_char_pointer_type_v<U> || is_valid_string_type_v<U> || is_valid_string_view_type_v<U>)&&std::
       is_same_v<get_char_type_t<T>, get_char_type_t<U>>>>
-int str_compare(const T &src1, const U &src2)
+inline int str_compare(const T &src1, const U &src2)
 {
   const size_t src1_len{ len(src1) };
   const size_t src2_len{ len(src2) };
@@ -2472,7 +2472,7 @@ template<
     get_char_type_t<typename std::iterator_traits<FwIterType1>::value_type>,
     get_char_type_t<
       typename std::iterator_traits<FwIterType2>::value_type>>>>
-int str_compare(FwIterType1 first1,
+inline int str_compare(FwIterType1 first1,
   FwIterType1 last1,
   FwIterType2 first2,
   FwIterType2 last2)
@@ -2520,7 +2520,7 @@ template<typename T,
   typename = std::enable_if_t<
     (is_char_array_type_v<T> || is_char_pointer_type_v<T> || is_valid_string_type_v<T> || is_valid_string_view_type_v<T>)&&(is_char_array_type_v<U> || is_char_pointer_type_v<U> || is_valid_string_type_v<U> || is_valid_string_view_type_v<U>)&&std::
       is_same_v<get_char_type_t<T>, get_char_type_t<U>>>>
-int str_compare_n(const T &src1,
+inline int str_compare_n(const T &src1,
   const U &src2,
   size_t number_of_characters_to_compare)
 {
@@ -2556,7 +2556,7 @@ template<
     get_char_type_t<typename std::iterator_traits<FwIterType1>::value_type>,
     get_char_type_t<
       typename std::iterator_traits<FwIterType2>::value_type>>>>
-int str_compare_n(
+inline int str_compare_n(
   FwIterType1 first1,
   FwIterType1 last1,
   FwIterType2 first2,
@@ -2607,7 +2607,7 @@ template<typename T,
   typename = std::enable_if_t<
     (is_char_array_type_v<T> || is_char_pointer_type_v<T> || is_valid_string_type_v<T> || is_valid_string_view_type_v<T>)&&(is_char_array_type_v<U> || is_char_pointer_type_v<U> || is_valid_string_type_v<U> || is_valid_string_view_type_v<U>)&&std::
       is_same_v<get_char_type_t<T>, get_char_type_t<U>>>>
-int str_compare_i(const T &src1,
+inline int str_compare_i(const T &src1,
   const U &src2,
   const std::locale &loc = std::locale{})
 {
@@ -2665,7 +2665,7 @@ template<
     get_char_type_t<typename std::iterator_traits<FwIterType1>::value_type>,
     get_char_type_t<
       typename std::iterator_traits<FwIterType2>::value_type>>>>
-int str_compare_i(FwIterType1 first1,
+inline int str_compare_i(FwIterType1 first1,
   FwIterType1 last1,
   FwIterType2 first2,
   FwIterType2 last2,
@@ -2740,7 +2740,7 @@ template<typename T,
   typename = std::enable_if_t<
     (is_char_array_type_v<T> || is_char_pointer_type_v<T> || is_valid_string_type_v<T> || is_valid_string_view_type_v<T>)&&(is_char_array_type_v<U> || is_char_pointer_type_v<U> || is_valid_string_type_v<U> || is_valid_string_view_type_v<U>)&&std::
       is_same_v<get_char_type_t<T>, get_char_type_t<U>>>>
-int str_compare_n_i(const T &src1,
+inline int str_compare_n_i(const T &src1,
   const U &src2,
   size_t number_of_characters_to_compare,
   const std::locale &loc = std::locale{})
@@ -2790,7 +2790,7 @@ template<
     get_char_type_t<typename std::iterator_traits<FwIterType1>::value_type>,
     get_char_type_t<
       typename std::iterator_traits<FwIterType2>::value_type>>>>
-int str_compare_n_i(
+inline int str_compare_n_i(
   FwIterType1 first1,
   FwIterType1 last1,
   FwIterType2 first2,

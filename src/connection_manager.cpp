@@ -211,14 +211,14 @@ size_t connection_manager::receive_data_from_server(
                 player_name.pop_back();
               }
 
-              string ip_address{ matches[7].str() };
+              const string ip_address{ matches[7].str() };
 
               players_data[pl_index].pid = player_pid;
               players_data[pl_index].score = player_score;
               strcpy_s(players_data[pl_index].ping, 5, player_ping.c_str());
-              if (strcmp(player_name.c_str(), players_data[pl_index].player_name) != 0) {
-                strcpy_s(players_data[pl_index].player_name, 33, player_name.c_str());
-              }
+              // if (stl::helper::str_compare(player_name.c_str(), players_data[pl_index].player_name) != 0) {
+              strcpy_s(players_data[pl_index].player_name, 33, player_name.c_str());
+              // }
 
               if (strcmp(ip_address.c_str(), players_data[pl_index].ip_address) != 0) {
 
