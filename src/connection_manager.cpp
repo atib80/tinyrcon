@@ -182,7 +182,7 @@ size_t connection_manager::receive_data_from_server(
 
           for (const string &player_line : lines) {
 
-            std::smatch matches;
+            std::smatch matches{};
 
             if (std::regex_search(player_line, matches, status_regex)) {
               const int player_pid{ stoi(matches[1].str()) };

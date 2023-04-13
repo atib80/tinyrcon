@@ -23,6 +23,8 @@ extern char const *const tempbans_file_path =
 extern char const *const banned_ip_addresses_file_path =
   "data\\bans.txt";
 
+extern const std::regex ip_address_and_port_regex;
+
 extern volatile std::atomic<bool> is_terminate_program;
 extern volatile std::atomic<bool> is_terminate_tinyrcon_settings_configuration_dialog_window;
 extern string g_message_data_contents;
@@ -636,16 +638,20 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     case ID_CONNECTBUTTON: {
       snprintf(message_buffer, std::size(message_buffer), "^3Are you sure you want to connect to ^1%s ^3game server?\n", main_app.get_game_server_name().c_str());
-      if (show_user_confirmation_dialog(message_buffer, "Connect to the CoD2 game server?")) {
-        connect_to_the_game_server(false, true);
+      if (show_user_confirmation_dialog(message_buffer, "Connect to game server?")) {
+        smatch matches{};
+        const string game_server_address{ regex_search(admin_reason, matches, ip_address_and_port_regex) ? matches[1].str() : main_app.get_game_server().get_server_ip_address() + ":"s + to_string(main_app.get_game_server().get_server_port()) };
+        connect_to_the_game_server(game_server_address, false, true);
       }
     } break;
 
     case ID_CONNECTPRIVATESLOTBUTTON: {
 
       snprintf(message_buffer, std::size(message_buffer), "^3Are you sure you want to connect to ^1%s ^3game server using a ^1private slot^3?\n", main_app.get_game_server_name().c_str());
-      if (show_user_confirmation_dialog(message_buffer, "Connect to the CoD2 game server using a private slot?")) {
-        connect_to_the_game_server(true, true);
+      if (show_user_confirmation_dialog(message_buffer, "Connect to game server using a private slot?")) {
+        smatch matches{};
+        const string game_server_address{ regex_search(admin_reason, matches, ip_address_and_port_regex) ? matches[1].str() : main_app.get_game_server().get_server_ip_address() + ":"s + to_string(main_app.get_game_server().get_server_port()) };
+        connect_to_the_game_server(game_server_address, true, true);
       }
     } break;
 

@@ -51,8 +51,6 @@ mutex check_exit_condition_mutex;
 extern mutex mu;
 extern condition_variable exit_flag;
 
-// condition_variable cv;
-
 mutex word_wrap_mutex;
 mutex print_data_mutex;
 mutex log_data_mutex;
@@ -74,7 +72,6 @@ vector<string> commands_history;
 size_t commands_history_index{};
 
 string g_re_match_information_contents;
-// string g_re_players_data_contents;
 string g_message_data_contents;
 string previous_map;
 string match_information;
@@ -83,6 +80,8 @@ HIMAGELIST hImageList{};
 row_of_player_data_to_display displayed_players_data[64]{};
 
 static char path_buffer[32768];
+
+extern const std::regex ip_address_and_port_regex{ R"((\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:-?\d+))" };
 
 extern const std::unordered_map<char, COLORREF> colors{
   { '0', color::black },
@@ -2603,7 +2602,11 @@ void process_user_command(const std::vector<string> &user_cmd)
       }
     } else if (user_cmd[0] == "!c" || user_cmd[0] == "!cp") {
       const bool use_private_slot{ user_cmd[0] == "!cp" && !main_app.get_game_server().get_private_slot_password().empty() };
-      connect_to_the_game_server(use_private_slot, true);
+      smatch ip_port_match{};
+      const string ip_port_server_address{
+        (user_cmd.size() > 1 && regex_search(user_cmd[1], ip_port_match, ip_address_and_port_regex)) ? ip_port_match[1].str() : main_app.get_game_server().get_server_ip_address() + ":"s + to_string(main_app.get_game_server().get_server_port())
+      };
+      connect_to_the_game_server(ip_port_server_address, use_private_slot, true);
     } else if ((user_cmd[0] == "!m" || user_cmd[0] == "!map") && user_cmd.size() >= 2 && !user_cmd[1].empty()) {
       const string map_name{ stl::helper::trim(user_cmd[1], " \t\n") };
       const string game_type{ user_cmd.size() >= 3 ? stl::helper::trim(user_cmd[2], " \t\n") : "ctf" };
@@ -3935,21 +3938,13 @@ const char *find_call_of_duty_1_installation_path(const bool is_show_browse_fold
   HKEY game_installation_reg_key{};
   bool found{};
 
-  WIN32_FIND_DATAA find_data;
-  HANDLE search_handle;
-
   const char *found_reg_location{};
-
-  const char **def_game_reg_key;
-
-  def_game_reg_key = def_cod1_registry_location_subkeys;
-
-  LRESULT status;
+  const char **def_game_reg_key{ def_cod1_registry_location_subkeys };
 
   ZeroMemory(&game_installation_reg_key, sizeof(HKEY));
   DWORD is_steam_game_installed{};
 
-  status = RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Valve\\Steam\\Apps\\2620", 0, KEY_QUERY_VALUE, &game_installation_reg_key);
+  LRESULT status = RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Valve\\Steam\\Apps\\2620", 0, KEY_QUERY_VALUE, &game_installation_reg_key);
 
   if (status == ERROR_SUCCESS) {
     cch = sizeof(is_steam_game_installed);
@@ -4041,13 +4036,13 @@ const char *find_call_of_duty_1_installation_path(const bool is_show_browse_fold
 
       if (status == ERROR_SUCCESS) {
 
-        ZeroMemory(&find_data, sizeof(WIN32_FIND_DATAA));
+        WIN32_FIND_DATAA find_data{};
 
         remove_dir_path_sep_char(install_path);
 
         snprintf(exe_file_path, max_path_length, "%s\\codmp.exe", install_path);
 
-        search_handle = FindFirstFileA(exe_file_path, &find_data);
+        HANDLE search_handle = FindFirstFileA(exe_file_path, &find_data);
 
         if (search_handle != INVALID_HANDLE_VALUE) {
 
@@ -4084,13 +4079,13 @@ const char *find_call_of_duty_1_installation_path(const bool is_show_browse_fold
 
         if (status == ERROR_SUCCESS) {
 
-          ZeroMemory(&find_data, sizeof(WIN32_FIND_DATAA));
+          WIN32_FIND_DATAA find_data{};
 
           remove_dir_path_sep_char(install_path);
 
           snprintf(exe_file_path, max_path_length, "%s\\codmp.exe", install_path);
 
-          search_handle = FindFirstFileA(exe_file_path, &find_data);
+          HANDLE search_handle = FindFirstFileA(exe_file_path, &find_data);
 
           if (search_handle != INVALID_HANDLE_VALUE) {
 
@@ -4220,21 +4215,13 @@ const char *find_call_of_duty_2_installation_path(const bool is_show_browse_fold
   HKEY game_installation_reg_key{};
   bool found{};
 
-  WIN32_FIND_DATAA find_data;
-  HANDLE search_handle;
-
   const char *found_reg_location{};
-
-  const char **def_game_reg_key;
-
-  def_game_reg_key = def_cod2_registry_location_subkeys;
-
-  LRESULT status;
+  const char **def_game_reg_key{ def_cod2_registry_location_subkeys };
 
   ZeroMemory(&game_installation_reg_key, sizeof(HKEY));
   DWORD is_steam_game_installed{};
 
-  status = RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Valve\\Steam\\Apps\\2630", 0, KEY_QUERY_VALUE, &game_installation_reg_key);
+  LRESULT status = RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Valve\\Steam\\Apps\\2630", 0, KEY_QUERY_VALUE, &game_installation_reg_key);
 
   if (status == ERROR_SUCCESS) {
     cch = sizeof(is_steam_game_installed);
@@ -4325,14 +4312,11 @@ const char *find_call_of_duty_2_installation_path(const bool is_show_browse_fold
       status = RegQueryValueExA(game_installation_reg_key, game_install_path_key, nullptr, nullptr, reinterpret_cast<LPBYTE>(install_path), &cch);
 
       if (status == ERROR_SUCCESS) {
-
-        ZeroMemory(&find_data, sizeof(WIN32_FIND_DATAA));
-
+        WIN32_FIND_DATAA find_data{};
         remove_dir_path_sep_char(install_path);
-
         snprintf(exe_file_path, max_path_length, "%s\\cod2mp_s.exe", install_path);
 
-        search_handle = FindFirstFileA(exe_file_path, &find_data);
+        HANDLE search_handle = FindFirstFileA(exe_file_path, &find_data);
 
         if (search_handle != INVALID_HANDLE_VALUE) {
 
@@ -4369,13 +4353,10 @@ const char *find_call_of_duty_2_installation_path(const bool is_show_browse_fold
 
         if (status == ERROR_SUCCESS) {
 
-          ZeroMemory(&find_data, sizeof(WIN32_FIND_DATAA));
-
+          WIN32_FIND_DATAA find_data{};
           remove_dir_path_sep_char(install_path);
-
           snprintf(exe_file_path, max_path_length, "%s\\cod2mp_s.exe", install_path);
-
-          search_handle = FindFirstFileA(exe_file_path, &find_data);
+          HANDLE search_handle = FindFirstFileA(exe_file_path, &find_data);
 
           if (search_handle != INVALID_HANDLE_VALUE) {
 
@@ -4505,21 +4486,13 @@ const char *find_call_of_duty_4_installation_path(const bool is_show_browse_fold
   HKEY game_installation_reg_key{};
   bool found{};
 
-  WIN32_FIND_DATAA find_data;
-  HANDLE search_handle;
-
   const char *found_reg_location{};
-
-  const char **def_game_reg_key;
-
-  def_game_reg_key = def_cod4_registry_location_subkeys;
-
-  LRESULT status;
+  const char **def_game_reg_key{ def_cod4_registry_location_subkeys };
 
   ZeroMemory(&game_installation_reg_key, sizeof(HKEY));
   DWORD is_steam_game_installed{};
 
-  status = RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Valve\\Steam\\Apps\\7940", 0, KEY_QUERY_VALUE, &game_installation_reg_key);
+  LRESULT status = RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Valve\\Steam\\Apps\\7940", 0, KEY_QUERY_VALUE, &game_installation_reg_key);
 
   if (status == ERROR_SUCCESS) {
     cch = sizeof(is_steam_game_installed);
@@ -4610,14 +4583,10 @@ const char *find_call_of_duty_4_installation_path(const bool is_show_browse_fold
       status = RegQueryValueExA(game_installation_reg_key, game_install_path_key, nullptr, nullptr, reinterpret_cast<LPBYTE>(install_path), &cch);
 
       if (status == ERROR_SUCCESS) {
-
-        ZeroMemory(&find_data, sizeof(WIN32_FIND_DATAA));
-
+        WIN32_FIND_DATAA find_data{};
         remove_dir_path_sep_char(install_path);
-
         snprintf(exe_file_path, max_path_length, "%s\\iw3mp.exe", install_path);
-
-        search_handle = FindFirstFileA(exe_file_path, &find_data);
+        HANDLE search_handle = FindFirstFileA(exe_file_path, &find_data);
 
         if (search_handle != INVALID_HANDLE_VALUE) {
 
@@ -4653,14 +4622,10 @@ const char *find_call_of_duty_4_installation_path(const bool is_show_browse_fold
         status = RegQueryValueExA(game_installation_reg_key, game_install_path_key, nullptr, nullptr, reinterpret_cast<LPBYTE>(install_path), &cch);
 
         if (status == ERROR_SUCCESS) {
-
-          ZeroMemory(&find_data, sizeof(WIN32_FIND_DATAA));
-
+          WIN32_FIND_DATAA find_data{};
           remove_dir_path_sep_char(install_path);
-
           snprintf(exe_file_path, max_path_length, "%s\\iw3mp.exe", install_path);
-
-          search_handle = FindFirstFileA(exe_file_path, &find_data);
+          HANDLE search_handle = FindFirstFileA(exe_file_path, &find_data);
 
           if (search_handle != INVALID_HANDLE_VALUE) {
 
@@ -4790,21 +4755,13 @@ const char *find_call_of_duty_5_installation_path(const bool is_show_browse_fold
   HKEY game_installation_reg_key{};
   bool found{};
 
-  WIN32_FIND_DATAA find_data;
-  HANDLE search_handle;
-
   const char *found_reg_location{};
-
-  const char **def_game_reg_key;
-
-  def_game_reg_key = def_cod5_registry_location_subkeys;
-
-  LRESULT status;
+  const char **def_game_reg_key{ def_cod5_registry_location_subkeys };
 
   ZeroMemory(&game_installation_reg_key, sizeof(HKEY));
   DWORD is_steam_game_installed{};
 
-  status = RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Valve\\Steam\\Apps\\10090", 0, KEY_QUERY_VALUE, &game_installation_reg_key);
+  LRESULT status = RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Valve\\Steam\\Apps\\10090", 0, KEY_QUERY_VALUE, &game_installation_reg_key);
 
   if (status == ERROR_SUCCESS) {
     cch = sizeof(is_steam_game_installed);
@@ -4895,14 +4852,10 @@ const char *find_call_of_duty_5_installation_path(const bool is_show_browse_fold
       status = RegQueryValueExA(game_installation_reg_key, game_install_path_key, nullptr, nullptr, reinterpret_cast<LPBYTE>(install_path), &cch);
 
       if (status == ERROR_SUCCESS) {
-
-        ZeroMemory(&find_data, sizeof(WIN32_FIND_DATAA));
-
+        WIN32_FIND_DATAA find_data{};
         remove_dir_path_sep_char(install_path);
-
         snprintf(exe_file_path, max_path_length, "%s\\cod5mp.exe", install_path);
-
-        search_handle = FindFirstFileA(exe_file_path, &find_data);
+        HANDLE search_handle = FindFirstFileA(exe_file_path, &find_data);
 
         if (search_handle != INVALID_HANDLE_VALUE) {
 
@@ -4939,13 +4892,10 @@ const char *find_call_of_duty_5_installation_path(const bool is_show_browse_fold
 
         if (status == ERROR_SUCCESS) {
 
-          ZeroMemory(&find_data, sizeof(WIN32_FIND_DATAA));
-
+          WIN32_FIND_DATAA find_data{};
           remove_dir_path_sep_char(install_path);
-
           snprintf(exe_file_path, max_path_length, "%s\\cod5mp.exe", install_path);
-
-          search_handle = FindFirstFileA(exe_file_path, &find_data);
+          HANDLE search_handle = FindFirstFileA(exe_file_path, &find_data);
 
           if (search_handle != INVALID_HANDLE_VALUE) {
 
@@ -5058,7 +5008,7 @@ bool check_if_call_of_duty_5_game_is_running() noexcept
   return false;
 }
 
-bool connect_to_the_game_server(const bool use_private_slot, const bool minimize_tinyrcon) noexcept
+bool connect_to_the_game_server(const std::string &server_ip_port_address, const bool use_private_slot, const bool minimize_tinyrcon)
 {
   constexpr size_t max_path_length{ 32768 };
   static char command_line[max_path_length]{};
@@ -5136,15 +5086,15 @@ bool connect_to_the_game_server(const bool use_private_slot, const bool minimize
 
   if (is_game_installed_via_steam) {
     if (use_private_slot) {
-      snprintf(command_line, max_path_length, "%s +password %s +connect %s:%d", game_path, main_app.get_game_server().get_private_slot_password().c_str(), main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port());
+      snprintf(command_line, max_path_length, "%s +password %s +connect %s", game_path, main_app.get_game_server().get_private_slot_password().c_str(), server_ip_port_address.c_str());
     } else {
-      snprintf(command_line, max_path_length, "%s +connect %s:%d", game_path, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port());
+      snprintf(command_line, max_path_length, "%s +connect %s", game_path, server_ip_port_address.c_str());
     }
   } else {
     if (use_private_slot) {
-      snprintf(command_line, max_path_length, "\"%s\" +password %s +connect %s:%d", game_path, main_app.get_game_server().get_private_slot_password().c_str(), main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port());
+      snprintf(command_line, max_path_length, "\"%s\" +password %s +connect %s", game_path, main_app.get_game_server().get_private_slot_password().c_str(), server_ip_port_address.c_str());
     } else {
-      snprintf(command_line, max_path_length, "\"%s\" +connect %s:%d", game_path, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port());
+      snprintf(command_line, max_path_length, "\"%s\" +connect %s", game_path, server_ip_port_address.c_str());
     }
   }
 
