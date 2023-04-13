@@ -2,7 +2,6 @@
 
 #include <atomic>
 #include <fstream>
-// #include <iostream>
 #include <mutex>
 #include <queue>
 #include <string>
@@ -16,19 +15,19 @@ using namespace std::string_literals;
 
 class tiny_cod2_rcon_client_application
 {
-  std::atomic<bool> is_connection_settings_valid{};
+  std::atomic<bool> is_connection_settings_valid{ false };
   bool is_enable_automatic_connection_flood_ip_ban{ true };
   bool is_log_file_open{};
   bool is_draw_border_lines{ true };
   size_t minimum_number_of_connections_from_same_ip_for_automatic_ban{ 5 };
   size_t maximum_number_of_warnings_for_automatic_kick{ 2 };
-  // size_t number_of_rows_printed{};
-  // size_t number_of_cols_printed{};
   game_name_t game_name{ game_name_t::unknown };
-  game_name_t configuration_game_name{ game_name_t::unknown };
   string username{ "^1Administrator" };
   string game_server_name{ R"(194.226.49.72:28995 CoD2 CTF https://discord.gg/cnbfxEu6A8)" };
+  string codmp_exe_path;
   string cod2mp_s_exe_path;
+  string iw3mp_exe_path;
+  string cod5mp_exe_path;
   string command_line_info{ R"(
 ^5>> For a list of possible commands type ^1help ^5or ^1list user ^5or ^1list rcon ^5in the console.
 ^3>> Type ^1s ^3[Enter] in the console to refresh current status of players data.
@@ -41,8 +40,8 @@ class tiny_cod2_rcon_client_application
 ^5>> Type ^1bans ^5[Enter] to see all permanently banned IP addresses.
 ^3>> Type ^1tempbans ^3[Enter] to see all temporarily banned IP addresses.
 ^5>> Type ^1!m mapname gametype ^5[Enter] to load map 'mapname' in 'gametype' mode (^1!m mp_toujane ctf ^5| ^1!m mp_burgundy hq^5)
-^3>> Type ^1!c ^3[Enter] to launch CoD2 game and connect to the CTF game server.
-^5>> Type ^1!cp ^5[Enter] to launch CoD2 game and connect to the CTF game server using a private slot.
+^3>> Type ^1!c ^3[Enter] to launch your Call of duty game and connect to configured game server.
+^5>> Type ^1!cp ^5[Enter] to launch your Call of duty game and connect to configured game server using a private slot.
 ^3>> Type ^1q ^3[Enter] to quit the program.
 ^1Administrator >> )"s };
   std::unordered_map<std::string, std::string> admin_messages{
@@ -57,6 +56,14 @@ class tiny_cod2_rcon_client_application
       "^7Temporarily banned player {PLAYERNAME} ^7is being automatically ^1kicked.{{br}}^7Your temporary ban expires on ^1{TEMP_BAN_END_DATE}",
     },
     { "automatic_kick_ip_ban_msg", "^7Player {PLAYERNAME} ^7with a previously ^1banned IP address ^7is being automatically ^1kicked." }
+  };
+
+  const std::unordered_map<game_name_t, std::string> game_names{
+    { game_name_t::unknown, "Unknown game!" },
+    { game_name_t::cod1, "Call of Duty Multiplayer" },
+    { game_name_t::cod2, "Call of Duty 2 Multiplayer" },
+    { game_name_t::cod4, "Call of Duty 4: Modern Warfare" },
+    { game_name_t::cod5, "Call of Duty 5: World at War" }
   };
   string server_message{ "^5| ^3Server is empty!^5" };
   game_server server;
@@ -120,16 +127,6 @@ public:
     maximum_number_of_warnings_for_automatic_kick = new_value;
   }
 
-  //  inline game_name_t get_configuration_game_name() const noexcept
-  //  {
-  //    return configuration_game_name;
-  //  }
-  //
-  //  inline void set_configuration_game_name(const game_name_t new_game_name) noexcept
-  //  {
-  //    configuration_game_name = new_game_name;
-  //  }
-
   inline game_name_t get_game_name() const noexcept
   {
     return game_name;
@@ -160,6 +157,16 @@ public:
     game_server_name = std::move(new_value);
   }
 
+  inline const string &get_codmp_exe_path() const noexcept
+  {
+    return codmp_exe_path;
+  }
+
+  inline void set_codmp_exe_path(string new_value) noexcept
+  {
+    codmp_exe_path = std::move(new_value);
+  }
+
   inline const string &get_cod2mp_exe_path() const noexcept
   {
     return cod2mp_s_exe_path;
@@ -170,10 +177,26 @@ public:
     cod2mp_s_exe_path = std::move(new_value);
   }
 
-  //  inline const string &get_command_line_info() const noexcept
-  //  {
-  //    return command_line_info;
-  //  }
+  inline const string &get_iw3mp_exe_path() const noexcept
+  {
+    return iw3mp_exe_path;
+  }
+
+  inline void set_iw3mp_exe_path(string new_value) noexcept
+  {
+    iw3mp_exe_path = std::move(new_value);
+  }
+
+  inline const string &get_cod5mp_exe_path() const noexcept
+  {
+    return cod5mp_exe_path;
+  }
+
+  inline void set_cod5mp_exe_path(string new_value) noexcept
+  {
+    cod5mp_exe_path = std::move(new_value);
+  }
+
 
   inline void set_command_line_info(string new_value) noexcept
   {
@@ -256,6 +279,13 @@ public:
   std::string get_automatic_kick_ip_ban_msg()
   {
     return admin_messages["automatic_kick_ip_ban_msg"];
+  }
+
+  inline const char *get_game_title() noexcept
+  {
+    if (game_names.contains(game_name))
+      return game_names.at(game_name).c_str();
+    return "Unknown game!";
   }
 
   bool get_is_draw_border_lines() const noexcept

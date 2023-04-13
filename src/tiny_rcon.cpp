@@ -1,6 +1,3 @@
-// TinyRconGUI.cpp : Defines the entry point for the application.
-//
-
 #include "framework.h"
 #include "resource.h"
 
@@ -26,8 +23,8 @@ extern char const *const tempbans_file_path =
 extern char const *const banned_ip_addresses_file_path =
   "data\\bans.txt";
 
-// extern condition_variable cv;
 extern volatile std::atomic<bool> is_terminate_program;
+extern volatile std::atomic<bool> is_terminate_tinyrcon_settings_configuration_dialog_window;
 extern string g_message_data_contents;
 
 tiny_cod2_rcon_client_application main_app;
@@ -61,8 +58,8 @@ extern const char *user_help_message =
 ^5Type ^1bans ^5[Enter] to see all permanently banned IP addresses.
 ^3Type ^1tempbans ^3[Enter] to see all temporarily banned IP addresses.
 ^5Type ^1!m mapname gametype ^5[Enter] to load map 'mapname' in 'gametype' mode (^1!m mp_toujane ctf^5)
-^3Type ^1!c ^3[Enter] to launch CoD2 game and connect to the CTF game server.
-^5Type ^1!cp ^5[Enter] to launch CoD2 game and connect to the CTF game server using a private slot.
+^3Type ^1!c ^3[Enter] to launch your Call of Duty game and connect to configured game server.
+^5Type ^1!cp ^5[Enter] to launch your Call of Duty game and connect to configured game server using a private slot.
 ^3Type ^1q ^3[Enter] to quit the program.
 ^5>> Press ^1F1 ^5to sort players data by their 'pid' values in ascending/descending order.
 ^3>> Press ^1F2 ^3to sort players data by their 'score' values in ascending/descending order.
@@ -72,8 +69,6 @@ extern const char *user_help_message =
 ^3>> Press ^1F6 ^3to sort players data by their 'country - city' values in ascending/descending order.
 ^5>> Press ^1F8 ^5to refresh current status of players data.
 )";
-
-// extern string g_re_messages_data_contents;
 
 extern const std::unordered_map<string, sort_type> sort_mode_names_dict;
 
@@ -96,7 +91,11 @@ extern const std::unordered_map<int, string> button_id_to_label_text{
   { ID_BUTTON_CANCEL, "Cancel" },
   { ID_BUTTON_CONFIGURE_SERVER_SETTINGS, "Configure server settings" },
   { ID_CLEARMESSAGESCREENBUTTON, "Clear messages screen" },
-  { ID_BUTTON_CONFIGURATION_EXIT_TINYRCON, "Exit TinyRcon" }
+  { ID_BUTTON_CONFIGURATION_EXIT_TINYRCON, "Exit TinyRcon" },
+  { ID_BUTTON_CONFIGURATION_COD1_PATH, "Browse for codmp.exe" },
+  { ID_BUTTON_CONFIGURATION_COD2_PATH, "Browse for cod2mp_s.exe" },
+  { ID_BUTTON_CONFIGURATION_COD4_PATH, "Browse for iw3mp.exe" },
+  { ID_BUTTON_CONFIGURATION_COD5_PATH, "Browse for cod5mp.exe" }
 };
 
 
@@ -111,8 +110,6 @@ tiny_rcon_handles app_handles{};
 
 WNDCLASSEX wcex, wcex_confirmation_dialog, wcex_configuration_dialog;
 HFONT hfontbody{};
-
-// static HHOOK hMsgBoxHook;
 
 int selected_row{};
 int selected_col{};
@@ -133,50 +130,12 @@ atomic<int> admin_choice{ 0 };
 string admin_reason{ "not specified" };
 extern HIMAGELIST hImageList;
 
-// Forward declarations of functions included in this code module:
 ATOM MyRegisterClass(HINSTANCE hInstance);
 BOOL InitInstance(HINSTANCE, int);
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK ComboProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubClass, DWORD_PTR);
-// MsgBoxEx(HWND hwnd, const char *szText, const char *szCaption, UINT uType);
 LRESULT CALLBACK WndProcForConfirmationDialog(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK WndProcForConfigurationDialog(HWND, UINT, WPARAM, LPARAM);
-// INT_PTR CALLBACK About(HWND, UINT, WPARAM, LPARAM);
-
-// DWORD __stdcall process_tiny_rcon_events(LPVOID)
-//{
-//   IsGUIThread(TRUE);
-//
-//   while (!should_program_terminate().load()) {
-//
-//   unique_lock<mutex> ul{ mu };
-//     exit_flag.wait_for(ul, std::chrono::milliseconds(20), [&]() {
-//       return is_terminate_program.load();
-//     });
-//
-//     if (main_app.get_is_connection_settings_valid()) {
-//
-//       bool is_status_command_processed{};
-//
-//       while (!main_app.is_command_queue_empty()) {
-//         auto cmd = main_app.get_command_from_queue();
-//         if (!is_status_command_processed && (cmd.command[0] == "s" || cmd.command[0] == "!s" || cmd.command[0] == "status" || cmd.command[0] == "!status")) {
-//           is_status_command_processed = true;
-//           atomic_counter.store(main_app.get_game_server().get_check_for_banned_players_time_period());
-//         }
-//         main_app.process_queue_command(std::move(cmd));
-//       }
-//
-//       if (is_refresh_players_data_event.load()) {
-//         if (!is_status_command_processed)
-//           refresh_players_data();
-//         is_refresh_players_data_event.store(false);
-//       }
-//     }
-//   }
-//
-//   return 0;
-// }
 
 int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   _In_opt_ HINSTANCE,
@@ -188,7 +147,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
   MyRegisterClass(hInstance);
 
-  // Perform application initialization:
   if (!InitInstance(hInstance, nCmdShow)) {
     return FALSE;
   }
@@ -210,8 +168,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 ^5>> Type ^1bans ^5[Enter] to see all permanently banned IP addresses.
 ^3>> Type ^1tempbans ^3[Enter] to see all temporarily banned IP addresses.
 ^5>> Type ^1!m mapname gametype ^5[Enter] to load map 'mapname' in 'gametype' mode (^1!m mp_toujane ctf^5)
-^3>> Type ^1!c ^3[Enter] to launch CoD2 game and connect to the CTF game server.
-^5>> Type ^1!cp ^5[Enter] to launch CoD2 game and connect to the CTF game server using a private slot.
+^3>> Type ^1!c ^3[Enter] to launch your Call of duty game and connect to configured game server.
+^5>> Type ^1!cp ^5[Enter] to launch your Call of duty game and connect to configured game server using a private slot.
 ^3>> Type ^1q ^3[Enter] to quit the program.
 ^5>> Press ^1F1 ^5to sort players data by their 'pid' values in ascending/descending order.
 ^3>> Press ^1F2 ^3to sort players data by their 'score' values in ascending/descending order.
@@ -296,36 +254,45 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
           return is_terminate_program.load();
         });
 
-        if (main_app.get_is_connection_settings_valid()) {
+        bool is_status_command_processed{};
+        string rcon_reply;
 
-          bool is_status_command_processed{};
-          string rcon_reply;
-
-          while (!main_app.is_command_queue_empty()) {
-            auto cmd = main_app.get_command_from_queue();
-            if (cmd.command[0] == "s" || cmd.command[0] == "!s" || cmd.command[0] == "status" || cmd.command[0] == "!status") {
-              if (!is_status_command_processed) {
-                is_status_command_processed = true;
-                atomic_counter.store(main_app.get_game_server().get_check_for_banned_players_time_period());
+        while (!main_app.is_command_queue_empty()) {
+          auto cmd = main_app.get_command_from_queue();
+          if (cmd.command[0] == "s" || cmd.command[0] == "!s" || cmd.command[0] == "status" || cmd.command[0] == "!status" || cmd.command[0] == "gs" || cmd.command[0] == "!gs" || cmd.command[0] == "getstatus") {
+            if (!is_status_command_processed) {
+              is_status_command_processed = true;
+              atomic_counter.store(main_app.get_game_server().get_check_for_banned_players_time_period());
+              if (main_app.get_is_connection_settings_valid()) {
                 main_app.get_connection_manager().send_and_receive_rcon_data("g_gametype", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
                 main_app.get_connection_manager().send_and_receive_rcon_data("status", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
                 prepare_players_data_for_display(false);
-                is_refreshed_players_data_ready_event.store(true);
+              } else {
+                main_app.get_connection_manager().send_and_receive_rcon_data("getstatus", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
+                prepare_players_data_for_display_of_getstatus_response(false);
               }
-            } else {
-              main_app.process_queue_command(std::move(cmd));
-            }
-          }
 
-          if (is_refresh_players_data_event.load()) {
-            if (!is_status_command_processed) {
+              is_refreshed_players_data_ready_event.store(true);
+            }
+          } else {
+            main_app.process_queue_command(std::move(cmd));
+          }
+        }
+
+        if (is_refresh_players_data_event.load()) {
+          if (!is_status_command_processed) {
+            if (main_app.get_is_connection_settings_valid()) {
               main_app.get_connection_manager().send_and_receive_rcon_data("g_gametype", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
               main_app.get_connection_manager().send_and_receive_rcon_data("status", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
               prepare_players_data_for_display(false);
-              is_refreshed_players_data_ready_event.store(true);
+            } else {
+              main_app.get_connection_manager().send_and_receive_rcon_data("getstatus", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
+              prepare_players_data_for_display_of_getstatus_response(false);
             }
-            is_refresh_players_data_event.store(false);
+
+            is_refreshed_players_data_ready_event.store(true);
           }
+          is_refresh_players_data_event.store(false);
         }
       }
     }
@@ -335,7 +302,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
   while (GetMessage(&msg, nullptr, 0, 0)) {
 
-    // if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg)) {
     if (IsDialogMessage(app_handles.hwnd_main_window, &msg) == 0) {
       TranslateMessage(&msg);
       if (msg.message == WM_KEYDOWN) {
@@ -347,13 +313,18 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     if (is_main_window_constructed && !is_tinyrcon_initialized) {
       string rcon_task_reply;
       is_tinyrcon_initialized = true;
-      print_colored_text(app_handles.hwnd_re_messages_data, "^2Sending rcon command ^1'g_gametype' ^2to the game server.\n", true, true, true);
-      main_app.get_connection_manager().send_and_receive_rcon_data("g_gametype", rcon_task_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
-      // if (main_app.get_is_rcon_password_valid()) {
-      print_colored_text(app_handles.hwnd_re_messages_data, "^2Sending rcon command ^1'status' ^2to the game server.\n", true, true, true);
-      main_app.get_connection_manager().send_and_receive_rcon_data("status", rcon_task_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
-      // initiate_sending_rcon_status_command_now();
-      prepare_players_data_for_display();
+      if (main_app.get_is_connection_settings_valid()) {
+        print_colored_text(app_handles.hwnd_re_messages_data, "^2Sending rcon command ^1'g_gametype' ^2to the game server.\n", true, true, true);
+        main_app.get_connection_manager().send_and_receive_rcon_data("g_gametype", rcon_task_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
+        print_colored_text(app_handles.hwnd_re_messages_data, "^2Sending rcon command ^1'status' ^2to the game server.\n", true, true, true);
+        main_app.get_connection_manager().send_and_receive_rcon_data("status", rcon_task_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
+        prepare_players_data_for_display();
+
+      } else {
+        print_colored_text(app_handles.hwnd_re_messages_data, "^2Sending rcon command ^1'getstatus' ^2to the game server.\n", true, true, true);
+        main_app.get_connection_manager().send_and_receive_rcon_data("getstatus", rcon_task_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
+        prepare_players_data_for_display_of_getstatus_response();
+      }
       display_players_data_in_players_grid(app_handles.hwnd_players_grid);
       PostMessage(app_handles.hwnd_progress_bar, PBM_SETMARQUEE, (WPARAM)FALSE, (LPARAM)0);
       auto progress_bar_style = GetWindowStyle(app_handles.hwnd_progress_bar);
@@ -375,10 +346,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       display_context_menu_over_grid(x, y, selected_row);
     }
   }
-
-  // if (task_thread != NULL) {
-  //   CloseHandle(task_thread);
-  // }
 
   is_terminate_program.store(true);
   {
@@ -425,8 +392,6 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
   wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_TINYRCONGUI));
   wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
   wcex.hbrBackground = CreateSolidBrush(color::black);
-  // wcex.hbrBackground = GetSysColorBrush(COLOR_3DFACE);
-  // wcex.lpszMenuName = MAKEINTRESOURCE(IDC_TINYRCONGUI);
   wcex.lpszClassName = "TINYRCONGUI";
   wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
   auto status = RegisterClassEx(&wcex);
@@ -444,8 +409,6 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
   wcex_confirmation_dialog.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_TINYRCONGUI));
   wcex_confirmation_dialog.hCursor = LoadCursor(nullptr, IDC_ARROW);
   wcex_confirmation_dialog.hbrBackground = CreateSolidBrush(color::black);
-  // wcex_confirmation_dialog.hbrBackground = GetSysColorBrush(COLOR_3DFACE);
-  // wcex_confirmation_dialog.lpszMenuName = MAKEINTRESOURCE(IDC_TINYRCONGUI);
   wcex_confirmation_dialog.lpszClassName = "ConfirmationDialog";
   wcex_confirmation_dialog.hIconSm = LoadIcon(wcex_confirmation_dialog.hInstance, MAKEINTRESOURCE(IDI_SMALL));
   status = RegisterClassEx(&wcex_confirmation_dialog);
@@ -464,8 +427,6 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
   wcex_configuration_dialog.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_TINYRCONGUI));
   wcex_configuration_dialog.hCursor = LoadCursor(nullptr, IDC_ARROW);
   wcex_configuration_dialog.hbrBackground = CreateSolidBrush(color::black);
-  // wcex_configuration_dialog.hbrBackground = GetSysColorBrush(COLOR_3DFACE);
-  // wcex_configuration_dialog.lpszMenuName = MAKEINTRESOURCE(IDC_TINYRCONGUI);
   wcex_configuration_dialog.lpszClassName = "ConfigurationDialog";
   wcex_configuration_dialog.hIconSm = LoadIcon(wcex_configuration_dialog.hInstance, MAKEINTRESOURCE(IDI_SMALL));
   status = RegisterClassEx(&wcex_configuration_dialog);
@@ -502,14 +463,13 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
   hfontbody = CreateFont(0, 0, 0, 0, FW_DONTCARE, FALSE, FALSE, FALSE, RUSSIAN_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, PROOF_QUALITY, FIXED_PITCH | FF_DECORATIVE, "Lucida Console");
 
-  app_handles.hwnd_main_window = CreateWindow("TINYRCONGUI", "Welcome to TinyRcon | For admins of the 185.158.113.146:28995 CoD2 CTF | version: 2.4", WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME /*WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX*/, 0, 0, screen_width, screen_height, nullptr, nullptr, hInstance, nullptr);
+  app_handles.hwnd_main_window = CreateWindow("TINYRCONGUI", "Welcome to TinyRcon | For admins of the 185.158.113.146:28995 CoD2 CTF | version: 2.4", WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME, 0, 0, screen_width, screen_height, nullptr, nullptr, hInstance, nullptr);
 
   if (!app_handles.hwnd_main_window)
     return FALSE;
 
   ShowWindow(app_handles.hwnd_main_window, nCmdShow);
   UpdateWindow(app_handles.hwnd_main_window);
-  // SetFocus(app_handles.hwnd_e_user_input);
   return TRUE;
 }
 
@@ -521,8 +481,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //  WM_COMMAND  - process the application menu
 //  WM_PAINT    - Paint the main window
 //  WM_DESTROY  - post a quit message and return
-//
-//
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
   static char msg_buffer[512];
@@ -538,7 +497,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
   case WM_TIMER: {
 
-    // SendMessage(g_progress_bar, PBM_STEPIT, 0, 0);
     ++atomic_counter;
     if (atomic_counter.load() > main_app.get_game_server().get_check_for_banned_players_time_period())
       atomic_counter.store(0);
@@ -560,52 +518,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       is_refreshed_players_data_ready_event.store(false);
       display_players_data_in_players_grid(app_handles.hwnd_players_grid);
     }
-
-    /*if (main_app.get_is_connection_settings_valid()) {
-
-      bool is_status_command_processed{};
-
-      while (!main_app.is_command_queue_empty()) {
-        auto cmd = main_app.get_command_from_queue();
-        if (!is_status_command_processed && (cmd.command[0] == "s" || cmd.command[0] == "!s" || cmd.command[0] == "status" || cmd.command[0] == "!status")) {
-          is_status_command_processed = true;
-          atomic_counter.store(main_app.get_game_server().get_check_for_banned_players_time_period());
-        }
-        main_app.process_queue_command(std::move(cmd));
-      }
-
-      if (main_app.get_game_server().get_check_for_banned_players_time_period() == atomic_counter.load()) {
-        if (!is_status_command_processed)
-          refresh_players_data();
-      }
-    }*/
-
-
-    // std::thread task{
-    //   [&]() {
-    //     // IsGUIThread(TRUE);
-    //     if (main_app.get_is_connection_settings_valid()) {
-
-    //      bool is_status_command_processed{};
-
-    //      while (!main_app.is_command_queue_empty()) {
-    //        auto cmd = main_app.get_command_from_queue();
-    //        if (!is_status_command_processed && (cmd.command[0] == "s" || cmd.command[0] == "!s" || cmd.command[0] == "status" || cmd.command[0] == "!status")) {
-    //          is_status_command_processed = true;
-    //          atomic_counter.store(main_app.get_game_server().get_check_for_banned_players_time_period());
-    //        }
-    //        main_app.process_queue_command(std::move(cmd));
-    //      }
-
-    //      if (main_app.get_game_server().get_check_for_banned_players_time_period() == atomic_counter.load()) {
-    //        if (!is_status_command_processed)
-    //          refresh_players_data();
-    //      }
-    //    }
-    //  }
-    //};
-
-    // task.detach();
 
     InvalidateRect(hWnd, &bounding_rectangle, TRUE);
   }
@@ -634,33 +546,26 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       LPNMCUSTOMDRAW item = (LPNMCUSTOMDRAW)some_item;
 
       if (item->uItemState & CDIS_SELECTED) {
-        // Select our color when the button is selected
         if (!selectbrush)
           selectbrush = CreateSolidBrush(color::yellow);
 
-        // Create pen for button border
         HPEN pen = CreatePen(PS_SOLID, 2, color::red);
 
-        // Select our brush into hDC
         HGDIOBJ old_pen = SelectObject(item->hdc, pen);
         HGDIOBJ old_brush = SelectObject(item->hdc, selectbrush);
 
         Rectangle(item->hdc, item->rc.left, item->rc.top, item->rc.right, item->rc.bottom);
 
-        // Clean up
         SelectObject(item->hdc, old_pen);
         SelectObject(item->hdc, old_brush);
         DeleteObject(pen);
 
-        // Here is the problem:
-        SetTextColor(item->hdc, color::red);// For green text, but use any COLORREF value.
+        SetTextColor(item->hdc, color::red);
         SetBkMode(item->hdc, TRANSPARENT);
         DrawTextA(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
         return CDRF_SKIPDEFAULT;
       } else {
-        if (item->uItemState & CDIS_HOT)// Our mouse is over the button
-        {
-          // Select our color when the mouse hovers our button
+        if (item->uItemState & CDIS_HOT) {
           if (!hotbrush)
             hotbrush = CreateSolidBrush(color::yellow);
 
@@ -675,14 +580,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
           SelectObject(item->hdc, old_brush);
           DeleteObject(pen);
 
-          // Here too:
-          SetTextColor(item->hdc, color::red);// For green text, but use any COLORREF value.
+          SetTextColor(item->hdc, color::red);
           SetBkMode(item->hdc, TRANSPARENT);
           DrawTextA(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
           return CDRF_SKIPDEFAULT;
         }
 
-        // Select our color when our button is doing nothing
         if (defaultbrush == NULL)
           defaultbrush = CreateSolidBrush(color::light_blue);
 
@@ -697,8 +600,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         SelectObject(item->hdc, old_brush);
         DeleteObject(pen);
 
-        // And also here:
-        SetTextColor(item->hdc, color::red);// For green text, but use any COLORREF value.
+        SetTextColor(item->hdc, color::red);
         SetBkMode(item->hdc, TRANSPARENT);
         DrawTextA(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
         return CDRF_SKIPDEFAULT;
@@ -714,12 +616,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     const int wmId = LOWORD(wParam);
     const int wparam_high_word = HIWORD(wParam);
 
-    // Parse the menu selections:
     switch (wmId) {
 
     case ID_QUITBUTTON:
-      // if (get_confirmation_message_from_user("^3Do you really want to quit?", "Exit program?")) {
-      if (show_user_confirmation_dialog("^3Do you really want to quit?", "Quit TinyRcon?")) {
+      if (show_user_confirmation_dialog("^3Do you really want to quit?\n", "Quit TinyRcon?")) {
         is_terminate_program.store(true);
         {
           unique_lock<mutex> ul{ mu };
@@ -735,10 +635,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     } break;
 
     case ID_CONNECTBUTTON: {
-      snprintf(message_buffer, std::size(message_buffer), "^3Are you sure you want to connect to ^1%s ^3game server?", main_app.get_game_server_name().c_str());
-      // string question_message{ message_buffer };
-      // remove_all_color_codes(question_message);
-      // if (get_confirmation_message_from_user(question_message.c_str(), "Confirm your action")) {
+      snprintf(message_buffer, std::size(message_buffer), "^3Are you sure you want to connect to ^1%s ^3game server?\n", main_app.get_game_server_name().c_str());
       if (show_user_confirmation_dialog(message_buffer, "Connect to the CoD2 game server?")) {
         connect_to_the_game_server(false, true);
       }
@@ -746,20 +643,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     case ID_CONNECTPRIVATESLOTBUTTON: {
 
-      snprintf(message_buffer, std::size(message_buffer), "^3Are you sure you want to connect to ^1%s ^3game server using a ^1private slot^3?", main_app.get_game_server_name().c_str());
-      // string question_message{ message_buffer };
-      // remove_all_color_codes(question_message);
+      snprintf(message_buffer, std::size(message_buffer), "^3Are you sure you want to connect to ^1%s ^3game server using a ^1private slot^3?\n", main_app.get_game_server_name().c_str());
       if (show_user_confirmation_dialog(message_buffer, "Connect to the CoD2 game server using a private slot?")) {
-        // if (get_confirmation_message_from_user(question_message.c_str(), "Confirm your action")) {
         connect_to_the_game_server(true, true);
       }
     } break;
 
     case ID_REFRESHDATABUTTON: {
-      if (main_app.get_is_connection_settings_valid()) {
-        // main_app.add_command_to_queue({ "status" }, command_type::rcon, true);
-        initiate_sending_rcon_status_command_now();
-      }
+      initiate_sending_rcon_status_command_now();
     } break;
 
 
@@ -772,7 +663,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       const auto &full_gametype_names = get_rcon_gametype_names_to_full_gametype_names_for_specified_game_name(main_app.get_game_name());
       if (stl::helper::len(full_map) > 0U && stl::helper::len(rcon_gametype) > 0U && full_map_names_to_rcon_map_names.contains(full_map) && full_gametype_names.contains(rcon_gametype)) {
         const string gametype_uc{ stl::helper::to_upper_case(rcon_gametype) };
-        snprintf(message_buffer, std::size(message_buffer), "^2Are you sure you want to load map ^3%s ^2in ^3%s ^2game type?", full_map, gametype_uc.c_str());
+        snprintf(message_buffer, std::size(message_buffer), "^2Are you sure you want to load map ^3%s ^2in ^3%s ^2game type?\n", full_map, gametype_uc.c_str());
         if (show_user_confirmation_dialog(message_buffer, "Confirm your action")) {
           const string load_map_command{ stl::helper::str_join(std::vector<string>{ "!m", full_map_names_to_rcon_map_names.at(full_map), rcon_gametype }, " ") };
           Edit_SetText(app_handles.hwnd_e_user_input, load_map_command.c_str());
@@ -788,7 +679,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
           selected_pid_str.erase(0, 2);
         if (int pid{ -1 }; is_valid_decimal_whole_number(selected_pid_str, pid)) {
           const string player_information{ get_player_information(pid) };
-          snprintf(message_buffer, std::size(message_buffer), "^3Are you sure you want to warn player (^4%s^3)?", player_information.c_str());
+          snprintf(message_buffer, std::size(message_buffer), "^3Are you sure you want to warn player (^4%s^3)?\n", player_information.c_str());
           if (show_user_confirmation_dialog(message_buffer, "Confirm your action")) {
             snprintf(msg_buffer, std::size(msg_buffer), "!w %d %s", pid, admin_reason.c_str());
             Edit_SetText(app_handles.hwnd_e_user_input, msg_buffer);
@@ -798,7 +689,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
       } else {
         print_colored_text(app_handles.hwnd_re_messages_data, "\n^3You have selected an empty line ^1(invalid pid index) ^3in the players' data table!\n^5Please, select a non-empty, valid player's row.\n", true, true, true);
-        // MessageBox(app_handles.hwnd_main_window, "You have selected an empty line (invalid pid index) in the players' data table!\nPlease, select desired player's row.", "Invalid selection", MB_ICONWARNING | MB_OK);
       }
     } break;
 
@@ -809,7 +699,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
           selected_pid_str.erase(0, 2);
         if (int pid{ -1 }; is_valid_decimal_whole_number(selected_pid_str, pid)) {
           const string player_information{ get_player_information(pid) };
-          snprintf(message_buffer, std::size(message_buffer), "^3Are you sure you want to kick player (^4%s^3)?", player_information.c_str());
+          snprintf(message_buffer, std::size(message_buffer), "^3Are you sure you want to kick player (^4%s^3)?\n", player_information.c_str());
           if (show_user_confirmation_dialog(message_buffer, "Confirm your action")) {
             snprintf(msg_buffer, std::size(msg_buffer), "!k %d %s", pid, admin_reason.c_str());
             Edit_SetText(app_handles.hwnd_e_user_input, msg_buffer);
@@ -819,7 +709,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
       } else {
         print_colored_text(app_handles.hwnd_re_messages_data, "\n^3You have selected an empty line ^1(invalid pid index) ^3in the players' data table!\n^5Please, select a non-empty, valid player's row.\n", true, true, true);
-        /*MessageBox(app_handles.hwnd_main_window, "You have selected an empty line (invalid pid index) in the players' data table!\nPlease, select desired player's row.", "Invalid selection", MB_ICONWARNING | MB_OK);*/
       }
 
     } break;
@@ -831,7 +720,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
           selected_pid_str.erase(0, 2);
         if (int pid{ -1 }; is_valid_decimal_whole_number(selected_pid_str, pid)) {
           const string player_information{ get_player_information(pid) };
-          snprintf(message_buffer, std::size(message_buffer), "^3Are you sure you want to temporarily ban IP address of player: (^4%s^3)?", player_information.c_str());
+          snprintf(message_buffer, std::size(message_buffer), "^3Are you sure you want to temporarily ban IP address of player: (^4%s^3)?\n", player_information.c_str());
           if (show_user_confirmation_dialog(message_buffer, "Confirm your action")) {
             snprintf(msg_buffer, std::size(msg_buffer), "!tb %d 24 %s", pid, admin_reason.c_str());
             Edit_SetText(app_handles.hwnd_e_user_input, msg_buffer);
@@ -841,7 +730,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
       } else {
         print_colored_text(app_handles.hwnd_re_messages_data, "\n^3You have selected an empty line ^1(invalid pid index) ^3in the players' data table!\n^5Please, select a non-empty, valid player's row.\n", true, true, true);
-        /* MessageBox(app_handles.hwnd_main_window, "You have selected an empty line (invalid pid index) in the players' data table!\nPlease, select desired player's row.", "Invalid selection", MB_ICONWARNING | MB_OK);*/
       }
 
     } break;
@@ -853,7 +741,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
           selected_pid_str.erase(0, 2);
         if (int pid{ -1 }; is_valid_decimal_whole_number(selected_pid_str, pid)) {
           const string player_information{ get_player_information(pid) };
-          snprintf(message_buffer, std::size(message_buffer), "^3Are you sure you want to permanently ban IP address of player: (^4%s^3)?", player_information.c_str());
+          snprintf(message_buffer, std::size(message_buffer), "^3Are you sure you want to permanently ban IP address of player: (^4%s^3)?\n", player_information.c_str());
           if (show_user_confirmation_dialog(message_buffer, "Confirm your action")) {
             snprintf(msg_buffer, std::size(msg_buffer), "!gb %d %s", pid, admin_reason.c_str());
             Edit_SetText(app_handles.hwnd_e_user_input, msg_buffer);
@@ -863,7 +751,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
       } else {
         print_colored_text(app_handles.hwnd_re_messages_data, "\n^3You have selected an empty line ^1(invalid pid index) ^3in the players' data table!\n^5Please, select a non-empty, valid player's row.\n", true, true, true);
-        /*MessageBox(app_handles.hwnd_main_window, "You have selected an empty line (invalid pid index) in the players' data table!\nPlease, select desired player's row.", "Invalid selection", MB_ICONWARNING | MB_OK);*/
       }
 
     } break;
@@ -871,7 +758,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case ID_SAY_BUTTON: {
 
       admin_reason = "Type your public message in here...";
-      if (show_user_confirmation_dialog("^2Are you sure you want to send a ^1public message ^2visible to all players?", "Confirm your action", "Message:")) {
+      if (show_user_confirmation_dialog("^2Are you sure you want to send a ^1public message ^2visible to all players?\n", "Confirm your action", "Message:")) {
         snprintf(msg_buffer, std::size(msg_buffer), "say \"%s\"", admin_reason.c_str());
         Edit_SetText(app_handles.hwnd_e_user_input, msg_buffer);
         get_user_input();
@@ -887,7 +774,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
           selected_pid_str.erase(0, 2);
         if (int pid{ -1 }; is_valid_decimal_whole_number(selected_pid_str, pid)) {
           const string player_information{ get_player_information(pid) };
-          snprintf(message_buffer, std::size(message_buffer), "^2Are you sure you want to send a ^1private message ^2to player: (^4%s^3)?", player_information.c_str());
+          snprintf(message_buffer, std::size(message_buffer), "^2Are you sure you want to send a ^1private message ^2to player: (^4%s^3)?\n", player_information.c_str());
           admin_reason = "Type your private message in here...";
           if (show_user_confirmation_dialog(message_buffer, "Confirm your action", "Message:")) {
             snprintf(msg_buffer, std::size(msg_buffer), "tell %d \"%s\"", pid, admin_reason.c_str());
@@ -1019,8 +906,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       screen_height - 58,
     };
 
-    if (!main_app.get_is_connection_settings_valid()) {
-      // KillTimer(app_handles.hwnd_main_window, ID_TIMER);
+    if (!is_tinyrcon_initialized) {
       DrawText(hdc, "Configuring and initializing tinyrcon ...", -1, &bounding_rectangle, DT_SINGLELINE | DT_TOP | DT_LEFT);
 
     } else {
@@ -1148,7 +1034,6 @@ LRESULT CALLBACK ComboProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UI
     GetClientRect(hwnd, &rc);
 
     // Select our color when the button is selected
-
     if (GetFocus() == hwnd) {
       if (!selectbrush)
         selectbrush = CreateSolidBrush(color::yellow);
@@ -1198,8 +1083,7 @@ LRESULT CALLBACK ComboProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UI
       InflateRect(&temp, -2, -2);
       DrawFocusRect(hdc, &temp);
     }
-    // SetTextColor(hdc, color::red);// For green text, but use any COLORREF value.
-    // SetBkMode(hdc, TRANSPARENT);
+
     int index = SendMessage(hwnd, CB_GETCURSEL, 0, 0);
     if (index >= 0) {
       SendMessage(hwnd, CB_GETLBTEXT, index, (LPARAM)buf);
@@ -1213,16 +1097,9 @@ LRESULT CALLBACK ComboProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UI
     return 0;
   }
 
-    // case WM_DESTROY: {
-    //   if (selectbrush) DeleteBrush(selectbrush);
-    //   if (brush) DeleteBrush(selectbrush);
-    // } break;
 
   case WM_NCDESTROY: {
     if (selectbrush) DeleteBrush(selectbrush);
-    // if (hotbrush) DeleteBrush(hotbrush);
-    // if (defaultbrush) DeleteBrush(defaultbrush);
-
     RemoveWindowSubclass(hwnd, ComboProc, uIdSubClass);
     break;
   }
@@ -1230,26 +1107,6 @@ LRESULT CALLBACK ComboProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UI
 
   return DefSubclassProc(hwnd, msg, wParam, lParam);
 }
-
-// LRESULT CALLBACK CBTProc(int nCode, WPARAM wParam, LPARAM lParam)
-//{
-//   HWND hwnd;
-//
-//   if (nCode < 0)
-//     return CallNextHookEx(hMsgBoxHook, nCode, wParam, lParam);
-//
-//   switch (nCode) {
-//   case HCBT_ACTIVATE:
-//     // Get handle to the message box!
-//     hwnd = (HWND)wParam;
-//
-//     // Do customization!
-//     return 0;
-//   }
-//
-//   // Call the next hook, if there is one
-//   return CallNextHookEx(hMsgBoxHook, nCode, wParam, lParam);
-// }
 
 LRESULT CALLBACK WndProcForConfirmationDialog(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -1276,29 +1133,24 @@ LRESULT CALLBACK WndProcForConfirmationDialog(HWND hWnd, UINT message, WPARAM wP
         if (comboBrush1 == NULL)
           comboBrush1 = CreateSolidBrush(color::yellow);
 
-        // Create pen for button border
         HPEN pen = CreatePen(PS_SOLID, 2, color::red);
 
-        // Select our brush into hDC
         HGDIOBJ old_pen = SelectObject(item->hdc, pen);
         HGDIOBJ old_brush = SelectObject(item->hdc, comboBrush1);
 
         Rectangle(item->hdc, item->rc.left, item->rc.top, item->rc.right, item->rc.bottom);
 
-        // Clean up
         SelectObject(item->hdc, old_pen);
         SelectObject(item->hdc, old_brush);
         DeleteObject(pen);
 
-        // Here is the problem:
-        SetTextColor(item->hdc, color::red);// For green text, but use any COLORREF value.
+        SetTextColor(item->hdc, color::red);
         SetBkMode(item->hdc, TRANSPARENT);
         DrawTextA(item->hdc, some_item->idFrom == ID_YES_BUTTON ? "Yes" : "No", -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
         return CDRF_SKIPDEFAULT;
       } else {
-        if (item->uItemState & CDIS_HOT || some_item->hwndFrom == GetFocus())// Our mouse is over the button
-        {
-          // Select our color when the mouse hovers our button
+        if (item->uItemState & CDIS_HOT || some_item->hwndFrom == GetFocus()) {
+
           if (comboBrush2 == NULL)
             comboBrush2 = CreateSolidBrush(color::yellow);
 
@@ -1313,28 +1165,21 @@ LRESULT CALLBACK WndProcForConfirmationDialog(HWND hWnd, UINT message, WPARAM wP
           SelectObject(item->hdc, old_brush);
           DeleteObject(pen);
 
-          // Here too:
-          SetTextColor(item->hdc, color::red);// For green text, but use any COLORREF value.
+          SetTextColor(item->hdc, color::red);
           SetBkMode(item->hdc, TRANSPARENT);
           DrawTextA(item->hdc, some_item->idFrom == ID_YES_BUTTON ? "Yes" : "No", -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
           return CDRF_SKIPDEFAULT;
         }
 
-        // Select our color when our button is doing nothing
         if (comboBrush3 == NULL)
           comboBrush3 = CreateSolidBrush(color::light_blue);
 
-        // HPEN pen = CreatePen(PS_SOLID, 2, color::light_blue);
-        // HGDIOBJ old_pen = SelectObject(item->hdc, pen);
         HGDIOBJ old_brush = SelectObject(item->hdc, comboBrush3);
 
         Rectangle(item->hdc, item->rc.left, item->rc.top, item->rc.right, item->rc.bottom);
 
-        // SelectObject(item->hdc, old_pen);
         SelectObject(item->hdc, old_brush);
-        // DeleteObject(pen);
 
-        // And also here:
         SetTextColor(item->hdc, color::red);// For green text, but use any COLORREF value.
         SetBkMode(item->hdc, TRANSPARENT);
         DrawTextA(item->hdc, some_item->idFrom == ID_YES_BUTTON ? "Yes" : "No", -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
@@ -1384,10 +1229,6 @@ LRESULT CALLBACK WndProcForConfirmationDialog(HWND hWnd, UINT message, WPARAM wP
     SetBkColor(hdc, color::black);
     SetTextColor(hdc, color::red);
     RECT bounding_rectangle{ 10, 220, 90, 240 };
-    // if (!black_brush)
-    //   black_brush = CreateSolidBrush(color::black);
-    // FillRect(hdc, &bounding_rectangle, black_brush);
-    // bounding_rectangle = { 10, 220, 90, 240 };
     DrawText(hdc, "Reason:", -1, &bounding_rectangle, DT_SINGLELINE | DT_TOP | DT_LEFT /*| DT_END_ELLIPSIS*/);
     EndPaint(hWnd, &ps);
   } break;
@@ -1437,6 +1278,9 @@ LRESULT CALLBACK WndProcForConfirmationDialog(HWND hWnd, UINT message, WPARAM wP
 
 LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+  constexpr size_t max_path_length{ 32768 };
+  static char install_path[max_path_length];
+  static char exe_file_path[max_path_length];
   static char msg_buffer[1024];
   HBRUSH orig_textEditBrush{};
   HBRUSH comboBrush1{}, comboBrush2{}, comboBrush3{}, comboBrush4{};
@@ -1453,39 +1297,32 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
 
     LPNMHDR some_item = (LPNMHDR)lParam;
 
-    if ((some_item->idFrom == ID_BUTTON_SAVE_CHANGES || some_item->idFrom == ID_BUTTON_TEST_CONNECTION || some_item->idFrom == ID_BUTTON_CANCEL || some_item->idFrom == ID_BUTTON_CONFIGURATION_EXIT_TINYRCON)
+    if ((some_item->idFrom == ID_BUTTON_SAVE_CHANGES || some_item->idFrom == ID_BUTTON_TEST_CONNECTION || some_item->idFrom == ID_BUTTON_CANCEL || some_item->idFrom == ID_BUTTON_CONFIGURATION_EXIT_TINYRCON || some_item->idFrom == ID_BUTTON_CONFIGURATION_COD1_PATH || some_item->idFrom == ID_BUTTON_CONFIGURATION_COD2_PATH || some_item->idFrom == ID_BUTTON_CONFIGURATION_COD4_PATH || some_item->idFrom == ID_BUTTON_CONFIGURATION_COD5_PATH)
         && (some_item->code == NM_CUSTOMDRAW)) {
       LPNMCUSTOMDRAW item = (LPNMCUSTOMDRAW)some_item;
 
       if (item->uItemState & CDIS_SELECTED) {
-        // Select our color when the button is selected
         if (!comboBrush1)
           comboBrush1 = CreateSolidBrush(color::yellow);
 
-        // Create pen for button border
         if (!pen)
           pen = CreatePen(PS_SOLID, 2, color::red);
 
-        // Select our brush into hDC
         HGDIOBJ old_pen = SelectObject(item->hdc, pen);
         HGDIOBJ old_brush = SelectObject(item->hdc, comboBrush1);
 
         Rectangle(item->hdc, item->rc.left, item->rc.top, item->rc.right, item->rc.bottom);
 
-        // Clean up
         SelectObject(item->hdc, old_pen);
         SelectObject(item->hdc, old_brush);
-        // DeleteObject(pen);
+        DeleteObject(pen);
 
-        // Here is the problem:
-        SetTextColor(item->hdc, color::red);// For green text, but use any COLORREF value.
+        SetTextColor(item->hdc, color::red);
         SetBkMode(item->hdc, TRANSPARENT);
         DrawTextA(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
         return CDRF_SKIPDEFAULT;
       } else {
-        if (item->uItemState & CDIS_HOT || some_item->hwndFrom == GetFocus())// Our mouse is over the button
-        {
-          // Select our color when the mouse hovers our button
+        if (item->uItemState & CDIS_HOT || some_item->hwndFrom == GetFocus()) {
           if (!comboBrush2)
             comboBrush2 = CreateSolidBrush(color::yellow);
 
@@ -1499,31 +1336,28 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
 
           SelectObject(item->hdc, old_pen);
           SelectObject(item->hdc, old_brush);
-          // DeleteObject(pen);
+          DeleteObject(pen);
 
-          // Here too:
-          SetTextColor(item->hdc, color::red);// For green text, but use any COLORREF value.
+          SetTextColor(item->hdc, color::red);
           SetBkMode(item->hdc, TRANSPARENT);
           DrawTextA(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
           return CDRF_SKIPDEFAULT;
         }
 
-        // Select our color when our button is doing nothing
         if (!comboBrush3)
           comboBrush3 = CreateSolidBrush(color::light_blue);
 
-        // HPEN pen = CreatePen(PS_SOLID, 2, color::light_blue);
-        // HGDIOBJ old_pen = SelectObject(item->hdc, pen);
+        HPEN pen2 = CreatePen(PS_SOLID, 2, color::light_blue);
+        HGDIOBJ old_pen = SelectObject(item->hdc, pen2);
         HGDIOBJ old_brush = SelectObject(item->hdc, comboBrush3);
 
         Rectangle(item->hdc, item->rc.left, item->rc.top, item->rc.right, item->rc.bottom);
 
-        // SelectObject(item->hdc, old_pen);
+        SelectObject(item->hdc, old_pen);
         SelectObject(item->hdc, old_brush);
-        // DeleteObject(pen);
+        DeleteObject(pen2);
 
-        // And also here:
-        SetTextColor(item->hdc, color::red);// For green text, but use any COLORREF value.
+        SetTextColor(item->hdc, color::red);
         SetBkMode(item->hdc, TRANSPARENT);
         DrawTextA(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
         return CDRF_SKIPDEFAULT;
@@ -1549,7 +1383,7 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
     } break;
 
     case ID_BUTTON_CANCEL: {
-
+      is_terminate_tinyrcon_settings_configuration_dialog_window.store(true);
       EnableWindow(app_handles.hwnd_main_window, TRUE);
       SetFocus(app_handles.hwnd_e_user_input);
       DestroyWindow(app_handles.hwnd_configuration_dialog);
@@ -1565,6 +1399,87 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
         exit_flag.notify_one();
       }
     } break;
+
+    case ID_BUTTON_CONFIGURATION_COD1_PATH: {
+
+      strcpy_s(install_path, max_path_length, "C:\\");
+      snprintf(msg_buffer, std::size(msg_buffer), "Please, select your Call of Duty game's installation folder (codmp.exe) and click OK.");
+
+      const char *cod1_game_path = BrowseFolder(install_path, msg_buffer);
+
+      if (lstrcmpA(cod1_game_path, "") == 0 || lstrcmpA(cod1_game_path, "C:\\") == 0) {
+        print_colored_text(app_handles.hwnd_re_messages_data, "^1Error! You haven't selected a valid folder for your game installation.\n");
+        print_colored_text(app_handles.hwnd_re_messages_data, "^5You have to select your ^1game's installation directory ^5and click the OK button.\n");
+      } else {
+        snprintf(exe_file_path, max_path_length, "%s\\codmp.exe", cod1_game_path);
+      }
+
+      stl::helper::trim_in_place(exe_file_path);
+
+      Edit_SetText(app_handles.hwnd_cod1_path_edit, exe_file_path);
+
+    } break;
+
+    case ID_BUTTON_CONFIGURATION_COD2_PATH: {
+
+      strcpy_s(install_path, max_path_length, "C:\\");
+      snprintf(msg_buffer, std::size(msg_buffer), "Please, select your Call of Duty 2 game's installation folder (cod2mp_s.exe) and click OK.");
+
+      const char *cod2_game_path = BrowseFolder(install_path, msg_buffer);
+
+      if (lstrcmpA(cod2_game_path, "") == 0 || lstrcmpA(cod2_game_path, "C:\\") == 0) {
+        print_colored_text(app_handles.hwnd_re_messages_data, "^1Error! You haven't selected a valid folder for your game installation.\n");
+        print_colored_text(app_handles.hwnd_re_messages_data, "^5You have to select your ^1game's installation directory ^5and click the OK button.\n");
+      } else {
+        snprintf(exe_file_path, max_path_length, "%s\\cod2mp_s.exe", cod2_game_path);
+      }
+
+      stl::helper::trim_in_place(exe_file_path);
+
+      Edit_SetText(app_handles.hwnd_cod2_path_edit, exe_file_path);
+
+    } break;
+
+    case ID_BUTTON_CONFIGURATION_COD4_PATH: {
+
+      strcpy_s(install_path, max_path_length, "C:\\");
+      snprintf(msg_buffer, std::size(msg_buffer), "Please, select your Call of Duty 4: Modern Warfare game's installation folder (iw3mp.exe) and click OK.");
+
+      const char *cod4_game_path = BrowseFolder(install_path, msg_buffer);
+
+      if (lstrcmpA(cod4_game_path, "") == 0 || lstrcmpA(cod4_game_path, "C:\\") == 0) {
+        print_colored_text(app_handles.hwnd_re_messages_data, "^1Error! You haven't selected a valid folder for your game installation.\n");
+        print_colored_text(app_handles.hwnd_re_messages_data, "^5You have to select your ^1game's installation directory ^5and click the OK button.\n");
+      } else {
+        snprintf(exe_file_path, max_path_length, "%s\\iw3mp.exe", cod4_game_path);
+      }
+
+      stl::helper::trim_in_place(exe_file_path);
+
+      Edit_SetText(app_handles.hwnd_cod4_path_edit, exe_file_path);
+
+    } break;
+
+    case ID_BUTTON_CONFIGURATION_COD5_PATH: {
+
+      strcpy_s(install_path, max_path_length, "C:\\");
+      snprintf(msg_buffer, std::size(msg_buffer), "Please, select your Call of Duty 5: World at War game's installation folder (cod5mp.exe) and click OK.");
+
+      const char *cod5_game_path = BrowseFolder(install_path, msg_buffer);
+
+      if (lstrcmpA(cod5_game_path, "") == 0 || lstrcmpA(cod5_game_path, "C:\\") == 0) {
+        print_colored_text(app_handles.hwnd_re_messages_data, "^1Error! You haven't selected a valid folder for your game installation.\n");
+        print_colored_text(app_handles.hwnd_re_messages_data, "^5You have to select your ^1game's installation directory ^5and click the OK button.\n");
+      } else {
+        snprintf(exe_file_path, max_path_length, "%s\\cod5mp.exe", cod5_game_path);
+      }
+
+      stl::helper::trim_in_place(exe_file_path);
+
+      Edit_SetText(app_handles.hwnd_cod5_path_edit, exe_file_path);
+
+    } break;
+
 
     default:
       return DefWindowProc(hWnd, message, wParam, lParam);
@@ -1610,42 +1525,3 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
   }
   return DefWindowProc(hWnd, message, wParam, lParam);
 }
-
-// Message handler for about box.
-// INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
-//{
-//  UNREFERENCED_PARAMETER(lParam);
-//  switch (message) {
-//  case WM_INITDIALOG:
-//    return (INT_PTR)TRUE;
-//
-//  case WM_COMMAND:
-//    if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL) {
-//      EndDialog(hDlg, LOWORD(wParam));
-//      return (INT_PTR)TRUE;
-//    }
-//    break;
-//  }
-//  return (INT_PTR)FALSE;
-//}
-
-// int MsgBoxEx(HWND hwnd, const char* szText, const char* szCaption, UINT uType)
-//{
-//   int retval;
-//
-//   // Install a window hook, so we can intercept the message-box
-//   // creation, and customize it
-//   hMsgBoxHook = SetWindowsHookEx(
-//     WH_CBT,
-//     CBTProc,
-//     NULL,
-//     GetCurrentThreadId()// Only install for THIS thread!!!
-//   );
-//
-//   // Display a standard message box
-//   retval = MessageBox(hwnd, szText, szCaption, uType);
-//
-//   // remove the window hook
-//   UnhookWindowsHookEx(hMsgBoxHook);
-//   return retval;
-// }

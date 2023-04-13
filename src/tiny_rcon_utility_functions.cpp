@@ -17,7 +17,11 @@
 #include "Resource.h"
 #include "simpleGrid.h"
 
-// CoD 2 steam appid: 2630
+// Call of duty steam appid: 2620
+// Call of duty 2 steam appid: 2630
+// Call of duty 4: Modern Warfare steam appid: 7940
+// Call of duty 5: World at war steam appid: 10090
+
 using namespace std;
 using namespace stl::helper;
 
@@ -28,45 +32,6 @@ extern char const *const banned_ip_addresses_file_path;
 extern PROCESS_INFORMATION pr_info;
 extern sort_type type_of_sort;
 
-// extern HINSTANCE g_hInstance;
-// extern HWND app_handles.hwnd_main_window;
-// extern HWND app_handles.hwnd_players_grid;
-// extern HWND app_handles.hwnd_match_information;
-// extern HWND app_handles.hwnd_re_messages_data;
-// extern HWND app_handles.hwnd_re_help_data;
-// extern HWND app_handles.hwnd_e_user_input;
-// extern HWND app_handles.hwnd_progress_bar;
-// extern HWND g_combo_box_map;
-// extern HWND g_combo_box_gametype;
-// extern HWND g_combo_box_sortmode;
-// extern HWND g_button_load;
-// extern HWND g_button_kick;
-// extern HWND g_button_tempban;
-// extern HWND g_button_ipban;
-// extern HWND g_button_view_tempbans;
-// extern HWND g_button_view_ipbans;
-// extern HWND g_refresh_players_data_button;
-// extern HWND g_connect_button;
-// extern HWND g_connect_private_slot_button;
-// extern HWND g_say_button;
-// extern HWND g_tell_button;
-// extern HWND g_quit_button;
-// extern HWND app_handles.hwnd_confirmation_dialog;
-// extern HWND app_handles.hwnd_yes_button;
-// extern HWND app_handles.hwnd_no_button;
-// extern HWND app_handles.hwnd_re_confirmation_message;
-// extern HWND app_handles.hwnd_e_reason;
-// extern HWND app_handles.hwnd_configuration_dialog;
-// extern HWND app_handles.hwnd_server_name;
-// extern HWND app_handles.hwnd_server_ip_address;
-// extern HWND app_handles.hwnd_server_port;
-// extern HWND app_handles.hwnd_rcon_password;
-// extern HWND app_handles.hwnd_refresh_time_period;
-// extern HWND app_handles.hwnd_save_settings_button;
-// extern HWND app_handles.hwnd_test_connection_button;
-// extern HWND app_handles.hwnd_close_button;
-// extern HWND app_handles.hwnd_exit_tinyrcon_button;
-// extern HWND g_configure_server_settings_button;
 extern WNDCLASSEX wcex_confirmation_dialog, wcex_configuration_dialog;
 extern HFONT hfontbody;
 
@@ -77,6 +42,7 @@ extern int selected_col;
 extern const char *user_help_message;
 extern const size_t max_players_grid_rows{ 64 };
 volatile std::atomic<bool> is_terminate_program{ false };
+volatile std::atomic<bool> is_terminate_tinyrcon_settings_configuration_dialog_window{ false };
 extern volatile std::atomic<bool> is_refresh_players_data_event;
 extern std::atomic<int> admin_choice;
 extern std::string admin_reason;
@@ -116,6 +82,7 @@ string match_information;
 HIMAGELIST hImageList{};
 row_of_player_data_to_display displayed_players_data[64]{};
 
+static char path_buffer[32768];
 
 extern const std::unordered_map<char, COLORREF> colors{
   { '0', color::black },
@@ -298,6 +265,9 @@ unordered_set<string> user_commands_set{
   "!banip",
   "!ub",
   "!unban",
+  "gs",
+  "!gs",
+  "!getstatus",
   "!config",
   "!rt",
   "!refreshtime",
@@ -377,7 +347,7 @@ unordered_set<string> rcon_commands_set{ "s",
   "!say",
   "!tell" };
 
-unordered_set<string> rcon_commands_wait_for_reply{ "!s", "!status", "s", "status", "serverinfo", "map_rotate", "map_restart", "map", "fast_restart", "getinfo", "mapname", "g_gametype", "sv_maprotation", "sv_maprotationcurrent" };
+unordered_set<string> rcon_commands_wait_for_reply{ "!s", "!status", "s", "status", "gs", "!gs", "getstatus", "serverinfo", "map_rotate", "map_restart", "map", "fast_restart", "getinfo", "mapname", "g_gametype", "sv_maprotation", "sv_maprotationcurrent" };
 
 extern unordered_map<size_t, string> rcon_status_grid_column_header_titles;
 extern unordered_map<size_t, string> get_status_grid_column_header_titles;
@@ -724,7 +694,10 @@ bool write_tiny_rcon_json_settings_to_file(
   config_file << "\"rcon_port\": " << main_app.get_game_server().get_server_port() << ",\n";
   config_file << "\"rcon_password\": \"" << main_app.get_game_server().get_rcon_password() << "\",\n";
   config_file << "\"private_slot_password\": \"" << main_app.get_game_server().get_private_slot_password() << "\",\n";
+  config_file << "\"codmp_exe_path\": \"" << main_app.get_codmp_exe_path() << "\",\n";
   config_file << "\"cod2mp_s_exe_path\": \"" << main_app.get_cod2mp_exe_path() << "\",\n";
+  config_file << "\"iw3mp_exe_path\": \"" << main_app.get_iw3mp_exe_path() << "\",\n";
+  config_file << "\"cod5mp_exe_path\": \"" << main_app.get_cod5mp_exe_path() << "\",\n";
   config_file << "\"enable_automatic_connection_flood_ip_ban\": " << (main_app.get_is_enable_automatic_connection_flood_ip_ban() ? "true" : "false") << ",\n";
   config_file << "\"minimum_number_of_connections_from_same_ip_for_automatic_ban\": " << main_app.get_minimum_number_of_connections_from_same_ip_for_automatic_ban() << ",\n";
   config_file << "\"number_of_warnings_for_automatic_kick\": " << main_app.get_maximum_number_of_warnings_for_automatic_kick() << ",\n";
@@ -981,6 +954,21 @@ void parse_tiny_cod2_rcon_tool_config_file(const char *configFileName)
     main_app.get_game_server().set_private_slot_password("abc123");
   }
 
+  if (json_resource["codmp_exe_path"].exists()) {
+    data_line = json_resource["codmp_exe_path"].as_str();
+    replace_forward_slash_with_backward_slash(data_line);
+    strip_leading_and_trailing_quotes(data_line);
+    main_app.set_codmp_exe_path(std::move(data_line));
+  } else {
+    found_missing_config_setting = true;
+    main_app.set_codmp_exe_path("");
+  }
+
+
+  if (!check_if_file_path_exists(main_app.get_codmp_exe_path().c_str())) {
+    main_app.set_codmp_exe_path("");
+  }
+
   if (json_resource["cod2mp_s_exe_path"].exists()) {
     data_line = json_resource["cod2mp_s_exe_path"].as_str();
     replace_forward_slash_with_backward_slash(data_line);
@@ -994,6 +982,36 @@ void parse_tiny_cod2_rcon_tool_config_file(const char *configFileName)
 
   if (!check_if_file_path_exists(main_app.get_cod2mp_exe_path().c_str())) {
     main_app.set_cod2mp_exe_path("");
+  }
+
+  if (json_resource["iw3mp_exe_path"].exists()) {
+    data_line = json_resource["iw3mp_exe_path"].as_str();
+    replace_forward_slash_with_backward_slash(data_line);
+    strip_leading_and_trailing_quotes(data_line);
+    main_app.set_iw3mp_exe_path(std::move(data_line));
+  } else {
+    found_missing_config_setting = true;
+    main_app.set_iw3mp_exe_path("");
+  }
+
+
+  if (!check_if_file_path_exists(main_app.get_iw3mp_exe_path().c_str())) {
+    main_app.set_iw3mp_exe_path("");
+  }
+
+  if (json_resource["cod5mp_exe_path"].exists()) {
+    data_line = json_resource["cod5mp_exe_path"].as_str();
+    replace_forward_slash_with_backward_slash(data_line);
+    strip_leading_and_trailing_quotes(data_line);
+    main_app.set_cod5mp_exe_path(std::move(data_line));
+  } else {
+    found_missing_config_setting = true;
+    main_app.set_cod5mp_exe_path("");
+  }
+
+
+  if (!check_if_file_path_exists(main_app.get_cod5mp_exe_path().c_str())) {
+    main_app.set_cod5mp_exe_path("");
   }
 
   if (json_resource["enable_automatic_connection_flood_ip_ban"].exists()) {
@@ -2472,6 +2490,8 @@ void process_user_command(const std::vector<string> &user_cmd)
     } else if (user_cmd[0] == "s" || user_cmd[0] == "!s" || user_cmd[0] == "!status") {
       // main_app.add_command_to_queue({ "status" }, command_type::rcon, true);
       initiate_sending_rcon_status_command_now();
+    } else if (user_cmd[0] == "gs" || user_cmd[0] == "!gs" || user_cmd[0] == "getstatus" || user_cmd[0] == "!getstatus") {
+      main_app.add_command_to_queue({ "getstatus" }, command_type::rcon, true);
     } else if (user_cmd[0] == "!t" || user_cmd[0] == "!time") {
       const std::chrono::time_point<std::chrono::system_clock> now =
         std::chrono::system_clock::now();
@@ -2520,7 +2540,6 @@ void process_user_command(const std::vector<string> &user_cmd)
 
         type_of_sort = new_sort_type;
         if (main_app.get_is_connection_settings_valid()) {
-          // main_app.add_command_to_queue({ "status" }, command_type::rcon, true);
           initiate_sending_rcon_status_command_now();
         }
       } else {
@@ -3639,7 +3658,7 @@ void log_message(const string &msg, const bool is_log_current_date_time) noexcep
     os << "[" << put_time(&time_info, "%Y-%b-%d %T") << "] ";
   }
   os << msg;
-  if (msg.back() == '\n') {
+  if (msg.back() != '\n') {
     os << endl;
   }
   main_app.log_message(os.str());
@@ -3802,25 +3821,31 @@ void say_slow(HWND control, const char *msg, size_t const len) noexcept
 
 bool remove_dir_path_sep_char(char *dir_path) noexcept
 {
-  if (stl::helper::str_ends_with(dir_path, '\\') || stl::helper::str_ends_with(dir_path, '/')) {
-    auto len = lstrlenA(dir_path);
-    dir_path[len - 1] = 0;
-    return true;
+  const size_t dir_path_len{ stl::helper::len(dir_path) };
+  if (dir_path_len == 0)
+    return false;
+  size_t index{ dir_path_len - 1 };
+  while (index > 0 && (dir_path[index] == '\\' || dir_path[index] == '/')) {
+    dir_path[index] = '\0';
+    --index;
   }
 
-  return false;
+  return index < dir_path_len - 1;
 }
 
 bool remove_dir_path_sep_char(wchar_t *dir_path) noexcept
 {
 
-  if (stl::helper::str_ends_with(dir_path, L'\\') || stl::helper::str_ends_with(dir_path, L'/')) {
-    auto len = lstrlenW(dir_path);
-    dir_path[len - 1] = L'\0';
-    return true;
+  const size_t dir_path_len{ stl::helper::len(dir_path) };
+  if (dir_path_len == 0)
+    return false;
+  size_t index{ dir_path_len - 1 };
+  while (index > 0 && (dir_path[index] == L'\\' || dir_path[index] == L'/')) {
+    dir_path[index] = L'\0';
+    --index;
   }
 
-  return false;
+  return index < dir_path_len - 1;
 }
 
 void replace_forward_slash_with_backward_slash(std::string &path)
@@ -3893,7 +3918,292 @@ const char *BrowseFolder(const char *saved_path, const char *user_info) noexcept
   return path;
 }
 
-const char *find_call_of_duty_2_installation_path() noexcept
+const char *find_call_of_duty_1_installation_path(const bool is_show_browse_folder_dialog) noexcept
+{
+  constexpr size_t max_path_length{ 32768 };
+  static char install_path[max_path_length]{};
+  static char exe_file_path[max_path_length]{};
+  static const char *def_cod1_registry_location_subkeys[] = {
+    "SOFTWARE\\Activision\\Call of Duty",
+    "SOFTWARE\\Wow6432Node\\Activision\\Call of Duty",
+    "SOFTWARE\\Activision\\Call of Duty(R)",
+    "SOFTWARE\\WOW6432Node\\Activision\\Call of Duty(R)",
+    nullptr
+  };
+  const char *game_install_path_key = "InstallPath";
+  DWORD cch{};
+  HKEY game_installation_reg_key{};
+  bool found{};
+
+  WIN32_FIND_DATAA find_data;
+  HANDLE search_handle;
+
+  const char *found_reg_location{};
+
+  const char **def_game_reg_key;
+
+  def_game_reg_key = def_cod1_registry_location_subkeys;
+
+  LRESULT status;
+
+  ZeroMemory(&game_installation_reg_key, sizeof(HKEY));
+  DWORD is_steam_game_installed{};
+
+  status = RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Valve\\Steam\\Apps\\2620", 0, KEY_QUERY_VALUE, &game_installation_reg_key);
+
+  if (status == ERROR_SUCCESS) {
+    cch = sizeof(is_steam_game_installed);
+    status = RegQueryValueExA(game_installation_reg_key, "Installed", nullptr, nullptr, reinterpret_cast<LPBYTE>(&is_steam_game_installed), &cch);
+
+    if (status == ERROR_SUCCESS && is_steam_game_installed == 1) {
+      HKEY steam_installation_key{};
+      status = RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Valve\\Steam", 0, KEY_QUERY_VALUE, &steam_installation_key);
+      if (status == ERROR_SUCCESS) {
+        cch = sizeof(install_path);
+        status = RegQueryValueExA(steam_installation_key, "SteamExe", nullptr, nullptr, reinterpret_cast<LPBYTE>(install_path), &cch);
+
+        if (status == ERROR_SUCCESS) {
+
+          string steam_exe_path{ install_path };
+          replace_forward_slash_with_backward_slash(steam_exe_path);
+          if (check_if_file_path_exists(steam_exe_path.c_str())) {
+
+            snprintf(exe_file_path, max_path_length, "\"%s\" -applaunch 2620", steam_exe_path.c_str());
+
+            found = true;
+            char buffer[1024];
+            snprintf(buffer, std::size(buffer), "^2Successfully built your ^3Call of Duty (Steam) ^2game's launch command: ^5%s\n", exe_file_path);
+            print_colored_text(app_handles.hwnd_re_messages_data, buffer);
+            *def_game_reg_key = nullptr;
+          }
+        }
+
+        RegCloseKey(steam_installation_key);
+      }
+    }
+
+    RegCloseKey(game_installation_reg_key);
+  }
+
+  if (!found) {
+    ZeroMemory(&game_installation_reg_key, sizeof(HKEY));
+    is_steam_game_installed = 0;
+    cch = sizeof(is_steam_game_installed);
+
+    status = RegOpenKeyExA(HKEY_CURRENT_USER, "SOFTWARE\\Valve\\Steam\\Apps\\2620", 0, KEY_QUERY_VALUE, &game_installation_reg_key);
+
+    if (status == ERROR_SUCCESS) {
+
+      status = RegQueryValueExA(game_installation_reg_key, "Installed", nullptr, nullptr, reinterpret_cast<LPBYTE>(&is_steam_game_installed), &cch);
+
+      if (status == ERROR_SUCCESS && is_steam_game_installed == 1) {
+        HKEY steam_installation_key{};
+        status = RegOpenKeyExA(HKEY_CURRENT_USER, "SOFTWARE\\Valve\\Steam", 0, KEY_QUERY_VALUE, &steam_installation_key);
+        if (status == ERROR_SUCCESS) {
+          cch = sizeof(install_path);
+          status = RegQueryValueExA(steam_installation_key, "SteamExe", nullptr, nullptr, reinterpret_cast<LPBYTE>(install_path), &cch);
+
+          if (status == ERROR_SUCCESS) {
+
+            string steam_exe_path{ install_path };
+            replace_forward_slash_with_backward_slash(steam_exe_path);
+            if (check_if_file_path_exists(steam_exe_path.c_str())) {
+
+              snprintf(exe_file_path, max_path_length, "\"%s\" -applaunch 2620", steam_exe_path.c_str());
+
+              found = true;
+              char buffer[1024];
+              snprintf(buffer, std::size(buffer), "^2Successfully built your ^3Call of Duty (Steam) ^2game's launch command: ^5%s\n", exe_file_path);
+              print_colored_text(app_handles.hwnd_re_messages_data, buffer);
+              *def_game_reg_key = nullptr;
+            }
+          }
+
+          RegCloseKey(steam_installation_key);
+        }
+      }
+
+      RegCloseKey(game_installation_reg_key);
+    }
+  }
+
+  while (!found && *def_game_reg_key) {
+
+    ZeroMemory(&game_installation_reg_key, sizeof(HKEY));
+
+    cch = sizeof(install_path);
+
+    status = RegOpenKeyExA(HKEY_LOCAL_MACHINE, *def_game_reg_key, 0, KEY_QUERY_VALUE, &game_installation_reg_key);
+
+    if (status == ERROR_SUCCESS) {
+
+      status = RegQueryValueExA(game_installation_reg_key, game_install_path_key, nullptr, nullptr, reinterpret_cast<LPBYTE>(install_path), &cch);
+
+      if (status == ERROR_SUCCESS) {
+
+        ZeroMemory(&find_data, sizeof(WIN32_FIND_DATAA));
+
+        remove_dir_path_sep_char(install_path);
+
+        snprintf(exe_file_path, max_path_length, "%s\\codmp.exe", install_path);
+
+        search_handle = FindFirstFileA(exe_file_path, &find_data);
+
+        if (search_handle != INVALID_HANDLE_VALUE) {
+
+          found = true;
+          found_reg_location = *def_game_reg_key;
+          char buffer[1024];
+          snprintf(buffer, std::size(buffer), "^2Successfully built your ^3Call of Duty ^2game's launch command: ^5%s\n", exe_file_path);
+          print_colored_text(app_handles.hwnd_re_messages_data, buffer);
+          *def_game_reg_key = nullptr;
+          break;
+        }
+      }
+
+      RegCloseKey(game_installation_reg_key);
+    }
+
+    def_game_reg_key++;
+  }
+
+  if (!found) {
+
+    def_game_reg_key = def_cod1_registry_location_subkeys;
+
+    while (!found && *def_game_reg_key) {
+
+      ZeroMemory(&game_installation_reg_key, sizeof(HKEY));
+      cch = sizeof(install_path);
+
+      status = RegOpenKeyExA(HKEY_CURRENT_USER, *def_game_reg_key, 0, KEY_QUERY_VALUE, &game_installation_reg_key);
+
+      if (status == ERROR_SUCCESS) {
+
+        status = RegQueryValueExA(game_installation_reg_key, game_install_path_key, nullptr, nullptr, reinterpret_cast<LPBYTE>(install_path), &cch);
+
+        if (status == ERROR_SUCCESS) {
+
+          ZeroMemory(&find_data, sizeof(WIN32_FIND_DATAA));
+
+          remove_dir_path_sep_char(install_path);
+
+          snprintf(exe_file_path, max_path_length, "%s\\codmp.exe", install_path);
+
+          search_handle = FindFirstFileA(exe_file_path, &find_data);
+
+          if (search_handle != INVALID_HANDLE_VALUE) {
+
+            found = true;
+            found_reg_location = *def_game_reg_key;
+            char buffer[1024];
+            snprintf(buffer, std::size(buffer), "^2Successfully built your ^3Call of Duty ^2game's launch command: ^5%s\n", exe_file_path);
+            print_colored_text(app_handles.hwnd_re_messages_data, buffer);
+            *def_game_reg_key = nullptr;
+            break;
+          }
+        }
+
+        RegCloseKey(game_installation_reg_key);
+      }
+
+      def_game_reg_key++;
+    }
+  }
+
+  if (!found && is_show_browse_folder_dialog) {
+
+    strcpy_s(install_path, max_path_length, "C:\\");
+    found_reg_location = nullptr;
+
+    static char msgbuff[1024];
+    snprintf(msgbuff, std::size(msgbuff), "Please, select your Call of Duty game's installation folder and click OK.");
+
+    const char *cod1_game_path = BrowseFolder(install_path, msgbuff);
+
+    if (lstrcmpA(cod1_game_path, "") == 0 || lstrcmpA(cod1_game_path, "C:\\") == 0) {
+      print_colored_text(app_handles.hwnd_re_messages_data, "^1\n> Error! You haven't selected a valid folder for your game installation.");
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3\n> You have to select your game's installation directory and click the OK button.");
+      print_colored_text(app_handles.hwnd_re_messages_data, "^2\n> Restart the program and try again.\n");
+    } else {
+      snprintf(exe_file_path, max_path_length, "%s\\codmp.exe", cod1_game_path);
+    }
+  }
+
+  if (!stl::helper::str_contains(exe_file_path, "-applaunch 2620")) {
+    string exe_path{ exe_file_path };
+    replace_forward_slash_with_backward_slash(exe_path);
+    strcpy_s(exe_file_path, max_path_length, exe_path.c_str());
+  }
+
+  if (!check_if_file_path_exists(exe_file_path) && !stl::helper::str_contains(exe_file_path, "-applaunch 2620")) {
+    main_app.set_codmp_exe_path("");
+  } else {
+    main_app.set_codmp_exe_path(exe_file_path);
+    write_tiny_rcon_json_settings_to_file("config\\tinyrcon.json");
+  }
+
+  return exe_file_path;
+}
+
+bool check_if_call_of_duty_1_game_is_running() noexcept
+{
+  DWORD processes[1024], processes_size{};
+  char buffer[256];
+
+  memset(processes, 0, 1024 * sizeof(DWORD));
+
+  if (EnumProcesses(processes, sizeof(processes), &processes_size))
+    for (size_t i{}; i < processes_size; ++i) {
+      if (processes[i] == 0) continue;
+      auto ph = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, 0, processes[i]);
+      const auto n = GetModuleBaseNameA(ph, 0, buffer, sizeof(buffer));
+      CloseHandle(ph);
+      if (n == 0) continue;
+      const string module_base_name{ buffer };
+      if (stl::helper::str_index_of(module_base_name, "codmp.exe", 0, true) != string::npos)
+        return true;
+    }
+
+  DWORD cch{};
+  HKEY game_installation_reg_key;
+
+  ZeroMemory(&game_installation_reg_key, sizeof(HKEY));
+  DWORD is_steam_game_running{};
+  cch = sizeof(is_steam_game_running);
+
+  auto status = RegOpenKeyExA(HKEY_CURRENT_USER, "SOFTWARE\\Valve\\Steam", 0, KEY_QUERY_VALUE, &game_installation_reg_key);
+
+  if (status == ERROR_SUCCESS) {
+
+    status = RegQueryValueExA(game_installation_reg_key, "RunningAppID", nullptr, nullptr, reinterpret_cast<LPBYTE>(&is_steam_game_running), &cch);
+
+    if (status == ERROR_SUCCESS && 2620 == is_steam_game_running)
+      return true;
+  }
+
+  RegCloseKey(game_installation_reg_key);
+
+  ZeroMemory(&game_installation_reg_key, sizeof(HKEY));
+  is_steam_game_running = 0;
+  cch = sizeof(is_steam_game_running);
+
+  status = RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Valve\\Steam", 0, KEY_QUERY_VALUE, &game_installation_reg_key);
+
+  if (status == ERROR_SUCCESS) {
+
+    status = RegQueryValueExA(game_installation_reg_key, "RunningAppID", nullptr, nullptr, reinterpret_cast<LPBYTE>(&is_steam_game_running), &cch);
+
+    if (status == ERROR_SUCCESS && 2620 == is_steam_game_running)
+      return true;
+  }
+
+  RegCloseKey(game_installation_reg_key);
+
+  return false;
+}
+
+const char *find_call_of_duty_2_installation_path(const bool is_show_browse_folder_dialog) noexcept
 {
   constexpr size_t max_path_length{ 32768 };
   static char install_path[max_path_length]{};
@@ -3947,7 +4257,7 @@ const char *find_call_of_duty_2_installation_path() noexcept
 
             found = true;
             char buffer[1024];
-            snprintf(buffer, std::size(buffer), "^2Successfully found your ^3Call of Duty 2 (Steam) ^2game's launch command: ^5%s\n", exe_file_path);
+            snprintf(buffer, std::size(buffer), "^2Successfully built your ^3Call of Duty 2 (Steam) ^2game's launch command: ^5%s\n", exe_file_path);
             print_colored_text(app_handles.hwnd_re_messages_data, buffer);
             *def_game_reg_key = nullptr;
           }
@@ -3988,7 +4298,7 @@ const char *find_call_of_duty_2_installation_path() noexcept
 
               found = true;
               char buffer[1024];
-              snprintf(buffer, std::size(buffer), "^2Successfully found your ^3Call of Duty 2 (Steam) ^2game's launch command: ^5%s\n", exe_file_path);
+              snprintf(buffer, std::size(buffer), "^2Successfully built your ^3Call of Duty 2 (Steam) ^2game's launch command: ^5%s\n", exe_file_path);
               print_colored_text(app_handles.hwnd_re_messages_data, buffer);
               *def_game_reg_key = nullptr;
             }
@@ -4029,7 +4339,7 @@ const char *find_call_of_duty_2_installation_path() noexcept
           found = true;
           found_reg_location = *def_game_reg_key;
           char buffer[1024];
-          snprintf(buffer, std::size(buffer), "^2Successfully found your ^3Call of Duty 2 ^2game's launch command: ^5%s\n", exe_file_path);
+          snprintf(buffer, std::size(buffer), "^2Successfully built your ^3Call of Duty 2 ^2game's launch command: ^5%s\n", exe_file_path);
           print_colored_text(app_handles.hwnd_re_messages_data, buffer);
           *def_game_reg_key = nullptr;
           break;
@@ -4039,7 +4349,7 @@ const char *find_call_of_duty_2_installation_path() noexcept
       RegCloseKey(game_installation_reg_key);
     }
 
-    def_game_reg_key++;
+    ++def_game_reg_key;
   }
 
   if (!found) {
@@ -4072,7 +4382,7 @@ const char *find_call_of_duty_2_installation_path() noexcept
             found = true;
             found_reg_location = *def_game_reg_key;
             char buffer[1024];
-            snprintf(buffer, std::size(buffer), "^2Successfully found your ^3Call of Duty 2 ^2game's launch command: ^5%s\n", exe_file_path);
+            snprintf(buffer, std::size(buffer), "^2Successfully built your ^3Call of Duty 2 ^2game's launch command: ^5%s\n", exe_file_path);
             print_colored_text(app_handles.hwnd_re_messages_data, buffer);
             *def_game_reg_key = nullptr;
             break;
@@ -4082,11 +4392,11 @@ const char *find_call_of_duty_2_installation_path() noexcept
         RegCloseKey(game_installation_reg_key);
       }
 
-      def_game_reg_key++;
+      ++def_game_reg_key;
     }
   }
 
-  if (!found) {
+  if (!found && is_show_browse_folder_dialog) {
 
     strcpy_s(install_path, max_path_length, "C:\\");
     found_reg_location = nullptr;
@@ -4178,28 +4488,646 @@ bool check_if_call_of_duty_2_game_is_running() noexcept
   return false;
 }
 
+const char *find_call_of_duty_4_installation_path(const bool is_show_browse_folder_dialog) noexcept
+{
+  constexpr size_t max_path_length{ 32768 };
+  static char install_path[max_path_length]{};
+  static char exe_file_path[max_path_length]{};
+  static const char *def_cod4_registry_location_subkeys[] = {
+    "SOFTWARE\\Activision\\Call of Duty 4",
+    "SOFTWARE\\Wow6432Node\\Activision\\Call of Duty 4",
+    "SOFTWARE\\Activision\\Call of Duty(R) 4",
+    "SOFTWARE\\WOW6432Node\\Activision\\Call of Duty(R) 4",
+    nullptr
+  };
+  const char *game_install_path_key = "InstallPath";
+  DWORD cch{};
+  HKEY game_installation_reg_key{};
+  bool found{};
+
+  WIN32_FIND_DATAA find_data;
+  HANDLE search_handle;
+
+  const char *found_reg_location{};
+
+  const char **def_game_reg_key;
+
+  def_game_reg_key = def_cod4_registry_location_subkeys;
+
+  LRESULT status;
+
+  ZeroMemory(&game_installation_reg_key, sizeof(HKEY));
+  DWORD is_steam_game_installed{};
+
+  status = RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Valve\\Steam\\Apps\\7940", 0, KEY_QUERY_VALUE, &game_installation_reg_key);
+
+  if (status == ERROR_SUCCESS) {
+    cch = sizeof(is_steam_game_installed);
+    status = RegQueryValueExA(game_installation_reg_key, "Installed", nullptr, nullptr, reinterpret_cast<LPBYTE>(&is_steam_game_installed), &cch);
+
+    if (status == ERROR_SUCCESS && is_steam_game_installed == 1) {
+      HKEY steam_installation_key{};
+      status = RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Valve\\Steam", 0, KEY_QUERY_VALUE, &steam_installation_key);
+      if (status == ERROR_SUCCESS) {
+        cch = sizeof(install_path);
+        status = RegQueryValueExA(steam_installation_key, "SteamExe", nullptr, nullptr, reinterpret_cast<LPBYTE>(install_path), &cch);
+
+        if (status == ERROR_SUCCESS) {
+
+          string steam_exe_path{ install_path };
+          replace_forward_slash_with_backward_slash(steam_exe_path);
+          if (check_if_file_path_exists(steam_exe_path.c_str())) {
+
+            snprintf(exe_file_path, max_path_length, "\"%s\" -applaunch 7940", steam_exe_path.c_str());
+
+            found = true;
+            char buffer[1024];
+            snprintf(buffer, std::size(buffer), "^2Successfully built your ^3Call of Duty 4: Modern Warfare (Steam) ^2game's launch command: ^5%s\n", exe_file_path);
+            print_colored_text(app_handles.hwnd_re_messages_data, buffer);
+            *def_game_reg_key = nullptr;
+          }
+        }
+
+        RegCloseKey(steam_installation_key);
+      }
+    }
+
+    RegCloseKey(game_installation_reg_key);
+  }
+
+  if (!found) {
+    ZeroMemory(&game_installation_reg_key, sizeof(HKEY));
+    is_steam_game_installed = 0;
+    cch = sizeof(is_steam_game_installed);
+
+    status = RegOpenKeyExA(HKEY_CURRENT_USER, "SOFTWARE\\Valve\\Steam\\Apps\\7940", 0, KEY_QUERY_VALUE, &game_installation_reg_key);
+
+    if (status == ERROR_SUCCESS) {
+
+      status = RegQueryValueExA(game_installation_reg_key, "Installed", nullptr, nullptr, reinterpret_cast<LPBYTE>(&is_steam_game_installed), &cch);
+
+      if (status == ERROR_SUCCESS && is_steam_game_installed == 1) {
+        HKEY steam_installation_key{};
+        status = RegOpenKeyExA(HKEY_CURRENT_USER, "SOFTWARE\\Valve\\Steam", 0, KEY_QUERY_VALUE, &steam_installation_key);
+        if (status == ERROR_SUCCESS) {
+          cch = sizeof(install_path);
+          status = RegQueryValueExA(steam_installation_key, "SteamExe", nullptr, nullptr, reinterpret_cast<LPBYTE>(install_path), &cch);
+
+          if (status == ERROR_SUCCESS) {
+
+            string steam_exe_path{ install_path };
+            replace_forward_slash_with_backward_slash(steam_exe_path);
+            if (check_if_file_path_exists(steam_exe_path.c_str())) {
+
+              snprintf(exe_file_path, max_path_length, "\"%s\" -applaunch 7940", steam_exe_path.c_str());
+
+              found = true;
+              char buffer[1024];
+              snprintf(buffer, std::size(buffer), "^2Successfully built your ^3Call of Duty 4: Modern Warfare (Steam) ^2game's launch command: ^5%s\n", exe_file_path);
+              print_colored_text(app_handles.hwnd_re_messages_data, buffer);
+              *def_game_reg_key = nullptr;
+            }
+          }
+
+          RegCloseKey(steam_installation_key);
+        }
+      }
+
+      RegCloseKey(game_installation_reg_key);
+    }
+  }
+
+  while (!found && *def_game_reg_key) {
+
+    ZeroMemory(&game_installation_reg_key, sizeof(HKEY));
+
+    cch = sizeof(install_path);
+
+    status = RegOpenKeyExA(HKEY_LOCAL_MACHINE, *def_game_reg_key, 0, KEY_QUERY_VALUE, &game_installation_reg_key);
+
+    if (status == ERROR_SUCCESS) {
+
+      status = RegQueryValueExA(game_installation_reg_key, game_install_path_key, nullptr, nullptr, reinterpret_cast<LPBYTE>(install_path), &cch);
+
+      if (status == ERROR_SUCCESS) {
+
+        ZeroMemory(&find_data, sizeof(WIN32_FIND_DATAA));
+
+        remove_dir_path_sep_char(install_path);
+
+        snprintf(exe_file_path, max_path_length, "%s\\iw3mp.exe", install_path);
+
+        search_handle = FindFirstFileA(exe_file_path, &find_data);
+
+        if (search_handle != INVALID_HANDLE_VALUE) {
+
+          found = true;
+          found_reg_location = *def_game_reg_key;
+          char buffer[1024];
+          snprintf(buffer, std::size(buffer), "^2Successfully built your ^3Call of Duty 4: Modern Warfare ^2game's launch command: ^5%s\n", exe_file_path);
+          print_colored_text(app_handles.hwnd_re_messages_data, buffer);
+          *def_game_reg_key = nullptr;
+          break;
+        }
+      }
+
+      RegCloseKey(game_installation_reg_key);
+    }
+
+    def_game_reg_key++;
+  }
+
+  if (!found) {
+
+    def_game_reg_key = def_cod4_registry_location_subkeys;
+
+    while (!found && *def_game_reg_key) {
+
+      ZeroMemory(&game_installation_reg_key, sizeof(HKEY));
+      cch = sizeof(install_path);
+
+      status = RegOpenKeyExA(HKEY_CURRENT_USER, *def_game_reg_key, 0, KEY_QUERY_VALUE, &game_installation_reg_key);
+
+      if (status == ERROR_SUCCESS) {
+
+        status = RegQueryValueExA(game_installation_reg_key, game_install_path_key, nullptr, nullptr, reinterpret_cast<LPBYTE>(install_path), &cch);
+
+        if (status == ERROR_SUCCESS) {
+
+          ZeroMemory(&find_data, sizeof(WIN32_FIND_DATAA));
+
+          remove_dir_path_sep_char(install_path);
+
+          snprintf(exe_file_path, max_path_length, "%s\\iw3mp.exe", install_path);
+
+          search_handle = FindFirstFileA(exe_file_path, &find_data);
+
+          if (search_handle != INVALID_HANDLE_VALUE) {
+
+            found = true;
+            found_reg_location = *def_game_reg_key;
+            char buffer[1024];
+            snprintf(buffer, std::size(buffer), "^2Successfully built your ^3Call of Duty 4: Modern Warfare ^2game's launch command: ^5%s\n", exe_file_path);
+            print_colored_text(app_handles.hwnd_re_messages_data, buffer);
+            *def_game_reg_key = nullptr;
+            break;
+          }
+        }
+
+        RegCloseKey(game_installation_reg_key);
+      }
+
+      def_game_reg_key++;
+    }
+  }
+
+  if (!found && is_show_browse_folder_dialog) {
+
+    strcpy_s(install_path, max_path_length, "C:\\");
+    found_reg_location = nullptr;
+
+    static char msgbuff[1024];
+    snprintf(msgbuff, std::size(msgbuff), "Please, select your Call of Duty 4: Modern Warfare game's installation folder and click OK.");
+
+    const char *cod4_game_path = BrowseFolder(install_path, msgbuff);
+
+    if (lstrcmpA(cod4_game_path, "") == 0 || lstrcmpA(cod4_game_path, "C:\\") == 0) {
+      print_colored_text(app_handles.hwnd_re_messages_data, "^1\n> Error! You haven't selected a valid folder for your game installation.");
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3\n> You have to select your game's installation directory and click the OK button.");
+      print_colored_text(app_handles.hwnd_re_messages_data, "^2\n> Restart the program and try again.\n");
+    } else {
+      snprintf(exe_file_path, max_path_length, "%s\\iw3mp.exe", cod4_game_path);
+    }
+  }
+
+  if (!stl::helper::str_contains(exe_file_path, "-applaunch 7940")) {
+    string exe_path{ exe_file_path };
+    replace_forward_slash_with_backward_slash(exe_path);
+    strcpy_s(exe_file_path, max_path_length, exe_path.c_str());
+  }
+
+  if (!check_if_file_path_exists(exe_file_path) && !stl::helper::str_contains(exe_file_path, "-applaunch 7940")) {
+    main_app.set_iw3mp_exe_path("");
+  } else {
+    main_app.set_iw3mp_exe_path(exe_file_path);
+    write_tiny_rcon_json_settings_to_file("config\\tinyrcon.json");
+  }
+
+  return exe_file_path;
+}
+
+bool check_if_call_of_duty_4_game_is_running() noexcept
+{
+  DWORD processes[1024], processes_size{};
+  char buffer[256];
+
+  memset(processes, 0, 1024 * sizeof(DWORD));
+
+  if (EnumProcesses(processes, sizeof(processes), &processes_size))
+    for (size_t i{}; i < processes_size; ++i) {
+      if (processes[i] == 0) continue;
+      auto ph = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, 0, processes[i]);
+      const auto n = GetModuleBaseNameA(ph, 0, buffer, sizeof(buffer));
+      CloseHandle(ph);
+      if (n == 0) continue;
+      const string module_base_name{ buffer };
+      if (stl::helper::str_index_of(module_base_name, "iw3mp.exe", 0, true) != string::npos)
+        return true;
+    }
+
+  DWORD cch{};
+  HKEY game_installation_reg_key;
+
+  ZeroMemory(&game_installation_reg_key, sizeof(HKEY));
+  DWORD is_steam_game_running{};
+  cch = sizeof(is_steam_game_running);
+
+  auto status = RegOpenKeyExA(HKEY_CURRENT_USER, "SOFTWARE\\Valve\\Steam", 0, KEY_QUERY_VALUE, &game_installation_reg_key);
+
+  if (status == ERROR_SUCCESS) {
+
+    status = RegQueryValueExA(game_installation_reg_key, "RunningAppID", nullptr, nullptr, reinterpret_cast<LPBYTE>(&is_steam_game_running), &cch);
+
+    if (status == ERROR_SUCCESS && 7940 == is_steam_game_running)
+      return true;
+  }
+
+  RegCloseKey(game_installation_reg_key);
+
+  ZeroMemory(&game_installation_reg_key, sizeof(HKEY));
+  is_steam_game_running = 0;
+  cch = sizeof(is_steam_game_running);
+
+  status = RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Valve\\Steam", 0, KEY_QUERY_VALUE, &game_installation_reg_key);
+
+  if (status == ERROR_SUCCESS) {
+
+    status = RegQueryValueExA(game_installation_reg_key, "RunningAppID", nullptr, nullptr, reinterpret_cast<LPBYTE>(&is_steam_game_running), &cch);
+
+    if (status == ERROR_SUCCESS && 7940 == is_steam_game_running)
+      return true;
+  }
+
+  RegCloseKey(game_installation_reg_key);
+
+  return false;
+}
+
+const char *find_call_of_duty_5_installation_path(const bool is_show_browse_folder_dialog) noexcept
+{
+  constexpr size_t max_path_length{ 32768 };
+  static char install_path[max_path_length]{};
+  static char exe_file_path[max_path_length]{};
+  static const char *def_cod5_registry_location_subkeys[] = {
+    "SOFTWARE\\Activision\\Call of Duty WAW",
+    "SOFTWARE\\Wow6432Node\\Activision\\Call of Duty WAW",
+    "SOFTWARE\\Activision\\Call of Duty(R) WAW",
+    "SOFTWARE\\WOW6432Node\\Activision\\Call of Duty(R) WAW",
+    nullptr
+  };
+  const char *game_install_path_key = "InstallPath";
+  DWORD cch{};
+  HKEY game_installation_reg_key{};
+  bool found{};
+
+  WIN32_FIND_DATAA find_data;
+  HANDLE search_handle;
+
+  const char *found_reg_location{};
+
+  const char **def_game_reg_key;
+
+  def_game_reg_key = def_cod5_registry_location_subkeys;
+
+  LRESULT status;
+
+  ZeroMemory(&game_installation_reg_key, sizeof(HKEY));
+  DWORD is_steam_game_installed{};
+
+  status = RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Valve\\Steam\\Apps\\10090", 0, KEY_QUERY_VALUE, &game_installation_reg_key);
+
+  if (status == ERROR_SUCCESS) {
+    cch = sizeof(is_steam_game_installed);
+    status = RegQueryValueExA(game_installation_reg_key, "Installed", nullptr, nullptr, reinterpret_cast<LPBYTE>(&is_steam_game_installed), &cch);
+
+    if (status == ERROR_SUCCESS && is_steam_game_installed == 1) {
+      HKEY steam_installation_key{};
+      status = RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Valve\\Steam", 0, KEY_QUERY_VALUE, &steam_installation_key);
+      if (status == ERROR_SUCCESS) {
+        cch = sizeof(install_path);
+        status = RegQueryValueExA(steam_installation_key, "SteamExe", nullptr, nullptr, reinterpret_cast<LPBYTE>(install_path), &cch);
+
+        if (status == ERROR_SUCCESS) {
+
+          string steam_exe_path{ install_path };
+          replace_forward_slash_with_backward_slash(steam_exe_path);
+          if (check_if_file_path_exists(steam_exe_path.c_str())) {
+
+            snprintf(exe_file_path, max_path_length, "\"%s\" -applaunch 10090", steam_exe_path.c_str());
+
+            found = true;
+            char buffer[1024];
+            snprintf(buffer, std::size(buffer), "^2Successfully built your ^3Call of Duty 5: World at War (Steam) ^2game's launch command: ^5%s\n", exe_file_path);
+            print_colored_text(app_handles.hwnd_re_messages_data, buffer);
+            *def_game_reg_key = nullptr;
+          }
+        }
+
+        RegCloseKey(steam_installation_key);
+      }
+    }
+
+    RegCloseKey(game_installation_reg_key);
+  }
+
+  if (!found) {
+    ZeroMemory(&game_installation_reg_key, sizeof(HKEY));
+    is_steam_game_installed = 0;
+    cch = sizeof(is_steam_game_installed);
+
+    status = RegOpenKeyExA(HKEY_CURRENT_USER, "SOFTWARE\\Valve\\Steam\\Apps\\10090", 0, KEY_QUERY_VALUE, &game_installation_reg_key);
+
+    if (status == ERROR_SUCCESS) {
+
+      status = RegQueryValueExA(game_installation_reg_key, "Installed", nullptr, nullptr, reinterpret_cast<LPBYTE>(&is_steam_game_installed), &cch);
+
+      if (status == ERROR_SUCCESS && is_steam_game_installed == 1) {
+        HKEY steam_installation_key{};
+        status = RegOpenKeyExA(HKEY_CURRENT_USER, "SOFTWARE\\Valve\\Steam", 0, KEY_QUERY_VALUE, &steam_installation_key);
+        if (status == ERROR_SUCCESS) {
+          cch = sizeof(install_path);
+          status = RegQueryValueExA(steam_installation_key, "SteamExe", nullptr, nullptr, reinterpret_cast<LPBYTE>(install_path), &cch);
+
+          if (status == ERROR_SUCCESS) {
+
+            string steam_exe_path{ install_path };
+            replace_forward_slash_with_backward_slash(steam_exe_path);
+            if (check_if_file_path_exists(steam_exe_path.c_str())) {
+
+              snprintf(exe_file_path, max_path_length, "\"%s\" -applaunch 10090", steam_exe_path.c_str());
+
+              found = true;
+              char buffer[1024];
+              snprintf(buffer, std::size(buffer), "^2Successfully built your ^3Call of Duty 5: World at War (Steam) ^2game's launch command: ^5%s\n", exe_file_path);
+              print_colored_text(app_handles.hwnd_re_messages_data, buffer);
+              *def_game_reg_key = nullptr;
+            }
+          }
+
+          RegCloseKey(steam_installation_key);
+        }
+      }
+
+      RegCloseKey(game_installation_reg_key);
+    }
+  }
+
+  while (!found && *def_game_reg_key) {
+
+    ZeroMemory(&game_installation_reg_key, sizeof(HKEY));
+
+    cch = sizeof(install_path);
+
+    status = RegOpenKeyExA(HKEY_LOCAL_MACHINE, *def_game_reg_key, 0, KEY_QUERY_VALUE, &game_installation_reg_key);
+
+    if (status == ERROR_SUCCESS) {
+
+      status = RegQueryValueExA(game_installation_reg_key, game_install_path_key, nullptr, nullptr, reinterpret_cast<LPBYTE>(install_path), &cch);
+
+      if (status == ERROR_SUCCESS) {
+
+        ZeroMemory(&find_data, sizeof(WIN32_FIND_DATAA));
+
+        remove_dir_path_sep_char(install_path);
+
+        snprintf(exe_file_path, max_path_length, "%s\\cod5mp.exe", install_path);
+
+        search_handle = FindFirstFileA(exe_file_path, &find_data);
+
+        if (search_handle != INVALID_HANDLE_VALUE) {
+
+          found = true;
+          found_reg_location = *def_game_reg_key;
+          char buffer[1024];
+          snprintf(buffer, std::size(buffer), "^2Successfully built your ^3Call of Duty 5: World at War ^2game's launch command: ^5%s\n", exe_file_path);
+          print_colored_text(app_handles.hwnd_re_messages_data, buffer);
+          *def_game_reg_key = nullptr;
+          break;
+        }
+      }
+
+      RegCloseKey(game_installation_reg_key);
+    }
+
+    def_game_reg_key++;
+  }
+
+  if (!found) {
+
+    def_game_reg_key = def_cod5_registry_location_subkeys;
+
+    while (!found && *def_game_reg_key) {
+
+      ZeroMemory(&game_installation_reg_key, sizeof(HKEY));
+      cch = sizeof(install_path);
+
+      status = RegOpenKeyExA(HKEY_CURRENT_USER, *def_game_reg_key, 0, KEY_QUERY_VALUE, &game_installation_reg_key);
+
+      if (status == ERROR_SUCCESS) {
+
+        status = RegQueryValueExA(game_installation_reg_key, game_install_path_key, nullptr, nullptr, reinterpret_cast<LPBYTE>(install_path), &cch);
+
+        if (status == ERROR_SUCCESS) {
+
+          ZeroMemory(&find_data, sizeof(WIN32_FIND_DATAA));
+
+          remove_dir_path_sep_char(install_path);
+
+          snprintf(exe_file_path, max_path_length, "%s\\cod5mp.exe", install_path);
+
+          search_handle = FindFirstFileA(exe_file_path, &find_data);
+
+          if (search_handle != INVALID_HANDLE_VALUE) {
+
+            found = true;
+            found_reg_location = *def_game_reg_key;
+            char buffer[1024];
+            snprintf(buffer, std::size(buffer), "^2Successfully built your ^3Call of Duty 5: World at War ^2game's launch command: ^5%s\n", exe_file_path);
+            print_colored_text(app_handles.hwnd_re_messages_data, buffer);
+            *def_game_reg_key = nullptr;
+            break;
+          }
+        }
+
+        RegCloseKey(game_installation_reg_key);
+      }
+
+      def_game_reg_key++;
+    }
+  }
+
+  if (!found && is_show_browse_folder_dialog) {
+
+    strcpy_s(install_path, max_path_length, "C:\\");
+    found_reg_location = nullptr;
+
+    static char msgbuff[1024];
+    snprintf(msgbuff, std::size(msgbuff), "Please, select your Call of Duty 5: World at War game's installation folder and click OK.");
+
+    const char *cod5_game_path = BrowseFolder(install_path, msgbuff);
+
+    if (lstrcmpA(cod5_game_path, "") == 0 || lstrcmpA(cod5_game_path, "C:\\") == 0) {
+      print_colored_text(app_handles.hwnd_re_messages_data, "^1\n> Error! You haven't selected a valid folder for your game installation.");
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3\n> You have to select your game's installation directory and click the OK button.");
+      print_colored_text(app_handles.hwnd_re_messages_data, "^2\n> Restart the program and try again.\n");
+    } else {
+      snprintf(exe_file_path, max_path_length, "%s\\cod5mp.exe", cod5_game_path);
+    }
+  }
+
+  if (!stl::helper::str_contains(exe_file_path, "-applaunch 10090")) {
+    string exe_path{ exe_file_path };
+    replace_forward_slash_with_backward_slash(exe_path);
+    strcpy_s(exe_file_path, max_path_length, exe_path.c_str());
+  }
+
+  if (!check_if_file_path_exists(exe_file_path) && !stl::helper::str_contains(exe_file_path, "-applaunch 10090")) {
+    main_app.set_cod5mp_exe_path("");
+  } else {
+    main_app.set_cod5mp_exe_path(exe_file_path);
+    write_tiny_rcon_json_settings_to_file("config\\tinyrcon.json");
+  }
+
+  return exe_file_path;
+}
+
+bool check_if_call_of_duty_5_game_is_running() noexcept
+{
+  DWORD processes[1024], processes_size{};
+  char buffer[256];
+
+  memset(processes, 0, 1024 * sizeof(DWORD));
+
+  if (EnumProcesses(processes, sizeof(processes), &processes_size))
+    for (size_t i{}; i < processes_size; ++i) {
+      if (processes[i] == 0) continue;
+      auto ph = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, 0, processes[i]);
+      const auto n = GetModuleBaseNameA(ph, 0, buffer, sizeof(buffer));
+      CloseHandle(ph);
+      if (n == 0) continue;
+      const string module_base_name{ buffer };
+      if (stl::helper::str_index_of(module_base_name, "cod5mp.exe", 0, true) != string::npos)
+        return true;
+    }
+
+  DWORD cch{};
+  HKEY game_installation_reg_key;
+
+  ZeroMemory(&game_installation_reg_key, sizeof(HKEY));
+  DWORD is_steam_game_running{};
+  cch = sizeof(is_steam_game_running);
+
+  auto status = RegOpenKeyExA(HKEY_CURRENT_USER, "SOFTWARE\\Valve\\Steam", 0, KEY_QUERY_VALUE, &game_installation_reg_key);
+
+  if (status == ERROR_SUCCESS) {
+
+    status = RegQueryValueExA(game_installation_reg_key, "RunningAppID", nullptr, nullptr, reinterpret_cast<LPBYTE>(&is_steam_game_running), &cch);
+
+    if (status == ERROR_SUCCESS && 10090 == is_steam_game_running)
+      return true;
+  }
+
+  RegCloseKey(game_installation_reg_key);
+
+  ZeroMemory(&game_installation_reg_key, sizeof(HKEY));
+  is_steam_game_running = 0;
+  cch = sizeof(is_steam_game_running);
+
+  status = RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Valve\\Steam", 0, KEY_QUERY_VALUE, &game_installation_reg_key);
+
+  if (status == ERROR_SUCCESS) {
+
+    status = RegQueryValueExA(game_installation_reg_key, "RunningAppID", nullptr, nullptr, reinterpret_cast<LPBYTE>(&is_steam_game_running), &cch);
+
+    if (status == ERROR_SUCCESS && 10090 == is_steam_game_running)
+      return true;
+  }
+
+  RegCloseKey(game_installation_reg_key);
+
+  return false;
+}
+
 bool connect_to_the_game_server(const bool use_private_slot, const bool minimize_tinyrcon) noexcept
 {
   constexpr size_t max_path_length{ 32768 };
   static char command_line[max_path_length]{};
 
-  if (check_if_call_of_duty_2_game_is_running()) {
-    print_colored_text(app_handles.hwnd_re_messages_data, "Call of Duty 2 Multiplayer game is already running in the background.\n", true, true, true);
+  const game_name_t game_name{ main_app.get_game_name() };
+  const char *game_path{};
+
+  switch (game_name) {
+  case game_name_t::cod1:
+    if (check_if_call_of_duty_1_game_is_running()) {
+      print_colored_text(app_handles.hwnd_re_messages_data, "Call of Duty Multiplayer game is already running in the background.\n", true, true, true);
+      return false;
+    }
+
+    game_path = main_app.get_codmp_exe_path().c_str();
+    if (!check_if_file_path_exists(game_path) && !stl::helper::str_contains(game_path, "-applaunch 2620")) {
+      game_path = find_call_of_duty_1_installation_path();
+    }
+    break;
+
+  case game_name_t::cod2:
+    if (check_if_call_of_duty_2_game_is_running()) {
+      print_colored_text(app_handles.hwnd_re_messages_data, "Call of Duty 2 Multiplayer game is already running in the background.\n", true, true, true);
+      return false;
+    }
+
+    game_path = main_app.get_cod2mp_exe_path().c_str();
+    if (!check_if_file_path_exists(game_path) && !stl::helper::str_contains(game_path, "-applaunch 2630")) {
+      game_path = find_call_of_duty_2_installation_path();
+    }
+    break;
+
+  case game_name_t::cod4:
+    if (check_if_call_of_duty_4_game_is_running()) {
+      print_colored_text(app_handles.hwnd_re_messages_data, "Call of Duty 4: Modern Warfare Multiplayer game is already running in the background.\n", true, true, true);
+      return false;
+    }
+
+    game_path = main_app.get_iw3mp_exe_path().c_str();
+    if (!check_if_file_path_exists(game_path) && !stl::helper::str_contains(game_path, "-applaunch 7940")) {
+      game_path = find_call_of_duty_4_installation_path();
+    }
+    break;
+
+  case game_name_t::cod5:
+    if (check_if_call_of_duty_5_game_is_running()) {
+      print_colored_text(app_handles.hwnd_re_messages_data, "Call of Duty 5: World at War Multiplayer game is already running in the background.\n", true, true, true);
+      return false;
+    }
+
+    game_path = main_app.get_cod5mp_exe_path().c_str();
+    if (!check_if_file_path_exists(game_path) && !stl::helper::str_contains(game_path, "-applaunch 10090")) {
+      game_path = find_call_of_duty_5_installation_path();
+    }
+    break;
+
+  default:
+    print_colored_text(app_handles.hwnd_re_messages_data, "^1Invalid ^1'game_name_t' enum value has been specified!\n", true, true, true);
     return false;
   }
 
-  const char *cod2_game_path = main_app.get_cod2mp_exe_path().c_str();
-  if (!check_if_file_path_exists(cod2_game_path) && !stl::helper::str_contains(cod2_game_path, "-applaunch 2630")) {
-    cod2_game_path = find_call_of_duty_2_installation_path();
-  }
 
-  assert(cod2_game_path != nullptr && stl::helper::len(cod2_game_path) > 0U);
+  assert(game_path != nullptr && stl::helper::len(game_path) > 0U);
 
   const bool is_game_installed_via_steam{
-    stl::helper::str_contains(cod2_game_path, "-applaunch 2630")
+    stl::helper::str_contains(game_path, "-applaunch 2620") || stl::helper::str_contains(game_path, "-applaunch 2630") || stl::helper::str_contains(game_path, "-applaunch 7940") || stl::helper::str_contains(game_path, "-applaunch 10090")
   };
 
-  if (cod2_game_path == nullptr || strlen(cod2_game_path) == 0 || (!stl::helper::str_ends_with(cod2_game_path, ".exe", true) && !is_game_installed_via_steam))
+  if (game_path == nullptr || strlen(game_path) == 0 || (!stl::helper::str_ends_with(game_path, ".exe", true) && !is_game_installed_via_steam))
     return false;
 
   if (minimize_tinyrcon) {
@@ -4208,23 +5136,30 @@ bool connect_to_the_game_server(const bool use_private_slot, const bool minimize
 
   if (is_game_installed_via_steam) {
     if (use_private_slot) {
-      snprintf(command_line, max_path_length, "%s +password %s +connect %s:%d", cod2_game_path, main_app.get_game_server().get_private_slot_password().c_str(), main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port());
+      snprintf(command_line, max_path_length, "%s +password %s +connect %s:%d", game_path, main_app.get_game_server().get_private_slot_password().c_str(), main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port());
     } else {
-      snprintf(command_line, max_path_length, "%s +connect %s:%d", cod2_game_path, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port());
+      snprintf(command_line, max_path_length, "%s +connect %s:%d", game_path, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port());
     }
   } else {
     if (use_private_slot) {
-      snprintf(command_line, max_path_length, "\"%s\" +password %s +connect %s:%d", cod2_game_path, main_app.get_game_server().get_private_slot_password().c_str(), main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port());
+      snprintf(command_line, max_path_length, "\"%s\" +password %s +connect %s:%d", game_path, main_app.get_game_server().get_private_slot_password().c_str(), main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port());
     } else {
-      snprintf(command_line, max_path_length, "\"%s\" +connect %s:%d", cod2_game_path, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port());
+      snprintf(command_line, max_path_length, "\"%s\" +connect %s:%d", game_path, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port());
     }
   }
 
   if (!is_game_installed_via_steam) {
-    string game_folder{ cod2_game_path };
+    string game_folder{ game_path };
     game_folder.erase(cbegin(game_folder) + game_folder.rfind('\\'), cend(game_folder));
+    if (!game_folder.empty() && '\\' == game_folder.back())
+      game_folder.pop_back();
 
-    print_colored_text(app_handles.hwnd_re_messages_data, "Launching Call of Duty 2 Multiplayer and connecting to the CTF game server...\n", true, true, true);
+    ostringstream oss;
+    oss << "^2Launching ^1" << main_app.get_game_title() << " ^2and connecting to ^1" << main_app.get_game_server_name() << " ^2game server...\n";
+
+    const string message{ oss.str() };
+
+    print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), true, true, true);
 
     STARTUPINFOA process_startup_info{};
     process_startup_info.cb = sizeof(STARTUPINFOA);
@@ -4243,12 +5178,16 @@ bool connect_to_the_game_server(const bool use_private_slot, const bool minimize
           &pr_info)) {
       char buffer[512]{};
       strerror_s(buffer, 512, GetLastError());
-      const string error_message{ "Launching CoD 2 Multiplayer failed: "s + buffer + "\n"s };
+      const string error_message{ "^1Launching game failed: "s + buffer + "\n"s };
       print_colored_text(app_handles.hwnd_re_messages_data, error_message.c_str(), true, true, true);
       return false;
     }
   } else {
-    print_colored_text(app_handles.hwnd_re_messages_data, "Launching CoD 2 Multiplayer via Steam and connecting to the CTF game server...\n", true, true, true);
+
+    ostringstream oss;
+    oss << "^2Launching ^1" << main_app.get_game_title() << " ^2via Steam and connecting to ^1" << main_app.get_game_server_name() << " ^2game server...\n";
+    const string message{ oss.str() };
+    print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), true, true, true);
 
     STARTUPINFOA process_startup_info{};
     process_startup_info.cb = sizeof(STARTUPINFOA);
@@ -4267,7 +5206,7 @@ bool connect_to_the_game_server(const bool use_private_slot, const bool minimize
           &pr_info)) {
       char buffer[512]{};
       strerror_s(buffer, std::size(buffer), GetLastError());
-      const string error_message{ "Launching CoD 2 Multiplayer via Steam failed: "s + buffer + "\n"s };
+      const string error_message{ "^1Launching game via Steam failed: "s + buffer + "\n"s };
       print_colored_text(app_handles.hwnd_re_messages_data, error_message.c_str(), true, true, true);
       return false;
     }
@@ -4396,6 +5335,9 @@ size_t print_colored_text(HWND re_control, const char *text, const bool print_to
   if (log_to_file) {
     string message_without_color_codes{ message };
     remove_all_color_codes(message_without_color_codes);
+    if (message_without_color_codes.length() > 0 && message_without_color_codes.back() != '\n') {
+      message_without_color_codes.push_back('\n');
+    }
     log_message(message_without_color_codes, is_log_current_date_time);
   }
 
@@ -4519,16 +5461,6 @@ void scroll_to_bottom(HWND hwnd) noexcept
 void append(HWND hwnd, const char *str) noexcept
 {
   cursor_to_bottom(hwnd);
-  /*CHARFORMAT cf = get_char_fmt(hwnd);
-  cf.cbSize = sizeof(CHARFORMAT);
-  cf.dwMask = CFM_CHARSET;
-  cf.dwEffects = 0;
-  cf.bCharSet = RUSSIAN_CHARSET;
-  set_char_fmt(hwnd, cf);*/
-  // SETTEXTEX stx{};
-  // stx.flags = ST_SELECTION;
-  // stx.codepage = 1251;
-  // PostMessage(hwnd, EM_SETTEXTEX, (WPARAM)&stx, (LPARAM)str);
   replace_sel(hwnd, str);
   scroll_to_bottom(hwnd);
 }
@@ -4545,40 +5477,22 @@ void process_key_down_message(const MSG &msg)
       PostQuitMessage(0);
     }
   } else if (msg.wParam == VK_UP) {
-    //  if (selected_row > 0) {
-    //    --selected_row;
-    //    SelectRow(app_handles.hwnd_players_grid, selected_row);
-    //    // SendMessage(app_handles.hwnd_players_grid, WM_KEYDOWN, msg.wParam, msg.lParam);
-    //  }
     if (!commands_history.empty()) {
       if (commands_history_index > 0) {
         --commands_history_index;
         if (commands_history_index < commands_history.size()) {
           Edit_SetText(app_handles.hwnd_e_user_input, commands_history.at(commands_history_index).c_str());
-          // const size_t command_len{ commands_history.at(commands_history_index).length() };
           cursor_to_bottom(app_handles.hwnd_e_user_input);
-          // scroll_to(app_handles.hwnd_e_user_input, (DWORD)command_len);
-          // Edit_SetSel(app_handles.hwnd_e_user_input, 0, command_len);
-          // SetFocus(app_handles.hwnd_e_user_input);
         }
       }
     }
   } else if (msg.wParam == VK_DOWN) {
-    // if (selected_row < max_players_grid_rows - 1) {
-    //   ++selected_row;
-    //   // SendMessage(app_handles.hwnd_players_grid, WM_KEYDOWN, msg.wParam, msg.lParam);
-    //   SelectRow(app_handles.hwnd_players_grid, selected_row);
-    // }
     if (!commands_history.empty()) {
       if (commands_history_index < commands_history.size() - 1) {
         ++commands_history_index;
         if (commands_history_index < commands_history.size()) {
           Edit_SetText(app_handles.hwnd_e_user_input, commands_history.at(commands_history_index).c_str());
-          // const size_t command_len{ commands_history.at(commands_history_index).length() };
           cursor_to_bottom(app_handles.hwnd_e_user_input);
-          /*scroll_to(app_handles.hwnd_e_user_input, (DWORD)command_len);
-          Edit_SetSel(app_handles.hwnd_e_user_input, 0, command_len);*/
-          // SetFocus(app_handles.hwnd_e_user_input);
         }
       }
     }
@@ -4592,7 +5506,6 @@ void process_key_down_message(const MSG &msg)
       PostQuitMessage(0);
     }
 
-    // SetFocus(app_handles.hwnd_e_user_input);
   } else if (msg.wParam == VK_F1) {
     is_process_combobox_item_selection_event = false;
     type_of_sort = sort_by_pid_asc ? sort_type::pid_asc : sort_type::pid_desc;
@@ -4624,12 +5537,8 @@ void process_key_down_message(const MSG &msg)
     sort_by_geo_asc = !sort_by_geo_asc;
     process_sort_type_change_request(type_of_sort);
   } else if (msg.wParam == VK_F8) {
-    if (sort_by_geo_asc)
-      print_colored_text(app_handles.hwnd_re_messages_data, "^2Manually refreshing players data.\n");
-    if (main_app.get_is_connection_settings_valid()) {
-      // main_app.add_command_to_queue({ "status" }, command_type::rcon, true);
-      initiate_sending_rcon_status_command_now();
-    }
+    print_colored_text(app_handles.hwnd_re_messages_data, "^2Manually refreshing players data.\n");
+    initiate_sending_rcon_status_command_now();
   }
 }
 
@@ -4689,31 +5598,6 @@ void construct_tinyrcon_gui(HWND hWnd) noexcept
     Edit_SetText(app_handles.hwnd_match_information, "");
   else
     print_colored_text(app_handles.hwnd_match_information, g_re_match_information_contents.c_str(), true, true, true);
-
-  // if (g_banned_players_data != NULL) {
-  //   ShowWindow(g_banned_players_data, SW_HIDE);
-  //   DestroyWindow(g_banned_players_data);
-  // }
-
-  // g_banned_players_data = CreateWindowEx(0, RICHEDIT_CLASS, nullptr, draw_border_lines_flag | WS_VISIBLE | WS_CHILD | WS_VSCROLL | ES_MULTILINE | ES_LEFT | ES_AUTOVSCROLL | ES_READONLY, 10, screen_height / 2 + 235, screen_width / 2 + 140, 190, hWnd, nullptr, app_handles.hInstance, nullptr);
-  // if (!g_banned_players_data)
-  //   FatalAppExitA(0, "Couldn't create 'g_banned_players_data' richedit control!");
-  // if (g_banned_players_data != 0) {
-  //   SendMessage(g_banned_players_data, EM_SETBKGNDCOLOR, NULL, color::black);
-  //   SendMessage(g_banned_players_data, EM_SETWORDWRAPMODE, WBF_WORDWRAP, 0);
-  //   SendMessage(g_banned_players_data, EM_SETWORDWRAPMODE, WBF_WORDBREAK, 0);
-  //   SendMessage(g_banned_players_data, EM_SETWORDWRAPMODE, WBF_WORDWRAP | WBF_WORDBREAK, 0);
-  //   scroll_to_beginning(g_banned_players_data);
-  //   set_rich_edit_control_colors(g_banned_players_data, color::white, color::black);
-  //   if (g_message_data_contents.empty())
-  //     Edit_SetText(g_banned_players_data, "");
-  //   else {
-  //     const string temporary_msg{ std::move(g_message_data_contents) };
-  //     g_message_data_contents.clear();
-  //     print_colored_text(g_banned_players_data, temporary_msg.c_str(), true, true, true);
-  //   }
-  // }
-
 
   if (app_handles.hwnd_re_messages_data != NULL) {
     ShowWindow(app_handles.hwnd_re_messages_data, SW_HIDE);
@@ -4832,7 +5716,6 @@ void construct_tinyrcon_gui(HWND hWnd) noexcept
   SendMessage(app_handles.hwnd_combo_box_sortmode, CB_SELECTSTRING, (WPARAM)-1, (LPARAM) "Sort by pid in ascending order");
 
   UpdateWindow(hWnd);
-  // SetFocus(app_handles.hwnd_players_grid);
 }
 
 void PutCell(HWND hgrid, const int row, const int col, const char *text) noexcept
@@ -4863,7 +5746,6 @@ string GetCellContents(HWND hgrid, const int row, const int col)
   item.lpCurValue = (LPARAM)cell_buffer;
   SimpleGrid_GetItemData(hgrid, &item);
   return string{ cell_buffer };
-  // return string{reinterpret_cast<const char *>(item.lpCurValue)};
 }
 
 void initialize_players_grid(HWND hgrid, const size_t cols, const size_t rows, const bool is_for_rcon_status) noexcept
@@ -5035,7 +5917,6 @@ bool show_user_confirmation_dialog(const char *msg, const char *title, const cha
     DestroyWindow(app_handles.hwnd_re_confirmation_message);
   }
 
-  // http://msdn.microsoft.com/en-us/library/bb774367(VS.85).aspx
   app_handles.hwnd_re_confirmation_message = CreateWindowEx(0, RICHEDIT_CLASS, nullptr, WS_BORDER | WS_VISIBLE | WS_CHILD | WS_VSCROLL | ES_MULTILINE | ES_LEFT | ES_AUTOVSCROLL | ES_READONLY, 10, 10, 560, 200, app_handles.hwnd_confirmation_dialog, nullptr, app_handles.hInstance, nullptr);
   if (!app_handles.hwnd_re_confirmation_message)
     return false;
@@ -5069,8 +5950,6 @@ bool show_user_confirmation_dialog(const char *msg, const char *title, const cha
   CenterWindow(app_handles.hwnd_confirmation_dialog);
   ShowWindow(app_handles.hwnd_confirmation_dialog, SW_SHOW);
   SetFocus(app_handles.hwnd_no_button);
-  // RECT rect{ 10, 220, 90, 240 };
-  // InvalidateRect(app_handles.hwnd_confirmation_dialog, &rect, TRUE);
 
   MSG wnd_msg{};
   while (GetMessage(&wnd_msg, NULL, NULL, NULL) != 0) {
@@ -5295,11 +6174,11 @@ std::pair<bool, game_name_t> check_if_specified_server_ip_port_and_rcon_password
 
 bool show_and_process_tinyrcon_configuration_panel(const char *title)
 {
-
+  is_terminate_tinyrcon_settings_configuration_dialog_window.store(false);
   if (app_handles.hwnd_configuration_dialog) {
     DestroyWindow(app_handles.hwnd_configuration_dialog);
   }
-  app_handles.hwnd_configuration_dialog = CreateWindowEx(NULL, wcex_configuration_dialog.lpszClassName, title, WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME /*WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX*/, 0, 0, 650, 620, app_handles.hwnd_main_window, nullptr, app_handles.hInstance, nullptr);
+  app_handles.hwnd_configuration_dialog = CreateWindowEx(NULL, wcex_configuration_dialog.lpszClassName, title, WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME /*WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX*/, 0, 0, 920, 820, app_handles.hwnd_main_window, nullptr, app_handles.hInstance, nullptr);
 
   if (!app_handles.hwnd_configuration_dialog)
     return false;
@@ -5310,7 +6189,7 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
     DestroyWindow(app_handles.hwnd_server_name);
   }
 
-  app_handles.hwnd_server_name = CreateWindowEx(0, "Edit", nullptr, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT, 150, 10, 450, 20, app_handles.hwnd_configuration_dialog, (HMENU)ID_EDIT_SERVER_NAME, app_handles.hInstance, nullptr);
+  app_handles.hwnd_server_name = CreateWindowEx(0, "Edit", nullptr, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT, 220, 10, 450, 20, app_handles.hwnd_configuration_dialog, (HMENU)ID_EDIT_SERVER_NAME, app_handles.hInstance, nullptr);
   if (!app_handles.hwnd_server_name)
     return false;
 
@@ -5319,7 +6198,7 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
   }
   (void)CreateWindowEx(0, "Static", "Server IP address:", WS_CHILD | WS_VISIBLE | SS_LEFT, 10, 40, 130, 20, app_handles.hwnd_configuration_dialog, NULL, app_handles.hInstance, nullptr);
 
-  app_handles.hwnd_server_ip_address = CreateWindowEx(0, "Edit", nullptr, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT, 150, 40, 450, 20, app_handles.hwnd_configuration_dialog, (HMENU)ID_EDIT_SERVER_IP, app_handles.hInstance, nullptr);
+  app_handles.hwnd_server_ip_address = CreateWindowEx(0, "Edit", nullptr, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT, 220, 40, 450, 20, app_handles.hwnd_configuration_dialog, (HMENU)ID_EDIT_SERVER_IP, app_handles.hInstance, nullptr);
 
   if (!app_handles.hwnd_server_ip_address)
     return false;
@@ -5329,7 +6208,7 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
   }
   (void)CreateWindowEx(0, "Static", "Server port:", WS_CHILD | WS_VISIBLE | SS_LEFT, 10, 70, 120, 20, app_handles.hwnd_configuration_dialog, NULL, app_handles.hInstance, nullptr);
 
-  app_handles.hwnd_server_port = CreateWindowEx(0, "Edit", nullptr, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT, 150, 70, 450, 20, app_handles.hwnd_configuration_dialog, (HMENU)ID_EDIT_SERVER_PORT, app_handles.hInstance, nullptr);
+  app_handles.hwnd_server_port = CreateWindowEx(0, "Edit", nullptr, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT, 220, 70, 450, 20, app_handles.hwnd_configuration_dialog, (HMENU)ID_EDIT_SERVER_PORT, app_handles.hInstance, nullptr);
 
   if (!app_handles.hwnd_server_port)
     return false;
@@ -5339,7 +6218,7 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
   }
   (void)CreateWindowEx(0, "Static", "Rcon password:", WS_CHILD | WS_VISIBLE | SS_LEFT, 10, 100, 140, 20, app_handles.hwnd_configuration_dialog, NULL, app_handles.hInstance, nullptr);
 
-  app_handles.hwnd_rcon_password = CreateWindowEx(0, "Edit", nullptr, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT, 150, 100, 450, 20, app_handles.hwnd_configuration_dialog, (HMENU)ID_EDIT_SERVER_RCON, app_handles.hInstance, nullptr);
+  app_handles.hwnd_rcon_password = CreateWindowEx(0, "Edit", nullptr, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT, 220, 100, 450, 20, app_handles.hwnd_configuration_dialog, (HMENU)ID_EDIT_SERVER_RCON, app_handles.hInstance, nullptr);
 
   if (!app_handles.hwnd_rcon_password)
     return false;
@@ -5349,17 +6228,86 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
   }
   (void)CreateWindowEx(0, "Static", "Refresh time period:", WS_CHILD | WS_VISIBLE | SS_LEFT, 10, 130, 140, 20, app_handles.hwnd_configuration_dialog, NULL, app_handles.hInstance, nullptr);
 
-  app_handles.hwnd_refresh_time_period = CreateWindowEx(0, "Edit", nullptr, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT, 150, 130, 450, 20, app_handles.hwnd_configuration_dialog, (HMENU)ID_EDIT_REFRESH_TIME_PERIOD, app_handles.hInstance, nullptr);
+  app_handles.hwnd_refresh_time_period = CreateWindowEx(0, "Edit", nullptr, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT, 220, 130, 450, 20, app_handles.hwnd_configuration_dialog, (HMENU)ID_EDIT_REFRESH_TIME_PERIOD, app_handles.hInstance, nullptr);
 
   if (!app_handles.hwnd_refresh_time_period)
+    return false;
+
+  if (app_handles.hwnd_cod1_path_edit) {
+    DestroyWindow(app_handles.hwnd_cod1_path_edit);
+  }
+  (void)CreateWindowEx(0, "Static", "Call of Duty installation path:", WS_CHILD | WS_VISIBLE | SS_LEFT, 10, 165, 200, 25, app_handles.hwnd_configuration_dialog, NULL, app_handles.hInstance, nullptr);
+
+  app_handles.hwnd_cod1_path_edit = CreateWindowEx(0, "Edit", nullptr, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT | ES_MULTILINE | ES_AUTOHSCROLL | WS_HSCROLL, 220, 160, 450, 40, app_handles.hwnd_configuration_dialog, (HMENU)ID_EDIT_CONFIGURATION_COD1_PATH, app_handles.hInstance, nullptr);
+
+  if (!app_handles.hwnd_cod1_path_edit)
+    return false;
+
+  SendMessage(app_handles.hwnd_cod1_path_edit, EM_SETLIMITTEXT, 1024, 0);
+
+  if (app_handles.hwnd_cod1_path_button) {
+    DestroyWindow(app_handles.hwnd_cod1_path_button);
+  }
+  app_handles.hwnd_cod1_path_button = CreateWindowEx(NULL, "Button", "Browse for codmp.exe", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 680, 170, 190, 25, app_handles.hwnd_configuration_dialog, (HMENU)ID_BUTTON_CONFIGURATION_COD1_PATH, app_handles.hInstance, NULL);
+  if (!app_handles.hwnd_cod1_path_button)
+    return false;
+
+  if (app_handles.hwnd_cod2_path_edit) {
+    DestroyWindow(app_handles.hwnd_cod2_path_edit);
+  }
+  (void)CreateWindowEx(0, "Static", "Call of Duty 2 installation path:", WS_CHILD | WS_VISIBLE | SS_LEFT, 10, 215, 200, 25, app_handles.hwnd_configuration_dialog, NULL, app_handles.hInstance, nullptr);
+
+  app_handles.hwnd_cod2_path_edit = CreateWindowEx(0, "Edit", nullptr, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT | ES_MULTILINE | ES_AUTOHSCROLL | WS_HSCROLL, 220, 210, 450, 40, app_handles.hwnd_configuration_dialog, (HMENU)ID_EDIT_CONFIGURATION_COD2_PATH, app_handles.hInstance, nullptr);
+
+  if (!app_handles.hwnd_cod2_path_edit)
+    return false;
+
+  if (app_handles.hwnd_cod2_path_button) {
+    DestroyWindow(app_handles.hwnd_cod2_path_button);
+  }
+  app_handles.hwnd_cod2_path_button = CreateWindowEx(NULL, "Button", "Browse for cod2mp_s.exe", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 680, 220, 190, 25, app_handles.hwnd_configuration_dialog, (HMENU)ID_BUTTON_CONFIGURATION_COD2_PATH, app_handles.hInstance, NULL);
+  if (!app_handles.hwnd_cod2_path_button)
+    return false;
+
+  if (app_handles.hwnd_cod4_path_edit) {
+    DestroyWindow(app_handles.hwnd_cod4_path_edit);
+  }
+  (void)CreateWindowEx(0, "Static", "Call of Duty 4 installation path:", WS_CHILD | WS_VISIBLE | SS_LEFT, 10, 265, 200, 25, app_handles.hwnd_configuration_dialog, NULL, app_handles.hInstance, nullptr);
+
+  app_handles.hwnd_cod4_path_edit = CreateWindowEx(0, "Edit", nullptr, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT | ES_MULTILINE | ES_AUTOHSCROLL | WS_HSCROLL, 220, 260, 450, 40, app_handles.hwnd_configuration_dialog, (HMENU)ID_EDIT_CONFIGURATION_COD4_PATH, app_handles.hInstance, nullptr);
+
+  if (!app_handles.hwnd_cod4_path_edit)
+    return false;
+
+  if (app_handles.hwnd_cod4_path_button) {
+    DestroyWindow(app_handles.hwnd_cod4_path_button);
+  }
+  app_handles.hwnd_cod4_path_button = CreateWindowEx(NULL, "Button", "Browse for iw3mp.exe", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 680, 270, 190, 25, app_handles.hwnd_configuration_dialog, (HMENU)ID_BUTTON_CONFIGURATION_COD4_PATH, app_handles.hInstance, NULL);
+  if (!app_handles.hwnd_cod4_path_button)
+    return false;
+
+  if (app_handles.hwnd_cod5_path_edit) {
+    DestroyWindow(app_handles.hwnd_cod5_path_edit);
+  }
+  (void)CreateWindowEx(0, "Static", "Call of Duty 5 installation path:", WS_CHILD | WS_VISIBLE | SS_LEFT, 10, 315, 200, 25, app_handles.hwnd_configuration_dialog, NULL, app_handles.hInstance, nullptr);
+
+  app_handles.hwnd_cod5_path_edit = CreateWindowEx(0, "Edit", nullptr, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_MULTILINE | ES_AUTOHSCROLL | WS_HSCROLL, 220, 310, 450, 40, app_handles.hwnd_configuration_dialog, (HMENU)ID_EDIT_CONFIGURATION_COD5_PATH, app_handles.hInstance, nullptr);
+
+  if (!app_handles.hwnd_cod5_path_edit)
+    return false;
+
+  if (app_handles.hwnd_cod5_path_button) {
+    DestroyWindow(app_handles.hwnd_cod5_path_button);
+  }
+  app_handles.hwnd_cod5_path_button = CreateWindowEx(NULL, "Button", "Browse for cod5mp.exe", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 680, 320, 190, 25, app_handles.hwnd_configuration_dialog, (HMENU)ID_BUTTON_CONFIGURATION_COD5_PATH, app_handles.hInstance, NULL);
+  if (!app_handles.hwnd_cod5_path_button)
     return false;
 
   if (app_handles.hwnd_re_confirmation_message) {
     DestroyWindow(app_handles.hwnd_re_confirmation_message);
   }
 
-  // http://msdn.microsoft.com/en-us/library/bb774367(VS.85).aspx
-  app_handles.hwnd_re_confirmation_message = CreateWindowEx(0, RICHEDIT_CLASS, nullptr, WS_BORDER | WS_VISIBLE | WS_CHILD | WS_VSCROLL | ES_MULTILINE | ES_LEFT | ES_AUTOVSCROLL | ES_READONLY, 150, 160, 450, 350, app_handles.hwnd_configuration_dialog, nullptr, app_handles.hInstance, nullptr);
+  app_handles.hwnd_re_confirmation_message = CreateWindowEx(0, RICHEDIT_CLASS, nullptr, WS_BORDER | WS_VISIBLE | WS_CHILD | WS_VSCROLL | ES_MULTILINE | ES_LEFT | ES_AUTOVSCROLL | ES_READONLY, 220, 360, 450, 360, app_handles.hwnd_configuration_dialog, nullptr, app_handles.hInstance, nullptr);
   if (!app_handles.hwnd_re_confirmation_message)
     return false;
 
@@ -5375,7 +6323,7 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
   if (app_handles.hwnd_save_settings_button) {
     DestroyWindow(app_handles.hwnd_save_settings_button);
   }
-  app_handles.hwnd_save_settings_button = CreateWindowEx(NULL, "Button", "Save changes", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 120, 530, 120, 20, app_handles.hwnd_configuration_dialog, (HMENU)ID_BUTTON_SAVE_CHANGES, app_handles.hInstance, NULL);
+  app_handles.hwnd_save_settings_button = CreateWindowEx(NULL, "Button", "Save changes", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 220, 740, 120, 25, app_handles.hwnd_configuration_dialog, (HMENU)ID_BUTTON_SAVE_CHANGES, app_handles.hInstance, NULL);
   if (!app_handles.hwnd_save_settings_button)
     return false;
 
@@ -5383,7 +6331,7 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
     DestroyWindow(app_handles.hwnd_test_connection_button);
   }
 
-  app_handles.hwnd_test_connection_button = CreateWindowEx(NULL, "Button", "Test connection", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 260, 530, 140, 20, app_handles.hwnd_configuration_dialog, (HMENU)ID_BUTTON_TEST_CONNECTION, app_handles.hInstance, NULL);
+  app_handles.hwnd_test_connection_button = CreateWindowEx(NULL, "Button", "Test connection", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 360, 740, 140, 25, app_handles.hwnd_configuration_dialog, (HMENU)ID_BUTTON_TEST_CONNECTION, app_handles.hInstance, NULL);
 
   if (!app_handles.hwnd_test_connection_button)
     return false;
@@ -5391,7 +6339,7 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
   if (app_handles.hwnd_close_button) {
     DestroyWindow(app_handles.hwnd_close_button);
   }
-  app_handles.hwnd_close_button = CreateWindowEx(NULL, "Button", "Cancel", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 420, 530, 60, 20, app_handles.hwnd_configuration_dialog, (HMENU)ID_BUTTON_CANCEL, app_handles.hInstance, NULL);
+  app_handles.hwnd_close_button = CreateWindowEx(NULL, "Button", "Cancel", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 520, 740, 60, 25, app_handles.hwnd_configuration_dialog, (HMENU)ID_BUTTON_CANCEL, app_handles.hInstance, NULL);
 
   if (!app_handles.hwnd_close_button)
     return false;
@@ -5399,7 +6347,7 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
   if (app_handles.hwnd_exit_tinyrcon_button) {
     DestroyWindow(app_handles.hwnd_exit_tinyrcon_button);
   }
-  app_handles.hwnd_exit_tinyrcon_button = CreateWindowEx(NULL, "Button", "Exit TinyRcon", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 500, 530, 120, 20, app_handles.hwnd_configuration_dialog, (HMENU)ID_BUTTON_CONFIGURATION_EXIT_TINYRCON, app_handles.hInstance, NULL);
+  app_handles.hwnd_exit_tinyrcon_button = CreateWindowEx(NULL, "Button", "Exit TinyRcon", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 600, 740, 120, 25, app_handles.hwnd_configuration_dialog, (HMENU)ID_BUTTON_CONFIGURATION_EXIT_TINYRCON, app_handles.hInstance, NULL);
 
   if (!app_handles.hwnd_exit_tinyrcon_button)
     return false;
@@ -5413,6 +6361,52 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
   char buffer_rt[8];
   snprintf(buffer_rt, 8, "%zu", main_app.get_game_server().get_check_for_banned_players_time_period());
   Edit_SetText(app_handles.hwnd_refresh_time_period, buffer_rt);
+
+  if (!main_app.get_codmp_exe_path().empty() && (str_contains(main_app.get_cod2mp_exe_path(), "-applaunch 2620") || check_if_file_path_exists(main_app.get_codmp_exe_path().c_str()))) {
+    Edit_SetText(app_handles.hwnd_cod1_path_edit, main_app.get_codmp_exe_path().c_str());
+  } else {
+    const char *found_cod1_path = find_call_of_duty_1_installation_path(false);
+    if (found_cod1_path != nullptr && len(found_cod1_path) > 0 && (str_contains(found_cod1_path, "-applaunch 2620") || check_if_file_path_exists(found_cod1_path))) {
+      Edit_SetText(app_handles.hwnd_cod1_path_edit, found_cod1_path);
+    } else {
+      Edit_SetText(app_handles.hwnd_cod1_path_edit, "");
+    }
+  }
+
+  if (!main_app.get_cod2mp_exe_path().empty() && (str_contains(main_app.get_cod2mp_exe_path(), "-applaunch 2630") || check_if_file_path_exists(main_app.get_cod2mp_exe_path().c_str()))) {
+    Edit_SetText(app_handles.hwnd_cod2_path_edit, main_app.get_cod2mp_exe_path().c_str());
+  } else {
+    const char *found_cod2_path = find_call_of_duty_2_installation_path(false);
+    if (found_cod2_path != nullptr && len(found_cod2_path) > 0 && (str_contains(found_cod2_path, "-applaunch 2630") || check_if_file_path_exists(found_cod2_path))) {
+      Edit_SetText(app_handles.hwnd_cod2_path_edit, found_cod2_path);
+    } else {
+      Edit_SetText(app_handles.hwnd_cod2_path_edit, "");
+    }
+  }
+
+  if (!main_app.get_iw3mp_exe_path().empty() && (str_contains(main_app.get_cod2mp_exe_path(), "-applaunch 7940") || check_if_file_path_exists(main_app.get_iw3mp_exe_path().c_str()))) {
+    Edit_SetText(app_handles.hwnd_cod4_path_edit, main_app.get_iw3mp_exe_path().c_str());
+  } else {
+
+    const char *found_cod4_path = find_call_of_duty_4_installation_path(false);
+    if (found_cod4_path != nullptr && len(found_cod4_path) > 0 && (str_contains(found_cod4_path, "-applaunch 7940") || check_if_file_path_exists(found_cod4_path))) {
+      Edit_SetText(app_handles.hwnd_cod4_path_edit, found_cod4_path);
+    } else {
+      Edit_SetText(app_handles.hwnd_cod4_path_edit, "");
+    }
+  }
+
+  if (!main_app.get_cod5mp_exe_path().empty() && (str_contains(main_app.get_cod2mp_exe_path(), "-applaunch 10090") || check_if_file_path_exists(main_app.get_cod5mp_exe_path().c_str()))) {
+    Edit_SetText(app_handles.hwnd_cod5_path_edit, main_app.get_cod5mp_exe_path().c_str());
+  } else {
+    const char *found_cod5_path = find_call_of_duty_5_installation_path(false);
+    if (found_cod5_path != nullptr && len(found_cod5_path) > 0 && (str_contains(found_cod5_path, "-applaunch 10090") || check_if_file_path_exists(found_cod5_path))) {
+      Edit_SetText(app_handles.hwnd_cod5_path_edit, found_cod5_path);
+    } else {
+      Edit_SetText(app_handles.hwnd_cod5_path_edit, "");
+    }
+  }
+
   print_colored_text(app_handles.hwnd_re_confirmation_message, "^2Please enter and verify the correctness of your game server's input settings by clicking on the ^3Test connection ^2button.\n", true, false, false);
   CenterWindow(app_handles.hwnd_configuration_dialog);
   ShowWindow(app_handles.hwnd_configuration_dialog, SW_SHOW);
@@ -5429,6 +6423,7 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
     } else if (WM_KEYDOWN == wnd_msg.message && VK_RETURN == wnd_msg.wParam) {
       const auto focused_hwnd = GetFocus();
       if (focused_hwnd == app_handles.hwnd_close_button) {
+        is_terminate_tinyrcon_settings_configuration_dialog_window.store(true);
         EnableWindow(app_handles.hwnd_main_window, TRUE);
         SetFocus(app_handles.hwnd_e_user_input);
         DestroyWindow(app_handles.hwnd_configuration_dialog);
@@ -5486,6 +6481,7 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
 
 void process_button_save_changes_click_event(HWND hwnd)
 {
+
   static char msg_buffer[1024];
   string new_server_name;
   string new_server_ip;
@@ -5499,7 +6495,7 @@ void process_button_save_changes_click_event(HWND hwnd)
     new_server_name.assign(msg_buffer);
   } else {
     is_invalid_entry = true;
-    print_colored_text(app_handles.hwnd_re_confirmation_message, "^1Server name text field cannot be empty!\n", true, false, false);
+    print_colored_text(app_handles.hwnd_re_confirmation_message, "^1Server name cannot be left empty!\n", true, false, false);
   }
 
   if (!is_invalid_entry) {
@@ -5518,11 +6514,11 @@ void process_button_save_changes_click_event(HWND hwnd)
   if (!is_invalid_entry) {
 
     Edit_GetText(app_handles.hwnd_server_port, msg_buffer, std::size(msg_buffer));
-    if (int number{}; stl::helper::len(msg_buffer) > 0 && is_valid_decimal_whole_number(msg_buffer, number)) {
+    if (int number{}; stl::helper::len(msg_buffer) > 0 && is_valid_decimal_whole_number(msg_buffer, number) && number >= 1024 && number <= 65535) {
       new_port = static_cast<uint_least16_t>(number);
     } else {
       is_invalid_entry = true;
-      const string user_message{ "^1You have entered an invalid server port number! ^5("s + msg_buffer + ")\n"s };
+      const string user_message{ "^1You have entered an invalid server port number! ^5("s + msg_buffer + ")\n^1Port number ^3must be >= ^11024 ^3and <= ^165535\n"s };
       print_colored_text(app_handles.hwnd_re_confirmation_message, user_message.c_str(), true, false, false);
     }
   }
@@ -5530,11 +6526,11 @@ void process_button_save_changes_click_event(HWND hwnd)
   if (!is_invalid_entry) {
 
     Edit_GetText(app_handles.hwnd_rcon_password, msg_buffer, std::size(msg_buffer));
-    if (stl::helper::len(msg_buffer) > 0) {
+    if (stl::helper::len(msg_buffer) > 3) {
       new_rcon_password.assign(msg_buffer);
     } else {
       is_invalid_entry = true;
-      const string user_message{ "^1You have entered an invalid rcon password! ^5("s + msg_buffer + ")\n"s };
+      const string user_message{ "^1You have entered an invalid rcon password! ^5("s + msg_buffer + ")\n^1Rcon password ^3must be at least ^14 characters ^3long.\n"s };
       print_colored_text(app_handles.hwnd_re_confirmation_message, user_message.c_str(), true, false, false);
     }
   }
@@ -5542,26 +6538,61 @@ void process_button_save_changes_click_event(HWND hwnd)
   if (!is_invalid_entry) {
 
     Edit_GetText(app_handles.hwnd_refresh_time_period, msg_buffer, std::size(msg_buffer));
-    int number{};
-    if (stl::helper::len(msg_buffer) > 0 && is_valid_decimal_whole_number(msg_buffer, number)) {
+    if (int number{}; stl::helper::len(msg_buffer) > 0 && is_valid_decimal_whole_number(msg_buffer, number) && number >= 5 && number <= 120) {
       new_refresh_time_period = number;
     } else {
       is_invalid_entry = true;
-      const string user_message{ "^1You have entered an invalid time period value (5 <= time period <= 120)! ^5("s + msg_buffer + ")\n"s };
+      const string user_message{ "^3You have entered an ^1invalid time period ^3value ^1("s + msg_buffer + ")\n^2Valid time period is ^15 <= ^2time period ^1<= 120\n"s };
       print_colored_text(app_handles.hwnd_re_confirmation_message, user_message.c_str(), true, false, false);
     }
   }
 
   if (!is_invalid_entry) {
+    snprintf(msg_buffer, std::size(msg_buffer), "\n^2Testing connection with the specified game server (^5%s^2) at ^5%s:%d ^2using the following ^5Tiny^6Rcon ^2settings:\n^1Server name: ^5%s\n^1Server IP address: ^5%s\n^1Server port number: ^5%d\n^1Server rcon password: ^5%s\n^1Refresh time period: ^5%d second(s)\n", new_server_name.c_str(), new_server_ip.c_str(), new_port, new_server_name.c_str(), new_server_ip.c_str(), new_port, new_rcon_password.c_str(), new_refresh_time_period);
+    print_colored_text(app_handles.hwnd_re_confirmation_message, msg_buffer, true, false, false);
+    const auto [test_result, game_name] = check_if_specified_server_ip_port_and_rcon_password_are_valid(new_server_ip.c_str(), new_port, new_rcon_password.c_str());
+    if (test_result) {
+      main_app.set_is_connection_settings_valid(true);
+      print_colored_text(app_handles.hwnd_re_confirmation_message, "^2Testing connection SUCCEEDED!\n", true, false, false);
+    } else {
+      main_app.set_is_connection_settings_valid(false);
+      print_colored_text(app_handles.hwnd_re_confirmation_message, "^1Testing connection FAILED!\n", true, false, false);
+    }
 
     snprintf(msg_buffer, std::size(msg_buffer), "\n^2Saving the following ^5Tiny^6Rcon ^2settings:\n^1Server name: ^5%s\n^1Server IP address: ^5%s\n^1Server port number: ^5%d\n^1Server rcon password: ^5%s\n^1Refresh time period: ^5%d\n", new_server_name.c_str(), new_server_ip.c_str(), new_port, new_rcon_password.c_str(), new_refresh_time_period);
     print_colored_text(app_handles.hwnd_re_confirmation_message, msg_buffer, true, false, false);
 
+    main_app.set_game_name(game_name);
     main_app.set_game_server_name(std::move(new_server_name));
     main_app.get_game_server().set_server_ip_address(std::move(new_server_ip));
     main_app.get_game_server().set_server_port(new_port);
     main_app.get_game_server().set_rcon_password(std::move(new_rcon_password));
     main_app.get_game_server().set_check_for_banned_players_time_period(new_refresh_time_period);
+
+    Edit_GetText(app_handles.hwnd_cod1_path_edit, path_buffer, std::size(path_buffer));
+    trim_in_place(path_buffer);
+    if (str_contains(path_buffer, "-applaunch 2620") || check_if_file_path_exists(path_buffer)) {
+      main_app.set_codmp_exe_path(path_buffer);
+    }
+
+    Edit_GetText(app_handles.hwnd_cod2_path_edit, path_buffer, std::size(path_buffer));
+    trim_in_place(path_buffer);
+    if (str_contains(path_buffer, "-applaunch 2630") || check_if_file_path_exists(path_buffer)) {
+      main_app.set_cod2mp_exe_path(path_buffer);
+    }
+
+    Edit_GetText(app_handles.hwnd_cod4_path_edit, path_buffer, std::size(path_buffer));
+    trim_in_place(path_buffer);
+    if (str_contains(path_buffer, "-applaunch 7940") || check_if_file_path_exists(path_buffer)) {
+      main_app.set_iw3mp_exe_path(path_buffer);
+    }
+
+    Edit_GetText(app_handles.hwnd_cod5_path_edit, path_buffer, std::size(path_buffer));
+    trim_in_place(path_buffer);
+    if (str_contains(path_buffer, "-applaunch 10090") || check_if_file_path_exists(path_buffer)) {
+      main_app.set_cod5mp_exe_path(path_buffer);
+    }
+
     write_tiny_rcon_json_settings_to_file("config\\tinyrcon.json");
     print_colored_text(app_handles.hwnd_re_confirmation_message, "^2Displayed server configuration settings have been successfully saved!\n", true, false, false);
     MessageBox(hwnd, "Displayed server configuration settings have been successfully saved!", "Successfully saved server settings", MB_ICONINFORMATION | MB_OK);
@@ -5977,6 +7008,7 @@ bool initialize_and_verify_server_connection_settings()
       print_colored_text(app_handles.hwnd_re_messages_data, "^3Initializing network settings for communicating with the game server.\n", true, true, true);
       print_colored_text(app_handles.hwnd_re_messages_data, "^2Initializing network settings has completed.\n", true, true, true);
     } else {
+      main_app.set_is_connection_settings_valid(false);
       show_error(app_handles.hwnd_main_window, "Failed to establish test connection with the specified game server!\nPlease verify your game server's IP address, port and rcon password settings.", 0);
       if (!show_and_process_tinyrcon_configuration_panel("Configure and verify your game server's settings.")) {
         show_error(app_handles.hwnd_main_window, "Failed to construct and show TinyRcon configuration dialog!", 0);
@@ -5984,6 +7016,9 @@ bool initialize_and_verify_server_connection_settings()
 
       if (is_terminate_program.load())
         return false;
+
+      if (is_terminate_tinyrcon_settings_configuration_dialog_window.load())
+        break;
     }
   } while (main_app.get_game_name() == game_name_t::unknown);
 
@@ -5992,9 +7027,14 @@ bool initialize_and_verify_server_connection_settings()
 
 void initiate_sending_rcon_status_command_now()
 {
-  print_colored_text(app_handles.hwnd_re_messages_data, "^2Executing rcon command: ^5!s\n", true, true, true);
+  if (main_app.get_is_connection_settings_valid()) {
+    print_colored_text(app_handles.hwnd_re_messages_data, "^2Executing rcon command: ^5!s\n", true, true, true);
+    print_colored_text(app_handles.hwnd_re_messages_data, "^5Sending status rcon command to the server.\n", true, true, true);
+  } else {
+    print_colored_text(app_handles.hwnd_re_messages_data, "^2Executing rcon command: ^5!gs\n", true, true, true);
+    print_colored_text(app_handles.hwnd_re_messages_data, "^5Sending getstatus rcon command to the server.\n", true, true, true);
+  }
   atomic_counter.store(main_app.get_game_server().get_check_for_banned_players_time_period());
-  print_colored_text(app_handles.hwnd_re_messages_data, "^5Sending status rcon command to the server.\n", true, true, true);
   RECT bounding_rectangle{
     screen_width - 480,
     screen_height - 78,
@@ -6113,6 +7153,91 @@ void prepare_players_data_for_display(const bool is_log_status_table)
         log << left << setw(16) << p.ip_address << " | " << left
             << setw(longest_country_length) << buffer
             << "|" << '\n';
+      }
+    }
+  }
+
+  if (is_log_status_table) {
+    log << string{ decoration_line + "\n"s };
+    log_message(log.str(), true);
+  }
+}
+
+void prepare_players_data_for_display_of_getstatus_response(const bool is_log_status_table)
+{
+  static char buffer[256];
+  size_t longest_name_length{ 32 };
+
+  auto &players = main_app.get_game_server().get_players_data();
+  const size_t number_of_players{ main_app.get_game_server().get_number_of_players() };
+
+  if (number_of_players > 0) {
+    sort_players_data(players, sort_type::score_desc);
+    if (!players.empty()) {
+      longest_name_length =
+        std::max(longest_name_length, find_longest_player_name_length(players, false, number_of_players));
+    }
+  }
+
+  ostringstream log;
+  match_information = prepare_current_match_information();
+
+  if (is_log_status_table) {
+    remove_all_color_codes(match_information);
+    log << match_information;
+  }
+
+  const string &pd = main_app.get_game_server().get_data_player_pid_color();
+  const string &sd = main_app.get_game_server().get_data_player_score_color();
+  const string &pgd = main_app.get_game_server().get_data_player_ping_color();
+
+  const string decoration_line(24 + longest_name_length, '=');
+  if (is_log_status_table) {
+    log << string{ "\n"s + decoration_line + "\n"s }.c_str();
+    log << "|" << setw(6) << " score"
+        << " | " << setw(4) << "ping"
+        << " | " << setw(longest_name_length)
+        << left << "Player name" << '|' << string{ "\n"s + decoration_line + "\n"s };
+    if (number_of_players == 0) {
+      log << string{ "| Server is empty." };
+      const string filler{
+        string(decoration_line.length() - 1 - stl::helper::len("| Server is empty."), ' ') + "|\n"s
+      };
+      log << filler;
+    }
+  }
+
+  if (number_of_players > 0) {
+
+    for (size_t i{}; i < number_of_players; ++i) {
+
+      const player_data &p{ players[i] };
+
+      snprintf(buffer, 5, "%s%d", pd.c_str(), p.pid);
+      strcpy_s(displayed_players_data[i].pid, std::size(displayed_players_data[i].pid), buffer);
+
+      snprintf(buffer, std::size(buffer), "%s%d", sd.c_str(), p.score);
+      strcpy_s(displayed_players_data[i].score, std::size(displayed_players_data[i].score), buffer);
+
+      snprintf(buffer, std::size(buffer), "%s%s", pgd.c_str(), p.ping);
+      strcpy_s(displayed_players_data[i].ping, std::size(displayed_players_data[i].ping), buffer);
+
+      strcpy_s(displayed_players_data[i].player_name, std::size(displayed_players_data[i].player_name), p.player_name);
+
+      displayed_players_data[i].ip_address[0] = 0;
+      displayed_players_data[i].geo_info[0] = 0;
+      displayed_players_data[i].country_code = "xy";
+
+      if (is_log_status_table) {
+        log << "|" << right << setw(3) << p.pid << " | " << setw(6) << p.score << " | " << setw(4) << p.ping << " | ";
+        string name{ p.player_name };
+        remove_all_color_codes(name);
+        log << name;
+        const size_t printed_name_char_count{ get_number_of_characters_without_color_codes(p.player_name) };
+        if (printed_name_char_count < longest_name_length) {
+          log << string(longest_name_length - printed_name_char_count, ' ');
+        }
+        log << "|\n";
       }
     }
   }

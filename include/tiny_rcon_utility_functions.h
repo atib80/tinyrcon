@@ -55,6 +55,14 @@ struct tiny_rcon_handles
   HWND hwnd_exit_tinyrcon_button;
   HWND hwnd_configure_server_settings_button;
   HWND hwnd_clear_messages_button;
+  HWND hwnd_cod1_path_edit;
+  HWND hwnd_cod2_path_edit;
+  HWND hwnd_cod4_path_edit;
+  HWND hwnd_cod5_path_edit;
+  HWND hwnd_cod1_path_button;
+  HWND hwnd_cod2_path_button;
+  HWND hwnd_cod4_path_button;
+  HWND hwnd_cod5_path_button;
 };
 
 enum class game_name_t {
@@ -358,9 +366,21 @@ bool remove_dir_path_sep_char(wchar_t *) noexcept;
 
 void replace_forward_slash_with_backward_slash(std::string &);
 
-const char *find_call_of_duty_2_installation_path() noexcept;
+const char *find_call_of_duty_1_installation_path(const bool is_show_browse_folder_dialog = true) noexcept;
+
+bool check_if_call_of_duty_1_game_is_running() noexcept;
+
+const char *find_call_of_duty_2_installation_path(const bool is_show_browse_folder_dialog = true) noexcept;
 
 bool check_if_call_of_duty_2_game_is_running() noexcept;
+
+const char *find_call_of_duty_4_installation_path(const bool is_show_browse_folder_dialog = true) noexcept;
+
+bool check_if_call_of_duty_4_game_is_running() noexcept;
+
+const char *find_call_of_duty_5_installation_path(const bool is_show_browse_folder_dialog = true) noexcept;
+
+bool check_if_call_of_duty_5_game_is_running() noexcept;
 
 const char *BrowseFolder(const char *, const char *) noexcept;
 
@@ -439,3 +459,4 @@ bool initialize_and_verify_server_connection_settings();
 void initiate_sending_rcon_status_command_now();
 
 void prepare_players_data_for_display(const bool is_log_status_table = false);
+void prepare_players_data_for_display_of_getstatus_response(const bool is_log_status_table = false);

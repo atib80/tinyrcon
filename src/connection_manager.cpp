@@ -38,7 +38,7 @@ void connection_manager::prepare_rcon_command(
   char *buffer,
   const size_t buffer_size,
   const char *rconCommandToSend,
-  const char *rcon_password) noexcept
+  const char *rcon_password) const noexcept
 {
   // ZeroMemory(buffer, buffer_size);
   if (_strcmpi(rconCommandToSend, "getstatus") == 0 || _strcmpi(rconCommandToSend, "getinfo") == 0) {
@@ -52,7 +52,7 @@ void connection_manager::prepare_rcon_command(
 size_t connection_manager::send_rcon_command(
   const string &outgoing_data,
   const char *remote_ip,
-  const uint_least16_t remote_port)
+  const uint_least16_t remote_port) const
 {
   const ip::udp::endpoint dst{ ip::address::from_string(remote_ip), remote_port };
   const size_t sent_bytes = udp_socket.send_to(buffer(outgoing_data.c_str(), outgoing_data.length()), dst);
@@ -62,7 +62,7 @@ size_t connection_manager::send_rcon_command(
 size_t connection_manager::receive_data_from_server(
   const char *remote_ip,
   const uint_least16_t remote_port,
-  std::string &received_reply)
+  std::string &received_reply) const
 {
   char incoming_data_buffer[receive_buffer_size];
   size_t noOfReceivedBytes{}, noOfAllReceivedBytes{};
@@ -88,12 +88,13 @@ size_t connection_manager::receive_data_from_server(
       stl::helper::strstr(incoming_data_buffer, "\xFF\xFF\xFF\xFFprint\nInvalid password.");
     if (start != nullptr) {
       main_app.set_is_connection_settings_valid(false);
-      if (!initialize_and_verify_server_connection_settings()) {
-        PostQuitMessage(0);
+      main_app.add_command_to_queue({ "getstatus" }, command_type::rcon, true);
+      /* if (!initialize_and_verify_server_connection_settings()) {
+         PostQuitMessage(0);
       }
-      /*if (!show_and_process_tinyrcon_configuration_panel("Invalid rcon password! Please, configure and verify your game server's settings.")) {
-        show_error(g_main_window, "Failed to construct and show TinyRcon configuration dialog!", 0);
-      }*/
+       if (!show_and_process_tinyrcon_configuration_panel("Invalid rcon password! Please, configure and verify your game server's settings.")) {
+         show_error(g_main_window, "Failed to construct and show TinyRcon configuration dialog!", 0);
+       }*/
     } else {
       incoming_data_buffer[noOfAllReceivedBytes] = '\0';
       const char *current{}, *last{};
@@ -103,7 +104,7 @@ size_t connection_manager::receive_data_from_server(
       if ((strstr(incoming_data_buffer, rcon_status_response_needle1)
             != nullptr)
           || (rcon_status_response_needle2 != nullptr && strstr(incoming_data_buffer, rcon_status_response_needle2) != nullptr)) {
-
+        main_app.set_is_connection_settings_valid(true);
         start = received_reply.c_str() + 15;
         last = start;
         while (*last != 0x0A)
@@ -314,12 +315,17 @@ size_t connection_manager::receive_data_from_server(
           last = ++start;
           while (*last != '"')
             ++last;
-          string player_name(start, last);
-          stl::helper::trim_in_place(player_name);
 
           players_data[player_num].pid = player_num;
           players_data[player_num].score = player_score;
-          strcpy_s(players_data[player_num].ping, 5, player_ping.c_str());
+          strcpy_s(players_data[player_num].ping, std::size(players_data[player_num].ping), player_ping.c_str());
+          const size_t no_of_chars_to_copy = static_cast<size_t>(last - start);
+          strncpy_s(players_data[player_num].player_name, std::size(players_data[player_num].player_name), start, no_of_chars_to_copy);
+          players_data[player_num].player_name[no_of_chars_to_copy] = '\0';
+          players_data[player_num].country_name = "Unknown";
+          players_data[player_num].region = "Unknown";
+          players_data[player_num].city = "Unknown";
+          players_data[player_num].country_code = "xy";
           ++player_num;
           start = last = current;
         }
@@ -347,6 +353,7 @@ size_t connection_manager::receive_data_from_server(
           update_game_server_setting(std::move(property), std::move(value));
         }
       } else if (strstr(incoming_data_buffer, "map_rotate...\n\n") != nullptr) {
+        main_app.set_is_connection_settings_valid(true);
         received_reply.assign(incoming_data_buffer,
           incoming_data_buffer + noOfReceivedBytes);
         while (true) {
@@ -360,6 +367,7 @@ size_t connection_manager::receive_data_from_server(
         }
 
       } else if (strstr(incoming_data_buffer, "sv_mapRotationCurrent") != nullptr) {
+        main_app.set_is_connection_settings_valid(true);
         current = &incoming_data_buffer[0] + 39;
         start = current;
         last = stl::helper::strstr(current, "^7\"");
@@ -382,17 +390,20 @@ size_t connection_manager::receive_data_from_server(
           }
         }
       } else if (strstr(incoming_data_buffer, "sv_mapRotation") != nullptr) {
+        main_app.set_is_connection_settings_valid(true);
         current = &incoming_data_buffer[0] + 32;
         start = current;
         last = stl::helper::strstr(current, "^7\"");
         main_app.get_game_server().set_map_rotation(string(start, last));
       } else if (strstr(incoming_data_buffer, "sv_hostname") != nullptr) {
+        main_app.set_is_connection_settings_valid(true);
         current = &incoming_data_buffer[0] + 29;
         start = last = current;
         while (*last != '^' && *(last + 1) != '7' && *(last + 2) != '"')
           ++last;
         main_app.get_game_server().set_server_name(string(start, last));
       } else if (strstr(incoming_data_buffer, "mapname") != nullptr) {
+        main_app.set_is_connection_settings_valid(true);
         start = current = &incoming_data_buffer[0] + 25;
         last = stl::helper::strstr(current, "^7");
         if (last != nullptr) {
@@ -404,6 +415,7 @@ size_t connection_manager::receive_data_from_server(
           main_app.get_game_server().set_current_map(std::move(current_map));
         }
       } else if (strstr(incoming_data_buffer, "\"g_gametype\" is: \"") != nullptr && strstr(incoming_data_buffer, "default: \"") != nullptr) {
+        main_app.set_is_connection_settings_valid(true);
         start =
           stl::helper::strstr(incoming_data_buffer, "\"g_gametype\" is: \"") + 18;
         last = stl::helper::strstr(start, "^7");
@@ -435,7 +447,7 @@ void connection_manager::send_and_receive_rcon_data(
   const char *remote_ip,
   const uint_least16_t remote_port,
   const char *rcon_password,
-  const bool is_wait_for_reply)
+  const bool is_wait_for_reply) const
 {
   constexpr size_t buffer_size{ 1536 };
   static char outgoing_data_buffer[buffer_size];
