@@ -21,7 +21,7 @@
     <ClInclude Include="include\targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\Resource.h">
+    <ClInclude Include="include\resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\tiny_rcon.h">
@@ -30,7 +30,7 @@
     <ClInclude Include="include\detail\stl_helper_functions_impl.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\RSJparser.hpp">
+    <ClInclude Include="include\json_parser.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\stl_helper_functions.hpp">
@@ -48,7 +48,7 @@
     <ClInclude Include="include\connection_manager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\simpleGrid.h">
+    <ClInclude Include="include\simple_grid.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -62,7 +62,7 @@
     <ClCompile Include="src\connection_manager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\simpleGrid.cpp">
+    <ClCompile Include="src\simple_grid.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

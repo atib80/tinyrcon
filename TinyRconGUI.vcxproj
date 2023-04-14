@@ -188,9 +188,9 @@
     <ClInclude Include="include\detail\stl_helper_functions_impl.hpp" />
     <ClInclude Include="include\framework.h" />
     <ClInclude Include="include\game_server.h" />
-    <ClInclude Include="include\Resource.h" />
-    <ClInclude Include="include\RSJparser.hpp" />
-    <ClInclude Include="include\simpleGrid.h" />
+    <ClInclude Include="include\resource.h" />
+    <ClInclude Include="include\json_parser.hpp" />
+    <ClInclude Include="include\simple_grid.h" />
     <ClInclude Include="include\stl_helper_functions.hpp" />
     <ClInclude Include="include\targetver.h" />
     <ClInclude Include="include\tiny_rcon.h" />
@@ -199,7 +199,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\connection_manager.cpp" />
-    <ClCompile Include="src\simpleGrid.cpp" />
+    <ClCompile Include="src\simple_grid.cpp" />
     <ClCompile Include="src\tiny_rcon.cpp" />
     <ClCompile Include="src\tiny_rcon_utility_functions.cpp" />
   </ItemGroup>

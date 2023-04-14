@@ -1,17 +1,11 @@
 ﻿#include "tiny_cod2_rcon_client_application.h"
 #include "game_server.h"
 #include "stl_helper_functions.hpp"
-#include <atomic>
-#include <codecvt>
-#include <conio.h>
 #include <fstream>
 #include <iomanip>
-#include <locale>
 #include <Psapi.h>
 #include <regex>
-#include <shellapi.h>
 #include <Shlobj.h>
-#include <strsafe.h>
 #include <windowsx.h>
 #include "json_parser.hpp"
 #include "resource.h"
@@ -81,7 +75,7 @@ row_of_player_data_to_display displayed_players_data[64]{};
 
 static char path_buffer[32768];
 
-extern const std::regex ip_address_and_port_regex{ R"((\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:-?\d+))" };
+extern const std::regex ip_address_and_port_regex{ R"((\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(-?\d+))" };
 
 extern const std::unordered_map<char, COLORREF> colors{
   { '0', color::black },
@@ -793,7 +787,6 @@ void convert_guid_key_to_country_name(const vector<geoip_data> &geo_data,
   } else {
     if (len(player_data.guid_key) == 0) {
       snprintf(player_data.guid_key, std::size(player_data.guid_key), "%lu", playerGuidKey);
-      // player_data.guid_key = to_string(playerGuidKey);
     }
     const size_t sizeOfElements{ geo_data.size() };
     size_t lower_bound{ 0 };
@@ -837,7 +830,6 @@ size_t find_longest_player_name_length(
   const bool count_color_codes,
   const size_t number_of_players_to_process) noexcept
 {
-  // const size_t number_of_players{ main_app.get_game_server().get_number_of_players() };
   if (0 == number_of_players_to_process)
     return 0;
 
@@ -854,7 +846,6 @@ size_t find_longest_player_country_city_info_length(
   const std::vector<player_data> &players,
   const size_t number_of_players_to_process) noexcept
 {
-  // const size_t number_of_players{ main_app.get_game_server().get_number_of_players() };
   if (0 == number_of_players_to_process)
     return 0;
 
@@ -1653,7 +1644,6 @@ bool remove_temp_banned_ip_address(const std::string &ip_address, std::string &m
     }
 
     rcon_say(message);
-    // print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), true, true, true);
 
     temp_banned_players.erase(remove_if(std::begin(temp_banned_players), std::end(temp_banned_players), [&ip_address](const player_data &p) {
       return ip_address == p.ip_address;
@@ -1704,7 +1694,6 @@ bool remove_permanently_banned_ip_address(const std::string &ip_address, std::st
     message.assign(buffer);
 
     rcon_say(message);
-    // print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), true, true, true);
 
     banned_players.erase(remove_if(std::begin(banned_players), std::end(banned_players), [&ip_address](const player_data &p) {
       return ip_address == p.ip_address;
@@ -1781,7 +1770,6 @@ bool get_user_input()
 
 void print_help_information(const std::vector<std::string> &input_parts)
 {
-  // Edit_SetText(app_handles.hwnd_re_messages_data, "");
   if (input_parts.size() >= 2 && (input_parts[0] == "!list" || input_parts[0] == "list" || input_parts[0] == "!l" || input_parts[0] == "!help" || input_parts[0] == "help" || input_parts[0] == "!h" || input_parts[0] == "h") && str_starts_with(input_parts[1], "user", true)) {
     const string help_message{
       R"(
@@ -2083,7 +2071,6 @@ void check_for_banned_ip_addresses()
       specify_reason_for_player_pid(online_player.pid, reason);
       string public_msg{ "^5Tiny^6Rcon ^2has successfully automatically banned ^1IP address: "s + online_player.ip_address + " ^2Reason: " + reason + "\n"s };
       rcon_say(public_msg, true);
-      // print_colored_text(app_handles.hwnd_re_messages_data, public_msg.c_str(), true, true, true);
       main_app.get_tinyrcon_dict()["{REASON}"] = std::move(reason);
       const string message{
         "^5Tiny^6Rcon ^2has successfully automatically executed command ^1!gb ^2on player ("s + get_player_information(online_player.pid) + "^3)\n"s
@@ -2114,9 +2101,6 @@ void kick_player(const int pid, string &custom_message)
   rcon_say(message);
   snprintf(buffer, std::size(buffer), "clientkick %d", pid);
   main_app.get_connection_manager().send_and_receive_rcon_data(buffer, reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str(), false);
-  // this_thread::sleep_for(std::chrono::milliseconds(20));
-  // main_app.get_game_server().remove_player_data(pid);
-  // main_app.get_game_server().get_player_data(pid).is_ignore_player_data = true;
   auto &warned_players = main_app.get_game_server().get_warned_players_data();
   if (warned_players.find(pid) != end(warned_players)) {
     warned_players.erase(pid);
@@ -2127,7 +2111,6 @@ void tempban_player(player_data &pd, std::string &custom_message)
 {
   temp_ban_player_ip_address(pd);
   kick_player(pd.pid, custom_message);
-  // this_thread::sleep_for(std::chrono::milliseconds(20));
 }
 
 void ban_player(const int pid, std::string &custom_message)
@@ -2137,7 +2120,6 @@ void ban_player(const int pid, std::string &custom_message)
   snprintf(buffer, std::size(buffer), "banclient %d", pid);
   main_app.get_connection_manager().send_and_receive_rcon_data(buffer, reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str(), false);
   kick_player(pid, custom_message);
-  // this_thread::sleep_for(std::chrono::milliseconds(20));
 }
 
 void say_message(const char *message)
@@ -2227,7 +2209,6 @@ void tell_message(const char *message, const int pid)
   for (const auto &line : lines) {
     snprintf(buffer, std::size(buffer), "tell %d \"%s\"", pid, line.c_str());
     main_app.get_connection_manager().send_and_receive_rcon_data(buffer, reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str(), false);
-    // this_thread::sleep_for(std::chrono::milliseconds(20));
   }
 }
 
@@ -2416,7 +2397,6 @@ void process_user_command(const std::vector<string> &user_cmd)
           const auto &banned_ip_addresses =
             main_app.get_game_server().get_set_of_banned_ip_addresses();
           if (int pid{ -1 }; is_valid_decimal_whole_number(user_cmd[1], pid)) {
-            // const string &slot{ user_cmd[1] };
             auto &player = main_app.get_game_server().get_player_data(pid);
             if (pid == player.pid) {
               unsigned long guid{};
@@ -2476,7 +2456,6 @@ void process_user_command(const std::vector<string> &user_cmd)
                 main_app.get_tinyrcon_dict()["{REASON}"] = std::move(reason);
                 string command{ main_app.get_user_defined_ipban_message() };
                 build_tiny_rcon_message(command);
-                // say_message(command.c_str());
                 rcon_say(command);
                 print_colored_text(app_handles.hwnd_re_messages_data, string{ "^2You have successfully banned IP address: ^1"s + ip_address + "\n"s }.c_str(), true, true, true);
                 const string message{
@@ -2498,7 +2477,6 @@ void process_user_command(const std::vector<string> &user_cmd)
         print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, false);
       }
     } else if (user_cmd[0] == "s" || user_cmd[0] == "!s" || user_cmd[0] == "!status") {
-      // main_app.add_command_to_queue({ "status" }, command_type::rcon, true);
       initiate_sending_rcon_status_command_now();
     } else if (user_cmd[0] == "gs" || user_cmd[0] == "!gs" || user_cmd[0] == "getstatus" || user_cmd[0] == "!getstatus") {
       main_app.add_command_to_queue({ "getstatus" }, command_type::rcon, true);
@@ -2615,17 +2593,14 @@ void process_user_command(const std::vector<string> &user_cmd)
       const bool use_private_slot{ user_cmd[0] == "!cp" && !main_app.get_game_server().get_private_slot_password().empty() };
       smatch ip_port_match{};
       const string ip_port_server_address{
-        (user_cmd.size() > 1 && regex_search(user_cmd[1], ip_port_match, ip_address_and_port_regex)) ? ip_port_match[1].str() : main_app.get_game_server().get_server_ip_address() + ":"s + to_string(main_app.get_game_server().get_server_port())
+        (user_cmd.size() > 1 && regex_search(user_cmd[1], ip_port_match, ip_address_and_port_regex)) ? (ip_port_match[1].str() + ":"s + ip_port_match[2].str()) : (main_app.get_game_server().get_server_ip_address() + ":"s + to_string(main_app.get_game_server().get_server_port()))
       };
+      const size_t sep_pos{ ip_port_server_address.find(':') };
+      const string ip_address{ ip_port_server_address.substr(0, sep_pos) };
+      const uint16_t port_number{ static_cast<uint16_t>(stoul(ip_port_server_address.substr(sep_pos + 1))) };
+      const auto result = check_if_specified_server_ip_port_and_rcon_password_are_valid(ip_address.c_str(), port_number, main_app.get_game_server().get_rcon_password().c_str());
 
-      game_name_t game_name{ main_app.get_game_name() };
-
-      if (user_cmd.size() > 1) {
-
-        string last_arg{ user_cmd.back() };
-        stl::helper::to_lower_case_in_place(last_arg);
-        game_name = (last_arg == "cod1" || last_arg == "cod2" || last_arg == "cod4" || last_arg == "cod5") ? game_name_to_game_name_t.at(last_arg) : main_app.get_game_name();
-      }
+      const game_name_t game_name{ result.second != game_name_t::unknown ? result.second : main_app.get_game_name() };
 
       connect_to_the_game_server(ip_port_server_address, game_name, use_private_slot, true);
     }
@@ -3105,7 +3080,6 @@ void display_temporarily_banned_ip_addresses()
   }
   oss << string{ "^5"s + decoration_line + "\n\n"s };
   log << string{ decoration_line + "\n\n"s };
-  // Edit_SetText(app_handles.hwnd_re_messages_data, "");
   const string message{ oss.str() };
   print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), true, true, true);
   log_message(log.str(), true);
@@ -3221,7 +3195,6 @@ void display_permanently_banned_ip_addresses()
   }
   oss << string{ "^5"s + decoration_line + "\n\n"s };
   log << string{ decoration_line + "\n\n"s };
-  // Edit_SetText(app_handles.hwnd_re_messages_data, "");
   const string message{ oss.str() };
   print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), true, true, true);
   log_message(log.str(), true);
@@ -3620,7 +3593,6 @@ bool change_server_setting(const std::vector<std::string> &command) noexcept
       }
       print_colored_text(app_handles.hwnd_re_messages_data, string{ "^2You have successfully changed the ^1rcon password ^2to \"^5"s + command[2] + "^2\"\n"s }.c_str(), true, true, true);
       main_app.get_game_server().set_rcon_password(command[2]);
-      // main_app.add_command_to_queue({ "status" }, command_type::rcon, true);
       initiate_sending_rcon_status_command_now();
 
     } else if (command[1] == "private") {
@@ -3643,7 +3615,6 @@ bool change_server_setting(const std::vector<std::string> &command) noexcept
       print_colored_text(app_handles.hwnd_re_messages_data, string{ "^2You have successfully changed the ^1game server address ^2to ^5"s + command[2] + "^2\n"s }.c_str(), true, true, true);
       main_app.get_game_server().set_server_ip_address(ip);
       main_app.get_game_server().set_server_port(port);
-      // main_app.get_connection_manager().initialize_udp_settings();
       initiate_sending_rcon_status_command_now();
     } else if (command[1] == "name") {
       if (command[2].length() < 3U) {
@@ -3818,7 +3789,6 @@ void load_map(const string &rcon_map_name, const string &game_type, const bool i
 {
   if (is_change_game_type) {
     change_game_type(game_type, false);
-    // std::this_thread::sleep_for(std::chrono::milliseconds(50));
   }
 
   char buffer[128]{};
@@ -3827,22 +3797,6 @@ void load_map(const string &rcon_map_name, const string &game_type, const bool i
   main_app.get_connection_manager().send_and_receive_rcon_data(buffer, reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str(), true);
   main_app.get_game_server().set_current_map(rcon_map_name);
   initiate_sending_rcon_status_command_now();
-  /*prepare_players_data_for_display();
-  display_players_data_in_players_grid(app_handles.hwnd_players_grid);*/
-}
-
-void say_slow(HWND control, const char *msg, size_t const len) noexcept
-{
-  bool sleep_on = true;
-
-  const size_t delay = min(static_cast<size_t>(10), static_cast<size_t>(1000) / len);
-  char buffer[2]{};
-  for (size_t i = 0; i < len; ++i) {
-    buffer[0] = msg[i];
-    print_colored_text(control, buffer, true, true, true);
-    if (sleep_on) this_thread::sleep_for(std::chrono::milliseconds(delay));
-    if (_kbhit()) sleep_on = false;
-  }
 }
 
 bool remove_dir_path_sep_char(char *dir_path) noexcept
@@ -3916,7 +3870,6 @@ const char *BrowseFolder(const char *saved_path, const char *user_info) noexcept
 {
   constexpr size_t max_path_length{ 32768 };
   static char path[max_path_length];
-  // const char* path_param = saved_path.c_str();
 
   BROWSEINFOA bi{};
   bi.lpszTitle = user_info;
@@ -5388,7 +5341,7 @@ void set_rich_edit_control_colors(HWND richEditCtrl, const COLORREF fg_color, co
 {
   CHARFORMAT2 cf{};
   cf.cbSize = sizeof(CHARFORMAT2);
-  cf.dwMask = CFM_CHARSET | CFM_FACE | CFM_COLOR | CFM_BACKCOLOR | CFM_WEIGHT;// I'm setting only the style information
+  cf.dwMask = CFM_CHARSET | CFM_FACE | CFM_COLOR | CFM_BACKCOLOR | CFM_WEIGHT;
   strcpy_s(cf.szFaceName, font_face_name);
   cf.wWeight = 800;
   cf.bCharSet = RUSSIAN_CHARSET;
@@ -5556,14 +5509,12 @@ void construct_tinyrcon_gui(HWND hWnd) noexcept
     DestroyWindow(app_handles.hwnd_match_information);
   }
 
-  // http://msdn.microsoft.com/en-us/library/bb774367(VS.85).aspx
   app_handles.hwnd_match_information = CreateWindowEx(0, RICHEDIT_CLASS, nullptr, WS_VISIBLE | WS_CHILD | ES_LEFT | ES_READONLY, 10, 13, screen_width / 2 + 140, 30, hWnd, nullptr, app_handles.hInstance, nullptr);
   if (!app_handles.hwnd_match_information)
     FatalAppExitA(0, "Couldn't create 'app_handles.hwnd_match_information' richedit control!");
 
   assert(app_handles.hwnd_match_information != 0);
   SendMessage(app_handles.hwnd_match_information, EM_SETBKGNDCOLOR, NULL, color::black);
-  // SendMessage(app_handles.hwnd_match_information, EM_SETFONTSIZE, (WPARAM)8, (LPARAM)NULL);
   scroll_to_beginning(app_handles.hwnd_match_information);
   set_rich_edit_control_colors(app_handles.hwnd_match_information, color::white, color::black, "Lucida Console");
   if (g_re_match_information_contents.empty())
@@ -6709,13 +6660,9 @@ const std::regex &get_appropriate_status_regex_for_specified_game_name(const gam
 {
 
   static const std::regex status_regex_for_cod1{ R"(^\s*(\d+)\s+(-?\d+)\s+(-?\d+|[a-zA-Z]{4})\s+(\d*)\s+([^\n]+?)\s+(\d+)\s+(\d+\.\d+\.\d+\.\d+):(-?\d+)\s+(-?\d+)\s+(\d+)$)" };
-  // $correctGUIDKeyPatternPartial = '-?\d{7,10}';
-  // $correctGUIDKeyPatternFull = '#^(-?\d{7,10})$#';
 
   static const std::regex status_regex_for_cod2{ R"(^\s*(\d+)\s+(-?\d+)\s+(-?\d+|[a-zA-Z]{4})\s+(\d*)\s+([^\n]+?)\s+(\d+)\s+(\d+\.\d+\.\d+\.\d+):(-?\d+)\s+(-?\d+)\s+(\d+)$)" };
 
-  // $correctGUIDKeyPatternPartial = '[a-f0-9]{32}';
-  // $correctGUIDKeyPatternFull = '#^([a-f0-9]{32})$#';
   static const std::regex status_regex_for_cod4{ R"(^\s*(\d+)\s+(-?\d+)\s+(-?\d+|[a-zA-Z]{4})\s+([0-9a-fA-F]{32}?)\s+([^\n]+?)\s+(\d+)\s+(\d+\.\d+\.\d+\.\d+):(-?\d+)\s+(-?\d+)\s+(\d+)$)" };
 
   static const std::regex status_regex_for_cod5{ R"(^\s*(\d+)\s+(-?\d+)\s+(-?\d+|[a-zA-Z]{4})\s+([0-9a-fA-F]{32}?)\s+([^\n]+?)\s+(\d+)\s+(\d+\.\d+\.\d+\.\d+):(-?\d+)\s+(-?\d+)\s+(\d+)$)" };

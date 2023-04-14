@@ -2,9 +2,6 @@
 // Microsoft Visual C++ generated include file.
 // Used by TinyRconGUI.rc
 
-// #define IDI_ICON1 101
-// #define IDC_MYICON 2
-// #define IDD_TINYRCONGUI_DIALOG 102
 #define IDI_TINYRCONGUI 107
 #define IDI_SMALL 108
 #define IDC_TINYRCONGUI 109
@@ -29,7 +26,6 @@
 #define ID_NO_BUTTON 128
 #define ID_EDIT_ADMIN_REASON 129
 
-// #define IDR_MAINFRAME 130
 #define ID_COMBOBOX_MAP 131
 #define ID_COMBOBOX_GAMETYPE 132
 #define ID_COMBOBOX_SORTMODE 133

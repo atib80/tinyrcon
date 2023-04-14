@@ -23,27 +23,12 @@ class tiny_cod2_rcon_client_application
   size_t maximum_number_of_warnings_for_automatic_kick{ 2 };
   game_name_t game_name{ game_name_t::unknown };
   string username{ "^1Administrator" };
-  string game_server_name{ R"(194.226.49.72:28995 CoD2 CTF https://discord.gg/cnbfxEu6A8)" };
+  string game_server_name;
   string codmp_exe_path;
   string cod2mp_s_exe_path;
   string iw3mp_exe_path;
   string cod5mp_exe_path;
-  string command_line_info{ R"(
-^5>> For a list of possible commands type ^1help ^5or ^1list user ^5or ^1list rcon ^5in the console.
-^3>> Type ^1s ^3[Enter] in the console to refresh current status of players data.
-^5>> Type ^1!w 12 optional_reason ^5[Enter] to warn player whose pid = ^112 ^5(Player with ^12 ^5warnings is automatically kicked.
-^3>> Type ^1!k 12 optional_reason ^3[Enter] to kick player whose pid = ^112
-^5>> Type ^1!tb 12 24 optional_reason ^5[Enter] to temporarily ban (for 24 hours) IP address of player whose pid = ^112
-^3>> Type ^1!gb 12 optional_reason ^3[Enter] to ban IP address of player whose pid = ^112
-^5>> Type ^1!addip 123.123.123.123 optional_reason ^5[Enter] to ban custom IP address (^1123.123.123.123^5)
-^3>> Type ^1!ub 123.123.123.123 ^3[Enter] to remove temporarily and/or permanently banned IP address.
-^5>> Type ^1bans ^5[Enter] to see all permanently banned IP addresses.
-^3>> Type ^1tempbans ^3[Enter] to see all temporarily banned IP addresses.
-^5>> Type ^1!m mapname gametype ^5[Enter] to load map 'mapname' in 'gametype' mode (^1!m mp_toujane ctf ^5| ^1!m mp_burgundy hq^5)
-^3>> Type ^1!c ^3[Enter] to launch your Call of duty game and connect to configured game server.
-^5>> Type ^1!cp ^5[Enter] to launch your Call of duty game and connect to configured game server using a private slot.
-^3>> Type ^1q ^3[Enter] to quit the program.
-^1Administrator >> )"s };
+  string command_line_info;
   std::unordered_map<std::string, std::string> admin_messages{
     { "user_defined_warn_msg", "^3[^5Tiny^6Rcon^3] ^7> {PLAYERNAME} ^1you have been warned by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}" },
     { "user_defined_kick_msg", "^3[^5Tiny^6Rcon^3] ^7> {PLAYERNAME} ^1you are being kicked by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}" },

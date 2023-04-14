@@ -60,8 +60,10 @@ extern const char *user_help_message =
 ^5Type ^1bans ^5[Enter] to see all permanently banned IP addresses.
 ^3Type ^1tempbans ^3[Enter] to see all temporarily banned IP addresses.
 ^5Type ^1!m mapname gametype ^5[Enter] to load map 'mapname' in 'gametype' mode (^1!m mp_toujane ctf^5)
-^3Type ^1!c ^3[Enter] to launch your Call of Duty game and connect to configured game server.
-^5Type ^1!cp ^5[Enter] to launch your Call of Duty game and connect to configured game server using a private slot.
+^3Type ^1!c [IP:port_number] ^3[Enter] to launch your Call of Duty game and connect to currently configured game server
+  or optionally specified game server address [IP:port_number]
+^5Type ^1!cp [IP:port_number] ^5[Enter] to launch your Call of Duty game and connect to currently configured game server 
+  or optionally specified game server address [IP:port_number] using a private slot.
 ^3Type ^1q ^3[Enter] to quit the program.
 ^5>> Press ^1F1 ^5to sort players data by their 'pid' values in ascending/descending order.
 ^3>> Press ^1F2 ^3to sort players data by their 'score' values in ascending/descending order.
@@ -71,6 +73,7 @@ extern const char *user_help_message =
 ^3>> Press ^1F6 ^3to sort players data by their 'country - city' values in ascending/descending order.
 ^5>> Press ^1F8 ^5to refresh current status of players data.
 )";
+
 
 extern const std::unordered_map<string, sort_type> sort_mode_names_dict;
 
@@ -155,32 +158,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
   parse_tiny_cod2_rcon_tool_config_file("config\\tinyrcon.json");
 
-  main_app.set_command_line_info(
-    R"(^5>> For a list of possible commands type ^1help ^5or ^1list user ^5or ^1list rcon ^5in the console.
-^3Type ^1!say "Public message" to all players" ^3[Enter] to send "Public message" to all online players.
-^5Type ^1!tell 12 "Private message" ^5[Enter] to send "Private message" to only player whose pid = ^112
-^3>> Type ^1s ^3[Enter] in the console to refresh current status of players data.
-^5>> Type ^1!w 12 optional_reason ^5[Enter] to warn player whose pid = ^112 
-   ^5(Player with ^12 warnings ^5is automatically kicked.
-^3>> Type ^1!k 12 optional_reason ^3[Enter] to kick player whose pid = ^112
-^5>> Type ^1!tb 12 24 optional_reason ^5[Enter] to temporarily ban (for 24 hours) IP address of player whose pid = ^112
-^3>> Type ^1!gb 12 optional_reason ^3[Enter] to ban IP address of player whose pid = ^112
-^5>> Type ^1!addip 123.123.123.123 optional_reason ^5[Enter] to ban custom IP address (^1123.123.123.123^5)
-^3>> Type ^1!ub 123.123.123.123 ^3[Enter] to remove temporarily and/or permanently banned IP address.
-^5>> Type ^1bans ^5[Enter] to see all permanently banned IP addresses.
-^3>> Type ^1tempbans ^3[Enter] to see all temporarily banned IP addresses.
-^5>> Type ^1!m mapname gametype ^5[Enter] to load map 'mapname' in 'gametype' mode (^1!m mp_toujane ctf^5)
-^3>> Type ^1!c ^3[Enter] to launch your Call of duty game and connect to configured game server.
-^5>> Type ^1!cp ^5[Enter] to launch your Call of duty game and connect to configured game server using a private slot.
-^3>> Type ^1q ^3[Enter] to quit the program.
-^5>> Press ^1F1 ^5to sort players data by their 'pid' values in ascending/descending order.
-^3>> Press ^1F2 ^3to sort players data by their 'score' values in ascending/descending order.
-^5>> Press ^1F3 ^5to sort players data by their 'ping' values in ascending/descending order.
-^3>> Press ^1F4 ^3to sort players data by their 'name' values in ascending/descending order.
-^5>> Press ^1F5 ^5to sort players data by their 'IP address' values in ascending/descending order.
-^3>> Press ^1F6 ^3to sort players data by their 'country - city' values in ascending/descending order.
-^5>> Press ^1F8 ^5to refresh current status of players data.
-^1Administrator >> )"s);
+  main_app.set_command_line_info(user_help_message);
 
   rcon_status_grid_column_header_titles[0] = main_app.get_game_server().get_header_player_pid_color() + "Pid"s;
   rcon_status_grid_column_header_titles[1] = main_app.get_game_server().get_header_player_score_color() + "Score"s;
@@ -639,9 +617,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case ID_CONNECTBUTTON: {
       snprintf(message_buffer, std::size(message_buffer), "^3Are you sure you want to connect to ^1%s ^3game server?\n", main_app.get_game_server_name().c_str());
       if (show_user_confirmation_dialog(message_buffer, "Connect to game server?")) {
-        smatch matches{};
-        const string game_server_address{ regex_search(admin_reason, matches, ip_address_and_port_regex) ? matches[1].str() : main_app.get_game_server().get_server_ip_address() + ":"s + to_string(main_app.get_game_server().get_server_port()) };
-        connect_to_the_game_server(game_server_address, main_app.get_game_name(), false, true);
+        smatch ip_port_match{};
+        const string ip_port_server_address{ regex_search(admin_reason, ip_port_match, ip_address_and_port_regex) ? (ip_port_match[1].str() + ":"s + ip_port_match[2].str()) : (main_app.get_game_server().get_server_ip_address() + ":"s + to_string(main_app.get_game_server().get_server_port())) };
+        const size_t sep_pos{ ip_port_server_address.find(':') };
+        const string ip_address{ ip_port_server_address.substr(0, sep_pos) };
+        const uint16_t port_number{ static_cast<uint16_t>(stoul(ip_port_server_address.substr(sep_pos + 1))) };
+        const auto result = check_if_specified_server_ip_port_and_rcon_password_are_valid(ip_address.c_str(), port_number, main_app.get_game_server().get_rcon_password().c_str());
+
+        const game_name_t game_name{ result.second != game_name_t::unknown ? result.second : main_app.get_game_name() };
+        connect_to_the_game_server(ip_port_server_address, game_name, false, true);
       }
     } break;
 
@@ -649,9 +633,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
       snprintf(message_buffer, std::size(message_buffer), "^3Are you sure you want to connect to ^1%s ^3game server using a ^1private slot^3?\n", main_app.get_game_server_name().c_str());
       if (show_user_confirmation_dialog(message_buffer, "Connect to game server using a private slot?")) {
-        smatch matches{};
-        const string game_server_address{ regex_search(admin_reason, matches, ip_address_and_port_regex) ? matches[1].str() : main_app.get_game_server().get_server_ip_address() + ":"s + to_string(main_app.get_game_server().get_server_port()) };
-        connect_to_the_game_server(game_server_address, main_app.get_game_name(), true, true);
+        smatch ip_port_match{};
+        const string ip_port_server_address{ regex_search(admin_reason, ip_port_match, ip_address_and_port_regex) ? (ip_port_match[1].str() + ":"s + ip_port_match[2].str()) : (main_app.get_game_server().get_server_ip_address() + ":"s + to_string(main_app.get_game_server().get_server_port())) };
+        const size_t sep_pos{ ip_port_server_address.find(':') };
+        const string ip_address{ ip_port_server_address.substr(0, sep_pos) };
+        const uint16_t port_number{ static_cast<uint16_t>(stoul(ip_port_server_address.substr(sep_pos + 1))) };
+        const auto result = check_if_specified_server_ip_port_and_rcon_password_are_valid(ip_address.c_str(), port_number, main_app.get_game_server().get_rcon_password().c_str());
+
+        const game_name_t game_name{ result.second != game_name_t::unknown ? result.second : main_app.get_game_name() };
+        connect_to_the_game_server(ip_port_server_address, game_name, true, true);
       }
     } break;
 

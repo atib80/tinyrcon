@@ -1,18 +1,13 @@
 ﻿#pragma once
 
 #include <atomic>
-#include <limits>
 #include <map>
 #include <string>
-#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
-#include <Windows.h>
 #include "tiny_rcon_utility_functions.h"
-
-#undef max
 
 using std::map;
 using std::unordered_map;
@@ -679,7 +674,7 @@ private:
   unordered_map<int, player_data> warned_players_data;
   string short_version{ "1.0" };
   string ip_address{ "127.0.0.1" };
-  string sv_hostname{ "CoD2Host" };
+  string sv_hostname{ "CoDHost" };
   string game_name{ "unknown" };
   string rcon_password{
     "abc123"

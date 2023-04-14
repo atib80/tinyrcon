@@ -66,11 +66,9 @@
 #include <uxtheme.h>
 #include <shellapi.h>
 #include <tchar.h>
-// #include <cstdlib>
 #include <malloc.h>
 #include <cstdio>
 #include <wctype.h>
-// #include <cmath>
 #include "simple_grid.h"
 #include "stl_helper_functions.hpp"
 #include "tiny_rcon_utility_functions.h"
@@ -202,40 +200,40 @@ static LRESULT DefProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 /// @param data A string to analyze.
 ///
 /// @returns TRUE if is numeric (decimal or floating point) otherwise FALSE.
-//static BOOL IsNumeric(LPTSTR data)
+// static BOOL IsNumeric(LPTSTR data)
 //{
-//  int numberofperiods{};
-//  size_t k{ len(data) };
-//  // char tbuffer[k + 1]; //Sorry no VLA
-//  char *tbuffer = (char *)_alloca(sizeof(char) * (k + 1));// use _alloca instead
-//  BOOL DIGIT, ALPHA, WHITESPACE;
-//  strcpy_s(tbuffer, k + 1, data);
-//  k = len(tbuffer);
-//  to_upper_case_in_place(tbuffer);
-//  DIGIT = FALSE;
-//  ALPHA = FALSE;
-//  WHITESPACE = FALSE;
+//   int numberofperiods{};
+//   size_t k{ len(data) };
+//   // char tbuffer[k + 1]; //Sorry no VLA
+//   char *tbuffer = (char *)_alloca(sizeof(char) * (k + 1));// use _alloca instead
+//   BOOL DIGIT, ALPHA, WHITESPACE;
+//   strcpy_s(tbuffer, k + 1, data);
+//   k = len(tbuffer);
+//   to_upper_case_in_place(tbuffer);
+//   DIGIT = FALSE;
+//   ALPHA = FALSE;
+//   WHITESPACE = FALSE;
 //
-//  // numberofperiods = 0;
-//  for (size_t j{}; j < k; j++) {
-//    if (_istalpha(tbuffer[j])) ALPHA = TRUE;
+//   // numberofperiods = 0;
+//   for (size_t j{}; j < k; j++) {
+//     if (_istalpha(tbuffer[j])) ALPHA = TRUE;
 //
-//    if (_istdigit(tbuffer[j])) DIGIT = TRUE;
+//     if (_istdigit(tbuffer[j])) DIGIT = TRUE;
 //
-//    if (_istspace(tbuffer[j])) WHITESPACE = TRUE;
+//     if (_istspace(tbuffer[j])) WHITESPACE = TRUE;
 //
-//    if (tbuffer[j] == '.') numberofperiods++;
+//     if (tbuffer[j] == '.') numberofperiods++;
 //
-//    if (tbuffer[j] == '+' && j > 0) ALPHA = TRUE;
+//     if (tbuffer[j] == '+' && j > 0) ALPHA = TRUE;
 //
-//    if (tbuffer[j] == '-' && j > 0) ALPHA = TRUE;
-//  }
-//  if ((ALPHA) || (WHITESPACE)) return FALSE;
+//     if (tbuffer[j] == '-' && j > 0) ALPHA = TRUE;
+//   }
+//   if ((ALPHA) || (WHITESPACE)) return FALSE;
 //
-//  if ((DIGIT) && (!ALPHA) && (!WHITESPACE))
-//    return !(numberofperiods > 1);
-//  return FALSE;
-//}
+//   if ((DIGIT) && (!ALPHA) && (!WHITESPACE))
+//     return !(numberofperiods > 1);
+//   return FALSE;
+// }
 
 /// @brief Safe malloc
 ///
@@ -313,7 +311,7 @@ static VOID DrawBorder(HDC hdc, LPRECT lprc, DWORD dwBorder, COLORREF clr)
 static HFONT Font_SetUnderline(HWND hwnd, BOOL fUnderline)
 {
   HFONT hFont;
-  LOGFONT lf{ };
+  LOGFONT lf{};
 
   // Get a handle to the control's font object
   hFont = (HFONT)SendMessage(hwnd, WM_GETFONT, 0, 0);
@@ -730,11 +728,11 @@ static LPGRIDITEM New_Item(const char *szCurValue)
 {
   LPGRIDITEM lpItem = (LPGRIDITEM)calloc(1, sizeof(GRIDITEM));
 
-  if (lpItem == nullptr) 
-      return nullptr;
+  if (lpItem == nullptr)
+    return nullptr;
 
   lpItem->lpszMisc = nullptr;// <- used to store pointer to data allocated
-                          // to lpItem->lpszCurValue (if it is an array)
+                             // to lpItem->lpszCurValue (if it is an array)
   lpItem->dwAllignment = GSA_GENERAL;
   lpItem->lpszCurValue = NewString(szCurValue);
   return lpItem;
@@ -763,8 +761,8 @@ static LPGRIDCOLUMN New_Column(LPSGCOLUMN lpColumn, INT iWidth, LPVECTOR lpVecto
 {
   LPGRIDCOLUMN lpCol = (LPGRIDCOLUMN)calloc(1, sizeof(GRIDCOLUMN));
 
-  if (lpCol == nullptr) 
-      return nullptr;
+  if (lpCol == nullptr)
+    return nullptr;
 
   lpCol->dwType = lpColumn->dwType;
   switch (lpCol->dwType) {
@@ -1367,7 +1365,7 @@ static VOID DisplayColumn(HWND hwnd, int col, int offset, HFONT hfont, HFONT hco
     {
       // set cursor (or entire cursor row) to different display color
       if (((g_lpInst->HIGHLIGHTFULLROW && row == g_lpInst->cursorrow) || (!g_lpInst->HIGHLIGHTFULLROW && row == g_lpInst->cursorrow && col == g_lpInst->cursorcol))
-          /*&& g_lpInst->GRIDHASFOCUS*/) {
+        /*&& g_lpInst->GRIDHASFOCUS*/) {
         switch (iColumnType) {
         case GCT_ROWHEADER:
         case GCT_BUTTON:
@@ -1512,18 +1510,18 @@ static VOID DisplayColumn(HWND hwnd, int col, int offset, HFONT hfont, HFONT hco
     } break;
     default:// Text
     {
-      //if (is_main_window_constructed) {
-      //  SimpleGrid_GetColumnHeaderText(hwnd, col, title_buffer);
-      //}
+      // if (is_main_window_constructed) {
+      //   SimpleGrid_GetColumnHeaderText(hwnd, col, title_buffer);
+      // }
       InflateRect(&rect, -2, -2);
       // DWORD dwAllignment = NULL == lpgi ? GSA_GENERAL : lpgi->dwAllignment;
       if (g_lpInst->ELLIPSIS) {
         UINT uFormat = DT_NOPREFIX | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS;
 
         // if (is_main_window_constructed && strstri(title_buffer, "name") != nullptr) {
-          uFormat |= DT_LEFT;
+        uFormat |= DT_LEFT;
         // } else {
-          // uFormat |= GSA_LEFT == dwAllignment ? DT_LEFT : GSA_RIGHT == dwAllignment ? DT_RIGHT : IsNumeric(buffer) ? DT_RIGHT : DT_LEFT;
+        // uFormat |= GSA_LEFT == dwAllignment ? DT_LEFT : GSA_RIGHT == dwAllignment ? DT_RIGHT : IsNumeric(buffer) ? DT_RIGHT : DT_LEFT;
         // }
         // DrawTextEx(hdc, buffer, -1, &rect, uFormat, NULL);
 
@@ -1531,11 +1529,11 @@ static VOID DisplayColumn(HWND hwnd, int col, int offset, HFONT hfont, HFONT hco
       } else {
         UINT uFormat = DT_NOPREFIX | DT_WORDBREAK | DT_EDITCONTROL;
         // if (strstri(title_buffer, "name") != nullptr) {
-          uFormat |= DT_LEFT;
-         /*} else {
-          uFormat |= GSA_LEFT == dwAllignment ? DT_LEFT : GSA_RIGHT == dwAllignment ? DT_RIGHT
-                                                        : IsNumeric(buffer)         ? DT_RIGHT
-                                                                                    : DT_LEFT;   }*/
+        uFormat |= DT_LEFT;
+        /*} else {
+         uFormat |= GSA_LEFT == dwAllignment ? DT_LEFT : GSA_RIGHT == dwAllignment ? DT_RIGHT
+                                                       : IsNumeric(buffer)         ? DT_RIGHT
+                                                                                   : DT_LEFT;   }*/
         // DrawTextEx(hdc, buffer, -1, &rect, uFormat, NULL);
         print_colored_text_to_grid_cell(hdc, rect, buffer, uFormat);
       }
@@ -1753,9 +1751,8 @@ static VOID AdjustParentColWidth(HWND hwnd, INT col, INT row, const char *lpszVa
     for (size_t j{}; j < str_len + 1; ++j)// DWM 2.2.1: Replaced NELEMS with len + 1 per suggestion of Hans-Peter Kalb
     {
       // if (tbuffer[j] == '\n') {
-      if (lpszValue[j] == '\n') 
-          ++count;
-      
+      if (lpszValue[j] == '\n')
+        ++count;
     }
     if ((!g_lpInst->ELLIPSIS) || (row == 0)) {
       required_height *= count;
@@ -4100,11 +4097,11 @@ static LRESULT CALLBACK Grid_Proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
     return Grid_OnDeleteRow(hwnd, wParam) - 1;// don't include the column header row
   case SG_ENABLEEDIT:
     if (g_lpInst != nullptr)
-        g_lpInst->EDITABLE = (BOOL)wParam;
+      g_lpInst->EDITABLE = (BOOL)wParam;
     break;
   case SG_EXTENDLASTCOLUMN:
     if (g_lpInst != nullptr)
-        g_lpInst->EXTENDLASTCOLUMN = (BOOL)wParam;
+      g_lpInst->EXTENDLASTCOLUMN = (BOOL)wParam;
     RefreshGrid(hwnd);
     break;
   case SG_GETCOLCOUNT:
@@ -4337,12 +4334,12 @@ static LRESULT CALLBACK Grid_Proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
   return DefWindowProc(hwnd, msg, wParam, lParam);
 }
 
-//void SelectRow(HWND hwnd, const int row_index) noexcept
+// void SelectRow(HWND hwnd, const int row_index) noexcept
 //{
-//  static char buffer[128];
-//  // SetFocus(hwnd);
-//  g_lpInst->HIGHLIGHTFULLROW = TRUE;
-//  g_lpInst->cursorrow = row_index;
-//  g_lpInst->cursorcol = 0;
-//  RefreshGrid(hwnd);
-//}
+//   static char buffer[128];
+//   // SetFocus(hwnd);
+//   g_lpInst->HIGHLIGHTFULLROW = TRUE;
+//   g_lpInst->cursorrow = row_index;
+//   g_lpInst->cursorcol = 0;
+//   RefreshGrid(hwnd);
+// }
