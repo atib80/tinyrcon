@@ -384,7 +384,7 @@ bool check_if_call_of_duty_5_game_is_running() noexcept;
 
 const char *BrowseFolder(const char *, const char *) noexcept;
 
-bool connect_to_the_game_server(const std::string&, const bool, const bool = true);
+bool connect_to_the_game_server(const std::string&, const game_name_t, const bool, const bool = true);
 
 bool check_if_file_path_exists(const char *) noexcept;
 

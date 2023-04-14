@@ -641,7 +641,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       if (show_user_confirmation_dialog(message_buffer, "Connect to game server?")) {
         smatch matches{};
         const string game_server_address{ regex_search(admin_reason, matches, ip_address_and_port_regex) ? matches[1].str() : main_app.get_game_server().get_server_ip_address() + ":"s + to_string(main_app.get_game_server().get_server_port()) };
-        connect_to_the_game_server(game_server_address, false, true);
+        connect_to_the_game_server(game_server_address, main_app.get_game_name(), false, true);
       }
     } break;
 
@@ -651,7 +651,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       if (show_user_confirmation_dialog(message_buffer, "Connect to game server using a private slot?")) {
         smatch matches{};
         const string game_server_address{ regex_search(admin_reason, matches, ip_address_and_port_regex) ? matches[1].str() : main_app.get_game_server().get_server_ip_address() + ":"s + to_string(main_app.get_game_server().get_server_port()) };
-        connect_to_the_game_server(game_server_address, true, true);
+        connect_to_the_game_server(game_server_address, main_app.get_game_name(), true, true);
       }
     } break;
 

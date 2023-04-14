@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////
 ///
-/// @file simpleGrid.c
+/// @file simple_grid.cpp
 ///
 /// @brief A simple low overhead grid control in Win32 SDK C.
 ///
@@ -71,7 +71,7 @@
 #include <cstdio>
 #include <wctype.h>
 // #include <cmath>
-#include "SimpleGrid.h"
+#include "simple_grid.h"
 #include "stl_helper_functions.hpp"
 #include "tiny_rcon_utility_functions.h"
 

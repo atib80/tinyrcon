@@ -78,6 +78,11 @@ public:
     game_name = std::move(new_game_name);
   }
 
+  [[nodiscard]] const string &get_game_name() const noexcept
+  {
+    return game_name;
+  }
+
   [[nodiscard]] const string &get_current_game_type() const noexcept
   {
     return current_game_type;

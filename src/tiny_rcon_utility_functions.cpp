@@ -13,9 +13,9 @@
 #include <Shlobj.h>
 #include <strsafe.h>
 #include <windowsx.h>
-#include "RSJparser.hpp"
-#include "Resource.h"
-#include "simpleGrid.h"
+#include "json_parser.hpp"
+#include "resource.h"
+#include "simple_grid.h"
 
 // Call of duty steam appid: 2620
 // Call of duty 2 steam appid: 2630
@@ -350,6 +350,17 @@ unordered_set<string> rcon_commands_wait_for_reply{ "!s", "!status", "s", "statu
 
 extern unordered_map<size_t, string> rcon_status_grid_column_header_titles;
 extern unordered_map<size_t, string> get_status_grid_column_header_titles;
+extern unordered_map<string, game_name_t> game_name_to_game_name_t{
+  { "unknown", game_name_t::unknown },
+  { "cod1", game_name_t::cod1 },
+  { "Call of Duty", game_name_t::cod1 },
+  { "cod2", game_name_t::cod2 },
+  { "Call of Duty 2", game_name_t::cod2 },
+  { "cod4", game_name_t::cod4 },
+  { "Call of Duty 4", game_name_t::cod4 },
+  { "cod5", game_name_t::cod5 },
+  { "Call of Duty 5", game_name_t::cod5 },
+};
 
 extern const unordered_map<string, int> flag_name_index{
   { "xy", 0 },
@@ -2606,8 +2617,20 @@ void process_user_command(const std::vector<string> &user_cmd)
       const string ip_port_server_address{
         (user_cmd.size() > 1 && regex_search(user_cmd[1], ip_port_match, ip_address_and_port_regex)) ? ip_port_match[1].str() : main_app.get_game_server().get_server_ip_address() + ":"s + to_string(main_app.get_game_server().get_server_port())
       };
-      connect_to_the_game_server(ip_port_server_address, use_private_slot, true);
-    } else if ((user_cmd[0] == "!m" || user_cmd[0] == "!map") && user_cmd.size() >= 2 && !user_cmd[1].empty()) {
+
+      game_name_t game_name{ main_app.get_game_name() };
+
+      if (user_cmd.size() > 1) {
+
+        string last_arg{ user_cmd.back() };
+        stl::helper::to_lower_case_in_place(last_arg);
+        game_name = (last_arg == "cod1" || last_arg == "cod2" || last_arg == "cod4" || last_arg == "cod5") ? game_name_to_game_name_t.at(last_arg) : main_app.get_game_name();
+      }
+
+      connect_to_the_game_server(ip_port_server_address, game_name, use_private_slot, true);
+    }
+
+    else if ((user_cmd[0] == "!m" || user_cmd[0] == "!map") && user_cmd.size() >= 2 && !user_cmd[1].empty()) {
       const string map_name{ stl::helper::trim(user_cmd[1], " \t\n") };
       const string game_type{ user_cmd.size() >= 3 ? stl::helper::trim(user_cmd[2], " \t\n") : "ctf" };
       load_map(map_name, game_type, true);
@@ -5008,12 +5031,11 @@ bool check_if_call_of_duty_5_game_is_running() noexcept
   return false;
 }
 
-bool connect_to_the_game_server(const std::string &server_ip_port_address, const bool use_private_slot, const bool minimize_tinyrcon)
+bool connect_to_the_game_server(const std::string &server_ip_port_address, const game_name_t game_name, const bool use_private_slot, const bool minimize_tinyrcon)
 {
   constexpr size_t max_path_length{ 32768 };
   static char command_line[max_path_length]{};
 
-  const game_name_t game_name{ main_app.get_game_name() };
   const char *game_path{};
 
   switch (game_name) {
@@ -6105,8 +6127,12 @@ std::pair<bool, game_name_t> check_if_specified_server_ip_port_and_rcon_password
 
   game_name_t game_name{ game_name_t::unknown };
 
-  if (reply.find("Invalid password.") != string::npos)
-    return { false, game_name };
+  if (reply.find("Invalid password.") != string::npos || reply.find("rconpassword") != string::npos || reply.find("Bad rcon") != string::npos) {
+    cm.send_and_receive_rcon_data("getstatus", reply, ip_address, port_number, rcon_password, true);
+    const string &gn{ main_app.get_game_server().get_game_name() };
+    return { false, game_name_to_game_name_t.contains(gn) ? game_name_to_game_name_t.at(gn) : game_name_t::unknown };
+  }
+
 
   if (stl::helper::str_contains(reply, "CoD1", 0, true))
     game_name = game_name_t::cod1;
@@ -6959,7 +6985,7 @@ bool initialize_and_verify_server_connection_settings()
       print_colored_text(app_handles.hwnd_re_messages_data, "^2Initializing network settings has completed.\n", true, true, true);
     } else {
       main_app.set_is_connection_settings_valid(false);
-      show_error(app_handles.hwnd_main_window, "Failed to establish test connection with the specified game server!\nPlease verify your game server's IP address, port and rcon password settings.", 0);
+      /*show_error(app_handles.hwnd_main_window, "Failed to establish test connection with the specified game server!\nPlease verify your game server's IP address, port and rcon password settings.", 0);*/
       if (!show_and_process_tinyrcon_configuration_panel("Configure and verify your game server's settings.")) {
         show_error(app_handles.hwnd_main_window, "Failed to construct and show TinyRcon configuration dialog!", 0);
       }

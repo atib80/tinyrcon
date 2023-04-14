@@ -316,7 +316,7 @@ size_t connection_manager::receive_data_from_server(
           while (*last != '"')
             ++last;
 
-          players_data[player_num].pid = player_num;
+          players_data[player_num].pid = player_num + 1;
           players_data[player_num].score = player_score;
           strcpy_s(players_data[player_num].ping, std::size(players_data[player_num].ping), player_ping.c_str());
           const size_t no_of_chars_to_copy = static_cast<size_t>(last - start);

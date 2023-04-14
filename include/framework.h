@@ -22,5 +22,5 @@
 #include <unordered_map>
 #include <crtdbg.h>
 #include <thread>
-#include "simpleGrid.h"
+#include "simple_grid.h"
 #include "tiny_cod2_rcon_client_application.h"

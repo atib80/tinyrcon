@@ -8486,7 +8486,7 @@ void to_lower_case_in_place(T &src, const std::locale &loc = std::locale{})
 {
   using char_type = get_char_type_t<T>;
 
-  size_t str_len{ len(src) };
+  const size_t str_len{ len(src) };
   char_type *first{ &src[0] };
 
   if (std::has_facet<std::ctype<char_type>>(loc)) {
