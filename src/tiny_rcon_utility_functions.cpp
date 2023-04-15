@@ -213,8 +213,8 @@ map<string, string> user_commands_help{
     "'valid_ip_address'." },
   { "^5!m map_name game_type", "^5!m map_name game_type ^2-> loads map 'map_name' in specified game type 'game_type'" },
   { "!maps", "^5!maps ^2-> displays all available playable maps. " },
-  { "!c", "^5!c ^2-> launches your CoD 2 Multiplayer and connects to the CTF game server." },
-  { "!cp", "^5!cp ^2-> launches CoD 2 Multiplayer and connects to the CTF game server using a private slot." },
+  { "!c", "^5!c [IP:PORT] ^2-> launches your Call of Duty game and connects to currently configured game server or optionally specified game server address ^5[IP:PORT]" },
+  { "!cp", "^5!cp [IP:PORT] ^2-> launches your Call of Duty game and connects to currently configured game server or optionally specified game server address ^5[IP:PORT] using a private slot." },
   { "!rt", "^5!rt time_period ^2-> sets time period (automatic checking for banned players) to time_period (1-30 seconds)." },
   { "!config", "^5!config [rcon|private|address|name] [new_rcon_password|new_private_password|new_server_address|new_name]\n ^2-> you change tinyrcon's ^1rcon ^2or ^1private slot password^2, registered server ^1IP:port ^2address or your ^1username ^2using this command.\nFor example ^1!config rcon abc123 ^2changes currently used ^1rcon_password ^2to ^1abc123^2\n ^1!config private abc123 ^2changes currently used ^1sv_privatepassword ^2to ^1abc123^2\n ^1!config address 123.101.102.103:28960 ^2changes currently used server ^1IP:port ^2to ^1123.101.102.103:28960\n ^1!config name Administrator ^2changes currently used ^1username ^2to ^1Administrator" },
   { "!border", "Turns ^3on^5|^3off border lines around displayed ^3GUI controls^5." }
@@ -1776,8 +1776,10 @@ void print_help_information(const std::vector<std::string> &input_parts)
  ^5You can use the following user commands:
  ^1!cls ^3-> clears the screen.
  ^1!colors ^5-> change colors of various displayed table entries and game information.
- ^1!c ^5-> launches CoD 2 Multiplayer and connects to the CTF game server.
- ^1!cp ^5-> launches CoD 2 Multiplayer and connects to the CTF game server using a private slot.
+ ^1!c [IP:PORT] ^5-> launches your Call of Duty game and connect to currently configured game server 
+ or optionally specified game server address ^1[IP:PORT]^5.
+ ^1!cp [IP:PORT] ^5-> launches your Call of Duty game and connect to currently configured game server 
+ or optionally specified game server address ^1[IP:PORT] ^5using a private slot.
  ^1!warn player_pid optional_reason ^3-> warns the player whose pid number is equal to specified player_pid.
   A player who's been warned 2 times gets automatically kicked off the server.
  ^1!w player_pid optional_reason ^5-> warns the player whose pid number is equal to specified player_pid.
@@ -5558,19 +5560,35 @@ void construct_tinyrcon_gui(HWND hWnd) noexcept
 
   app_handles.hwnd_e_user_input = CreateWindowEx(0, "Edit", nullptr, WS_GROUP | WS_TABSTOP | WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT, 125, screen_height - 82, 450, 20, app_handles.hwnd_main_window, (HMENU)ID_USEREDIT, app_handles.hInstance, nullptr);
 
-  app_handles.hwnd_button_warn = CreateWindowEx(NULL, "Button", "Warn", WS_TABSTOP | BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 10, screen_height - 125, 80, 30, app_handles.hwnd_main_window, (HMENU)ID_WARNBUTTON, app_handles.hInstance, NULL);
+  app_handles.hwnd_button_warn = CreateWindowEx(NULL, "Button", "Warn", WS_GROUP | WS_TABSTOP | BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 10, screen_height - 125, 80, 30, app_handles.hwnd_main_window, (HMENU)ID_WARNBUTTON, app_handles.hInstance, NULL);
 
-  app_handles.hwnd_button_kick = CreateWindowEx(NULL, "Button", "Kick", WS_TABSTOP | BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 110, screen_height - 125, 80, 30, app_handles.hwnd_main_window, (HMENU)ID_KICKBUTTON, app_handles.hInstance, NULL);
+  app_handles.hwnd_button_kick = CreateWindowEx(NULL, "Button", "Kick", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 110, screen_height - 125, 80, 30, app_handles.hwnd_main_window, (HMENU)ID_KICKBUTTON, app_handles.hInstance, NULL);
 
-  app_handles.hwnd_button_tempban = CreateWindowEx(NULL, "Button", "Tempban", WS_TABSTOP | BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 210, screen_height - 125, 100, 30, app_handles.hwnd_main_window, (HMENU)ID_TEMPBANBUTTON, app_handles.hInstance, NULL);
+  app_handles.hwnd_button_tempban = CreateWindowEx(NULL, "Button", "Tempban", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 210, screen_height - 125, 100, 30, app_handles.hwnd_main_window, (HMENU)ID_TEMPBANBUTTON, app_handles.hInstance, NULL);
 
-  app_handles.hwnd_button_ipban = CreateWindowEx(NULL, "Button", "Ban IP", WS_TABSTOP | BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 330, screen_height - 125, 100, 30, app_handles.hwnd_main_window, (HMENU)ID_IPBANBUTTON, app_handles.hInstance, NULL);
+  app_handles.hwnd_button_ipban = CreateWindowEx(NULL, "Button", "Ban IP", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 330, screen_height - 125, 100, 30, app_handles.hwnd_main_window, (HMENU)ID_IPBANBUTTON, app_handles.hInstance, NULL);
 
-  app_handles.hwnd_button_view_tempbans = CreateWindowEx(NULL, "Button", "View temporary bans", WS_TABSTOP | BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 450, screen_height - 125, 180, 30, app_handles.hwnd_main_window, (HMENU)ID_VIEWTEMPBANSBUTTON, app_handles.hInstance, NULL);
+  app_handles.hwnd_button_view_tempbans = CreateWindowEx(NULL, "Button", "View temporary bans", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 450, screen_height - 125, 180, 30, app_handles.hwnd_main_window, (HMENU)ID_VIEWTEMPBANSBUTTON, app_handles.hInstance, NULL);
 
-  app_handles.hwnd_button_view_ipbans = CreateWindowEx(NULL, "Button", "View IP bans", WS_TABSTOP | BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 650, screen_height - 125, 160, 30, app_handles.hwnd_main_window, (HMENU)ID_VIEWIPBANSBUTTON, app_handles.hInstance, NULL);
+  app_handles.hwnd_button_view_ipbans = CreateWindowEx(NULL, "Button", "View IP bans", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 650, screen_height - 125, 160, 30, app_handles.hwnd_main_window, (HMENU)ID_VIEWIPBANSBUTTON, app_handles.hInstance, NULL);
 
-  app_handles.hwnd_combo_box_sortmode = CreateWindowEx(NULL, "Combobox", NULL, WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL | WS_HSCROLL, 830, screen_height - 122, 275, 210, app_handles.hwnd_main_window, (HMENU)ID_COMBOBOX_SORTMODE, app_handles.hInstance, NULL);
+  app_handles.hwnd_connect_button = CreateWindowEx(NULL, "Button", "Join server", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 590, screen_height - 87, 140, 30, app_handles.hwnd_main_window, (HMENU)ID_CONNECTBUTTON, app_handles.hInstance, NULL);
+
+  app_handles.hwnd_connect_private_slot_button = CreateWindowEx(NULL, "Button", "Join server (private slot)", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 750, screen_height - 87, 200, 30, app_handles.hwnd_main_window, (HMENU)ID_CONNECTPRIVATESLOTBUTTON, app_handles.hInstance, NULL);
+
+  app_handles.hwnd_say_button = CreateWindowEx(NULL, "Button", "Send public message", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 965, screen_height - 87, 150, 30, app_handles.hwnd_main_window, (HMENU)ID_SAY_BUTTON, app_handles.hInstance, NULL);
+
+  app_handles.hwnd_tell_button = CreateWindowEx(NULL, "Button", "Send private message", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 1132, screen_height - 87, 160, 30, app_handles.hwnd_main_window, (HMENU)ID_TELL_BUTTON, app_handles.hInstance, NULL);
+
+  app_handles.hwnd_quit_button = CreateWindowEx(NULL, "Button", "Exit", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 1312, screen_height - 87, 70, 30, app_handles.hwnd_main_window, (HMENU)ID_QUITBUTTON, app_handles.hInstance, NULL);
+
+  app_handles.hwnd_clear_messages_button = CreateWindowEx(NULL, "Button", "Clear messages screen", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, screen_width / 2 + 340, 8, 180, 28, app_handles.hwnd_main_window, (HMENU)ID_CLEARMESSAGESCREENBUTTON, app_handles.hInstance, NULL);
+
+  app_handles.hwnd_configure_server_settings_button = CreateWindowEx(NULL, "Button", "Configure server settings", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, screen_width / 2 + 540, 8, 180, 28, app_handles.hwnd_main_window, (HMENU)ID_BUTTON_CONFIGURE_SERVER_SETTINGS, app_handles.hInstance, NULL);
+
+  app_handles.hwnd_refresh_players_data_button = CreateWindowEx(NULL, "Button", "Refresh players data", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, screen_width / 2 + 740, 8, 180, 28, app_handles.hwnd_main_window, (HMENU)ID_REFRESHDATABUTTON, app_handles.hInstance, NULL);
+
+  app_handles.hwnd_combo_box_sortmode = CreateWindowEx(NULL, "Combobox", NULL, WS_GROUP | WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL | WS_HSCROLL, 830, screen_height - 122, 275, 210, app_handles.hwnd_main_window, (HMENU)ID_COMBOBOX_SORTMODE, app_handles.hInstance, NULL);
 
   SetWindowSubclass(app_handles.hwnd_combo_box_sortmode, ComboProc, 0, 0);
 
@@ -5582,23 +5600,9 @@ void construct_tinyrcon_gui(HWND hWnd) noexcept
 
   SetWindowSubclass(app_handles.hwnd_combo_box_gametype, ComboProc, 0, 0);
 
-  app_handles.hwnd_button_load = CreateWindowEx(NULL, "Button", "Load selected map", WS_TABSTOP | BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, screen_width / 2 + 670, screen_height / 2 + 107, 160, 30, app_handles.hwnd_main_window, (HMENU)ID_LOADBUTTON, app_handles.hInstance, NULL);
+  app_handles.hwnd_button_load = CreateWindowEx(NULL, "Button", "Load selected map", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, screen_width / 2 + 670, screen_height / 2 + 107, 160, 30, app_handles.hwnd_main_window, (HMENU)ID_LOADBUTTON, app_handles.hInstance, NULL);
 
-  app_handles.hwnd_connect_button = CreateWindowEx(NULL, "Button", "Join server", WS_TABSTOP | BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 590, screen_height - 87, 140, 30, app_handles.hwnd_main_window, (HMENU)ID_CONNECTBUTTON, app_handles.hInstance, NULL);
-
-  app_handles.hwnd_connect_private_slot_button = CreateWindowEx(NULL, "Button", "Join server (private slot)", WS_TABSTOP | BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 750, screen_height - 87, 200, 30, app_handles.hwnd_main_window, (HMENU)ID_CONNECTPRIVATESLOTBUTTON, app_handles.hInstance, NULL);
-
-  app_handles.hwnd_say_button = CreateWindowEx(NULL, "Button", "Send public message", WS_TABSTOP | BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 965, screen_height - 87, 150, 30, app_handles.hwnd_main_window, (HMENU)ID_SAY_BUTTON, app_handles.hInstance, NULL);
-
-  app_handles.hwnd_tell_button = CreateWindowEx(NULL, "Button", "Send private message", WS_TABSTOP | BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 1132, screen_height - 87, 160, 30, app_handles.hwnd_main_window, (HMENU)ID_TELL_BUTTON, app_handles.hInstance, NULL);
-
-  app_handles.hwnd_quit_button = CreateWindowEx(NULL, "Button", "Exit", WS_TABSTOP | BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 1312, screen_height - 87, 70, 30, app_handles.hwnd_main_window, (HMENU)ID_QUITBUTTON, app_handles.hInstance, NULL);
-
-  app_handles.hwnd_clear_messages_button = CreateWindowEx(NULL, "Button", "Clear messages screen", WS_TABSTOP | BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, screen_width / 2 + 340, 8, 180, 28, app_handles.hwnd_main_window, (HMENU)ID_CLEARMESSAGESCREENBUTTON, app_handles.hInstance, NULL);
-
-  app_handles.hwnd_configure_server_settings_button = CreateWindowEx(NULL, "Button", "Configure server settings", WS_TABSTOP | BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, screen_width / 2 + 540, 8, 180, 28, app_handles.hwnd_main_window, (HMENU)ID_BUTTON_CONFIGURE_SERVER_SETTINGS, app_handles.hInstance, NULL);
-
-  app_handles.hwnd_refresh_players_data_button = CreateWindowEx(NULL, "Button", "Refresh players data", WS_TABSTOP | BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, screen_width / 2 + 740, 8, 180, 28, app_handles.hwnd_main_window, (HMENU)ID_REFRESHDATABUTTON, app_handles.hInstance, NULL);
+  app_handles.hwnd_progress_bar = CreateWindowEx(0, PROGRESS_CLASS, nullptr, WS_CHILD | WS_VISIBLE | PBS_MARQUEE | PBS_SMOOTH, screen_width - 200, screen_height - 80, 170, 20, app_handles.hwnd_main_window, nullptr, app_handles.hInstance, nullptr);
 
   if (app_handles.hwnd_players_grid) {
     DestroyWindow(app_handles.hwnd_players_grid);
@@ -5613,8 +5617,6 @@ void construct_tinyrcon_gui(HWND hWnd) noexcept
   }
 
   initialize_players_grid(app_handles.hwnd_players_grid, 7, max_players_grid_rows, true);
-
-  app_handles.hwnd_progress_bar = CreateWindowEx(0, PROGRESS_CLASS, nullptr, WS_CHILD | WS_VISIBLE | PBS_MARQUEE | PBS_SMOOTH, screen_width - 200, screen_height - 80, 170, 20, app_handles.hwnd_main_window, nullptr, app_handles.hInstance, nullptr);
 
   const auto &full_map_names_to_rcon_names = get_full_map_names_to_rcon_map_names_for_specified_game_name(main_app.get_game_name());
 
@@ -6341,7 +6343,7 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
 
   MSG wnd_msg{};
   while (GetMessage(&wnd_msg, NULL, NULL, NULL) != 0) {
-    TranslateMessage(&wnd_msg);
+
     if (WM_KEYDOWN == wnd_msg.message && VK_ESCAPE == wnd_msg.wParam) {
       EnableWindow(app_handles.hwnd_main_window, TRUE);
       SetFocus(app_handles.hwnd_e_user_input);

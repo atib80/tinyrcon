@@ -60,10 +60,10 @@ extern const char *user_help_message =
 ^5Type ^1bans ^5[Enter] to see all permanently banned IP addresses.
 ^3Type ^1tempbans ^3[Enter] to see all temporarily banned IP addresses.
 ^5Type ^1!m mapname gametype ^5[Enter] to load map 'mapname' in 'gametype' mode (^1!m mp_toujane ctf^5)
-^3Type ^1!c [IP:port_number] ^3[Enter] to launch your Call of Duty game and connect to currently configured game server
-  or optionally specified game server address [IP:port_number]
-^5Type ^1!cp [IP:port_number] ^5[Enter] to launch your Call of Duty game and connect to currently configured game server 
-  or optionally specified game server address [IP:port_number] using a private slot.
+^3Type ^1!c [IP:PORT] ^3[Enter] to launch your Call of Duty game and connect to currently configured 
+ game server or optionally specified game server address ^1[IP:PORT]
+^5Type ^1!cp [IP:PORT] ^5[Enter] to launch your Call of Duty game and connect to currently configured 
+ game server or optionally specified game server address ^1[IP:PORT] using a private slot.
 ^3Type ^1q ^3[Enter] to quit the program.
 ^5>> Press ^1F1 ^5to sort players data by their 'pid' values in ascending/descending order.
 ^3>> Press ^1F2 ^3to sort players data by their 'score' values in ascending/descending order.
@@ -528,7 +528,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         && (some_item->code == NM_CUSTOMDRAW)) {
       LPNMCUSTOMDRAW item = (LPNMCUSTOMDRAW)some_item;
 
-      if (item->uItemState & CDIS_SELECTED) {
+      if ((item->uItemState & CDIS_FOCUS) || (item->uItemState & CDIS_SELECTED)) {
         if (!selectbrush)
           selectbrush = CreateSolidBrush(color::yellow);
 
@@ -1131,7 +1131,7 @@ LRESULT CALLBACK WndProcForConfirmationDialog(HWND hWnd, UINT message, WPARAM wP
         && (some_item->code == NM_CUSTOMDRAW)) {
       LPNMCUSTOMDRAW item = (LPNMCUSTOMDRAW)some_item;
 
-      if (item->uItemState & CDIS_SELECTED) {
+      if ((item->uItemState & CDIS_FOCUS) || (item->uItemState & CDIS_SELECTED)) {
         if (!selectbrush)
           selectbrush = CreateSolidBrush(color::yellow);
 
@@ -1317,7 +1317,7 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
         && (some_item->code == NM_CUSTOMDRAW)) {
       LPNMCUSTOMDRAW item = (LPNMCUSTOMDRAW)some_item;
 
-      if (item->uItemState & CDIS_SELECTED) {
+      if ((item->uItemState & CDIS_FOCUS) || (item->uItemState & CDIS_SELECTED)) {
         if (!selectbrush)
           selectbrush = CreateSolidBrush(color::yellow);
 

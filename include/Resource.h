@@ -1,52 +1,305 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
 // Used by TinyRconGUI.rc
-
-#define IDI_TINYRCONGUI 107
-#define IDI_SMALL 108
-#define IDC_TINYRCONGUI 109
-#define ID_BUTTON 110
-#define ID_TIMER 111
-#define ID_CLEARMESSAGESCREENBUTTON 112
-#define ID_USEREDIT 113
-#define IDS_APP_TITLE 114
-#define ID_BANNEDEDIT 115
-#define ID_LOADBUTTON 116
-#define ID_KICKBUTTON 117
-#define ID_TEMPBANBUTTON 118
-#define ID_WARNBUTTON 119
-#define ID_IPBANBUTTON 120
-#define ID_VIEWTEMPBANSBUTTON 121
-#define ID_VIEWIPBANSBUTTON 122
-#define ID_REFRESHDATABUTTON 123
-#define ID_CONNECTBUTTON 124
-#define ID_CONNECTPRIVATESLOTBUTTON 125
-#define ID_QUITBUTTON 126
-#define ID_YES_BUTTON 127
-#define ID_NO_BUTTON 128
-#define ID_EDIT_ADMIN_REASON 129
-
-#define ID_COMBOBOX_MAP 131
-#define ID_COMBOBOX_GAMETYPE 132
-#define ID_COMBOBOX_SORTMODE 133
-#define ID_SAY_BUTTON 134
-#define ID_TELL_BUTTON 135
-
-#define ID_EDIT_SERVER_NAME 136
-#define ID_EDIT_SERVER_IP 137
-#define ID_EDIT_SERVER_PORT 138
-#define ID_EDIT_SERVER_RCON 139
-#define ID_EDIT_REFRESH_TIME_PERIOD 140
-#define ID_BUTTON_SAVE_CHANGES 141
-#define ID_BUTTON_TEST_CONNECTION 142
-#define ID_BUTTON_CANCEL 143
+//
+#define IDI_TINYRCONGUI                 107
+#define IDI_SMALL                       108
+#define IDC_TINYRCONGUI                 109
+#define ID_BUTTON                       110
+#define ID_TIMER                        111
+#define ID_CLEARMESSAGESCREENBUTTON     112
+#define ID_USEREDIT                     113
+#define IDS_APP_TITLE                   114
+#define ID_BANNEDEDIT                   115
+#define ID_LOADBUTTON                   116
+#define ID_KICKBUTTON                   117
+#define ID_TEMPBANBUTTON                118
+#define ID_WARNBUTTON                   119
+#define ID_IPBANBUTTON                  120
+#define ID_VIEWTEMPBANSBUTTON           121
+#define ID_VIEWIPBANSBUTTON             122
+#define ID_REFRESHDATABUTTON            123
+#define ID_CONNECTBUTTON                124
+#define ID_CONNECTPRIVATESLOTBUTTON     125
+#define ID_QUITBUTTON                   126
+#define ID_YES_BUTTON                   127
+#define ID_NO_BUTTON                    128
+#define ID_EDIT_ADMIN_REASON            129
+#define ID_COMBOBOX_MAP                 131
+#define ID_COMBOBOX_GAMETYPE            132
+#define ID_COMBOBOX_SORTMODE            133
+#define ID_SAY_BUTTON                   134
+#define ID_TELL_BUTTON                  135
+#define ID_EDIT_SERVER_NAME             136
+#define ID_EDIT_SERVER_IP               137
+#define ID_EDIT_SERVER_PORT             138
+#define ID_EDIT_SERVER_RCON             139
+#define ID_EDIT_REFRESH_TIME_PERIOD     140
+#define ID_BUTTON_SAVE_CHANGES          141
+#define ID_BUTTON_TEST_CONNECTION       142
+#define ID_BUTTON_CANCEL                143
 #define ID_BUTTON_CONFIGURE_SERVER_SETTINGS 144
-#define ID_SORT_PLAYERS_DATA_BY_PID 145
-#define ID_SORT_PLAYERS_DATA_BY_SCORE 146
-#define ID_SORT_PLAYERS_DATA_BY_PING 147
-#define ID_SORT_PLAYERS_DATA_BY_NAME 148
-#define ID_SORT_PLAYERS_DATA_BY_IP 149
-#define ID_SORT_PLAYERS_DATA_BY_GEO 150
+#define ID_SORT_PLAYERS_DATA_BY_PID     145
+#define ID_SORT_PLAYERS_DATA_BY_SCORE   146
+#define ID_SORT_PLAYERS_DATA_BY_PING    147
+#define ID_SORT_PLAYERS_DATA_BY_NAME    148
+#define ID_SORT_PLAYERS_DATA_BY_IP      149
+#define ID_SORT_PLAYERS_DATA_BY_GEO     150
+#define IDR_BMP_XY                      151
+#define IDR_BMP_AD                      152
+#define IDR_BMP_AE                      153
+#define IDR_BMP_AF                      154
+#define IDR_BMP_AG                      155
+#define IDR_BMP_AI                      156
+#define IDR_BMP_AL                      157
+#define IDR_BMP_AM                      158
+#define IDR_BMP_AO                      159
+#define IDR_BMP_AQ                      160
+#define IDR_BMP_AR                      161
+#define IDR_BMP_AS                      162
+#define IDR_BMP_AT                      163
+#define IDR_BMP_AU                      164
+#define IDR_BMP_AW                      165
+#define IDR_BMP_AX                      166
+#define IDR_BMP_AZ                      167
+#define IDR_BMP_BA                      168
+#define IDR_BMP_BB                      169
+#define IDR_BMP_BD                      170
+#define IDR_BMP_BE                      171
+#define IDR_BMP_BF                      172
+#define IDR_BMP_BG                      173
+#define IDR_BMP_BH                      174
+#define IDR_BMP_BI                      175
+#define IDR_BMP_BJ                      176
+#define IDR_BMP_BL                      177
+#define IDR_BMP_BM                      178
+#define IDR_BMP_BN                      179
+#define IDR_BMP_BO                      180
+#define IDR_BMP_BQ                      181
+#define IDR_BMP_BR                      182
+#define IDR_BMP_BS                      183
+#define IDR_BMP_BT                      184
+#define IDR_BMP_BV                      185
+#define IDR_BMP_BW                      186
+#define IDR_BMP_BY                      187
+#define IDR_BMP_BZ                      188
+#define IDR_BMP_CA                      189
+#define IDR_BMP_CC                      190
+#define IDR_BMP_CD                      191
+#define IDR_BMP_CF                      192
+#define IDR_BMP_CG                      193
+#define IDR_BMP_CH                      194
+#define IDR_BMP_CI                      195
+#define IDR_BMP_CK                      196
+#define IDR_BMP_CL                      197
+#define IDR_BMP_CM                      198
+#define IDR_BMP_CN                      199
+#define IDR_BMP_CO                      200
+#define IDR_BMP_CR                      201
+#define IDR_BMP_CU                      202
+#define IDR_BMP_CV                      203
+#define IDR_BMP_CW                      204
+#define IDR_BMP_CX                      205
+#define IDR_BMP_CY                      206
+#define IDR_BMP_CZ                      207
+#define IDR_BMP_DE                      208
+#define IDR_BMP_DJ                      209
+#define IDR_BMP_DK                      210
+#define IDR_BMP_DM                      211
+#define IDR_BMP_DO                      212
+#define IDR_BMP_DZ                      213
+#define IDR_BMP_EC                      214
+#define IDR_BMP_EE                      215
+#define IDR_BMP_EG                      216
+#define IDR_BMP_EH                      217
+#define IDR_BMP_ER                      218
+#define IDR_BMP_ES                      219
+#define IDR_BMP_ET                      220
+#define IDR_BMP_FI                      221
+#define IDR_BMP_FJ                      222
+#define IDR_BMP_FK                      223
+#define IDR_BMP_FM                      224
+#define IDR_BMP_FO                      225
+#define IDR_BMP_FR                      226
+#define IDR_BMP_GA                      227
+#define IDR_BMP_GB                      228
+#define IDR_BMP_GB_ENG                  229
+#define IDR_BMP_GB_NIR                  230
+#define IDR_BMP_GB_SCT                  231
+#define IDR_BMP_GB_WLS                  232
+#define IDR_BMP_GD                      233
+#define IDR_BMP_GE                      234
+#define IDR_BMP_GF                      235
+#define IDR_BMP_GG                      236
+#define IDR_BMP_GH                      237
+#define IDR_BMP_GI                      238
+#define IDR_BMP_GL                      239
+#define IDR_BMP_GM                      240
+#define IDR_BMP_GN                      241
+#define IDR_BMP_GP                      242
+#define IDR_BMP_GQ                      243
+#define IDR_BMP_GR                      244
+#define IDR_BMP_GS                      245
+#define IDR_BMP_GT                      246
+#define IDR_BMP_GU                      247
+#define IDR_BMP_GW                      248
+#define IDR_BMP_GY                      249
+#define IDR_BMP_HK                      250
+#define IDR_BMP_HM                      251
+#define IDR_BMP_HN                      252
+#define IDR_BMP_HR                      253
+#define IDR_BMP_HT                      254
+#define IDR_BMP_HU                      255
+#define IDR_BMP_ID                      256
+#define IDR_BMP_IE                      257
+#define IDR_BMP_IL                      258
+#define IDR_BMP_IM                      259
+#define IDR_BMP_IN                      260
+#define IDR_BMP_IO                      261
+#define IDR_BMP_IQ                      262
+#define IDR_BMP_IR                      263
+#define IDR_BMP_IS                      264
+#define IDR_BMP_IT                      265
+#define IDR_BMP_JE                      266
+#define IDR_BMP_JM                      267
+#define IDR_BMP_JO                      268
+#define IDR_BMP_JP                      269
+#define IDR_BMP_KE                      270
+#define IDR_BMP_KG                      271
+#define IDR_BMP_KH                      272
+#define IDR_BMP_KI                      273
+#define IDR_BMP_KM                      274
+#define IDR_BMP_KN                      275
+#define IDR_BMP_KP                      276
+#define IDR_BMP_KR                      277
+#define IDR_BMP_KW                      278
+#define IDR_BMP_KY                      279
+#define IDR_BMP_KZ                      280
+#define IDR_BMP_LA                      281
+#define IDR_BMP_LB                      282
+#define IDR_BMP_LC                      283
+#define IDR_BMP_LI                      284
+#define IDR_BMP_LK                      285
+#define IDR_BMP_LR                      286
+#define IDR_BMP_LS                      287
+#define IDR_BMP_LT                      288
+#define IDR_BMP_LU                      289
+#define IDR_BMP_LV                      290
+#define IDR_BMP_LY                      291
+#define IDR_BMP_MA                      292
+#define IDR_BMP_MC                      293
+#define IDR_BMP_MD                      294
+#define IDR_BMP_ME                      295
+#define IDR_BMP_MF                      296
+#define IDR_BMP_MG                      297
+#define IDR_BMP_MH                      298
+#define IDR_BMP_MK                      299
+#define IDR_BMP_ML                      300
+#define IDR_BMP_MM                      301
+#define IDR_BMP_MN                      302
+#define IDR_BMP_MO                      303
+#define IDR_BMP_MP                      304
+#define IDR_BMP_MQ                      305
+#define IDR_BMP_MR                      306
+#define IDR_BMP_MS                      307
+#define IDR_BMP_MT                      308
+#define IDR_BMP_MU                      309
+#define IDR_BMP_MV                      310
+#define IDR_BMP_MW                      311
+#define IDR_BMP_MX                      312
+#define IDR_BMP_MY                      313
+#define IDR_BMP_MZ                      314
+#define IDR_BMP_NA                      315
+#define IDR_BMP_NC                      316
+#define IDR_BMP_NE                      317
+#define IDR_BMP_NF                      318
+#define IDR_BMP_NG                      319
+#define IDR_BMP_NI                      320
+#define IDR_BMP_NL                      321
+#define IDR_BMP_NO                      322
+#define IDR_BMP_NP                      323
+#define IDR_BMP_NR                      324
+#define IDR_BMP_NU                      325
+#define IDR_BMP_NZ                      326
+#define IDR_BMP_OM                      327
+#define IDR_BMP_PA                      328
+#define IDR_BMP_PE                      329
+#define IDR_BMP_PF                      330
+#define IDR_BMP_PG                      331
+#define IDR_BMP_PH                      332
+#define IDR_BMP_PK                      333
+#define IDR_BMP_PL                      334
+#define IDR_BMP_PM                      335
+#define IDR_BMP_PN                      336
+#define IDR_BMP_PR                      337
+#define IDR_BMP_PS                      338
+#define IDR_BMP_PT                      339
+#define IDR_BMP_PW                      340
+#define IDR_BMP_PY                      341
+#define IDR_BMP_QA                      342
+#define IDR_BMP_RE                      343
+#define IDR_BMP_RO                      344
+#define IDR_BMP_RS                      345
+#define IDR_BMP_RU                      346
+#define IDR_BMP_RW                      347
+#define IDR_BMP_SA                      348
+#define IDR_BMP_SB                      349
+#define IDR_BMP_SC                      350
+#define IDR_BMP_SD                      351
+#define IDR_BMP_SE                      352
+#define IDR_BMP_SG                      353
+#define IDR_BMP_SH                      354
+#define IDR_BMP_SI                      355
+#define IDR_BMP_SJ                      356
+#define IDR_BMP_SK                      357
+#define IDR_BMP_SL                      358
+#define IDR_BMP_SM                      359
+#define IDR_BMP_SN                      360
+#define IDR_BMP_SO                      361
+#define IDR_BMP_SR                      362
+#define IDR_BMP_SS                      363
+#define IDR_BMP_ST                      364
+#define IDR_BMP_SV                      365
+#define IDR_BMP_SX                      366
+#define IDR_BMP_SY                      367
+#define IDR_BMP_SZ                      368
+#define IDR_BMP_TC                      369
+#define IDR_BMP_TD                      370
+#define IDR_BMP_TF                      371
+#define IDR_BMP_TG                      372
+#define IDR_BMP_TH                      373
+#define IDR_BMP_TJ                      374
+#define IDR_BMP_TK                      375
+#define IDR_BMP_TL                      376
+#define IDR_BMP_TM                      377
+#define IDR_BMP_TN                      378
+#define IDR_BMP_TO                      379
+#define IDR_BMP_TR                      380
+#define IDR_BMP_TT                      381
+#define IDR_BMP_TV                      382
+#define IDR_BMP_TW                      383
+#define IDR_BMP_TZ                      384
+#define IDR_BMP_UA                      385
+#define IDR_BMP_UG                      386
+#define IDR_BMP_UM                      387
+#define IDR_BMP_US                      388
+#define IDR_BMP_UY                      389
+#define IDR_BMP_UZ                      390
+#define IDR_BMP_VA                      391
+#define IDR_BMP_VC                      392
+#define IDR_BMP_VE                      393
+#define IDR_BMP_VG                      394
+#define IDR_BMP_VI                      395
+#define IDR_BMP_VN                      396
+#define IDR_BMP_VU                      397
+#define IDR_BMP_WF                      398
+#define IDR_BMP_WS                      399
+#define IDR_BMP_XK                      400
+#define IDR_BMP_YE                      401
+#define IDR_BMP_YT                      402
+#define IDR_BMP_ZA                      403
+#define IDR_BMP_ZM                      404
+#define IDR_BMP_ZW                      405
 #define ID_BUTTON_CONFIGURATION_EXIT_TINYRCON 406
 #define ID_BUTTON_CONFIGURATION_COD1_PATH 407
 #define ID_BUTTON_CONFIGURATION_COD2_PATH 408
@@ -56,336 +309,16 @@
 #define ID_EDIT_CONFIGURATION_COD2_PATH 412
 #define ID_EDIT_CONFIGURATION_COD4_PATH 413
 #define ID_EDIT_CONFIGURATION_COD5_PATH 414
+#define IDC_STATIC                      -1
 
-#define IDR_BMP_XY 151
-#define IDR_BMP_AD 152
-#define IDR_BMP_AE 153
-#define IDR_BMP_AF 154
-#define IDR_BMP_AG 155
-#define IDR_BMP_AI 156
-#define IDR_BMP_AL 157
-#define IDR_BMP_AM 158
-#define IDR_BMP_AO 159
-#define IDR_BMP_AQ 160
-#define IDR_BMP_AR 161
-#define IDR_BMP_AS 162
-#define IDR_BMP_AT 163
-#define IDR_BMP_AU 164
-#define IDR_BMP_AW 165
-#define IDR_BMP_AX 166
-#define IDR_BMP_AZ 167
-#define IDR_BMP_BA 168
-#define IDR_BMP_BB 169
-#define IDR_BMP_BD 170
-#define IDR_BMP_BE 171
-#define IDR_BMP_BF 172
-#define IDR_BMP_BG 173
-#define IDR_BMP_BH 174
-#define IDR_BMP_BI 175
-#define IDR_BMP_BJ 176
-#define IDR_BMP_BL 177
-#define IDR_BMP_BM 178
-#define IDR_BMP_BN 179
-#define IDR_BMP_BO 180
-#define IDR_BMP_BQ 181
-#define IDR_BMP_BR 182
-#define IDR_BMP_BS 183
-#define IDR_BMP_BT 184
-#define IDR_BMP_BV 185
-#define IDR_BMP_BW 186
-#define IDR_BMP_BY 187
-#define IDR_BMP_BZ 188
-#define IDR_BMP_CA 189
-#define IDR_BMP_CC 190
-#define IDR_BMP_CD 191
-#define IDR_BMP_CF 192
-#define IDR_BMP_CG 193
-#define IDR_BMP_CH 194
-#define IDR_BMP_CI 195
-#define IDR_BMP_CK 196
-#define IDR_BMP_CL 197
-#define IDR_BMP_CM 198
-#define IDR_BMP_CN 199
-#define IDR_BMP_CO 200
-#define IDR_BMP_CR 201
-#define IDR_BMP_CU 202
-#define IDR_BMP_CV 203
-#define IDR_BMP_CW 204
-#define IDR_BMP_CX 205
-#define IDR_BMP_CY 206
-#define IDR_BMP_CZ 207
-#define IDR_BMP_DE 208
-#define IDR_BMP_DJ 209
-#define IDR_BMP_DK 210
-#define IDR_BMP_DM 211
-#define IDR_BMP_DO 212
-#define IDR_BMP_DZ 213
-#define IDR_BMP_EC 214
-#define IDR_BMP_EE 215
-#define IDR_BMP_EG 216
-#define IDR_BMP_EH 217
-#define IDR_BMP_ER 218
-#define IDR_BMP_ES 219
-#define IDR_BMP_ET 220
-#define IDR_BMP_FI 221
-#define IDR_BMP_FJ 222
-#define IDR_BMP_FK 223
-#define IDR_BMP_FM 224
-#define IDR_BMP_FO 225
-#define IDR_BMP_FR 226
-#define IDR_BMP_GA 227
-#define IDR_BMP_GB 228
-#define IDR_BMP_GB_ENG 229
-#define IDR_BMP_GB_NIR 230
-#define IDR_BMP_GB_SCT 231
-#define IDR_BMP_GB_WLS 232
-#define IDR_BMP_GD 233
-#define IDR_BMP_GE 234
-#define IDR_BMP_GF 235
-#define IDR_BMP_GG 236
-#define IDR_BMP_GH 237
-#define IDR_BMP_GI 238
-#define IDR_BMP_GL 239
-#define IDR_BMP_GM 240
-#define IDR_BMP_GN 241
-#define IDR_BMP_GP 242
-#define IDR_BMP_GQ 243
-#define IDR_BMP_GR 244
-#define IDR_BMP_GS 245
-#define IDR_BMP_GT 246
-#define IDR_BMP_GU 247
-#define IDR_BMP_GW 248
-#define IDR_BMP_GY 249
-#define IDR_BMP_HK 250
-#define IDR_BMP_HM 251
-#define IDR_BMP_HN 252
-#define IDR_BMP_HR 253
-#define IDR_BMP_HT 254
-#define IDR_BMP_HU 255
-#define IDR_BMP_ID 256
-#define IDR_BMP_IE 257
-#define IDR_BMP_IL 258
-#define IDR_BMP_IM 259
-#define IDR_BMP_IN 260
-#define IDR_BMP_IO 261
-#define IDR_BMP_IQ 262
-#define IDR_BMP_IR 263
-#define IDR_BMP_IS 264
-#define IDR_BMP_IT 265
-#define IDR_BMP_JE 266
-#define IDR_BMP_JM 267
-#define IDR_BMP_JO 268
-#define IDR_BMP_JP 269
-#define IDR_BMP_KE 270
-#define IDR_BMP_KG 271
-#define IDR_BMP_KH 272
-#define IDR_BMP_KI 273
-#define IDR_BMP_KM 274
-#define IDR_BMP_KN 275
-#define IDR_BMP_KP 276
-#define IDR_BMP_KR 277
-#define IDR_BMP_KW 278
-#define IDR_BMP_KY 279
-#define IDR_BMP_KZ 280
-#define IDR_BMP_LA 281
-#define IDR_BMP_LB 282
-#define IDR_BMP_LC 283
-#define IDR_BMP_LI 284
-#define IDR_BMP_LK 285
-#define IDR_BMP_LR 286
-#define IDR_BMP_LS 287
-#define IDR_BMP_LT 288
-#define IDR_BMP_LU 289
-#define IDR_BMP_LV 290
-#define IDR_BMP_LY 291
-#define IDR_BMP_MA 292
-#define IDR_BMP_MC 293
-#define IDR_BMP_MD 294
-#define IDR_BMP_ME 295
-#define IDR_BMP_MF 296
-#define IDR_BMP_MG 297
-#define IDR_BMP_MH 298
-#define IDR_BMP_MK 299
-#define IDR_BMP_ML 300
-#define IDR_BMP_MM 301
-#define IDR_BMP_MN 302
-#define IDR_BMP_MO 303
-#define IDR_BMP_MP 304
-#define IDR_BMP_MQ 305
-#define IDR_BMP_MR 306
-#define IDR_BMP_MS 307
-#define IDR_BMP_MT 308
-#define IDR_BMP_MU 309
-#define IDR_BMP_MV 310
-#define IDR_BMP_MW 311
-#define IDR_BMP_MX 312
-#define IDR_BMP_MY 313
-#define IDR_BMP_MZ 314
-#define IDR_BMP_NA 315
-#define IDR_BMP_NC 316
-#define IDR_BMP_NE 317
-#define IDR_BMP_NF 318
-#define IDR_BMP_NG 319
-#define IDR_BMP_NI 320
-#define IDR_BMP_NL 321
-#define IDR_BMP_NO 322
-#define IDR_BMP_NP 323
-#define IDR_BMP_NR 324
-#define IDR_BMP_NU 325
-#define IDR_BMP_NZ 326
-#define IDR_BMP_OM 327
-#define IDR_BMP_PA 328
-#define IDR_BMP_PE 329
-#define IDR_BMP_PF 330
-#define IDR_BMP_PG 331
-#define IDR_BMP_PH 332
-#define IDR_BMP_PK 333
-#define IDR_BMP_PL 334
-#define IDR_BMP_PM 335
-#define IDR_BMP_PN 336
-#define IDR_BMP_PR 337
-#define IDR_BMP_PS 338
-#define IDR_BMP_PT 339
-#define IDR_BMP_PW 340
-#define IDR_BMP_PY 341
-#define IDR_BMP_QA 342
-#define IDR_BMP_RE 343
-#define IDR_BMP_RO 344
-#define IDR_BMP_RS 345
-#define IDR_BMP_RU 346
-#define IDR_BMP_RW 347
-#define IDR_BMP_SA 348
-#define IDR_BMP_SB 349
-#define IDR_BMP_SC 350
-#define IDR_BMP_SD 351
-#define IDR_BMP_SE 352
-#define IDR_BMP_SG 353
-#define IDR_BMP_SH 354
-#define IDR_BMP_SI 355
-#define IDR_BMP_SJ 356
-#define IDR_BMP_SK 357
-#define IDR_BMP_SL 358
-#define IDR_BMP_SM 359
-#define IDR_BMP_SN 360
-#define IDR_BMP_SO 361
-#define IDR_BMP_SR 362
-#define IDR_BMP_SS 363
-#define IDR_BMP_ST 364
-#define IDR_BMP_SV 365
-#define IDR_BMP_SX 366
-#define IDR_BMP_SY 367
-#define IDR_BMP_SZ 368
-#define IDR_BMP_TC 369
-#define IDR_BMP_TD 370
-#define IDR_BMP_TF 371
-#define IDR_BMP_TG 372
-#define IDR_BMP_TH 373
-#define IDR_BMP_TJ 374
-#define IDR_BMP_TK 375
-#define IDR_BMP_TL 376
-#define IDR_BMP_TM 377
-#define IDR_BMP_TN 378
-#define IDR_BMP_TO 379
-#define IDR_BMP_TR 380
-#define IDR_BMP_TT 381
-#define IDR_BMP_TV 382
-#define IDR_BMP_TW 383
-#define IDR_BMP_TZ 384
-#define IDR_BMP_UA 385
-#define IDR_BMP_UG 386
-#define IDR_BMP_UM 387
-#define IDR_BMP_US 388
-#define IDR_BMP_UY 389
-#define IDR_BMP_UZ 390
-#define IDR_BMP_VA 391
-#define IDR_BMP_VC 392
-#define IDR_BMP_VE 393
-#define IDR_BMP_VG 394
-#define IDR_BMP_VI 395
-#define IDR_BMP_VN 396
-#define IDR_BMP_VU 397
-#define IDR_BMP_WF 398
-#define IDR_BMP_WS 399
-#define IDR_BMP_XK 400
-#define IDR_BMP_YE 401
-#define IDR_BMP_YT 402
-#define IDR_BMP_ZA 403
-#define IDR_BMP_ZM 404
-#define IDR_BMP_ZW 405
-
-#ifndef IDC_STATIC
-#define IDC_STATIC -1
-#endif
-
-// #define DLG_MAIN 1001
-// #define DLG_ABOUT 1002
-// #define IDM_SIMPLEGRID_DEMO 2001
-// #define IDM_ABOUT 2002
-// #define IDM_EXIT 2003
-
-// #define BMP_SIMPLEGRID_DEMO 4001
-// #define IDC_SIMPLEGRID_PLAYERS 4003
-// #define IDC_SIMPLEGRID1 4004
-// #define IDC_SIMPLEGRID2 4005
-// #define IDC_SIMPLEGRID3 4006
-// #define IDC_SIMPLEGRID4 4007
-// #define IDC_SIMPLEGRID5 4008
-// #define ID_LISTMAP 4009
-// #define IDC_TAB 4010
-// #define IDC_STATIC1 4011
-// #define IDC_STATIC2 4012
-// #define IDC_STATIC3 4013
-
-// #define IDR_ICO_MAIN 8001
-// #define IDR_ICO_SMALL 8002
-// #define IDR_BMP_ON 8003
-// #define IDR_BMP_OFF 8004
-// // Next default values for new objects
-// #define IDC_MAIN_RCONEDIT 10200
-// #define IDC_RCONKICK_BUTTON 10201
-// #define IDC_RCONTEMPBAN_BUTTON 10202
-// #define IDC_RCONBAN_BUTTON 10203
-// #define IDC_RCONGLOBALBAN_BUTTON 10204
-// #define IDC_RCONQUIT_BUTTON 10205
-// #define IDC_CONNECTSERVER_BUTTON 10206
-// #define IDC_STATUSSERVER_BUTTON 10207
-// #define IDC_ADDFAVORITESERVER_BUTTON 10208
-// #define IDC_SENDRCONCOMMAND_BUTTON 10209
-// #define IDC_SERVERINFO_BUTTON 10210
-// #define IDC_SYSTEMINFO_BUTTON 10211
-// #define IDC_STARTPROCESS_BUTTON 10212
-// #define IDC_STOPPROCESS_BUTTON 10213
-
-// #define IDS_SERVERADDRESSTITLE 10214
-// #define IDS_SERVERPORTTITLE 10215
-// #define IDS_RCONPASSWORDTITLE 10216
-// #define IDS_RCONPASSWORDHIDETITLE 10217
-// #define IDS_RCONPASSWORDSAVETITLE 10218
-// #define IDS_TIMEPERIODLEFTFIELD 10219
-// #define IDS_TIMEPERIODRIGHTFIELD 10220
-// #define IDC_SERVERADDRESSEDIT 10221
-// #define IDC_SERVERPORTEDIT 10222
-// #define IDC_RCONPASSWORDEDIT 10223
-// #define IDC_RCONPASSWORDSAVE 10224
-// #define IDC_RCONPASSWORDHIDE 10225
-// #define IDS_TIMEPERIODEDITTITLE 10226
-// #define IDS_TIMEPERIODMEASUREMENTTITLE 10227
-// #define IDC_TIMEPERIODEDIT 10228
-// #define IDC_TIMEPERIODTRACKBAR 10229
-// #define IDS_HISTORYLISTCOMBOLABEL 10230
-// #define IDC_HISTORYLISTCOMBO 10231
-// #define IDC_UPDATETIMEPERIODBUTTON 10232
-// #define IDS_STATICIMAGE1 10234
-// #define IDB_BACKGROUNDLOGO 10235
-// #define IDC_RCON_STB
-
+// Next default values for new objects
+// 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-
-#define _APS_NO_MFC 130
-#define _APS_NEXT_RESOURCE_VALUE 129
-#define _APS_NEXT_COMMAND_VALUE 32771
-#define _APS_NEXT_CONTROL_VALUE 1000
-#define _APS_NEXT_SYMED_VALUE 110
+#define _APS_NO_MFC                     1
+#define _APS_NEXT_RESOURCE_VALUE        129
+#define _APS_NEXT_COMMAND_VALUE         32771
+#define _APS_NEXT_CONTROL_VALUE         1000
+#define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif
