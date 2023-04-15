@@ -91,6 +91,8 @@ extern const std::unordered_map<int, string> button_id_to_label_text{
   { ID_TELL_BUTTON, "Send private message" },
   { ID_QUITBUTTON, "Exit" },
   { ID_LOADBUTTON, "Load selected map" },
+  { ID_YES_BUTTON, "Yes" },
+  { ID_NO_BUTTON, "No" },
   { ID_BUTTON_SAVE_CHANGES, "Save changes" },
   { ID_BUTTON_TEST_CONNECTION, "Test connection" },
   { ID_BUTTON_CANCEL, "Cancel" },
@@ -471,6 +473,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
   HBRUSH defaultbrush{};
   HBRUSH hotbrush{};
   HBRUSH selectbrush{};
+  HPEN pen{};
   PAINTSTRUCT ps;
 
   switch (message) {
@@ -529,7 +532,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         if (!selectbrush)
           selectbrush = CreateSolidBrush(color::yellow);
 
-        HPEN pen = CreatePen(PS_SOLID, 2, color::red);
+        if (!pen) pen = CreatePen(PS_SOLID, 2, color::red);
 
         HGDIOBJ old_pen = SelectObject(item->hdc, pen);
         HGDIOBJ old_brush = SelectObject(item->hdc, selectbrush);
@@ -549,7 +552,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
           if (!hotbrush)
             hotbrush = CreateSolidBrush(color::yellow);
 
-          HPEN pen = CreatePen(PS_SOLID, 2, color::red);
+          if (!pen) pen = CreatePen(PS_SOLID, 2, color::red);
 
           HGDIOBJ old_pen = SelectObject(item->hdc, pen);
           HGDIOBJ old_brush = SelectObject(item->hdc, hotbrush);
@@ -569,7 +572,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         if (defaultbrush == NULL)
           defaultbrush = CreateSolidBrush(color::light_blue);
 
-        HPEN pen = CreatePen(PS_SOLID, 2, color::light_blue);
+        if (!pen) pen = CreatePen(PS_SOLID, 2, color::light_blue);
 
         HGDIOBJ old_pen = SelectObject(item->hdc, pen);
         HGDIOBJ old_brush = SelectObject(item->hdc, defaultbrush);
@@ -1108,6 +1111,10 @@ LRESULT CALLBACK WndProcForConfirmationDialog(HWND hWnd, UINT message, WPARAM wP
 {
   static char msg_buffer[1024];
   HBRUSH orig_textEditBrush{}, comboBrush1{}, comboBrush2{}, comboBrush3{}, comboBrush4{}, black_brush{};
+  HBRUSH defaultbrush{};
+  HBRUSH hotbrush{};
+  HBRUSH selectbrush{};
+  HPEN pen{};
 
   switch (message) {
 
@@ -1125,14 +1132,14 @@ LRESULT CALLBACK WndProcForConfirmationDialog(HWND hWnd, UINT message, WPARAM wP
       LPNMCUSTOMDRAW item = (LPNMCUSTOMDRAW)some_item;
 
       if (item->uItemState & CDIS_SELECTED) {
-        // Select our color when the button is selected
-        if (comboBrush1 == NULL)
-          comboBrush1 = CreateSolidBrush(color::yellow);
+        if (!selectbrush)
+          selectbrush = CreateSolidBrush(color::yellow);
 
-        HPEN pen = CreatePen(PS_SOLID, 2, color::red);
+        if (!pen)
+          pen = CreatePen(PS_SOLID, 2, color::red);
 
         HGDIOBJ old_pen = SelectObject(item->hdc, pen);
-        HGDIOBJ old_brush = SelectObject(item->hdc, comboBrush1);
+        HGDIOBJ old_brush = SelectObject(item->hdc, selectbrush);
 
         Rectangle(item->hdc, item->rc.left, item->rc.top, item->rc.right, item->rc.bottom);
 
@@ -1142,18 +1149,18 @@ LRESULT CALLBACK WndProcForConfirmationDialog(HWND hWnd, UINT message, WPARAM wP
 
         SetTextColor(item->hdc, color::red);
         SetBkMode(item->hdc, TRANSPARENT);
-        DrawTextA(item->hdc, some_item->idFrom == ID_YES_BUTTON ? "Yes" : "No", -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
+        DrawTextA(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
         return CDRF_SKIPDEFAULT;
       } else {
-        if (item->uItemState & CDIS_HOT || some_item->hwndFrom == GetFocus()) {
+        if (item->uItemState & CDIS_HOT) {
+          if (!hotbrush)
+            hotbrush = CreateSolidBrush(color::yellow);
 
-          if (comboBrush2 == NULL)
-            comboBrush2 = CreateSolidBrush(color::yellow);
-
-          HPEN pen = CreatePen(PS_SOLID, 2, color::red);
+          if (!pen)
+            pen = CreatePen(PS_SOLID, 2, color::red);
 
           HGDIOBJ old_pen = SelectObject(item->hdc, pen);
-          HGDIOBJ old_brush = SelectObject(item->hdc, comboBrush2);
+          HGDIOBJ old_brush = SelectObject(item->hdc, hotbrush);
 
           Rectangle(item->hdc, item->rc.left, item->rc.top, item->rc.right, item->rc.bottom);
 
@@ -1163,22 +1170,28 @@ LRESULT CALLBACK WndProcForConfirmationDialog(HWND hWnd, UINT message, WPARAM wP
 
           SetTextColor(item->hdc, color::red);
           SetBkMode(item->hdc, TRANSPARENT);
-          DrawTextA(item->hdc, some_item->idFrom == ID_YES_BUTTON ? "Yes" : "No", -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
+          DrawTextA(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
           return CDRF_SKIPDEFAULT;
         }
 
-        if (comboBrush3 == NULL)
-          comboBrush3 = CreateSolidBrush(color::light_blue);
+        if (defaultbrush == NULL)
+          defaultbrush = CreateSolidBrush(color::light_blue);
 
-        HGDIOBJ old_brush = SelectObject(item->hdc, comboBrush3);
+        if (!pen)
+          pen = CreatePen(PS_SOLID, 2, color::light_blue);
+
+        HGDIOBJ old_pen = SelectObject(item->hdc, pen);
+        HGDIOBJ old_brush = SelectObject(item->hdc, defaultbrush);
 
         Rectangle(item->hdc, item->rc.left, item->rc.top, item->rc.right, item->rc.bottom);
 
+        SelectObject(item->hdc, old_pen);
         SelectObject(item->hdc, old_brush);
+        DeleteObject(pen);
 
-        SetTextColor(item->hdc, color::red);// For green text, but use any COLORREF value.
+        SetTextColor(item->hdc, color::red);
         SetBkMode(item->hdc, TRANSPARENT);
-        DrawTextA(item->hdc, some_item->idFrom == ID_YES_BUTTON ? "Yes" : "No", -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
+        DrawTextA(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
         return CDRF_SKIPDEFAULT;
       }
     }
@@ -1239,12 +1252,16 @@ LRESULT CALLBACK WndProcForConfirmationDialog(HWND hWnd, UINT message, WPARAM wP
     break;
 
   case WM_DESTROY:
-    if (orig_textEditBrush) DeleteObject(orig_textEditBrush);
-    if (comboBrush1) DeleteObject(comboBrush1);
-    if (comboBrush2) DeleteObject(comboBrush2);
-    if (comboBrush3) DeleteObject(comboBrush3);
-    if (comboBrush4) DeleteObject(comboBrush4);
-    if (black_brush) DeleteObject(black_brush);
+    if (orig_textEditBrush) DeleteBrush(orig_textEditBrush);
+    if (comboBrush1) DeleteBrush(comboBrush1);
+    if (comboBrush2) DeleteBrush(comboBrush2);
+    if (comboBrush3) DeleteBrush(comboBrush3);
+    if (comboBrush4) DeleteBrush(comboBrush4);
+    if (black_brush) DeleteBrush(black_brush);
+    if (defaultbrush) DeleteBrush(defaultbrush);
+    if (hotbrush) DeleteBrush(hotbrush);
+    if (selectbrush) DeleteBrush(selectbrush);
+    if (pen) DeletePen(pen);
     PostQuitMessage(admin_choice.load());
     return 0;
 
@@ -1280,6 +1297,9 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
   static char msg_buffer[1024];
   HBRUSH orig_textEditBrush{};
   HBRUSH comboBrush1{}, comboBrush2{}, comboBrush3{}, comboBrush4{};
+  HBRUSH defaultbrush{};
+  HBRUSH hotbrush{};
+  HBRUSH selectbrush{};
   HPEN pen{};
 
   switch (message) {
@@ -1298,14 +1318,14 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
       LPNMCUSTOMDRAW item = (LPNMCUSTOMDRAW)some_item;
 
       if (item->uItemState & CDIS_SELECTED) {
-        if (!comboBrush1)
-          comboBrush1 = CreateSolidBrush(color::yellow);
+        if (!selectbrush)
+          selectbrush = CreateSolidBrush(color::yellow);
 
         if (!pen)
           pen = CreatePen(PS_SOLID, 2, color::red);
 
         HGDIOBJ old_pen = SelectObject(item->hdc, pen);
-        HGDIOBJ old_brush = SelectObject(item->hdc, comboBrush1);
+        HGDIOBJ old_brush = SelectObject(item->hdc, selectbrush);
 
         Rectangle(item->hdc, item->rc.left, item->rc.top, item->rc.right, item->rc.bottom);
 
@@ -1318,15 +1338,15 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
         DrawTextA(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
         return CDRF_SKIPDEFAULT;
       } else {
-        if (item->uItemState & CDIS_HOT || some_item->hwndFrom == GetFocus()) {
-          if (!comboBrush2)
-            comboBrush2 = CreateSolidBrush(color::yellow);
+        if (item->uItemState & CDIS_HOT) {
+          if (!hotbrush)
+            hotbrush = CreateSolidBrush(color::yellow);
 
           if (!pen)
             pen = CreatePen(PS_SOLID, 2, color::red);
 
           HGDIOBJ old_pen = SelectObject(item->hdc, pen);
-          HGDIOBJ old_brush = SelectObject(item->hdc, comboBrush2);
+          HGDIOBJ old_brush = SelectObject(item->hdc, hotbrush);
 
           Rectangle(item->hdc, item->rc.left, item->rc.top, item->rc.right, item->rc.bottom);
 
@@ -1340,18 +1360,20 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
           return CDRF_SKIPDEFAULT;
         }
 
-        if (!comboBrush3)
-          comboBrush3 = CreateSolidBrush(color::light_blue);
+        if (defaultbrush == NULL)
+          defaultbrush = CreateSolidBrush(color::light_blue);
 
-        HPEN pen2 = CreatePen(PS_SOLID, 2, color::light_blue);
-        HGDIOBJ old_pen = SelectObject(item->hdc, pen2);
-        HGDIOBJ old_brush = SelectObject(item->hdc, comboBrush3);
+        if (!pen)
+          pen = CreatePen(PS_SOLID, 2, color::light_blue);
+
+        HGDIOBJ old_pen = SelectObject(item->hdc, pen);
+        HGDIOBJ old_brush = SelectObject(item->hdc, defaultbrush);
 
         Rectangle(item->hdc, item->rc.left, item->rc.top, item->rc.right, item->rc.bottom);
 
         SelectObject(item->hdc, old_pen);
         SelectObject(item->hdc, old_brush);
-        DeleteObject(pen2);
+        DeleteObject(pen);
 
         SetTextColor(item->hdc, color::red);
         SetBkMode(item->hdc, TRANSPARENT);
@@ -1490,11 +1512,14 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
     break;
 
   case WM_DESTROY:
-    if (orig_textEditBrush) DeleteObject(orig_textEditBrush);
-    if (comboBrush1) DeleteObject(comboBrush1);
-    if (comboBrush2) DeleteObject(comboBrush2);
-    if (comboBrush3) DeleteObject(comboBrush3);
-    if (comboBrush4) DeleteObject(comboBrush4);
+    if (orig_textEditBrush) DeleteBrush(orig_textEditBrush);
+    if (comboBrush1) DeleteBrush(comboBrush1);
+    if (comboBrush2) DeleteBrush(comboBrush2);
+    if (comboBrush3) DeleteBrush(comboBrush3);
+    if (comboBrush4) DeleteBrush(comboBrush4);
+    if (defaultbrush) DeleteBrush(defaultbrush);
+    if (hotbrush) DeleteBrush(hotbrush);
+    if (selectbrush) DeleteBrush(selectbrush);
     if (pen) DeletePen(pen);
     PostQuitMessage(0);
     return 0;
