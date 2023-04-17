@@ -207,7 +207,6 @@
     <ResourceCompile Include="TinyRconGUI.rc" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="big_codicon.ico" />
     <Image Include="data\icons\big_codicon.ico" />
     <Image Include="data\icons\small.ico" />
     <Image Include="data\icons\TinyRconGUI.ico" />
@@ -467,8 +466,6 @@
     <Image Include="data\images\flags\zm.bmp" />
     <Image Include="data\images\flags\zw.bmp" />
     <Image Include="small.ico" />
-    <Image Include="TinyRconGUI.ico" />
-    <Image Include="TinyRconGUI2.ico" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".clang-format" />

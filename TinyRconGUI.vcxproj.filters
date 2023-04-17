@@ -75,15 +75,6 @@
     <Image Include="small.ico">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="TinyRconGUI.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="TinyRconGUI2.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="big_codicon.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
     <Image Include="data\icons\TinyRconGUI.ico">
       <Filter>Resource Files</Filter>
     </Image>

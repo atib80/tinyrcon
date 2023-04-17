@@ -27,6 +27,7 @@ extern const std::regex ip_address_and_port_regex;
 
 extern volatile std::atomic<bool> is_terminate_program;
 extern volatile std::atomic<bool> is_terminate_tinyrcon_settings_configuration_dialog_window;
+// volatile std::atomic<bool> is_refreshing_players_data{false};
 extern string g_message_data_contents;
 
 tiny_cod2_rcon_client_application main_app;
@@ -41,7 +42,8 @@ mutex mu{};
 volatile atomic<size_t> atomic_counter{ 0 };
 volatile std::atomic<bool> is_refresh_players_data_event{ false };
 volatile std::atomic<bool> is_refreshed_players_data_ready_event{ false };
-
+volatile std::atomic<bool> is_display_permanently_banned_players_data_event{ false };
+volatile std::atomic<bool> is_display_temporarily_banned_players_data_event{ false };
 
 extern const int screen_width{ GetSystemMetrics(SM_CXSCREEN) };
 extern const int screen_height{ GetSystemMetrics(SM_CYSCREEN) - 20 };
@@ -193,11 +195,11 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   std::thread task_thread{
     [&]() {
       IsGUIThread(TRUE);
-      print_colored_text(app_handles.hwnd_re_messages_data, "^3Started importing serialized binary geological data from ^1'plugins/geoIP/geo.dat' ^3file.\n", true, true, true);
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3Started importing serialized binary geological data from\n ^1'plugins/geoIP/geo.dat' ^3file.\n", true, true, true);
       // parse_geodata_lite_csv_file("plugins/geoIP/IP2LOCATION-LITE-DB3.csv");
       import_geoip_data(main_app.get_connection_manager().get_geoip_data(), "plugins/geoIP/geo.dat");
 
-      print_colored_text(app_handles.hwnd_re_messages_data, "^2Finished importing serialized binary geological data from ^1'plugins/geoIP/geo.dat' ^2file.\n", true, true, true);
+      print_colored_text(app_handles.hwnd_re_messages_data, "^2Finished importing serialized binary geological data from\n ^1'plugins/geoIP/geo.dat' ^2file.\n", true, true, true);
 
       print_colored_text(app_handles.hwnd_re_messages_data, "^3Started parsing ^1tempbans.txt ^3file.\n", true, true, true);
       parse_tempbans_data_file();
@@ -230,51 +232,32 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       is_main_window_constructed = true;
 
       while (!should_program_terminate().load()) {
+        {
+          unique_lock<mutex> ul{ mu };
+          exit_flag.wait_for(ul, std::chrono::milliseconds(25), [&]() {
+            return is_terminate_program.load();
+          });
+        }
 
-        unique_lock<mutex> ul{ mu };
-        exit_flag.wait_for(ul, std::chrono::milliseconds(50), [&]() {
-          return is_terminate_program.load();
-        });
-
-        bool is_status_command_processed{};
         string rcon_reply;
 
         while (!main_app.is_command_queue_empty()) {
           auto cmd = main_app.get_command_from_queue();
-          if (cmd.command[0] == "s" || cmd.command[0] == "!s" || cmd.command[0] == "status" || cmd.command[0] == "!status" || cmd.command[0] == "gs" || cmd.command[0] == "!gs" || cmd.command[0] == "getstatus") {
-            if (!is_status_command_processed) {
-              is_status_command_processed = true;
-              atomic_counter.store(main_app.get_game_server().get_check_for_banned_players_time_period());
-              if (main_app.get_is_connection_settings_valid()) {
-                main_app.get_connection_manager().send_and_receive_rcon_data("g_gametype", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
-                main_app.get_connection_manager().send_and_receive_rcon_data("status", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
-                prepare_players_data_for_display(false);
-              } else {
-                main_app.get_connection_manager().send_and_receive_rcon_data("getstatus", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
-                prepare_players_data_for_display_of_getstatus_response(false);
-              }
-
-              is_refreshed_players_data_ready_event.store(true);
-            }
-          } else {
-            main_app.process_queue_command(std::move(cmd));
-          }
+          main_app.process_queue_command(std::move(cmd));
         }
 
         if (is_refresh_players_data_event.load()) {
-          if (!is_status_command_processed) {
-            if (main_app.get_is_connection_settings_valid()) {
-              main_app.get_connection_manager().send_and_receive_rcon_data("g_gametype", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
-              main_app.get_connection_manager().send_and_receive_rcon_data("status", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
-              prepare_players_data_for_display(false);
-            } else {
-              main_app.get_connection_manager().send_and_receive_rcon_data("getstatus", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
-              prepare_players_data_for_display_of_getstatus_response(false);
-            }
-
-            is_refreshed_players_data_ready_event.store(true);
+          if (main_app.get_is_connection_settings_valid()) {
+            main_app.get_connection_manager().send_and_receive_rcon_data("g_gametype", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
+            main_app.get_connection_manager().send_and_receive_rcon_data("status", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
+            prepare_players_data_for_display(false);
+          } else {
+            main_app.get_connection_manager().send_and_receive_rcon_data("getstatus", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
+            prepare_players_data_for_display_of_getstatus_response(false);
           }
+
           is_refresh_players_data_event.store(false);
+          is_refreshed_players_data_ready_event.store(true);
         }
       }
     }
@@ -503,6 +486,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     }
 
     InvalidateRect(hWnd, &bounding_rectangle, TRUE);
+    // is_refreshing_players_data.store(false);
   }
 
   break;
@@ -687,7 +671,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
           }
         }
       } else {
-        print_colored_text(app_handles.hwnd_re_messages_data, "\n^3You have selected an empty line ^1(invalid pid index) ^3in the players' data table!\n^5Please, select a non-empty, valid player's row.\n", true, true, true);
+        print_colored_text(app_handles.hwnd_re_messages_data, "\n^3You have selected an empty line ^1(invalid pid index)\n ^3in the players' data table!\n^5Please, select a non-empty, valid player's row.\n", true, true, true);
       }
     } break;
 
@@ -707,7 +691,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
           }
         }
       } else {
-        print_colored_text(app_handles.hwnd_re_messages_data, "\n^3You have selected an empty line ^1(invalid pid index) ^3in the players' data table!\n^5Please, select a non-empty, valid player's row.\n", true, true, true);
+        print_colored_text(app_handles.hwnd_re_messages_data, "\n^3You have selected an empty line ^1(invalid pid index)\n ^3in the players' data table!\n^5Please, select a non-empty, valid player's row.\n", true, true, true);
       }
 
     } break;
@@ -728,7 +712,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
           }
         }
       } else {
-        print_colored_text(app_handles.hwnd_re_messages_data, "\n^3You have selected an empty line ^1(invalid pid index) ^3in the players' data table!\n^5Please, select a non-empty, valid player's row.\n", true, true, true);
+        print_colored_text(app_handles.hwnd_re_messages_data, "\n^3You have selected an empty line ^1(invalid pid index)\n ^3in the players' data table!\n^5Please, select a non-empty, valid player's row.\n", true, true, true);
       }
 
     } break;
@@ -749,7 +733,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
           }
         }
       } else {
-        print_colored_text(app_handles.hwnd_re_messages_data, "\n^3You have selected an empty line ^1(invalid pid index) ^3in the players' data table!\n^5Please, select a non-empty, valid player's row.\n", true, true, true);
+        print_colored_text(app_handles.hwnd_re_messages_data, "\n^3You have selected an empty line ^1(invalid pid index)\n ^3in the players' data table!\n^5Please, select a non-empty, valid player's row.\n", true, true, true);
       }
 
     } break;
@@ -786,16 +770,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     } break;
 
     case ID_VIEWTEMPBANSBUTTON: {
-
-      Edit_SetText(app_handles.hwnd_e_user_input, "tempbans");
-      get_user_input();
-
+      is_display_temporarily_banned_players_data_event.store(true);
     } break;
 
     case ID_VIEWIPBANSBUTTON: {
-      Edit_SetText(app_handles.hwnd_e_user_input, "bans");
-      get_user_input();
-
+      is_display_permanently_banned_players_data_event.store(true);
     } break;
 
     case ID_SORT_PLAYERS_DATA_BY_PID: {
@@ -845,7 +824,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         show_error(app_handles.hwnd_main_window, "Failed to construct and show TinyRcon configuration dialog!", 0);
       }
       if (is_terminate_program.load()) {
-        unique_lock<mutex> ul{ mu };
+        lock_guard<mutex> ul{ mu };
         exit_flag.notify_one();
         PostQuitMessage(0);
       }
@@ -923,6 +902,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     }
 
     EndPaint(hWnd, &ps);
+
+    if (is_display_temporarily_banned_players_data_event.load()) {
+      display_temporarily_banned_ip_addresses();
+      is_display_temporarily_banned_players_data_event.store(false);
+    } else if (is_display_permanently_banned_players_data_event.load()) {
+      display_permanently_banned_ip_addresses();
+      is_display_permanently_banned_players_data_event.store(false);
+    }
   } break;
 
   case WM_KEYDOWN:
@@ -933,7 +920,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     if (show_user_confirmation_dialog("^3Do you really want to quit?", "Quit TinyRcon?")) {
       is_terminate_program.store(true);
       {
-        unique_lock<mutex> ul{ mu };
+        lock_guard<mutex> ul{ mu };
         exit_flag.notify_one();
       }
       DestroyWindow(app_handles.hwnd_main_window);
@@ -1413,7 +1400,7 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
       DestroyWindow(app_handles.hwnd_configuration_dialog);
       is_terminate_program.store(true);
       {
-        unique_lock<mutex> ul{ mu };
+        lock_guard<mutex> ul{ mu };
         exit_flag.notify_one();
       }
     } break;
@@ -1427,7 +1414,7 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
 
       if (lstrcmpA(cod1_game_path, "") == 0 || lstrcmpA(cod1_game_path, "C:\\") == 0) {
         print_colored_text(app_handles.hwnd_re_messages_data, "^1Error! You haven't selected a valid folder for your game installation.\n");
-        print_colored_text(app_handles.hwnd_re_messages_data, "^5You have to select your ^1game's installation directory ^5and click the OK button.\n");
+        print_colored_text(app_handles.hwnd_re_messages_data, "^5You have to select your ^1game's installation directory\n ^5and click the OK button.\n");
       } else {
         snprintf(exe_file_path, max_path_length, "%s\\codmp.exe", cod1_game_path);
       }
@@ -1447,7 +1434,7 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
 
       if (lstrcmpA(cod2_game_path, "") == 0 || lstrcmpA(cod2_game_path, "C:\\") == 0) {
         print_colored_text(app_handles.hwnd_re_messages_data, "^1Error! You haven't selected a valid folder for your game installation.\n");
-        print_colored_text(app_handles.hwnd_re_messages_data, "^5You have to select your ^1game's installation directory ^5and click the OK button.\n");
+        print_colored_text(app_handles.hwnd_re_messages_data, "^5You have to select your ^1game's installation directory\n ^5and click the OK button.\n");
       } else {
         snprintf(exe_file_path, max_path_length, "%s\\cod2mp_s.exe", cod2_game_path);
       }
@@ -1467,7 +1454,7 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
 
       if (lstrcmpA(cod4_game_path, "") == 0 || lstrcmpA(cod4_game_path, "C:\\") == 0) {
         print_colored_text(app_handles.hwnd_re_messages_data, "^1Error! You haven't selected a valid folder for your game installation.\n");
-        print_colored_text(app_handles.hwnd_re_messages_data, "^5You have to select your ^1game's installation directory ^5and click the OK button.\n");
+        print_colored_text(app_handles.hwnd_re_messages_data, "^5You have to select your ^1game's installation directory\n ^5and click the OK button.\n");
       } else {
         snprintf(exe_file_path, max_path_length, "%s\\iw3mp.exe", cod4_game_path);
       }
@@ -1487,7 +1474,7 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
 
       if (lstrcmpA(cod5_game_path, "") == 0 || lstrcmpA(cod5_game_path, "C:\\") == 0) {
         print_colored_text(app_handles.hwnd_re_messages_data, "^1Error! You haven't selected a valid folder for your game installation.\n");
-        print_colored_text(app_handles.hwnd_re_messages_data, "^5You have to select your ^1game's installation directory ^5and click the OK button.\n");
+        print_colored_text(app_handles.hwnd_re_messages_data, "^5You have to select your ^1game's installation directory\n ^5and click the OK button.\n");
       } else {
         snprintf(exe_file_path, max_path_length, "%s\\cod5mp.exe", cod5_game_path);
       }

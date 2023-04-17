@@ -1183,10 +1183,17 @@ bool trim_in_place(
     return true;
   }
 
-  last_char_pos =
-    std::find_if(std::crbegin(src), std::crend(src), [&trimmed_chars](const auto ch) {
-      return trimmed_chars.find(ch) == std::cend(trimmed_chars);
-    }).base();
+  while (--last_char_pos != first_char_pos) {
+    if (trimmed_chars.find(*last_char_pos) == std::cend(trimmed_chars))
+      break;
+  }
+
+  ++last_char_pos;
+
+  //last_char_pos =
+  //  std::find_if(std::crbegin(src), std::crend(src), [&trimmed_chars](const auto ch) {
+  //    return trimmed_chars.find(ch) == std::cend(trimmed_chars);
+  //  }).base();
 
   if (std::cbegin(src) == first_char_pos) {
     if (std::cend(src) == last_char_pos)

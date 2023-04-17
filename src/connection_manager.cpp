@@ -89,12 +89,6 @@ size_t connection_manager::receive_data_from_server(
     if (start != nullptr) {
       main_app.set_is_connection_settings_valid(false);
       main_app.add_command_to_queue({ "getstatus" }, command_type::rcon, true);
-      /* if (!initialize_and_verify_server_connection_settings()) {
-         PostQuitMessage(0);
-      }
-       if (!show_and_process_tinyrcon_configuration_panel("Invalid rcon password! Please, configure and verify your game server's settings.")) {
-         show_error(g_main_window, "Failed to construct and show TinyRcon configuration dialog!", 0);
-       }*/
     } else {
       incoming_data_buffer[noOfAllReceivedBytes] = '\0';
       const char *current{}, *last{};

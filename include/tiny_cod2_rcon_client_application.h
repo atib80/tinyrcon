@@ -62,7 +62,7 @@ class tiny_cod2_rcon_client_application
 
   std::string program_title{ "Welcome to TinyRcon!" };
   std::ofstream log_file;
-  std::mutex command_queue_mutex{};
+  std::recursive_mutex command_queue_mutex{};
 
 
 public:
@@ -329,6 +329,7 @@ public:
 
   inline void process_queue_command(command_t cmd)
   {
+    std::lock_guard lg{ command_queue_mutex };
     if (cmd.type == command_type::rcon) {
       process_rcon_command(cmd.command, cmd.is_wait_for_reply);
     } else if (cmd.type == command_type::user) {
