@@ -637,7 +637,20 @@ void show_error(HWND parent_window, const char *error_message, const size_t erro
   }
 }
 
-bool parse_geodata_lite_csv_file(const char *file_path) noexcept
+size_t get_number_of_lines_in_file(const char *file_path)
+{
+  ifstream input{ file_path };
+  if (!input)
+    return 0;
+
+  size_t lines_cnt{};
+  for (string line; getline(input, line); ++lines_cnt)
+    ;
+
+  return lines_cnt + 1;
+}
+
+bool parse_geodata_lite_csv_file(const char *file_path)
 {
 
   ifstream input{ file_path };
@@ -645,7 +658,7 @@ bool parse_geodata_lite_csv_file(const char *file_path) noexcept
     return false;
 
   vector<geoip_data> geoip_data;
-  geoip_data.reserve(3073926U);
+  geoip_data.reserve(get_number_of_lines_in_file(file_path));
 
   for (string line; getline(input, line);) {
     stl::helper::trim_in_place(line);
@@ -2061,6 +2074,7 @@ void check_for_temp_banned_ip_addresses()
 
 void check_for_banned_ip_addresses()
 {
+  char msg[512];
   const bool is_enable_automatic_connection_flood_ip_ban{ main_app.get_is_enable_automatic_connection_flood_ip_ban() };
 
   const auto &banned_ip_address =
@@ -2092,6 +2106,9 @@ void check_for_banned_ip_addresses()
         main_app.get_tinyrcon_dict()["{REASON}"] = pd.reason;
       }
       build_tiny_rcon_message(message);
+      const string banned_player_information{ get_player_information(online_player.pid) };
+      snprintf(msg, std::size(msg), "^1Automatic kick ^5for previously ^1banned IP: %s ^5| Reason: ^1%s\n%s\n", online_player.ip_address, pd.reason, banned_player_information.c_str());
+      print_colored_text(app_handles.hwnd_re_messages_data, msg, true, true, true);
       kick_player(online_player.pid, message);
     }
   }
@@ -2145,10 +2162,8 @@ void rcon_say(string &msg, const bool is_print_to_rich_edit_messages_box)
   const auto lines = str_split(msg, "\n", nullptr, true);
   for (const auto &line : lines) {
     say_message(line.c_str());
-    if (is_print_to_rich_edit_messages_box) {
+    if (is_print_to_rich_edit_messages_box)
       print_colored_text(app_handles.hwnd_re_messages_data, line.c_str(), true, true, true);
-      print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, true, true);
-    }
   }
 }
 
@@ -2293,9 +2308,9 @@ void process_user_command(const std::vector<string> &user_cmd)
               main_app.get_tinyrcon_dict()["{REASON}"] = std::move(reason2);
               string command2{ main_app.get_user_defined_kick_message() };
               build_tiny_rcon_message(command2);
-              print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, true, false);
+              /*print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, true, false);
               print_colored_text(app_handles.hwnd_re_messages_data, command2.c_str(), true, true, true);
-              print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, true, false);
+              print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, true, false);*/
               kick_player(player.pid, command2);
               warned_players.erase(player.pid);
             }
@@ -3274,6 +3289,10 @@ void import_geoip_data(vector<geoip_data> &geo_data, const char *file_path)
   if (is) {
     geo_data.resize(3073926U);
     is.read(reinterpret_cast<char *>(geo_data.data()), 3073926U * sizeof(geoip_data));
+    /*for (geoip_data geo{}; is.read(reinterpret_cast<char *>(&geo), sizeof(geoip_data));) {
+      geo_data.push_back(std::move(geo));
+      memset(&geo, 0, sizeof(geoip_data));
+    }*/
   }
 }
 
@@ -3680,7 +3699,7 @@ bool change_server_setting(const std::vector<std::string> &command) noexcept
   return true;
 }
 
-void log_message(const string &msg, const bool is_log_current_date_time) noexcept
+void log_message(const string &msg, const bool is_log_current_date_time)
 {
   ostringstream os;
   if (is_log_current_date_time) {
@@ -3768,7 +3787,7 @@ bool specify_reason_for_player_pid(const int pid, const std::string &reason)
 void build_tiny_rcon_message(std::string &msg)
 {
 
-  for (auto &&[key, value] : main_app.get_tinyrcon_dict()) {
+  for (const auto &[key, value] : main_app.get_tinyrcon_dict()) {
 
     for (size_t pos{}; (pos = msg.find(key, pos)) != string::npos; pos += value.length()) {
 

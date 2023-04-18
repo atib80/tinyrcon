@@ -209,8 +209,8 @@ void scroll_to_bottom(HWND hwnd) noexcept;
 void append(HWND hwnd, const char *str) noexcept;
 
 void show_error(HWND parent_window, const char *, const size_t) noexcept;
-
-bool parse_geodata_lite_csv_file(const char *) noexcept;
+size_t get_number_of_lines_in_file(const char *file_path);
+bool parse_geodata_lite_csv_file(const char *);
 
 bool write_tiny_rcon_json_settings_to_file(const char *) noexcept;
 
@@ -310,7 +310,7 @@ void replace_all_escaped_new_lines_with_new_lines(std::string &) noexcept;
 
 bool change_server_setting(const std::vector<std::string> &) noexcept;
 
-void log_message(const std::string &, const bool = true) noexcept;
+void log_message(const std::string &, const bool = true);
 
 std::string get_player_name_for_pid(const int);
 

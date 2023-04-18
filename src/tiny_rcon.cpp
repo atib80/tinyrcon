@@ -769,57 +769,57 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       }
     } break;
 
-    case ID_VIEWTEMPBANSBUTTON: {
+    case ID_VIEWTEMPBANSBUTTON:
       is_display_temporarily_banned_players_data_event.store(true);
-    } break;
+      break;
 
-    case ID_VIEWIPBANSBUTTON: {
+    case ID_VIEWIPBANSBUTTON:
       is_display_permanently_banned_players_data_event.store(true);
-    } break;
+      break;
 
-    case ID_SORT_PLAYERS_DATA_BY_PID: {
+    case ID_SORT_PLAYERS_DATA_BY_PID:
       is_process_combobox_item_selection_event = false;
       type_of_sort = sort_by_pid_asc ? sort_type::pid_asc : sort_type::pid_desc;
       sort_by_pid_asc = !sort_by_pid_asc;
       process_sort_type_change_request(type_of_sort);
-    } break;
+      break;
 
-    case ID_SORT_PLAYERS_DATA_BY_SCORE: {
+    case ID_SORT_PLAYERS_DATA_BY_SCORE:
       is_process_combobox_item_selection_event = false;
       type_of_sort = sort_by_score_asc ? sort_type::score_asc : sort_type::score_desc;
       sort_by_score_asc = !sort_by_score_asc;
       process_sort_type_change_request(type_of_sort);
-    } break;
+      break;
 
-    case ID_SORT_PLAYERS_DATA_BY_PING: {
+    case ID_SORT_PLAYERS_DATA_BY_PING:
       is_process_combobox_item_selection_event = false;
       type_of_sort = sort_by_ping_asc ? sort_type::ping_asc : sort_type::ping_desc;
       sort_by_ping_asc = !sort_by_ping_asc;
       process_sort_type_change_request(type_of_sort);
-    } break;
+      break;
 
-    case ID_SORT_PLAYERS_DATA_BY_NAME: {
+    case ID_SORT_PLAYERS_DATA_BY_NAME:
       is_process_combobox_item_selection_event = false;
       type_of_sort = sort_by_name_asc ? sort_type::name_asc : sort_type::name_desc;
       sort_by_name_asc = !sort_by_name_asc;
       process_sort_type_change_request(type_of_sort);
-    } break;
+      break;
 
-    case ID_SORT_PLAYERS_DATA_BY_IP: {
+    case ID_SORT_PLAYERS_DATA_BY_IP:
       is_process_combobox_item_selection_event = false;
       type_of_sort = sort_by_ip_asc ? sort_type::ip_asc : sort_type::ip_desc;
       sort_by_ip_asc = !sort_by_ip_asc;
       process_sort_type_change_request(type_of_sort);
-    } break;
+      break;
 
-    case ID_SORT_PLAYERS_DATA_BY_GEO: {
+    case ID_SORT_PLAYERS_DATA_BY_GEO:
       is_process_combobox_item_selection_event = false;
       type_of_sort = sort_by_geo_asc ? sort_type::geo_asc : sort_type::geo_desc;
       sort_by_geo_asc = !sort_by_geo_asc;
       process_sort_type_change_request(type_of_sort);
-    } break;
+      break;
 
-    case ID_BUTTON_CONFIGURE_SERVER_SETTINGS: {
+    case ID_BUTTON_CONFIGURE_SERVER_SETTINGS:
       if (!show_and_process_tinyrcon_configuration_panel("Configure and verify your game server's settings.")) {
         show_error(app_handles.hwnd_main_window, "Failed to construct and show TinyRcon configuration dialog!", 0);
       }
@@ -828,7 +828,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         exit_flag.notify_one();
         PostQuitMessage(0);
       }
-    } break;
+      break;
     }
 
     if (is_process_combobox_item_selection_event && wparam_high_word == CBN_SELCHANGE) {
