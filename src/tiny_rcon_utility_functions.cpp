@@ -679,6 +679,8 @@ bool parse_geodata_lite_csv_file(const char *file_path)
       parts[3] = "UK";
     } else if (pos = parts[3].find("United States of America"); pos != string::npos) {
       parts[3] = "USA";
+    } else if (pos = parts[3].find("United Arab Emirates"); pos != string::npos) {
+      parts[3] = "UAE";
     }
 
     parts[4].pop_back();
@@ -1736,16 +1738,18 @@ bool remove_permanently_banned_ip_address(const std::string &ip_address, std::st
 
 bool is_valid_decimal_whole_number(const std::string &number_str, int &number) noexcept
 {
-  if (number_str.empty() || any_of(cbegin(number_str), cend(number_str), [](const auto ch) { return !(ch >= '0' && ch <= '9'); }))
-    return false;
-
   try {
     number = stoi(number_str);
   } catch (const std::invalid_argument &) {
     return false;
   } catch (const std::out_of_range &) {
     return false;
+  } catch (const std::exception &) {
+    return false;
+  } catch (...) {
+    return false;
   }
+
   return true;
 }
 
@@ -3287,12 +3291,9 @@ void import_geoip_data(vector<geoip_data> &geo_data, const char *file_path)
   ifstream is{ file_path, std::ios::binary };
 
   if (is) {
-    geo_data.resize(3073926U);
-    is.read(reinterpret_cast<char *>(geo_data.data()), 3073926U * sizeof(geoip_data));
-    /*for (geoip_data geo{}; is.read(reinterpret_cast<char *>(&geo), sizeof(geoip_data));) {
-      geo_data.push_back(std::move(geo));
-      memset(&geo, 0, sizeof(geoip_data));
-    }*/
+    const size_t file_size{ get_file_size_in_bytes(file_path) };
+    geo_data.resize(file_size / sizeof(geoip_data));
+    is.read(reinterpret_cast<char *>(geo_data.data()), file_size);
   }
 }
 
@@ -7232,4 +7233,16 @@ void prepare_players_data_for_display_of_getstatus_response(const bool is_log_st
     log << string{ decoration_line + "\n"s };
     log_message(log.str(), true);
   }
+}
+
+size_t get_file_size_in_bytes(const char *file_path) noexcept
+{
+
+  ifstream input{ file_path, std::ios::binary | std::ios::in | std::ios::ate };
+  if (!input) {
+    perror(file_path);
+    return 0;
+  }
+  const std::fstream::pos_type file_size = input.tellg();
+  return static_cast<size_t>(file_size);
 }

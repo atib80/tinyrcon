@@ -205,9 +205,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       parse_tempbans_data_file();
       print_colored_text(app_handles.hwnd_re_messages_data, "^2Finished parsing ^1tempbans.txt ^3file.\n", true, true, true);
 
-      print_colored_text(app_handles.hwnd_re_messages_data, "^3Started parsing ^1banned_ip_addresses.txt ^3file.\n", true, true, true);
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3Started parsing ^1bans.txt ^3file.\n", true, true, true);
       parse_banned_ip_addresses_file();
-      print_colored_text(app_handles.hwnd_re_messages_data, "^2Finished parsing ^1banned_ip_addresses.txt ^3file.\n", true, true, true);
+      print_colored_text(app_handles.hwnd_re_messages_data, "^2Finished parsing ^1bans.txt ^3file.\n", true, true, true);
 
       if (!initialize_and_verify_server_connection_settings()) {
         PostQuitMessage(0);

@@ -460,3 +460,5 @@ void initiate_sending_rcon_status_command_now();
 
 void prepare_players_data_for_display(const bool is_log_status_table = false);
 void prepare_players_data_for_display_of_getstatus_response(const bool is_log_status_table = false);
+
+size_t get_file_size_in_bytes(const char *) noexcept;
