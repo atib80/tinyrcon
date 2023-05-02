@@ -253,8 +253,7 @@ bool get_user_input();
 void print_help_information(const std::vector<std::string> &);
 
 std::string prepare_current_match_information();
-
-bool is_valid_decimal_whole_number(const std::string &, int &) noexcept;
+bool is_valid_decimal_whole_number(const std::string &number_str, int &number) noexcept;
 
 bool check_if_user_provided_argument_is_valid_for_specified_command(
   const char *cmd,
@@ -262,6 +261,7 @@ bool check_if_user_provided_argument_is_valid_for_specified_command(
 
 bool check_if_user_provided_pid_is_valid(const std::string &) noexcept;
 
+void remove_all_color_codes(char *msg);
 void remove_all_color_codes(std::string &);
 
 void check_for_warned_players();
@@ -284,7 +284,7 @@ void process_user_command(const std::vector<std::string> &);
 
 void process_rcon_command(const std::vector<std::string> &, const bool);
 
-std::atomic<bool> should_program_terminate(const std::string & = "") noexcept;
+volatile bool should_program_terminate(const std::string & = "") noexcept;
 
 void sort_players_data(std::vector<player_data> &, const sort_type sort_method);
 
@@ -316,7 +316,7 @@ std::string get_player_name_for_pid(const int);
 
 player_data &get_player_data_for_pid(const int);
 
-std::string get_player_information(const int);
+std::string get_player_information(const int, const bool is_every_property_on_new_line = false);
 
 std::string get_player_information_for_player(player_data &);
 
@@ -346,7 +346,7 @@ void say(HWND control, const char *szoveg, Args... args) noexcept
 {
   static char outbuffer[8196];
 
-  if (S_OK != snprintf(outbuffer, std::size(outbuffer), szoveg, args...)) return;
+  if (-1 == snprintf(outbuffer, std::size(outbuffer), szoveg, args...)) return;
   print_colored_text(control, outbuffer, true);
 }
 
@@ -355,15 +355,12 @@ void csay(HWND control, const char *szoveg, Args... args) noexcept
 {
   static char outbuffer[8196];
 
-  if (S_OK != snprintf(outbuffer, std::size(outbuffer), szoveg, args...)) return;
+  if (-1 == snprintf(outbuffer, std::size(outbuffer), szoveg, args...)) return;
 
   print_colored_text(control, outbuffer, true);
 }
 
 bool remove_dir_path_sep_char(char *) noexcept;
-
-bool remove_dir_path_sep_char(wchar_t *) noexcept;
-
 void replace_forward_slash_with_backward_slash(std::string &);
 
 const char *find_call_of_duty_1_installation_path(const bool is_show_browse_folder_dialog = true) noexcept;
@@ -387,6 +384,7 @@ const char *BrowseFolder(const char *, const char *) noexcept;
 bool connect_to_the_game_server(const std::string &, const game_name_t, const bool, const bool = true);
 
 bool check_if_file_path_exists(const char *) noexcept;
+bool check_if_file_path_exists(const char *) noexcept;
 
 bool delete_temporary_game_file() noexcept;
 
@@ -403,7 +401,7 @@ void display_players_data_in_players_grid(HWND playersGrid) noexcept;
 void clear_players_data_in_players_grid(HWND playersGrid, const size_t start_row, const size_t last_row, const size_t cols) noexcept;
 void PutCell(HWND, const int, const int, const char *) noexcept;
 void display_country_flag(HWND, const int, const int, const char *) noexcept;
-std::string GetCellContents(HWND, const int, const int);
+std::string GetCellContents(HWND, const int row, const int col);
 
 bool is_alpha(const char ch) noexcept;
 bool is_decimal_digit(const char ch) noexcept;
@@ -462,3 +460,5 @@ void prepare_players_data_for_display(const bool is_log_status_table = false);
 void prepare_players_data_for_display_of_getstatus_response(const bool is_log_status_table = false);
 
 size_t get_file_size_in_bytes(const char *) noexcept;
+HWND CreateAHorizontalScrollBar(HWND hwndParent, HINSTANCE hInstance, const int sbHeight);
+HWND CreateAVerticalScrollBar(HWND hwndParent, HINSTANCE hInstance, const int sbWidth);

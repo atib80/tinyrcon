@@ -12,6 +12,7 @@ processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 #pragma comment(lib, "uxtheme.lib")
 
 using namespace std;
+using namespace stl::helper;
 using namespace std::string_literals;
 using namespace std::chrono;
 
@@ -24,8 +25,9 @@ extern char const *const banned_ip_addresses_file_path =
   "data\\bans.txt";
 
 extern const std::regex ip_address_and_port_regex;
+extern const std::wregex w_ip_address_and_port_regex;
 
-extern volatile std::atomic<bool> is_terminate_program;
+extern std::atomic<bool> is_terminate_program;
 extern volatile std::atomic<bool> is_terminate_tinyrcon_settings_configuration_dialog_window;
 // volatile std::atomic<bool> is_refreshing_players_data{false};
 extern string g_message_data_contents;
@@ -35,7 +37,7 @@ sort_type type_of_sort{ sort_type::pid_asc };
 
 PROCESS_INFORMATION pr_info{};
 
-static once_flag task_to_run_one_time{};
+// static once_flag task_to_run_one_time{};
 condition_variable exit_flag{};
 mutex mu{};
 
@@ -46,7 +48,8 @@ volatile std::atomic<bool> is_display_permanently_banned_players_data_event{ fal
 volatile std::atomic<bool> is_display_temporarily_banned_players_data_event{ false };
 
 extern const int screen_width{ GetSystemMetrics(SM_CXSCREEN) };
-extern const int screen_height{ GetSystemMetrics(SM_CYSCREEN) - 20 };
+extern const int screen_height{ GetSystemMetrics(SM_CYSCREEN) - 30 };
+RECT client_rect{ 0, 0, screen_width, screen_height };
 extern const char *user_help_message =
   R"(^5For a list of possible commands type ^1help ^5or ^1list user ^5or ^1list rcon ^5in the console.
 ^3Type ^1!say "Public message" to all players" ^3[Enter] to send "Public message" to all online players.
@@ -73,8 +76,7 @@ extern const char *user_help_message =
 ^3>> Press ^1F4 ^3to sort players data by their 'name' values in ascending/descending order.
 ^5>> Press ^1F5 ^5to sort players data by their 'IP address' values in ascending/descending order.
 ^3>> Press ^1F6 ^3to sort players data by their 'country - city' values in ascending/descending order.
-^5>> Press ^1F8 ^5to refresh current status of players data.
-)";
+^5>> Press ^1F8 ^5to refresh current status of players data.)";
 
 
 extern const std::unordered_map<string, sort_type> sort_mode_names_dict;
@@ -86,20 +88,20 @@ extern const std::unordered_map<int, string> button_id_to_label_text{
   { ID_IPBANBUTTON, "Ban IP" },
   { ID_VIEWTEMPBANSBUTTON, "View temporary bans" },
   { ID_VIEWIPBANSBUTTON, "View IP bans" },
-  { ID_REFRESHDATABUTTON, "Refresh players data" },
+  { ID_REFRESHDATABUTTON, "Refresh data" },
   { ID_CONNECTBUTTON, "Join server" },
   { ID_CONNECTPRIVATESLOTBUTTON, "Join server (private slot)" },
   { ID_SAY_BUTTON, "Send public message" },
   { ID_TELL_BUTTON, "Send private message" },
   { ID_QUITBUTTON, "Exit" },
-  { ID_LOADBUTTON, "Load selected map" },
+  { ID_LOADBUTTON, "Load map" },
   { ID_YES_BUTTON, "Yes" },
   { ID_NO_BUTTON, "No" },
   { ID_BUTTON_SAVE_CHANGES, "Save changes" },
   { ID_BUTTON_TEST_CONNECTION, "Test connection" },
-  { ID_BUTTON_CANCEL, "Cancel" },
-  { ID_BUTTON_CONFIGURE_SERVER_SETTINGS, "Configure server settings" },
-  { ID_CLEARMESSAGESCREENBUTTON, "Clear messages screen" },
+  { ID_BUTTON_CANCEL, "Cance" },
+  { ID_BUTTON_CONFIGURE_SERVER_SETTINGS, "Configure settings" },
+  { ID_CLEARMESSAGESCREENBUTTON, "Clear messages" },
   { ID_BUTTON_CONFIGURATION_EXIT_TINYRCON, "Exit TinyRcon" },
   { ID_BUTTON_CONFIGURATION_COD1_PATH, "Browse for codmp.exe" },
   { ID_BUTTON_CONFIGURATION_COD2_PATH, "Browse for cod2mp_s.exe" },
@@ -112,7 +114,7 @@ unordered_map<size_t, string> rcon_status_grid_column_header_titles;
 unordered_map<size_t, string> get_status_grid_column_header_titles;
 
 static constexpr const char *prompt_message{ "Administrator >>" };
-static constexpr const char *refresh_players_data_fmt_str{ "Refreshing players data in %zu seconds..." };
+static constexpr const char *refresh_players_data_fmt_str{ "Refreshing players data in %zu %s." };
 extern const size_t max_players_grid_rows;
 
 tiny_rcon_handles app_handles{};
@@ -183,7 +185,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   print_colored_text(app_handles.hwnd_re_messages_data, "^3Started parsing ^1tinyrcon.json ^3file.\n", true, true, true);
   print_colored_text(app_handles.hwnd_re_messages_data, "^2Finished parsing ^1tinyrcon.json ^3file.\n", true, true, true);
   const string program_title{ main_app.get_program_title() + " | "s + main_app.get_game_server_name() + " | "s + "version: "s + program_version };
-  SetWindowTextA(app_handles.hwnd_main_window, program_title.c_str());
+  SetWindowText(app_handles.hwnd_main_window, program_title.c_str());
 
   CenterWindow(app_handles.hwnd_main_window);
 
@@ -220,6 +222,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
         const time_t ban_expires_time = temp_banned_player_data.banned_start_time + (temp_banned_player_data.ban_duration_in_hours * 3600);
         string message{ main_app.get_automatic_remove_temp_ban_msg() };
+        main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
         main_app.get_tinyrcon_dict()["{PLAYERNAME}"] = temp_banned_player_data.player_name;
         main_app.get_tinyrcon_dict()["{TEMP_BAN_START_DATE}"] = get_date_and_time_for_time_t(temp_banned_player_data.banned_start_time);
         main_app.get_tinyrcon_dict()["{TEMP_BAN_END_DATE}"] = get_date_and_time_for_time_t(ban_expires_time);
@@ -231,7 +234,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       main_app.get_game_server().get_tempbanned_players_to_unban().clear();
       is_main_window_constructed = true;
 
-      while (!should_program_terminate().load()) {
+      while (!should_program_terminate()) {
         {
           unique_lock<mutex> ul{ mu };
           exit_flag.wait_for(ul, std::chrono::milliseconds(25), [&]() {
@@ -357,13 +360,13 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
   wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_TINYRCONGUI));
   wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
   wcex.hbrBackground = CreateSolidBrush(color::black);
-  wcex.lpszClassName = "TINYRCONGUI";
+  wcex.lpszClassName = "tinyrcongui";
   wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
   auto status = RegisterClassEx(&wcex);
   if (!status) {
-    char errorMessage[256]{};
-    sprintf_s(errorMessage, "Windows class creation failed with error code: %d", GetLastError());
-    MessageBox(nullptr, errorMessage, "Window Class Failed", MB_ICONERROR);
+    char error_msg[256]{};
+    (void)snprintf(error_msg, std::size(error_msg), "Windows class creation failed with error code: %d", GetLastError());
+    MessageBox(nullptr, error_msg, "Window Class Failed", MB_ICONERROR);
   }
 
   wcex_confirmation_dialog = {};
@@ -378,9 +381,9 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
   wcex_confirmation_dialog.hIconSm = LoadIcon(wcex_confirmation_dialog.hInstance, MAKEINTRESOURCE(IDI_SMALL));
   status = RegisterClassEx(&wcex_confirmation_dialog);
   if (!status) {
-    char errorMessage[256]{};
-    sprintf_s(errorMessage, "Windows class creation failed with error code: %d", GetLastError());
-    MessageBox(nullptr, errorMessage, "Window Class Failed", MB_ICONERROR);
+    char error_msg[256]{};
+    (void)snprintf(error_msg, std::size(error_msg), "Windows class creation failed with error code: %d", GetLastError());
+    MessageBox(nullptr, error_msg, "Window Class Failed", MB_ICONERROR);
   }
 
   wcex_configuration_dialog = {};
@@ -396,9 +399,9 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
   wcex_configuration_dialog.hIconSm = LoadIcon(wcex_configuration_dialog.hInstance, MAKEINTRESOURCE(IDI_SMALL));
   status = RegisterClassEx(&wcex_configuration_dialog);
   if (!status) {
-    char errorMessage[256]{};
-    sprintf_s(errorMessage, "Windows class creation failed with error code: %d", GetLastError());
-    MessageBox(nullptr, errorMessage, "Window Class Failed", MB_ICONERROR);
+    char error_msg[256]{};
+    (void)snprintf(error_msg, std::size(error_msg), "Windows class creation failed with error code: %d", GetLastError());
+    MessageBox(nullptr, error_msg, "Window Class Failed", MB_ICONERROR);
   }
 
   return status;
@@ -428,7 +431,12 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
   hfontbody = CreateFont(0, 0, 0, 0, FW_DONTCARE, FALSE, FALSE, FALSE, RUSSIAN_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, PROOF_QUALITY, FIXED_PITCH | FF_DECORATIVE, "Lucida Console");
 
-  app_handles.hwnd_main_window = CreateWindow("TINYRCONGUI", "Welcome to TinyRcon | For admins of the 185.158.113.146:28995 CoD2 CTF | version: 2.4", WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME, 0, 0, screen_width, screen_height, nullptr, nullptr, hInstance, nullptr);
+  // AdjustWindowRectEx(&client_rect, WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME, FALSE, 0);
+
+  app_handles.hwnd_main_window = CreateWindowEx(0, wcex.lpszClassName, "Welcome to TinyRcon | version: 2.4", WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME /*WS_OVERLAPPEDWINDOW | WS_HSCROLL | WS_VSCROLL*/, client_rect.left, client_rect.top, client_rect.right - client_rect.left, client_rect.bottom - client_rect.top, nullptr, nullptr, hInstance, nullptr);
+
+  // CreateAHorizontalScrollBar(app_handles.hwnd_main_window, hInstance, 20);
+  // CreateAVerticalScrollBar(app_handles.hwnd_main_window, hInstance, 20);
 
   if (!app_handles.hwnd_main_window)
     return FALSE;
@@ -470,10 +478,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     SendMessage(app_handles.hwnd_progress_bar, PBM_SETPOS, (WPARAM)atomic_counter.load(), 0);
 
     RECT bounding_rectangle{
-      screen_width - 480,
-      screen_height - 78,
-      screen_width - 200,
-      screen_height - 58,
+      screen_width - 270,
+      screen_height - 105,
+      screen_width - 5,
+      screen_height - 85,
     };
 
     if (main_app.get_game_server().get_check_for_banned_players_time_period() == atomic_counter.load()) {
@@ -484,6 +492,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       is_refreshed_players_data_ready_event.store(false);
       display_players_data_in_players_grid(app_handles.hwnd_players_grid);
     }
+
+    InvalidateRect(hWnd, &bounding_rectangle, TRUE);
+
+    bounding_rectangle = {
+      10,
+      screen_height - 70,
+      120,
+      screen_height - 50
+    };
 
     InvalidateRect(hWnd, &bounding_rectangle, TRUE);
     // is_refreshing_players_data.store(false);
@@ -529,7 +546,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
         SetTextColor(item->hdc, color::red);
         SetBkMode(item->hdc, TRANSPARENT);
-        DrawTextA(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
+        DrawText(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
         return CDRF_SKIPDEFAULT;
       } else {
         if (item->uItemState & CDIS_HOT) {
@@ -549,7 +566,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
           SetTextColor(item->hdc, color::red);
           SetBkMode(item->hdc, TRANSPARENT);
-          DrawTextA(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
+          DrawText(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
           return CDRF_SKIPDEFAULT;
         }
 
@@ -569,7 +586,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
         SetTextColor(item->hdc, color::red);
         SetBkMode(item->hdc, TRANSPARENT);
-        DrawTextA(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
+        DrawText(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
         return CDRF_SKIPDEFAULT;
       }
     }
@@ -602,10 +619,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     } break;
 
     case ID_CONNECTBUTTON: {
-      snprintf(message_buffer, std::size(message_buffer), "^3Are you sure you want to connect to ^1%s ^3game server?\n", main_app.get_game_server_name().c_str());
+      (void)snprintf(message_buffer, std::size(message_buffer), "^3Are you sure you want to connect to ^1%s ^3game server?\n", main_app.get_game_server_name().c_str());
       if (show_user_confirmation_dialog(message_buffer, "Connect to game server?")) {
-        smatch ip_port_match{};
-        const string ip_port_server_address{ regex_search(admin_reason, ip_port_match, ip_address_and_port_regex) ? (ip_port_match[1].str() + ":"s + ip_port_match[2].str()) : (main_app.get_game_server().get_server_ip_address() + ":"s + to_string(main_app.get_game_server().get_server_port())) };
+        match_results<string::const_iterator> ip_port_match{};
+        const string ip_port_server_address{ regex_search(admin_reason, ip_port_match, ip_address_and_port_regex) ? ip_port_match[1].str() + ":"s + ip_port_match[2].str() : main_app.get_game_server().get_server_ip_address() + ":"s + to_string(main_app.get_game_server().get_server_port()) };
         const size_t sep_pos{ ip_port_server_address.find(':') };
         const string ip_address{ ip_port_server_address.substr(0, sep_pos) };
         const uint16_t port_number{ static_cast<uint16_t>(stoul(ip_port_server_address.substr(sep_pos + 1))) };
@@ -618,10 +635,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     case ID_CONNECTPRIVATESLOTBUTTON: {
 
-      snprintf(message_buffer, std::size(message_buffer), "^3Are you sure you want to connect to ^1%s ^3game server using a ^1private slot^3?\n", main_app.get_game_server_name().c_str());
+      (void)snprintf(message_buffer, std::size(message_buffer), "^3Are you sure you want to connect to ^1%s ^3game server using a ^1private slot^3?\n", main_app.get_game_server_name().c_str());
       if (show_user_confirmation_dialog(message_buffer, "Connect to game server using a private slot?")) {
-        smatch ip_port_match{};
-        const string ip_port_server_address{ regex_search(admin_reason, ip_port_match, ip_address_and_port_regex) ? (ip_port_match[1].str() + ":"s + ip_port_match[2].str()) : (main_app.get_game_server().get_server_ip_address() + ":"s + to_string(main_app.get_game_server().get_server_port())) };
+        match_results<string::const_iterator> ip_port_match{};
+        const string ip_port_server_address{ regex_search(admin_reason, ip_port_match, ip_address_and_port_regex) ? ip_port_match[1].str() + ":"s + ip_port_match[2].str() : main_app.get_game_server().get_server_ip_address() + ":"s + to_string(main_app.get_game_server().get_server_port()) };
         const size_t sep_pos{ ip_port_server_address.find(':') };
         const string ip_address{ ip_port_server_address.substr(0, sep_pos) };
         const uint16_t port_number{ static_cast<uint16_t>(stoul(ip_port_server_address.substr(sep_pos + 1))) };
@@ -646,7 +663,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       const auto &full_gametype_names = get_rcon_gametype_names_to_full_gametype_names_for_specified_game_name(main_app.get_game_name());
       if (stl::helper::len(full_map) > 0U && stl::helper::len(rcon_gametype) > 0U && full_map_names_to_rcon_map_names.contains(full_map) && full_gametype_names.contains(rcon_gametype)) {
         const string gametype_uc{ stl::helper::to_upper_case(rcon_gametype) };
-        snprintf(message_buffer, std::size(message_buffer), "^2Are you sure you want to load map ^3%s ^2in ^3%s ^2game type?\n", full_map, gametype_uc.c_str());
+        (void)snprintf(message_buffer, std::size(message_buffer), "^2Are you sure you want to load map ^3%s ^2in ^3%s ^2game type?\n", full_map, gametype_uc.c_str());
         if (show_user_confirmation_dialog(message_buffer, "Confirm your action")) {
           const string load_map_command{ stl::helper::str_join(std::vector<string>{ "!m", full_map_names_to_rcon_map_names.at(full_map), rcon_gametype }, " ") };
           Edit_SetText(app_handles.hwnd_e_user_input, load_map_command.c_str());
@@ -655,16 +672,30 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       }
     } break;
 
+    case ID_PRINTPLAYERINFORMATION_ACTION: {
+      if (check_if_selected_cell_indices_are_valid(selected_row, selected_col)) {
+        string selected_pid_str{ GetCellContents(app_handles.hwnd_players_grid, selected_row, 0) };
+        if (selected_pid_str.length() >= 2 && '^' == selected_pid_str[0] && is_decimal_digit(selected_pid_str[1]))
+          selected_pid_str.erase(0, 2);
+        if (int pid{ -1 }; is_valid_decimal_whole_number(selected_pid_str, pid)) {
+          const string player_information{ get_player_information(pid, true) };
+          (void)snprintf(message_buffer, std::size(message_buffer), "^5Information about selected player:\n ^7%s\n", player_information.c_str());
+          print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, true, false, false);
+        }
+      }
+
+    } break;
+
     case ID_WARNBUTTON: {
       if (check_if_selected_cell_indices_are_valid(selected_row, selected_col)) {
         string selected_pid_str{ GetCellContents(app_handles.hwnd_players_grid, selected_row, 0) };
         if (selected_pid_str.length() >= 2 && '^' == selected_pid_str[0] && is_decimal_digit(selected_pid_str[1]))
           selected_pid_str.erase(0, 2);
         if (int pid{ -1 }; is_valid_decimal_whole_number(selected_pid_str, pid)) {
-          const string player_information{ get_player_information(pid) };
-          snprintf(message_buffer, std::size(message_buffer), "^3Are you sure you want to warn player (^4%s^3)?\n", player_information.c_str());
+          const string player_information{ get_player_information(pid, true) };
+          (void)snprintf(message_buffer, std::size(message_buffer), "^3Are you sure you want to warn selected player?\n ^7%s", player_information.c_str());
           if (show_user_confirmation_dialog(message_buffer, "Confirm your action")) {
-            snprintf(msg_buffer, std::size(msg_buffer), "!w %d %s", pid, admin_reason.c_str());
+            (void)snprintf(msg_buffer, std::size(msg_buffer), "!w %d %s", pid, admin_reason.c_str());
             Edit_SetText(app_handles.hwnd_e_user_input, msg_buffer);
             admin_reason.assign("not specified");
             get_user_input();
@@ -681,10 +712,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         if (selected_pid_str.length() >= 2 && '^' == selected_pid_str[0] && is_decimal_digit(selected_pid_str[1]))
           selected_pid_str.erase(0, 2);
         if (int pid{ -1 }; is_valid_decimal_whole_number(selected_pid_str, pid)) {
-          const string player_information{ get_player_information(pid) };
-          snprintf(message_buffer, std::size(message_buffer), "^3Are you sure you want to kick player (^4%s^3)?\n", player_information.c_str());
+          const string player_information{ get_player_information(pid, true) };
+          (void)snprintf(message_buffer, std::size(message_buffer), "^3Are you sure you want to kick selected player?\n ^7%s", player_information.c_str());
           if (show_user_confirmation_dialog(message_buffer, "Confirm your action")) {
-            snprintf(msg_buffer, std::size(msg_buffer), "!k %d %s", pid, admin_reason.c_str());
+            (void)snprintf(msg_buffer, std::size(msg_buffer), "!k %d %s", pid, admin_reason.c_str());
             Edit_SetText(app_handles.hwnd_e_user_input, msg_buffer);
             admin_reason.assign("not specified");
             get_user_input();
@@ -702,10 +733,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         if (selected_pid_str.length() >= 2 && '^' == selected_pid_str[0] && is_decimal_digit(selected_pid_str[1]))
           selected_pid_str.erase(0, 2);
         if (int pid{ -1 }; is_valid_decimal_whole_number(selected_pid_str, pid)) {
-          const string player_information{ get_player_information(pid) };
-          snprintf(message_buffer, std::size(message_buffer), "^3Are you sure you want to temporarily ban IP address of player: (^4%s^3)?\n", player_information.c_str());
+          const string player_information{ get_player_information(pid, true) };
+          (void)snprintf(message_buffer, std::size(message_buffer), "^3Are you sure you want to temporarily ban IP address of selected player?\n ^7%s", player_information.c_str());
           if (show_user_confirmation_dialog(message_buffer, "Confirm your action")) {
-            snprintf(msg_buffer, std::size(msg_buffer), "!tb %d 24 %s", pid, admin_reason.c_str());
+            (void)snprintf(msg_buffer, std::size(msg_buffer), "!tb %d 24 %s", pid, admin_reason.c_str());
             Edit_SetText(app_handles.hwnd_e_user_input, msg_buffer);
             get_user_input();
             admin_reason.assign("not specified");
@@ -723,10 +754,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         if (selected_pid_str.length() >= 2 && '^' == selected_pid_str[0] && is_decimal_digit(selected_pid_str[1]))
           selected_pid_str.erase(0, 2);
         if (int pid{ -1 }; is_valid_decimal_whole_number(selected_pid_str, pid)) {
-          const string player_information{ get_player_information(pid) };
-          snprintf(message_buffer, std::size(message_buffer), "^3Are you sure you want to permanently ban IP address of player: (^4%s^3)?\n", player_information.c_str());
+          const string player_information{ get_player_information(pid, true) };
+          (void)snprintf(message_buffer, std::size(message_buffer), "^3Are you sure you want to permanently ban IP address of selected player?\n ^7%s", player_information.c_str());
           if (show_user_confirmation_dialog(message_buffer, "Confirm your action")) {
-            snprintf(msg_buffer, std::size(msg_buffer), "!gb %d %s", pid, admin_reason.c_str());
+            (void)snprintf(msg_buffer, std::size(msg_buffer), "!gb %d %s", pid, admin_reason.c_str());
             Edit_SetText(app_handles.hwnd_e_user_input, msg_buffer);
             get_user_input();
             admin_reason.assign("not specified");
@@ -742,7 +773,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
       admin_reason = "Type your public message in here...";
       if (show_user_confirmation_dialog("^2Are you sure you want to send a ^1public message ^2visible to all players?\n", "Confirm your action", "Message:")) {
-        snprintf(msg_buffer, std::size(msg_buffer), "say \"%s\"", admin_reason.c_str());
+        (void)snprintf(msg_buffer, std::size(msg_buffer), "say \"%s\"", admin_reason.c_str());
         Edit_SetText(app_handles.hwnd_e_user_input, msg_buffer);
         get_user_input();
         admin_reason.assign("not specified");
@@ -756,11 +787,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         if (selected_pid_str.length() >= 2 && '^' == selected_pid_str[0] && is_decimal_digit(selected_pid_str[1]))
           selected_pid_str.erase(0, 2);
         if (int pid{ -1 }; is_valid_decimal_whole_number(selected_pid_str, pid)) {
-          const string player_information{ get_player_information(pid) };
-          snprintf(message_buffer, std::size(message_buffer), "^2Are you sure you want to send a ^1private message ^2to player: (^4%s^3)?\n", player_information.c_str());
+          const string player_information{ get_player_information(pid, true) };
+          (void)snprintf(message_buffer, std::size(message_buffer), "^2Are you sure you want to send a ^1private message ^2to selected player?\n^7(%s^7)", player_information.c_str());
           admin_reason = "Type your private message in here...";
           if (show_user_confirmation_dialog(message_buffer, "Confirm your action", "Message:")) {
-            snprintf(msg_buffer, std::size(msg_buffer), "tell %d \"%s\"", pid, admin_reason.c_str());
+            (void)snprintf(msg_buffer, std::size(msg_buffer), "tell %d \"%s\"", pid, admin_reason.c_str());
             Edit_SetText(app_handles.hwnd_e_user_input, msg_buffer);
             get_user_input();
             admin_reason.assign("not specified");
@@ -851,41 +882,32 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     SetBkColor(hdc, color::black);
     SetTextColor(hdc, color::red);
 
-    RECT bounding_rectangle{
-      screen_width / 2 + 170,
-      13,
-      screen_width / 2 + 340,
-      30
+    RECT bounding_rectangle = {
+      screen_width / 2 + 170, screen_height / 2 + 27, screen_width / 2 + 210, screen_height / 2 + 47
     };
+    DrawText(hdc, "Map:", -1, &bounding_rectangle, DT_SINGLELINE | DT_TOP | DT_LEFT);
 
-    DrawText(hdc, "TinyRcon messages:", -1, &bounding_rectangle, DT_SINGLELINE | DT_TOP | DT_LEFT /*| DT_END_ELLIPSIS*/);
-
-    bounding_rectangle = {
-      screen_width / 2 + 180, screen_height / 2 + 113, screen_width / 2 + 220, screen_height / 2 + 135
-    };
-    DrawText(hdc, "Map:", -1, &bounding_rectangle, DT_SINGLELINE | DT_TOP | DT_LEFT /*| DT_END_ELLIPSIS*/);
-
-    bounding_rectangle = { screen_width / 2 + 500, screen_height / 2 + 113, screen_width / 2 + 570, screen_height / 2 + 135 };
-    DrawText(hdc, "Gametype:", -1, &bounding_rectangle, DT_SINGLELINE | DT_TOP | DT_LEFT /*| DT_END_ELLIPSIS*/);
+    bounding_rectangle = { screen_width / 2 + 370, screen_height / 2 + 27, screen_width / 2 + 450, screen_height / 2 + 47 };
+    DrawText(hdc, "Gametype:", -1, &bounding_rectangle, DT_SINGLELINE | DT_TOP | DT_LEFT);
 
     bounding_rectangle = {
       10,
-      screen_height - 80,
+      screen_height - 75,
       120,
-      screen_height - 60
+      screen_height - 55
     };
 
-    DrawText(hdc, prompt_message, -1, &bounding_rectangle, DT_SINGLELINE | DT_TOP | DT_LEFT /*| DT_END_ELLIPSIS*/);
+    DrawText(hdc, prompt_message, -1, &bounding_rectangle, DT_SINGLELINE | DT_TOP | DT_LEFT | DT_END_ELLIPSIS);
 
     bounding_rectangle = {
-      screen_width - 480,
-      screen_height - 78,
-      screen_width - 200,
-      screen_height - 58,
+      screen_width - 270,
+      screen_height - 105,
+      screen_width - 5,
+      screen_height - 85,
     };
 
     if (!is_tinyrcon_initialized) {
-      DrawText(hdc, "Configuring and initializing tinyrcon ...", -1, &bounding_rectangle, DT_SINGLELINE | DT_TOP | DT_LEFT);
+      DrawText(hdc, "Configuring and initializing tinyrcon.", -1, &bounding_rectangle, DT_SINGLELINE | DT_TOP | DT_LEFT);
 
     } else {
 
@@ -896,7 +918,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       if (atomic_counter.load() == time_period) {
         DrawText(hdc, "Refreshing players data now...", -1, &bounding_rectangle, DT_SINGLELINE | DT_TOP | DT_LEFT);
       } else {
-        snprintf(msg_buffer, std::size(msg_buffer), refresh_players_data_fmt_str, time_period - atomic_counter.load());
+        const size_t remaining_seconds{ time_period - atomic_counter.load() };
+        (void)snprintf(msg_buffer, std::size(msg_buffer), refresh_players_data_fmt_str, remaining_seconds, (remaining_seconds != 1 ? "seconds" : "second"));
         DrawText(hdc, msg_buffer, -1, &bounding_rectangle, DT_SINGLELINE | DT_TOP | DT_LEFT);
       }
     }
@@ -945,7 +968,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
   case WM_SIZE:
     if (hWnd == app_handles.hwnd_main_window && is_main_window_constructed)
       return 0;
-    return DefWindowProcA(hWnd, message, wParam, lParam);
+    return DefWindowProc(hWnd, message, wParam, lParam);
 
   case WM_CTLCOLORLISTBOX: {
     COMBOBOXINFO info1{};
@@ -1136,7 +1159,7 @@ LRESULT CALLBACK WndProcForConfirmationDialog(HWND hWnd, UINT message, WPARAM wP
 
         SetTextColor(item->hdc, color::red);
         SetBkMode(item->hdc, TRANSPARENT);
-        DrawTextA(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
+        DrawText(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
         return CDRF_SKIPDEFAULT;
       } else {
         if (item->uItemState & CDIS_HOT) {
@@ -1157,7 +1180,7 @@ LRESULT CALLBACK WndProcForConfirmationDialog(HWND hWnd, UINT message, WPARAM wP
 
           SetTextColor(item->hdc, color::red);
           SetBkMode(item->hdc, TRANSPARENT);
-          DrawTextA(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
+          DrawText(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
           return CDRF_SKIPDEFAULT;
         }
 
@@ -1178,7 +1201,7 @@ LRESULT CALLBACK WndProcForConfirmationDialog(HWND hWnd, UINT message, WPARAM wP
 
         SetTextColor(item->hdc, color::red);
         SetBkMode(item->hdc, TRANSPARENT);
-        DrawTextA(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
+        DrawText(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
         return CDRF_SKIPDEFAULT;
       }
     }
@@ -1322,7 +1345,7 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
 
         SetTextColor(item->hdc, color::red);
         SetBkMode(item->hdc, TRANSPARENT);
-        DrawTextA(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
+        DrawText(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
         return CDRF_SKIPDEFAULT;
       } else {
         if (item->uItemState & CDIS_HOT) {
@@ -1343,7 +1366,7 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
 
           SetTextColor(item->hdc, color::red);
           SetBkMode(item->hdc, TRANSPARENT);
-          DrawTextA(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
+          DrawText(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
           return CDRF_SKIPDEFAULT;
         }
 
@@ -1364,7 +1387,7 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
 
         SetTextColor(item->hdc, color::red);
         SetBkMode(item->hdc, TRANSPARENT);
-        DrawTextA(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
+        DrawText(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
         return CDRF_SKIPDEFAULT;
       }
     }
@@ -1407,16 +1430,16 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
 
     case ID_BUTTON_CONFIGURATION_COD1_PATH: {
 
-      strcpy_s(install_path, max_path_length, "C:\\");
-      snprintf(msg_buffer, std::size(msg_buffer), "Please, select your Call of Duty game's installation folder (codmp.exe) and click OK.");
+      str_copy(install_path, "C:\\");
+      (void)snprintf(msg_buffer, std::size(msg_buffer), "Please, select your Call of Duty game's installation folder (codmp.exe) and click OK.");
 
       const char *cod1_game_path = BrowseFolder(install_path, msg_buffer);
 
-      if (lstrcmpA(cod1_game_path, "") == 0 || lstrcmpA(cod1_game_path, "C:\\") == 0) {
+      if (lstrcmp(cod1_game_path, "") == 0 || lstrcmp(cod1_game_path, "C:\\") == 0) {
         print_colored_text(app_handles.hwnd_re_messages_data, "^1Error! You haven't selected a valid folder for your game installation.\n");
         print_colored_text(app_handles.hwnd_re_messages_data, "^5You have to select your ^1game's installation directory\n ^5and click the OK button.\n");
       } else {
-        snprintf(exe_file_path, max_path_length, "%s\\codmp.exe", cod1_game_path);
+        (void)snprintf(exe_file_path, max_path_length, "%s\\codmp.exe", cod1_game_path);
       }
 
       stl::helper::trim_in_place(exe_file_path);
@@ -1427,16 +1450,16 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
 
     case ID_BUTTON_CONFIGURATION_COD2_PATH: {
 
-      strcpy_s(install_path, max_path_length, "C:\\");
-      snprintf(msg_buffer, std::size(msg_buffer), "Please, select your Call of Duty 2 game's installation folder (cod2mp_s.exe) and click OK.");
+      str_copy(install_path, "C:\\");
+      (void)snprintf(msg_buffer, std::size(msg_buffer), "Please, select your Call of Duty 2 game's installation folder (cod2mp_s.exe) and click OK.");
 
       const char *cod2_game_path = BrowseFolder(install_path, msg_buffer);
 
-      if (lstrcmpA(cod2_game_path, "") == 0 || lstrcmpA(cod2_game_path, "C:\\") == 0) {
+      if (lstrcmp(cod2_game_path, "") == 0 || lstrcmp(cod2_game_path, "C:\\") == 0) {
         print_colored_text(app_handles.hwnd_re_messages_data, "^1Error! You haven't selected a valid folder for your game installation.\n");
         print_colored_text(app_handles.hwnd_re_messages_data, "^5You have to select your ^1game's installation directory\n ^5and click the OK button.\n");
       } else {
-        snprintf(exe_file_path, max_path_length, "%s\\cod2mp_s.exe", cod2_game_path);
+        (void)snprintf(exe_file_path, max_path_length, "%s\\cod2mp_s.exe", cod2_game_path);
       }
 
       stl::helper::trim_in_place(exe_file_path);
@@ -1447,16 +1470,16 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
 
     case ID_BUTTON_CONFIGURATION_COD4_PATH: {
 
-      strcpy_s(install_path, max_path_length, "C:\\");
-      snprintf(msg_buffer, std::size(msg_buffer), "Please, select your Call of Duty 4: Modern Warfare game's installation folder (iw3mp.exe) and click OK.");
+      str_copy(install_path, "C:\\");
+      (void)snprintf(msg_buffer, std::size(msg_buffer), "Please, select your Call of Duty 4: Modern Warfare game's installation folder (iw3mp.exe) and click OK.");
 
       const char *cod4_game_path = BrowseFolder(install_path, msg_buffer);
 
-      if (lstrcmpA(cod4_game_path, "") == 0 || lstrcmpA(cod4_game_path, "C:\\") == 0) {
+      if (lstrcmp(cod4_game_path, "") == 0 || lstrcmp(cod4_game_path, "C:\\") == 0) {
         print_colored_text(app_handles.hwnd_re_messages_data, "^1Error! You haven't selected a valid folder for your game installation.\n");
         print_colored_text(app_handles.hwnd_re_messages_data, "^5You have to select your ^1game's installation directory\n ^5and click the OK button.\n");
       } else {
-        snprintf(exe_file_path, max_path_length, "%s\\iw3mp.exe", cod4_game_path);
+        (void)snprintf(exe_file_path, max_path_length, "%s\\iw3mp.exe", cod4_game_path);
       }
 
       stl::helper::trim_in_place(exe_file_path);
@@ -1467,16 +1490,16 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
 
     case ID_BUTTON_CONFIGURATION_COD5_PATH: {
 
-      strcpy_s(install_path, max_path_length, "C:\\");
-      snprintf(msg_buffer, std::size(msg_buffer), "Please, select your Call of Duty 5: World at War game's installation folder (cod5mp.exe) and click OK.");
+      str_copy(install_path, "C:\\");
+      (void)snprintf(msg_buffer, std::size(msg_buffer), "Please, select your Call of Duty 5: World at War game's installation folder (cod5mp.exe) and click OK.");
 
       const char *cod5_game_path = BrowseFolder(install_path, msg_buffer);
 
-      if (lstrcmpA(cod5_game_path, "") == 0 || lstrcmpA(cod5_game_path, "C:\\") == 0) {
+      if (lstrcmp(cod5_game_path, "") == 0 || lstrcmp(cod5_game_path, "C:\\") == 0) {
         print_colored_text(app_handles.hwnd_re_messages_data, "^1Error! You haven't selected a valid folder for your game installation.\n");
         print_colored_text(app_handles.hwnd_re_messages_data, "^5You have to select your ^1game's installation directory\n ^5and click the OK button.\n");
       } else {
-        snprintf(exe_file_path, max_path_length, "%s\\cod5mp.exe", cod5_game_path);
+        (void)snprintf(exe_file_path, max_path_length, "%s\\cod5mp.exe", cod5_game_path);
       }
 
       stl::helper::trim_in_place(exe_file_path);

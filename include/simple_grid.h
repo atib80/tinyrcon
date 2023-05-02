@@ -1057,6 +1057,6 @@ ATOM InitSimpleGrid(HINSTANCE hInstance);
 HWND New_SimpleGrid(HWND hParent, DWORD dwID);
 void Grid_OnSetFont(HWND hwnd, HFONT hfont, BOOL fRedraw) noexcept;
 VOID ShowHscroll(HWND);
-void SelectRow(HWND hwnd, const int row_index) noexcept;
+int findLongestTextWidthInColumn(HWND hwnd, const int col);
 
 #endif// GENERICCONTROL_H

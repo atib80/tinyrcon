@@ -44,7 +44,7 @@ set(BOOST_ENABLE_CMAKE ON)
 #)
 # FetchContent_MakeAvailable(Boost)
 
-set(src_files src/simpleGrid.cpp src/tiny_rcon_utility_functions.cpp src/connection_manager.cpp src/tiny_rcon.cpp)
+set(src_files src/simple_grid.cpp src/tiny_rcon_utility_functions.cpp src/connection_manager.cpp src/tiny_rcon.cpp)
 
 add_executable(tinyrcon ${src_files})
 

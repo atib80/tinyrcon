@@ -1190,10 +1190,10 @@ bool trim_in_place(
 
   ++last_char_pos;
 
-  //last_char_pos =
-  //  std::find_if(std::crbegin(src), std::crend(src), [&trimmed_chars](const auto ch) {
-  //    return trimmed_chars.find(ch) == std::cend(trimmed_chars);
-  //  }).base();
+  // last_char_pos =
+  //   std::find_if(std::crbegin(src), std::crend(src), [&trimmed_chars](const auto ch) {
+  //     return trimmed_chars.find(ch) == std::cend(trimmed_chars);
+  //   }).base();
 
   if (std::cbegin(src) == first_char_pos) {
     if (std::cend(src) == last_char_pos)

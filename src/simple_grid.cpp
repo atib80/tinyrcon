@@ -66,12 +66,13 @@
 #include <uxtheme.h>
 #include <shellapi.h>
 #include <tchar.h>
-#include <malloc.h>
+// #include <malloc.h>
 #include <cstdio>
-#include <wctype.h>
+// #include <wctype.h>
 #include "simple_grid.h"
 #include "stl_helper_functions.hpp"
 #include "tiny_rcon_utility_functions.h"
+#include "tiny_cod2_rcon_client_application.h"
 
 using namespace std;
 using namespace stl::helper;
@@ -121,6 +122,11 @@ using namespace stl::helper;
 #define UNCHECKED "F"///< GCT_CHECK unchecked
 
 // extern bool is_main_window_constructed;
+extern tiny_cod2_rcon_client_application main_app;
+// extern const wchar_t *black_bg_color;
+// extern const wchar_t *grey_bg_color;
+// extern const size_t black_bg_color_length;
+// extern const size_t grey_bg_color_length;
 
 /****************************************************************************/
 // Forward declarations
@@ -190,7 +196,7 @@ static LRESULT Grid_OnSetColWidth(HWND, WPARAM, LPARAM);
 /// @returns LRESULT depends on message.
 static LRESULT DefProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-  return CallWindowProc((WNDPROC)GetProp(hwnd, WPRC), hwnd, msg, wParam, lParam);
+  return CallWindowProc((WNDPROC)GetPropA(hwnd, WPRC), hwnd, msg, wParam, lParam);
 }
 
 #pragma region Utility
@@ -340,7 +346,7 @@ static HFONT Font_SetUnderline(HWND hwnd, BOOL fUnderline)
 /// @param iSize The size of the buffer
 ///
 /// @returns TRUE if successful, otherwise false
-static BOOL Alphabetize(INT num, LPTSTR buf, INT iSize)
+static BOOL Alphabetize(INT num, char *buf, INT iSize)
 {
   // fill buffer with spaces initially
   for (int i = 0; i < iSize; ++i) buf[i] = ' ';
@@ -553,8 +559,8 @@ typedef struct tagGRIDCOLUMN
 /// @brief This is the data associated with a grid item
 typedef struct tagGRIDITEM
 {
-  LPTSTR lpszCurValue;///< Item (cell) value
-  LPTSTR lpszMisc;///< Item (cell) specific data string
+  char *lpszCurValue;///< Item (cell) value
+  char *lpszMisc;///< Item (cell) specific data string
   DWORD dwAllignment;///< Item (cell) text allignment
   BOOL fProtected;///< Item (cell) protection status
 } GRIDITEM, *LPGRIDITEM;
@@ -574,7 +580,7 @@ typedef struct tagINSTANCEDATA
   HWND hwndControl;///< Handle to the current cell control
   HMENU gridmenu;///< The child-window identifier of this grid
   LPVECTOR data;///< A collection of columns of cells
-  LPTSTR title;///< The grid title string
+  char *title;///< The grid title string
   INT gridwidth;///< Grid width
   INT gridheight;///< Grid height
   INT homerow;///< The index of the home row
@@ -636,7 +642,7 @@ static LPINSTANCEDATA g_lpInst;///< instance data (this) pointer
 /// @returns TRUE if successful
 static BOOL Control_GetInstanceData(HWND hControl, LPINSTANCEDATA *ppInstanceData)
 {
-  *ppInstanceData = (LPINSTANCEDATA)GetProp(hControl, (LPCTSTR) _T("lpInsData"));
+  *ppInstanceData = (LPINSTANCEDATA)GetPropA(hControl, "lpInsData");
   if (NULL != *ppInstanceData)
     return TRUE;
   return FALSE;
@@ -773,7 +779,7 @@ static LPGRIDCOLUMN New_Column(LPSGCOLUMN lpColumn, INT iWidth, LPVECTOR lpVecto
     lpCol->pOptional = NULL;
     break;
   case GCT_COMBO:
-    lpCol->pOptional = NewStringArray((LPTSTR)lpColumn->pOptional);
+    lpCol->pOptional = NewStringArray((const char *)lpColumn->pOptional);
     break;
   case GCT_BUTTON:
     lpCol->pOptional = NULL;
@@ -1274,7 +1280,7 @@ static VOID DisplayColumn(HWND hwnd, int col, int offset, HFONT hfont, HFONT hco
 
   // max 1024 chars display in an excel worksheet cell so
   //  I'll use that for a max buffer size
-  static TCHAR buffer[1025];
+  static char buffer[1025];
   memset(&buffer, 0, sizeof(buffer));
 
   if (0 == GetColWidth(col)) {
@@ -1358,7 +1364,7 @@ static VOID DisplayColumn(HWND hwnd, int col, int offset, HFONT hfont, HFONT hco
     rectsave = rect;
     lpgi = GetCellData(col, row);
     isProtected = NULL == lpgi ? 0 : lpgi->fProtected;
-    strcpy_s(buffer, NULL == lpgi ? _T("") : lpgi->lpszCurValue);
+    strcpy_s(buffer, NULL == lpgi ? "" : lpgi->lpszCurValue);
 
     // Draw Cell if not row header
     if (GCT_ROWHEADER != iColumnType)// no need to draw row header twice
@@ -1404,7 +1410,7 @@ static VOID DisplayColumn(HWND hwnd, int col, int offset, HFONT hfont, HFONT hco
     case GCT_ROWHEADER: {
       if (g_lpInst->ROWSNUMBERED) {
         isNumeric = TRUE;
-        wsprintf(buffer, _T("%d"), row);
+        snprintf(buffer, std::size(buffer), "%d", row);
       } else
         isNumeric = FALSE;
 
@@ -1460,13 +1466,13 @@ static VOID DisplayColumn(HWND hwnd, int col, int offset, HFONT hfont, HFONT hco
       rectCheck.right = rectCheck.left + GetSystemMetrics(SM_CXVSCROLL);
       rectCheck.bottom = rectCheck.top + GetSystemMetrics(SM_CYVSCROLL);
 
-      DrawFrameControl(hdc, &rectCheck, DFC_BUTTON, DFCS_BUTTONCHECK | (0 == _tcsicmp(buffer, CHECKED) ? DFCS_CHECKED : 0));
+      DrawFrameControl(hdc, &rectCheck, DFC_BUTTON, DFCS_BUTTONCHECK | (0 == _stricmp(buffer, CHECKED) ? DFCS_CHECKED : 0));
     } break;
     case GCT_IMAGE: {
       // Calculate and draw image
       RECT rectImage = { 0, 0, 0, 0 };
       LONG index = 0;
-      LPTSTR end;
+      char *end;
       UINT style = ILD_NORMAL;
       ;
       CopyRect(&rectImage, &rect);
@@ -1479,8 +1485,8 @@ static VOID DisplayColumn(HWND hwnd, int col, int offset, HFONT hfont, HFONT hco
       rectImage.right = rectImage.left + imageWidth;
       rectImage.bottom = rectImage.top + imageHeight;
 
-      index = _tcstol(buffer, &end, 10);
-      if (0 < _tcslen(end))// we failed but I don't know how this could have happened
+      index = strtol(buffer, &end, 10);
+      if (0 < strlen(end))// we failed but I don't know how this could have happened
       {
         index = 0;
       }
@@ -1703,7 +1709,7 @@ static int FindLongestLine(HDC hdc, const char *text, PSIZE size)
   const vector<string> parts{ str_split(temptext, "\n", nullptr, true) };
   // p = _tcstok(temptext, _T("\n"));
   for (const auto &p : parts) {
-    GetTextExtentPoint32(hdc, p.c_str(), p.length(), size);
+    GetTextExtentPoint32A(hdc, p.c_str(), p.length(), size);
     if (size->cx > longest) {
       longest = size->cx;
     }
@@ -1936,7 +1942,7 @@ static VOID Edit_CenterTextVertically(HWND hEdit)
 
   // calculate client area height needed for a font
   hdc = GetDC(hEdit);
-  DrawText(hdc, "Ky", 2, &rcTxt, DT_CALCRECT | DT_LEFT);
+  DrawTextA(hdc, "Ky", 2, &rcTxt, DT_CALCRECT | DT_LEFT);
   ReleaseDC(hEdit, hdc);
 
   // Set top and left margins
@@ -1964,9 +1970,9 @@ static LRESULT CALLBACK Edit_Proc(HWND hEdit, UINT msg, WPARAM wParam, LPARAM lP
 
   if (WM_DESTROY == msg)// Unsubclass the Edit Control
   {
-    SetWindowLongPtr(hEdit, GWLP_WNDPROC, (DWORD_PTR)GetProp(hEdit, WPRC));// DWM 1.2: fixed cast
-    RemoveProp(hEdit, WPRC);
-    RemoveProp(hEdit, EDITMODE);// DWM 1.7: Added
+    SetWindowLongPtrA(hEdit, GWLP_WNDPROC, (DWORD_PTR)GetPropA(hEdit, WPRC));// DWM 1.2: fixed cast
+    RemovePropA(hEdit, WPRC);
+    RemovePropA(hEdit, EDITMODE);// DWM 1.7: Added
     return 0;
   } else if (WM_MOUSEWHEEL == msg) {
     FORWARD_WM_CHAR(hEdit, VK_RETURN, 0, SNDMSG);
@@ -1977,7 +1983,7 @@ static LRESULT CALLBACK Edit_Proc(HWND hEdit, UINT msg, WPARAM wParam, LPARAM lP
     switch (wParam) {
     case VK_LEFT:
     case VK_RIGHT:
-      if (str_compare_i(CHECKED, (const char *)GetProp(hEdit, EDITMODE)) == 0) break;// DWM 1.7: Added
+      if (str_compare_i(CHECKED, (const char *)GetPropA(hEdit, EDITMODE)) == 0) break;// DWM 1.7: Added
       // else fallthrough
     case VK_NEXT:
     case VK_PRIOR:
@@ -2035,10 +2041,10 @@ static HWND CreateEdit(HINSTANCE hInstance, HWND hwndParent, INT id, BOOL fEditM
   SendMessage(hwnd, WM_SETFONT, (WPARAM)SendMessage(hwndParent, WM_GETFONT, 0L, 0L), 0L);
 
   // DWM 1.7: Store EditMode flag
-  SetProp(hwnd, EDITMODE, fEditMode ? (HANDLE)CHECKED : (HANDLE)UNCHECKED);
+  SetPropA(hwnd, EDITMODE, fEditMode ? (HANDLE)CHECKED : (HANDLE)UNCHECKED);
 
   // Subclass Editor and save the OldProc
-  SetProp(hwnd, WPRC, (HANDLE)GetWindowLongPtr(hwnd, GWLP_WNDPROC));
+  SetPropA(hwnd, WPRC, (HANDLE)GetWindowLongPtrA(hwnd, GWLP_WNDPROC));
   SubclassWindow(hwnd, Edit_Proc);
 
   return hwnd;
@@ -2065,8 +2071,8 @@ static LRESULT CALLBACK Button_Proc(HWND hButton, UINT msg, WPARAM wParam, LPARA
 
   if (WM_DESTROY == msg)// Unsubclass the button control
   {
-    SetWindowLongPtr(hButton, GWLP_WNDPROC, (DWORD_PTR)GetProp(hButton, WPRC));// DWM 1.2: fixed cast
-    RemoveProp(hButton, WPRC);
+    SetWindowLongPtr(hButton, GWLP_WNDPROC, (DWORD_PTR)GetPropA(hButton, WPRC));// DWM 1.2: fixed cast
+    RemovePropA(hButton, WPRC);
     return 0;
   } else if (WM_MOUSEWHEEL == msg) {
     FORWARD_WM_KEYDOWN(hButton, VK_ESCAPE, 0, 0, SNDMSG);
@@ -2137,7 +2143,7 @@ static HWND CreateButton(HINSTANCE hInstance, HWND hwndParent, INT id)
   // DWM 1.9: Display the same font in buttons as rest of grid
   SendMessage(hwnd, WM_SETFONT, (WPARAM)SendMessage(hwndParent, WM_GETFONT, 0L, 0L), 0L);
 
-  SetProp(hwnd, WPRC, (HANDLE)GetWindowLongPtr(hwnd, GWLP_WNDPROC));
+  SetPropA(hwnd, WPRC, (HANDLE)GetWindowLongPtrA(hwnd, GWLP_WNDPROC));
   SubclassWindow(hwnd, Button_Proc);
 
   return hwnd;
@@ -2192,8 +2198,8 @@ static LRESULT CALLBACK ComboBox_Proc(HWND hCombo, UINT msg, WPARAM wParam, LPAR
 
   if (WM_DESTROY == msg)// Unsubclass the combobox or child edit control
   {
-    SetWindowLongPtr(hCombo, GWLP_WNDPROC, (LONG_PTR)GetProp(hCombo, WPRC));// DWM 1.2: fixed cast
-    RemoveProp(hCombo, WPRC);
+    SetWindowLongPtr(hCombo, GWLP_WNDPROC, (LONG_PTR)GetPropA(hCombo, WPRC));// DWM 1.2: fixed cast
+    RemovePropA(hCombo, WPRC);
     return 0;
   } else if (WM_PAINT == msg)// Obliterate border
   {
@@ -2278,7 +2284,7 @@ static HWND CreateCombo(HINSTANCE hInstance, HWND hwndParent, INT id)
   // DWM 1.9: Display the same font in editor as rest of grid
   SendMessage(hwnd, WM_SETFONT, (WPARAM)SendMessage(hwndParent, WM_GETFONT, 0L, 0L), 0L);
 
-  SetProp(hwnd, WPRC, (HANDLE)GetWindowLongPtr(hwnd, GWLP_WNDPROC));
+  SetPropA(hwnd, WPRC, (HANDLE)GetWindowLongPtrA(hwnd, GWLP_WNDPROC));
   SubclassWindow(hwnd, ComboBox_Proc);
 
   return hwnd;
@@ -2342,7 +2348,7 @@ static BOOL Grid_OnCreate(HWND hwnd, LPCREATESTRUCT lpCreateStruct)
     inst.clrGridline = GetSysColor(COLOR_BTNFACE);
     inst.clrHighlightText = GetSysColor(COLOR_HIGHLIGHTTEXT);
     inst.clrBackground = GetSysColor(COLOR_WINDOW);
-    inst.title = NewString(_T(""));
+    inst.title = NewString("");
     inst.titleheight = 0;
     inst.EXTENDLASTCOLUMN = TRUE;
     inst.SHOWINTEGRALROWS = TRUE;
@@ -2490,7 +2496,7 @@ static VOID Grid_OnHScroll(HWND hwnd, HWND, UINT code, int pos)
 /// @param fEditMode TRUE if EDIT control in edit mode FALSE for overwrite.
 ///
 /// @returns VOID.
-static VOID Grid_OnSelectEdit(HWND hwnd, RECT rc, LPTSTR text, BOOL fEditMode)// DWM 1.7: Added fEditMode argument
+static VOID Grid_OnSelectEdit(HWND hwnd, RECT rc, char *text, BOOL fEditMode)// DWM 1.7: Added fEditMode argument
 {
   // Adjust rect so text will center better
   rc.top += 1;
@@ -2503,7 +2509,7 @@ static VOID Grid_OnSelectEdit(HWND hwnd, RECT rc, LPTSTR text, BOOL fEditMode)//
   MoveWindow(g_lpInst->hwndControl, rc.left, rc.top, WIDTH(rc), HEIGHT(rc), TRUE);
 
   // Set the text in the edit box to the initial key
-  Edit_SetText(g_lpInst->hwndControl, text);
+  SetWindowTextA(g_lpInst->hwndControl, text);
   ShowWindow(g_lpInst->hwndControl, SW_SHOW);
   SetFocus(g_lpInst->hwndControl);
   Edit_CenterTextVertically(g_lpInst->hwndControl);
@@ -2521,7 +2527,7 @@ static VOID Grid_OnSelectEdit(HWND hwnd, RECT rc, LPTSTR text, BOOL fEditMode)//
 /// @param text The initial text for the button.
 ///
 /// @returns VOID.
-static VOID Grid_OnSelectButton(HWND hwnd, RECT rc, LPTSTR text)
+static VOID Grid_OnSelectButton(HWND hwnd, RECT rc, char *text)
 {
   InflateRect(&rc, -1, -1);
 
@@ -2531,7 +2537,7 @@ static VOID Grid_OnSelectButton(HWND hwnd, RECT rc, LPTSTR text)
   MoveWindow(g_lpInst->hwndControl, rc.left, rc.top, WIDTH(rc), HEIGHT(rc), TRUE);
 
   // Set the text in the edit box to the initial key
-  Button_SetText(g_lpInst->hwndControl, text);
+  SetWindowTextA(g_lpInst->hwndControl, text);
   ShowWindow(g_lpInst->hwndControl, SW_SHOW);
   SetFocus(g_lpInst->hwndControl);
 }
@@ -2545,7 +2551,7 @@ static VOID Grid_OnSelectButton(HWND hwnd, RECT rc, LPTSTR text)
 /// @param szSelected The currently selected item (if any).
 ///
 /// @returns VOID.
-static VOID Grid_OnSelectComboBox(HWND hwnd, RECT rc, LPTSTR szzItems, LPTSTR szSelected)
+static VOID Grid_OnSelectComboBox(HWND hwnd, RECT rc, char *szzItems, char *szSelected)
 {
   InflateRect(&rc, -1, -1);
 
@@ -2560,7 +2566,7 @@ static VOID Grid_OnSelectComboBox(HWND hwnd, RECT rc, LPTSTR szzItems, LPTSTR sz
   MoveWindow(g_lpInst->hwndControl, rc.left, rc.top, WIDTH(rc), HEIGHT(rc), TRUE);
 
   // Walk the item list and add each string until the empty string
-  for (LPTSTR p = szzItems; *p; p += _tcslen(p) + 1) {
+  for (char *p = szzItems; *p; p += strlen(p) + 1) {
     if (CB_ERR == ComboBox_FindStringExact(g_lpInst->hwndControl, 0, p))
       ComboBox_AddString(g_lpInst->hwndControl, p);
   }
@@ -2574,7 +2580,7 @@ static VOID Grid_OnSelectComboBox(HWND hwnd, RECT rc, LPTSTR szzItems, LPTSTR sz
     ComboBox_SetCurSel(g_lpInst->hwndControl, itm);
   else {
     ComboBox_SetCurSel(g_lpInst->hwndControl, 0);
-    ComboBox_SetText(g_lpInst->hwndControl, szSelected);
+    SetWindowTextA(g_lpInst->hwndControl, szSelected);
     ComboBox_SetEditSel(g_lpInst->hwndControl, 0, -1);
   }
   NotifyEditBegin(hwnd);
@@ -2681,15 +2687,15 @@ static void Grid_OnKeyDown(HWND hwnd, UINT vk, BOOL, int cRepeat, UINT flags)
     GetCellRect(hwnd, g_lpInst->cursorcol, g_lpInst->cursorrow, &cellrect);
 
     INT iRtn = 0;
-    TCHAR buf[5] = { 0 };
+    char buf[5] = { 0 };
     BYTE kbd[256] = { 0 };
     (void)GetKeyboardState(kbd);
 
-#ifdef _UNICODE
-    iRtn = ToUnicode(vk, flags, kbd, buf, NELEMS(buf), 0);
-#else
+    // #ifdef _UNICODE
+    // iRtn = ToUnicode(vk, flags, kbd, buf, NELEMS(buf), 0);
+    // #else
     iRtn = ToAscii(vk, flags, kbd, (LPWORD)buf, 0);
-#endif
+    // #endif
     if (iRtn < 0) iRtn = 0;
 
     // buf probably won't be null terminated so make sure it is.
@@ -2704,7 +2710,7 @@ static void Grid_OnKeyDown(HWND hwnd, UINT vk, BOOL, int cRepeat, UINT flags)
         fEditMode);// DWM 1.7: Added fEditMode
     } break;
     case GCT_COMBO: {
-      Grid_OnSelectComboBox(hwnd, cellrect, (LPTSTR)GetColOptional(g_lpInst->cursorcol), lpgi->lpszCurValue);
+      Grid_OnSelectComboBox(hwnd, cellrect, (char *)GetColOptional(g_lpInst->cursorcol), lpgi->lpszCurValue);
     } break;
     case GCT_BUTTON: {
       Grid_OnSelectButton(hwnd, cellrect, lpgi->lpszCurValue);
@@ -2713,7 +2719,7 @@ static void Grid_OnKeyDown(HWND hwnd, UINT vk, BOOL, int cRepeat, UINT flags)
       // Cell click handled by Grid_OnCommand()
     } break;
     case GCT_CHECK: {
-      if (0 == _tcsicmp(lpgi->lpszCurValue, CHECKED))
+      if (0 == _stricmp(lpgi->lpszCurValue, CHECKED))
         String_Replace(lpgi->lpszCurValue, UNCHECKED);
       else
         String_Replace(lpgi->lpszCurValue, CHECKED);
@@ -2722,7 +2728,7 @@ static void Grid_OnKeyDown(HWND hwnd, UINT vk, BOOL, int cRepeat, UINT flags)
     } break;
     case GCT_LINK: {
       if (!IsEmptyString(lpgi->lpszMisc) && (VK_RETURN == vk || VK_SPACE == vk))
-        ShellExecute(NULL, _T("open"), lpgi->lpszMisc, NULL, NULL, SW_SHOW);
+        ShellExecuteA(NULL, "open", lpgi->lpszMisc, NULL, NULL, SW_SHOW);
 
       NotifyCellClick(hwnd);
     } break;
@@ -2759,7 +2765,7 @@ static VOID Grid_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
       if (nullptr != lpi) {
         // const int len = ComboBox_GetTextLength(hwndCtl) + 1;
         // LPTSTR buf = (LPTSTR)_alloca(len * sizeof(char));
-        ComboBox_GetText(hwndCtl, combobox_buffer, std::size(combobox_buffer));
+        GetWindowTextA(hwndCtl, combobox_buffer, std::size(combobox_buffer));
         String_Replace(lpi->lpszCurValue, combobox_buffer);
       }
       // adjust the column width if COLAUTOWIDTH==TRUE
@@ -2778,7 +2784,7 @@ static VOID Grid_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
       if (nullptr != lpi) {
         // INT len = Edit_GetTextLength(hwndCtl);
         // LPTSTR buf = (LPTSTR)_alloca(sizeof(TCHAR) * (len + 1));
-        Edit_GetText(hwndCtl, edit_buffer, std::size(edit_buffer));// DWM 2.2.1: Replaced NELEMS with len + 1 per suggestion of Hans-Peter Kalbf
+        GetWindowTextA(hwndCtl, edit_buffer, std::size(edit_buffer));// DWM 2.2.1: Replaced NELEMS with len + 1 per suggestion of Hans-Peter Kalbf
         String_Replace(lpi->lpszCurValue, edit_buffer);
 
         ShowWindow(hwndCtl, SW_HIDE);
@@ -3004,7 +3010,7 @@ static VOID Grid_OnMouseMove(HWND hwnd, int x, int y, UINT)
 
     if (NULL != lpgi) {
       HDC hdc = GetDC(hwnd);
-      DrawText(hdc, lpgi->lpszCurValue, len(lpgi->lpszCurValue), &rcTxt, DT_CALCRECT | DT_LEFT);
+      DrawTextA(hdc, lpgi->lpszCurValue, len(lpgi->lpszCurValue), &rcTxt, DT_CALCRECT | DT_LEFT);
       // print_colored_text_to_grid_cell(hdc, rcTxt, lpgi->lpszCurValue, DT_END_ELLIPSIS | DT_CENTER | DT_WORDBREAK | DT_NOPREFIX);
 
       ReleaseDC(hwnd, hdc);
@@ -3146,25 +3152,25 @@ void Grid_OnSetFont(HWND hwnd, HFONT hfont, BOOL fRedraw) noexcept
 /// @param lpszText A pointer to a null-terminated string that is the window text.
 ///
 /// @returns VOID.
-static VOID Grid_OnSetText(HWND hwnd, LPCTSTR lpszText)
+static VOID Grid_OnSetText(HWND hwnd, const char *lpszText)
 {
   int j, linecount;
   SIZE size = { 0, 0 };
   HDC gdc;
   HFONT holdfont;
-  String_Replace(g_lpInst->title, (LPTSTR)lpszText);
+  String_Replace(g_lpInst->title, lpszText);
 
   gdc = GetDC(hwnd);
   // get linecount of title;
-  if (_tcslen(g_lpInst->title) > 0) {
+  if (strlen(g_lpInst->title) > 0) {
     linecount = 1;
-    for (j = 0; j < (int)_tcslen(g_lpInst->title); j++) {
+    for (j = 0; j < (int)strlen(g_lpInst->title); j++) {
       if (g_lpInst->title[j] == _T('\n')) {
         linecount++;
       }
     }
     holdfont = (HFONT)SelectObject(gdc, g_lpInst->htitlefont);
-    GetTextExtentPoint32(gdc, g_lpInst->title, _tcslen(g_lpInst->title), &size);
+    GetTextExtentPoint32A(gdc, g_lpInst->title, strlen(g_lpInst->title), &size);
     SelectObject(gdc, holdfont);
     g_lpInst->titleheight = (int)((size.cy * 1.2) * linecount);
   } else {
@@ -3429,7 +3435,7 @@ static LRESULT Grid_OnAddColumn(HWND, WPARAM, LPARAM lParam)
     if (fSuccess) {
       // Add rows (if any)
       for (int i = RowCount() - 1; 0 < i; --i) {// Don't include col headers
-        fSuccess = Vector_Add(temp, New_Item(_T("")));
+        fSuccess = Vector_Add(temp, New_Item(""));
         if (!fSuccess)
           break;
       }
@@ -3454,7 +3460,7 @@ static LRESULT Grid_OnAddColumn(HWND, WPARAM, LPARAM lParam)
 static LRESULT Grid_OnAddRow(HWND, WPARAM, LPARAM lParam)
 {
   BOOL fSuccess = FALSE;
-  LPTSTR tempStr;
+  const char *tempStr;
   LPVECTOR temp;
   LPGRIDITEM lpgi;
   int nCols = ColCount();
@@ -3462,14 +3468,14 @@ static LRESULT Grid_OnAddRow(HWND, WPARAM, LPARAM lParam)
   if (0 < nCols) {
     // Add Row header
     temp = ((LPGRIDCOLUMN)Vector_Get(g_lpInst->data, 0))->items;
-    tempStr = (LPTSTR)lParam;
+    tempStr = (const char *)lParam;
     lpgi = New_Item(tempStr);
     fSuccess = Vector_Add(temp, lpgi);
     if (fSuccess)// Add an empty row
     {
       for (int i = 1; i < nCols; ++i) {
         temp = ((LPGRIDCOLUMN)Vector_Get(g_lpInst->data, i))->items;
-        lpgi = New_Item(_T(""));
+        lpgi = New_Item("");
         fSuccess = Vector_Add(temp, lpgi);
         if (!fSuccess) {
           break;
@@ -3497,7 +3503,7 @@ static LRESULT Grid_OnInsertRow(HWND, WPARAM wParam, LPARAM lParam)// DWM 2.1: A
   // Author: Ferenc Hechler
   int nPos = wParam + 1;
   BOOL fSuccess = FALSE;
-  LPTSTR tempStr;
+  char *tempStr;
   LPVECTOR temp;
   LPGRIDITEM lpgi;
   int nCols = ColCount();
@@ -3505,14 +3511,14 @@ static LRESULT Grid_OnInsertRow(HWND, WPARAM wParam, LPARAM lParam)// DWM 2.1: A
   if (0 < nCols) {
     // Insert Row header
     temp = ((LPGRIDCOLUMN)Vector_Get(g_lpInst->data, 0))->items;
-    tempStr = (LPTSTR)lParam;
+    tempStr = (char *)lParam;
     lpgi = New_Item(tempStr);
     fSuccess = Vector_Insert(temp, nPos, lpgi);
     if (fSuccess)// Insert an empty row
     {
       for (int i = 1; i < nCols; ++i) {
         temp = ((LPGRIDCOLUMN)Vector_Get(g_lpInst->data, i))->items;
-        lpgi = New_Item(_T(""));
+        lpgi = New_Item("");
         fSuccess = Vector_Insert(temp, nPos, lpgi);
         if (!fSuccess) {
           break;
@@ -3598,14 +3604,14 @@ static VOID Grid_OnResetContent(HWND hwnd)
   // Add Column 0 (Row headers)
   LPVECTOR temp = New_Vector();
   // First element (the column name) Should be blank for row header column
-  BOOL fSuccess = Vector_Add(temp, New_Item(_T("")));
+  BOOL fSuccess = Vector_Add(temp, New_Item(""));
 
   if (fSuccess)// DWM 1.9 Refactored
   {
     SGCOLUMN sgc;
     sgc.dwType = (DWORD)GCT_ROWHEADER;
-    sgc.lpszHeader = _T("");
-    sgc.pOptional = NULL;
+    sgc.lpszHeader = "";
+    sgc.pOptional = nullptr;
     fSuccess = Vector_Add(g_lpInst->data, New_Column(&sgc, INITIAL_COL_WIDTH, temp));
   }
   // Reset Cursor and Selection to default
@@ -3725,7 +3731,7 @@ static LRESULT Grid_OnSetItemProtection(HWND, WPARAM wParam, LPARAM lParam)
 static LRESULT Grid_OnSetItemData(HWND hwnd, WPARAM, LPARAM lParam)
 {
   const char *lpszValue = "";
-  TCHAR buf[5];// Allow for indexes up to 9999 (more images than an image list likely can hold)
+  char buf[5];// Allow for indexes up to 9999 (more images than an image list likely can hold)
   LPGRIDITEM lpgi;
   LPSGITEM lpSGitem = (LPSGITEM)lParam;
   DWORD dwColType;
@@ -3839,8 +3845,8 @@ static LRESULT Grid_OnGetItemDataLength(HWND, WPARAM wParam, LPARAM lParam)
       // Determine total buffer length
       INT iLen = 0;
       // Walk the buffer to find the terminating empty string.
-      for (LPTSTR p = lpgi->lpszCurValue; *p;
-           (p += _tcslen(p) + 1, iLen = p - lpgi->lpszCurValue))
+      for (const char *p = lpgi->lpszCurValue; *p;
+           (p += strlen(p) + 1, iLen = p - lpgi->lpszCurValue))
         ;
 
       return iLen;
@@ -3862,7 +3868,7 @@ static LRESULT Grid_OnGetItemDataLength(HWND, WPARAM wParam, LPARAM lParam)
 /// @returns ERROR_SUCCESS otherwise SG_ERROR if desired cell is out of bounds
 static LRESULT Grid_OnGetItemData(HWND, WPARAM, LPARAM lParam)
 {
-  LPTSTR end;
+  char *end{};
   LPGRIDITEM lpgi;
   LPSGITEM lpSGitem = (LPSGITEM)lParam;
   if (OutOfRange(lpSGitem)) {
@@ -3897,19 +3903,19 @@ static LRESULT Grid_OnGetItemData(HWND, WPARAM, LPARAM lParam)
     INT iLen = 0;
 
     // Walk the buffer to find the terminating empty string.
-    for (LPTSTR p = lpgi->lpszCurValue; *p;
-         (p += _tcslen(p) + 1, iLen = p - lpgi->lpszCurValue))
+    for (const char *p = lpgi->lpszCurValue; *p;
+         (p += strlen(p) + 1, iLen = p - lpgi->lpszCurValue))
       ;
 
-    _tmemcpy((LPTSTR)lpSGitem->lpCurValue, lpgi->lpszCurValue, iLen + 1);// copy the terminating null also
+    memcpy((char *)lpSGitem->lpCurValue, lpgi->lpszCurValue, iLen + 1);// copy the terminating null also
     return iLen;
   }
   case GCT_CHECK:
-    lpSGitem->lpCurValue = (0 == _tcsicmp(lpgi->lpszCurValue, CHECKED));
+    lpSGitem->lpCurValue = (0 == _stricmp(lpgi->lpszCurValue, CHECKED));
     break;
   case GCT_IMAGE:
-    lpSGitem->lpCurValue = _tcstol(lpgi->lpszCurValue, &end, 10);
-    if (0 < _tcslen(end))// we failed but I don't know how this could have happened
+    lpSGitem->lpCurValue = strtol(lpgi->lpszCurValue, &end, 10);
+    if (0 < strlen(end))// we failed but I don't know how this could have happened
     {
       lpSGitem->lpCurValue = 0;
     }
@@ -4077,7 +4083,8 @@ static LRESULT CALLBACK Grid_Proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
     HANDLE_MSG(hwnd, WM_PAINT, Grid_OnPaint);
     HANDLE_MSG(hwnd, WM_SETFOCUS, Grid_OnSetFocus);
     HANDLE_MSG(hwnd, WM_SETFONT, Grid_OnSetFont);
-    HANDLE_MSG(hwnd, WM_SETTEXT, Grid_OnSetText);
+  case (0x000C):
+    return (((Grid_OnSetText))(((hwnd)), (const char *)((lParam))), 0L);
     HANDLE_MSG(hwnd, WM_SIZE, Grid_OnSize);
     HANDLE_MSG(hwnd, WM_VSCROLL, Grid_OnVScroll);
     // HANDLE_MSG(hwnd, WM_HSCROLL, Grid_OnHScroll);
@@ -4123,7 +4130,7 @@ static LRESULT CALLBACK Grid_Proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
     lpgi = GetCellData((INT)wParam + 1, 0);
 
     if (NULL != lpgi) {
-      return _tcslen(lpgi->lpszCurValue);
+      return strlen(lpgi->lpszCurValue);
     }
     // If we got here we failed
     SetLastError(ERROR_INVALID_DATA);
@@ -4179,7 +4186,7 @@ static LRESULT CALLBACK Grid_Proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
     lpgi = GetCellData(0, (INT)wParam + 1);
 
     if (NULL != lpgi) {
-      return _tcslen(lpgi->lpszCurValue);
+      return strlen(lpgi->lpszCurValue);
     }
     // If we got here we failed
     SetLastError(ERROR_INVALID_DATA);
@@ -4211,7 +4218,7 @@ static LRESULT CALLBACK Grid_Proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
     // adjust the column width if necessary
     LPGRIDITEM lpi = GetCellData(g_lpInst->cursorcol, 0);
     if (NULL != lpi) {
-      AdjustParentColWidth(hwnd, g_lpInst->cursorcol, 0, (LPTSTR)lpi->lpszCurValue);
+      AdjustParentColWidth(hwnd, g_lpInst->cursorcol, 0, (const char *)lpi->lpszCurValue);
     }
     RefreshGrid(hwnd);
   } break;
@@ -4309,7 +4316,7 @@ static LRESULT CALLBACK Grid_Proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
     // adjust the column width if necessary
     LPGRIDITEM lpi = GetCellData(0, g_lpInst->cursorrow);
     if (NULL != lpi) {
-      AdjustParentColWidth(hwnd, 0, g_lpInst->cursorrow, (LPTSTR)lpi->lpszCurValue);
+      AdjustParentColWidth(hwnd, 0, g_lpInst->cursorrow, (const char *)lpi->lpszCurValue);
     }
     RefreshGrid(hwnd);
   } break;
@@ -4334,12 +4341,42 @@ static LRESULT CALLBACK Grid_Proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
   return DefWindowProc(hwnd, msg, wParam, lParam);
 }
 
-// void SelectRow(HWND hwnd, const int row_index) noexcept
-//{
-//   static char buffer[128];
-//   // SetFocus(hwnd);
-//   g_lpInst->HIGHLIGHTFULLROW = TRUE;
-//   g_lpInst->cursorrow = row_index;
-//   g_lpInst->cursorcol = 0;
-//   RefreshGrid(hwnd);
-// }
+int findLongestTextWidthInColumn(HWND hwnd, const int col)
+{
+  char buffer[256];
+  HDC hdc;
+  SIZE size = { 0, 0 };
+  int longest_line{};
+  HFONT holdfont;
+  hdc = GetDC(hwnd);
+  holdfont = (HFONT)SelectObject(hdc, g_lpInst->hfont);
+  for (size_t i{}; i < main_app.get_game_server().get_number_of_players(); ++i) {
+    string cell_data{ GetCellContents(hwnd, i, col) };
+    const char *text = cell_data.c_str();
+    const char *last = text + cell_data.length();
+    size_t index{};
+    for (; *text; ++text) {
+      if (text + 4 <= last && *text == '^' && *(text + 1) == '^' && (*(text + 2) >= '0' && *(text + 2) <= '9') && (*(text + 3) >= '0' && *(text + 3) <= '9') && *(text + 2) == *(text + 3)) {
+        text += 3;
+      } else if (text + 2 <= last && *text == '^' && (*(text + 1) >= '0' && *(text + 1) <= '9')) {
+        ++text;
+
+      } else {
+        buffer[index] = *text;
+        ++index;
+      }
+    }
+    buffer[index] = '\0';
+    longest_line = std::max<int>(FindLongestLine(hdc, buffer, &size), longest_line);
+  }
+
+  longest_line += 5;
+
+  SelectObject(hdc, holdfont);
+  ReleaseDC(hwnd, hdc);
+
+  if (longest_line >= 260)
+    return 260;
+
+  return std::max<int>(160, longest_line);
+}

@@ -7,7 +7,6 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
-#include "tiny_rcon_utility_functions.h"
 
 using std::map;
 using std::unordered_map;
@@ -17,7 +16,6 @@ using std::vector;
 
 struct player_data
 {
-  char reason[128];
   char player_name[33];
   char guid_key[33];
   char banned_date_time[33];
@@ -32,6 +30,7 @@ struct player_data
   const char *country_code{};
   int pid;
   int score{};
+  std::string reason;
 };
 
 class alignas(size_t) game_server

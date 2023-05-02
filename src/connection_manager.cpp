@@ -1,8 +1,6 @@
-#define STRSAFE_NO_DEPRECATE
 #include "connection_manager.h"
 #include "tiny_cod2_rcon_client_application.h"
 #include "stl_helper_functions.hpp"
-#include <cctype>
 #include <utility>
 #include <regex>
 
@@ -42,9 +40,9 @@ void connection_manager::prepare_rcon_command(
 {
   // ZeroMemory(buffer, buffer_size);
   if (_strcmpi(rconCommandToSend, "getstatus") == 0 || _strcmpi(rconCommandToSend, "getinfo") == 0) {
-    snprintf(buffer, buffer_size, "\xFF\xFF\xFF\xFF%s", rconCommandToSend);
+    (void)snprintf(buffer, buffer_size, "\xFF\xFF\xFF\xFF%s", rconCommandToSend);
   } else {
-    snprintf(buffer, buffer_size, "\xFF\xFF\xFF\xFFrcon %s %s", rcon_password, rconCommandToSend);
+    (void)snprintf(buffer, buffer_size, "\xFF\xFF\xFF\xFFrcon %s %s", rcon_password, rconCommandToSend);
     ++number_of_sent_rcon_commands;
   }
 }
@@ -162,7 +160,7 @@ size_t connection_manager::receive_data_from_server(
               if (found_count == 2) {
                 std::string next_player_line(new_line_positions[0], last2);
                 lines[i].erase(new_line_positions[0], last2);
-                lines.insert(cbegin(lines) + i + 1, std::move(next_player_line));
+                lines.insert(cbegin(lines) + static_cast<std::ptrdiff_t>(i + 1), std::move(next_player_line));
                 break;
               }
 
@@ -211,15 +209,15 @@ size_t connection_manager::receive_data_from_server(
               players_data[pl_index].pid = player_pid;
               players_data[pl_index].score = player_score;
               strcpy_s(players_data[pl_index].ping, 5, player_ping.c_str());
-              // if (stl::helper::str_compare(player_name.c_str(), players_data[pl_index].player_name) != 0) {
-              strcpy_s(players_data[pl_index].player_name, 33, player_name.c_str());
-              // }
+              if (stl::helper::str_compare(player_name.c_str(), players_data[pl_index].player_name) != 0) {
+                strcpy_s(players_data[pl_index].player_name, 33, player_name.c_str());
+              }
 
               if (strcmp(ip_address.c_str(), players_data[pl_index].ip_address) != 0) {
 
                 strcpy_s(players_data[pl_index].ip_address, 16, ip_address.c_str());
                 convert_guid_key_to_country_name(
-                  geoip_db, { players_data[pl_index].ip_address, stl::helper::len(players_data[pl_index].ip_address) }, players_data[pl_index]);
+                  geoip_db, players_data[pl_index].ip_address, players_data[pl_index]);
               }
 
 
@@ -447,7 +445,7 @@ void connection_manager::send_and_receive_rcon_data(
   static char outgoing_data_buffer[buffer_size];
   std::lock_guard lg{ rcon_mutex };
   prepare_rcon_command(outgoing_data_buffer, buffer_size, rcon_command_to_send, rcon_password);
-  send_rcon_command(outgoing_data_buffer, remote_ip, remote_port);
+  (void)send_rcon_command(outgoing_data_buffer, remote_ip, remote_port);
   if (is_wait_for_reply) {
     receive_data_from_server(remote_ip, remote_port, received_reply);
   }

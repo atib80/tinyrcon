@@ -309,6 +309,7 @@
 #define ID_EDIT_CONFIGURATION_COD2_PATH 412
 #define ID_EDIT_CONFIGURATION_COD4_PATH 413
 #define ID_EDIT_CONFIGURATION_COD5_PATH 414
+#define ID_PRINTPLAYERINFORMATION_ACTION 415
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
