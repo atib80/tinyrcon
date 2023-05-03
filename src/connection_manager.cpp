@@ -196,21 +196,23 @@ size_t connection_manager::receive_data_from_server(
               string guid_key{ matches[4].str() };
 
               string player_name{ matches[5].str() };
-              stl::helper::trim_in_place(player_name);
               const size_t pn_len{ player_name.length() };
-
               if (pn_len >= 2 && player_name[pn_len - 2] == '^' && player_name[pn_len - 1] == '7') {
                 player_name.pop_back();
                 player_name.pop_back();
               }
+              stl::helper::trim_in_place(player_name, " \t\n\f\v\r");
 
               const string ip_address{ matches[7].str() };
 
               players_data[pl_index].pid = player_pid;
               players_data[pl_index].score = player_score;
               strcpy_s(players_data[pl_index].ping, 5, player_ping.c_str());
-              if (stl::helper::str_compare(player_name.c_str(), players_data[pl_index].player_name) != 0) {
-                strcpy_s(players_data[pl_index].player_name, 33, player_name.c_str());
+              if (strcmp(player_name.c_str(), players_data[pl_index].player_name) != 0) {
+                const size_t no_of_chars_to_copy{ std::min<size_t>(32, player_name.length()) };
+                strncpy_s(players_data[pl_index].player_name, 33, player_name.c_str(), no_of_chars_to_copy);
+                players_data[pl_index].player_name[no_of_chars_to_copy] = '\0';
+                // stl::helper::trim_in_place(players_data[pl_index].player_name);
               }
 
               if (strcmp(ip_address.c_str(), players_data[pl_index].ip_address) != 0) {
@@ -314,6 +316,7 @@ size_t connection_manager::receive_data_from_server(
           const size_t no_of_chars_to_copy = static_cast<size_t>(last - start);
           strncpy_s(players_data[player_num].player_name, std::size(players_data[player_num].player_name), start, no_of_chars_to_copy);
           players_data[player_num].player_name[no_of_chars_to_copy] = '\0';
+          stl::helper::trim_in_place(players_data[player_num].player_name);
           players_data[player_num].country_name = "Unknown";
           players_data[player_num].region = "Unknown";
           players_data[player_num].city = "Unknown";

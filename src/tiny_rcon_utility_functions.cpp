@@ -23,6 +23,8 @@ extern tiny_cod2_rcon_client_application main_app;
 extern tiny_rcon_handles app_handles;
 extern char const *const tempbans_file_path;
 extern char const *const banned_ip_addresses_file_path;
+extern const char *prompt_message;
+extern const char *refresh_players_data_fmt_str;
 extern PROCESS_INFORMATION pr_info;
 extern sort_type type_of_sort;
 
@@ -36,6 +38,7 @@ extern int selected_row;
 extern int selected_col;
 extern const char *user_help_message;
 extern const size_t max_players_grid_rows{ 64 };
+extern bool is_tinyrcon_initialized;
 std::atomic<bool> is_terminate_program{ false };
 volatile std::atomic<bool> is_terminate_tinyrcon_settings_configuration_dialog_window{ false };
 // extern volatile std::atomic<bool> is_refreshing_players_data;
@@ -78,7 +81,6 @@ row_of_player_data_to_display displayed_players_data[64]{};
 static char path_buffer[32768];
 
 extern const std::regex ip_address_and_port_regex{ R"((\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(-?\d+))" };
-extern const std::wregex w_ip_address_and_port_regex{ LR"((\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(-?\d+))" };
 
 extern const std::unordered_map<char, COLORREF> colors{
   { '0', color::black },
@@ -918,7 +920,7 @@ void parse_tiny_cod2_rcon_tool_config_file(const char *configFileName)
     data_line = json_resource["username"].as_str();
     strip_leading_and_trailing_quotes(data_line);
     main_app.set_username(data_line);
-    main_app.get_tinyrcon_dict()["{ADMINNAME}"] = std::move(data_line);
+    main_app.get_tinyrcon_dict()["{ADMINNAME}"] = data_line;
   } else {
     found_missing_config_setting = true;
     main_app.set_username("^1Administrator");
@@ -6400,7 +6402,7 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
   if (app_handles.hwnd_close_button) {
     DestroyWindow(app_handles.hwnd_close_button);
   }
-  app_handles.hwnd_close_button = CreateWindowEx(NULL, "Button", "Cance", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 520, 630, 60, 25, app_handles.hwnd_configuration_dialog, (HMENU)ID_BUTTON_CANCEL, app_handles.hInstance, NULL);
+  app_handles.hwnd_close_button = CreateWindowEx(NULL, "Button", "Cancel", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 520, 630, 60, 25, app_handles.hwnd_configuration_dialog, (HMENU)ID_BUTTON_CANCEL, app_handles.hInstance, NULL);
 
   if (!app_handles.hwnd_close_button)
     return false;
@@ -7377,3 +7379,59 @@ HWND CreateAVerticalScrollBar(HWND hwndParent, HINSTANCE hInstance, const int sb
     // pointer not needed
     ));
 }
+
+//void redraw(HWND hWnd)
+//{
+//  char msg_buffer[256];
+//  PAINTSTRUCT ps{};
+//
+//  HDC hdc = BeginPaint(hWnd, &ps);
+//
+//  SetBkMode(hdc, OPAQUE);
+//  SetBkColor(hdc, color::black);
+//  SetTextColor(hdc, color::red);
+//
+//  RECT bounding_rectangle = {
+//    screen_width / 2 + 170, screen_height / 2 + 27, screen_width / 2 + 210, screen_height / 2 + 47
+//  };
+//  DrawText(hdc, "Map:", -1, &bounding_rectangle, DT_SINGLELINE | DT_TOP | DT_LEFT);
+//
+//  bounding_rectangle = { screen_width / 2 + 370, screen_height / 2 + 27, screen_width / 2 + 450, screen_height / 2 + 47 };
+//  DrawText(hdc, "Gametype:", -1, &bounding_rectangle, DT_SINGLELINE | DT_TOP | DT_LEFT);
+//
+//  bounding_rectangle = {
+//    10,
+//    screen_height - 75,
+//    120,
+//    screen_height - 55
+//  };
+//
+//  DrawText(hdc, prompt_message, -1, &bounding_rectangle, DT_SINGLELINE | DT_TOP | DT_LEFT | DT_END_ELLIPSIS);
+//
+//  bounding_rectangle = {
+//    screen_width - 270,
+//    screen_height - 105,
+//    screen_width - 5,
+//    screen_height - 85,
+//  };
+//
+//  if (!is_tinyrcon_initialized) {
+//    DrawText(hdc, "Configuring and initializing tinyrcon.", -1, &bounding_rectangle, DT_SINGLELINE | DT_TOP | DT_LEFT);
+//
+//  } else {
+//
+//    const size_t time_period = main_app.get_game_server().get_check_for_banned_players_time_period();
+//
+//    atomic_counter.store(std::min<size_t>(atomic_counter.load(), time_period));
+//
+//    if (atomic_counter.load() == time_period) {
+//      DrawText(hdc, "Refreshing players data now...", -1, &bounding_rectangle, DT_SINGLELINE | DT_TOP | DT_LEFT);
+//    } else {
+//      const size_t remaining_seconds{ time_period - atomic_counter.load() };
+//      (void)snprintf(msg_buffer, std::size(msg_buffer), refresh_players_data_fmt_str, remaining_seconds, (remaining_seconds != 1 ? "seconds" : "second"));
+//      DrawText(hdc, msg_buffer, -1, &bounding_rectangle, DT_SINGLELINE | DT_TOP | DT_LEFT);
+//    }
+//  }
+//
+//  EndPaint(hWnd, &ps);
+//}

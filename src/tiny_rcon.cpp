@@ -25,7 +25,6 @@ extern char const *const banned_ip_addresses_file_path =
   "data\\bans.txt";
 
 extern const std::regex ip_address_and_port_regex;
-extern const std::wregex w_ip_address_and_port_regex;
 
 extern std::atomic<bool> is_terminate_program;
 extern volatile std::atomic<bool> is_terminate_tinyrcon_settings_configuration_dialog_window;
@@ -99,7 +98,7 @@ extern const std::unordered_map<int, string> button_id_to_label_text{
   { ID_NO_BUTTON, "No" },
   { ID_BUTTON_SAVE_CHANGES, "Save changes" },
   { ID_BUTTON_TEST_CONNECTION, "Test connection" },
-  { ID_BUTTON_CANCEL, "Cance" },
+  { ID_BUTTON_CANCEL, "Cancel" },
   { ID_BUTTON_CONFIGURE_SERVER_SETTINGS, "Configure settings" },
   { ID_CLEARMESSAGESCREENBUTTON, "Clear messages" },
   { ID_BUTTON_CONFIGURATION_EXIT_TINYRCON, "Exit TinyRcon" },
@@ -113,8 +112,8 @@ extern const std::unordered_map<int, string> button_id_to_label_text{
 unordered_map<size_t, string> rcon_status_grid_column_header_titles;
 unordered_map<size_t, string> get_status_grid_column_header_titles;
 
-static constexpr const char *prompt_message{ "Administrator >>" };
-static constexpr const char *refresh_players_data_fmt_str{ "Refreshing players data in %zu %s." };
+extern const char *prompt_message{ "Administrator >>" };
+extern const char *refresh_players_data_fmt_str{ "Refreshing players data in %zu %s." };
 extern const size_t max_players_grid_rows;
 
 tiny_rcon_handles app_handles{};
@@ -477,13 +476,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     SendMessage(app_handles.hwnd_progress_bar, PBM_SETPOS, (WPARAM)atomic_counter.load(), 0);
 
-    RECT bounding_rectangle{
-      screen_width - 270,
-      screen_height - 105,
-      screen_width - 5,
-      screen_height - 85,
-    };
-
     if (main_app.get_game_server().get_check_for_banned_players_time_period() == atomic_counter.load()) {
       is_refresh_players_data_event.store(true);
     }
@@ -492,6 +484,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       is_refreshed_players_data_ready_event.store(false);
       display_players_data_in_players_grid(app_handles.hwnd_players_grid);
     }
+
+    HDC hdc = BeginPaint(hWnd, &ps);
+
+    SetBkMode(hdc, OPAQUE);
+    SetBkColor(hdc, color::black);
+    SetTextColor(hdc, color::red);
+
+    RECT bounding_rectangle = {
+      screen_width - 270,
+      screen_height - 105,
+      screen_width - 5,
+      screen_height - 85,
+    };
 
     InvalidateRect(hWnd, &bounding_rectangle, TRUE);
 
@@ -502,8 +507,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       screen_height - 50
     };
 
-    InvalidateRect(hWnd, &bounding_rectangle, TRUE);
-    // is_refreshing_players_data.store(false);
+    DrawText(hdc, prompt_message, -1, &bounding_rectangle, DT_SINGLELINE | DT_TOP | DT_LEFT | DT_END_ELLIPSIS);
+    EndPaint(hWnd, &ps);
   }
 
   break;
@@ -876,6 +881,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     }
   } break;
   case WM_PAINT: {
+
     HDC hdc = BeginPaint(hWnd, &ps);
 
     SetBkMode(hdc, OPAQUE);
@@ -892,9 +898,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     bounding_rectangle = {
       10,
-      screen_height - 75,
+      screen_height - 70,
       120,
-      screen_height - 55
+      screen_height - 50
     };
 
     DrawText(hdc, prompt_message, -1, &bounding_rectangle, DT_SINGLELINE | DT_TOP | DT_LEFT | DT_END_ELLIPSIS);
