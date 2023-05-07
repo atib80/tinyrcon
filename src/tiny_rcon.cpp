@@ -300,7 +300,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         process_key_down_message(msg);
       }
       DispatchMessage(&msg);
-      // SetWindowText(app_handles.hwnd_e_user_input, "");
     } else if (msg.message == WM_KEYDOWN) {
       process_key_down_message(msg);
     } else if (msg.message == WM_RBUTTONDOWN && app_handles.hwnd_players_grid == GetFocus()) {
@@ -714,7 +713,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         if (int pid{ -1 }; is_valid_decimal_whole_number(selected_pid_str, pid)) {
           const string player_information{ get_player_information(pid, true) };
           (void)snprintf(message_buffer, std::size(message_buffer), "^5Information about selected player:\n ^7%s\n", player_information.c_str());
-          print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, true, false, false);
+          print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, true, true, true);
         }
       }
 
@@ -1471,8 +1470,8 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
       const char *cod1_game_path = BrowseFolder(install_path, msg_buffer);
 
       if (lstrcmp(cod1_game_path, "") == 0 || lstrcmp(cod1_game_path, "C:\\") == 0) {
-        print_colored_text(app_handles.hwnd_re_messages_data, "^1Error! You haven't selected a valid folder for your game installation.\n");
-        print_colored_text(app_handles.hwnd_re_messages_data, "^5You have to select your ^1game's installation directory\n ^5and click the OK button.\n");
+        print_colored_text(app_handles.hwnd_re_messages_data, "^1Error! You haven't selected a valid folder for your game installation.\n", true, true, true);
+        print_colored_text(app_handles.hwnd_re_messages_data, "^5You have to select your ^1game's installation directory\n ^5and click the OK button.\n", true, true, true);
       } else {
         (void)snprintf(exe_file_path, max_path_length, "%s\\codmp.exe", cod1_game_path);
       }
@@ -1491,8 +1490,8 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
       const char *cod2_game_path = BrowseFolder(install_path, msg_buffer);
 
       if (lstrcmp(cod2_game_path, "") == 0 || lstrcmp(cod2_game_path, "C:\\") == 0) {
-        print_colored_text(app_handles.hwnd_re_messages_data, "^1Error! You haven't selected a valid folder for your game installation.\n");
-        print_colored_text(app_handles.hwnd_re_messages_data, "^5You have to select your ^1game's installation directory\n ^5and click the OK button.\n");
+        print_colored_text(app_handles.hwnd_re_messages_data, "^1Error! You haven't selected a valid folder for your game installation.\n", true, true, true);
+        print_colored_text(app_handles.hwnd_re_messages_data, "^5You have to select your ^1game's installation directory\n ^5and click the OK button.\n", true, true, true);
       } else {
         (void)snprintf(exe_file_path, max_path_length, "%s\\cod2mp_s.exe", cod2_game_path);
       }
@@ -1511,8 +1510,8 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
       const char *cod4_game_path = BrowseFolder(install_path, msg_buffer);
 
       if (lstrcmp(cod4_game_path, "") == 0 || lstrcmp(cod4_game_path, "C:\\") == 0) {
-        print_colored_text(app_handles.hwnd_re_messages_data, "^1Error! You haven't selected a valid folder for your game installation.\n");
-        print_colored_text(app_handles.hwnd_re_messages_data, "^5You have to select your ^1game's installation directory\n ^5and click the OK button.\n");
+        print_colored_text(app_handles.hwnd_re_messages_data, "^1Error! You haven't selected a valid folder for your game installation.\n", true, true, true);
+        print_colored_text(app_handles.hwnd_re_messages_data, "^5You have to select your ^1game's installation directory\n ^5and click the OK button.\n", true, true, true);
       } else {
         (void)snprintf(exe_file_path, max_path_length, "%s\\iw3mp.exe", cod4_game_path);
       }
@@ -1531,8 +1530,8 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
       const char *cod5_game_path = BrowseFolder(install_path, msg_buffer);
 
       if (lstrcmp(cod5_game_path, "") == 0 || lstrcmp(cod5_game_path, "C:\\") == 0) {
-        print_colored_text(app_handles.hwnd_re_messages_data, "^1Error! You haven't selected a valid folder for your game installation.\n");
-        print_colored_text(app_handles.hwnd_re_messages_data, "^5You have to select your ^1game's installation directory\n ^5and click the OK button.\n");
+        print_colored_text(app_handles.hwnd_re_messages_data, "^1Error! You haven't selected a valid folder for your game installation.\n", true, true, true);
+        print_colored_text(app_handles.hwnd_re_messages_data, "^5You have to select your ^1game's installation directory\n ^5and click the OK button.\n", true, true, true);
       } else {
         (void)snprintf(exe_file_path, max_path_length, "%s\\cod5mp.exe", cod5_game_path);
       }

@@ -1852,8 +1852,8 @@ void print_help_information(const std::vector<std::string> &input_parts)
  ^1!border on|off ^5-> Turns ^3on^5|^3off border lines around displayed ^3GUI controls^5. 
 )"
     };
-    print_colored_text(app_handles.hwnd_re_messages_data, help_message.c_str(), true, false);
-    print_colored_text(app_handles.hwnd_re_messages_data, "^5\n", true, false);
+    print_colored_text(app_handles.hwnd_re_messages_data, help_message.c_str(), true, true, true);
+    print_colored_text(app_handles.hwnd_re_messages_data, "^5\n", true, true, false);
   } else if (input_parts.size() >= 2 && (input_parts[0] == "!list" || input_parts[0] == "list" || input_parts[0] == "!" || input_parts[0] == "!help" || input_parts[0] == "help" || input_parts[0] == "!h" || input_parts[0] == "h") && str_starts_with(input_parts[1], "rcon", true)) {
     const string help_message{
       R"(
@@ -1882,13 +1882,14 @@ void print_help_information(const std::vector<std::string> &input_parts)
  ^1tell player_pid "private message" ^3-> Sends "private message" to player whose pid = player_pid
 )"
     };
-    print_colored_text(app_handles.hwnd_re_messages_data, help_message.c_str(), true, false);
-    print_colored_text(app_handles.hwnd_re_messages_data, "^5\n", true, false);
+    print_colored_text(app_handles.hwnd_re_messages_data, help_message.c_str(), true, true, true);
+    print_colored_text(app_handles.hwnd_re_messages_data, "^5\n", true, true, false);
   } else {
     print_colored_text(app_handles.hwnd_re_messages_data,
       "^5********************************************************************"
       "**"
       "********************\n",
+      true,
       true,
       false);
     print_colored_text(app_handles.hwnd_re_messages_data,
@@ -1896,16 +1897,19 @@ void print_help_information(const std::vector<std::string> &input_parts)
       "the "
       "available rcon commands\nthat you can run in the console window.\n",
       true,
-      false);
+      true,
+      true);
     print_colored_text(app_handles.hwnd_re_messages_data,
       "Type '^2!list user^5' in the console to get more information about "
       "the "
       "available user commands\nthat you can run in the console window.\n",
       true,
-      false);
+      true,
+      true);
     print_colored_text(app_handles.hwnd_re_messages_data,
       "**********************************************************************"
       "********************\n",
+      true,
       true,
       false);
   }
@@ -2103,9 +2107,11 @@ void check_for_banned_ip_addresses()
       main_app.get_tinyrcon_dict()["{PLAYERNAME}"] = get_player_name_for_pid(online_player.pid);
       string reason{ "^1DoS attack" };
       specify_reason_for_player_pid(online_player.pid, reason);
-      string public_msg{ "^5Tiny^6Rcon ^2has successfully automatically banned ^1IP address: "s + online_player.ip_address + " ^2Reason: " + reason + "\n"s };
-      rcon_say(public_msg, true);
+      string public_msg{ "^1{ADMINNAME}: ^5Tiny^6Rcon ^2has successfully automatically banned ^1IP address: "s + online_player.ip_address + " ^7| ^5Player name: ^7{PLAYERNAME} ^7| ^5Reason: ^1{REASON} ^7| ^5Date of ban: ^1{IP_BAN_DATE}\n"s };
+      main_app.get_tinyrcon_dict()["{IP_BAN_DATE}"] = get_current_date_time_str();
       main_app.get_tinyrcon_dict()["{REASON}"] = std::move(reason);
+      build_tiny_rcon_message(public_msg);
+      rcon_say(public_msg, true);
       const string message{
         "^5Tiny^6Rcon ^2has successfully automatically executed command ^1!gb ^2on player ("s + get_player_information(online_player.pid) + "^3)\n"s
       };
@@ -2120,6 +2126,7 @@ void check_for_banned_ip_addresses()
       main_app.get_tinyrcon_dict()["{PLAYERNAME}"] = online_player.player_name;
       player_data pd{};
       if (main_app.get_game_server().get_banned_player_data_for_ip_address(online_player.ip_address, &pd)) {
+        main_app.get_tinyrcon_dict()["{IP_BAN_DATE}"] = pd.banned_date_time;
         main_app.get_tinyrcon_dict()["{REASON}"] = pd.reason;
       }
       build_tiny_rcon_message(message);
@@ -2338,8 +2345,8 @@ void process_user_command(const std::vector<string> &user_cmd)
         const string re_msg2{ "^3Invalid command syntax for user command: ^2"s + user_cmd[0] + "\n"s };
         print_colored_text(app_handles.hwnd_re_messages_data, re_msg2.c_str(), true, true, true);
         if (user_commands_help.contains(user_cmd[0])) {
-          print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(user_cmd[0]).c_str(), true, false);
-          print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, false);
+          print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(user_cmd[0]).c_str(), true, true, true);
+          print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, true, false);
         }
       }
 
@@ -2372,8 +2379,8 @@ void process_user_command(const std::vector<string> &user_cmd)
         };
         print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), true, true, true);
         if (user_commands_help.contains(user_cmd[0])) {
-          print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(user_cmd[0]).c_str(), true, false);
-          print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, false);
+          print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(user_cmd[0]).c_str(), true, true, true);
+          print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, true, false);
         }
       }
     } else if (user_cmd[0] == "!tb" || user_cmd[0] == "!tempban") {
@@ -2420,8 +2427,8 @@ void process_user_command(const std::vector<string> &user_cmd)
         const string re_msg{ "^3Invalid command syntax for user command: ^2"s + user_cmd[0] + "\n"s };
         print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), true, true, true);
         if (user_commands_help.contains(user_cmd[0])) {
-          print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(user_cmd[0]).c_str(), true, false);
-          print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, false);
+          print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(user_cmd[0]).c_str(), true, true, true);
+          print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, true, false);
         }
       }
     } else if (user_cmd[0] == "!b" || user_cmd[0] == "!ban") {
@@ -2449,8 +2456,8 @@ void process_user_command(const std::vector<string> &user_cmd)
         const string re_msg{ "^3Invalid command syntax for user command: ^2"s + user_cmd[0] + "\n"s };
         print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), true, true, true);
         if (user_commands_help.contains(user_cmd[0])) {
-          print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(user_cmd[0]).c_str(), true, false);
-          print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, false);
+          print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(user_cmd[0]).c_str(), true, true, true);
+          print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, true, false);
         }
       }
     } else if (user_cmd[0] == "!gb" || user_cmd[0] == "!globalban" || user_cmd[0] == "!banip" || user_cmd[0] == "!addip") {
@@ -2538,16 +2545,16 @@ void process_user_command(const std::vector<string> &user_cmd)
           const string re_msg{ "^3You specified an invalid non-existing ^1pid ^3or invalid ^1IP address ^3for the ^1" + user_cmd[0] + " ^3command: ^1"s + user_cmd[1] + "\n"s };
           print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), true, true, true);
           if (user_commands_help.contains(user_cmd[0])) {
-            print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(user_cmd[0]).c_str(), true, false);
-            print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, false);
+            print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(user_cmd[0]).c_str(), true, true, true);
+            print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, true, false);
           }
         }
       } else {
         const string re_msg{ "^3Invalid command syntax for user command: ^2"s + user_cmd[0] + "\n"s };
         print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), true, true, true);
         if (user_commands_help.contains(user_cmd[0])) {
-          print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(user_cmd[0]).c_str(), true, false);
-          print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, false);
+          print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(user_cmd[0]).c_str(), true, true, true);
+          print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, true, false);
         }
       }
     } else if (user_cmd[0] == "s" || user_cmd[0] == "!s" || user_cmd[0] == "status" || user_cmd[0] == "!status") {
@@ -2571,8 +2578,8 @@ void process_user_command(const std::vector<string> &user_cmd)
         const string re_msg{ "^3Invalid command syntax for user command: ^1"s + user_cmd[0] + "\n"s };
         print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), true, true, true);
         if (user_commands_help.contains(user_cmd[0])) {
-          print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(user_cmd[0]).c_str(), true, false);
-          print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, false);
+          print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(user_cmd[0]).c_str(), true, true, true);
+          print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, true, false);
         }
       }
       if (user_cmd.size() == 3) {
@@ -2610,8 +2617,8 @@ void process_user_command(const std::vector<string> &user_cmd)
         const string re_msg{ "^3Invalid command syntax for user command: ^1"s + user_cmd[0] + "\n"s };
         print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), true, true, true);
         if (user_commands_help.contains(user_cmd[0])) {
-          print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(user_cmd[0]).c_str(), true, false);
-          print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, false);
+          print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(user_cmd[0]).c_str(), true, true, true);
+          print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, true, false);
         }
       }
     } else if (user_cmd[0] == "bans" || user_cmd[0] == "!bans") {
@@ -2671,8 +2678,8 @@ void process_user_command(const std::vector<string> &user_cmd)
         const string re_msg{ "^3Invalid command syntax for user command: ^1"s + user_cmd[0] + "\n"s };
         print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), true, true, true);
         if (user_commands_help.contains(user_cmd[0])) {
-          print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(user_cmd[0]).c_str(), true, false);
-          print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, false);
+          print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(user_cmd[0]).c_str(), true, true, true);
+          print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, true, false);
         }
       }
     } else if (user_cmd[0] == "!c" || user_cmd[0] == "!cp") {
@@ -2791,8 +2798,8 @@ void process_rcon_command(const std::vector<string> &rcon_cmd, const bool)
         const string re_msg{ "^3Invalid command syntax for user command: ^2"s + rcon_cmd[0] + "\n"s };
         print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), true, true, true);
         if (user_commands_help.contains(rcon_cmd[0])) {
-          print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(rcon_cmd[0]).c_str(), true, false);
-          print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, false);
+          print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(rcon_cmd[0]).c_str(), true, true, true);
+          print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, true, false);
         }
       }
     } else if (rcon_cmd[0] == "tempbanclient") {
@@ -2838,8 +2845,8 @@ void process_rcon_command(const std::vector<string> &rcon_cmd, const bool)
         const string re_msg{ "^3Invalid command syntax for user command: ^2"s + rcon_cmd[0] + "\n"s };
         print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), true, true, true);
         if (user_commands_help.contains(rcon_cmd[0])) {
-          print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(rcon_cmd[0]).c_str(), true, false);
-          print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, false);
+          print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(rcon_cmd[0]).c_str(), true, true, true);
+          print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, true, false);
         }
       }
     } else if (rcon_cmd[0] == "banclient") {
@@ -2866,8 +2873,8 @@ void process_rcon_command(const std::vector<string> &rcon_cmd, const bool)
         const string re_msg{ "^3Invalid command syntax for user command: ^2"s + rcon_cmd[0] + "\n"s };
         print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), true, true, true);
         if (user_commands_help.contains(rcon_cmd[0])) {
-          print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(rcon_cmd[0]).c_str(), true, false);
-          print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, false);
+          print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(rcon_cmd[0]).c_str(), true, true, true);
+          print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, true, false);
         }
       }
     } else if (rcon_cmd[0] == "kick" || rcon_cmd[0] == "onlykick" || rcon_cmd[0] == "tempbanuser" || rcon_cmd[0] == "banuser") {
@@ -2916,8 +2923,8 @@ void process_rcon_command(const std::vector<string> &rcon_cmd, const bool)
         const string re_msg{ "^3Invalid command syntax for user command: ^2"s + rcon_cmd[0] + "\n"s };
         print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), true, true, true);
         if (user_commands_help.contains(rcon_cmd[0])) {
-          print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(rcon_cmd[0]).c_str(), true, false);
-          print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, false);
+          print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(rcon_cmd[0]).c_str(), true, true, true);
+          print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, true, false);
         }
       }
     } else {
@@ -2943,8 +2950,8 @@ void process_rcon_command(const std::vector<string> &rcon_cmd, const bool)
             break;
           reply.erase(pos, 10);
         }
-        print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, true, true);
-        print_colored_text(app_handles.hwnd_re_messages_data, reply.c_str(), true, true, false);
+        print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, true, false);
+        print_colored_text(app_handles.hwnd_re_messages_data, reply.c_str(), true, true, true);
         print_colored_text(app_handles.hwnd_re_messages_data, "\n", true, true, false);
       }
     }
@@ -3209,12 +3216,8 @@ void display_permanently_banned_ip_addresses()
   ostringstream oss;
   ostringstream log;
   const string decoration_line(79 + longest_name_length + longest_country_length, '=');
-  string buffer{ "^5\n"s + decoration_line + "\n"s };
-  print_colored_text(app_handles.hwnd_re_messages_data,
-    buffer.c_str(),
-    true,
-    false,
-    false);
+  oss << "^5\n"
+      << decoration_line << "\n";
   oss << "^5| ";
   log << "\n"
       << decoration_line << "\n"
@@ -3302,7 +3305,7 @@ void display_permanently_banned_ip_addresses()
   oss << string{ "^5"s + decoration_line + "\n\n"s };
   log << string{ decoration_line + "\n\n"s };
   const string message{ oss.str() };
-  print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), true, false, false);
+  print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), true, true, true);
   log_message(log.str(), true);
 }
 
@@ -5308,12 +5311,12 @@ bool delete_temporary_game_file() noexcept
 size_t print_colored_text(HWND re_control, const char *text, const bool print_to_richedit_control, const bool log_to_file, const bool is_log_current_date_time)
 {
   const char *message{ text };
-  const size_t text_len{ stl::helper::len(text) };
+  size_t text_len{ stl::helper::len(text) };
   if (text == nullptr || text_len == 0)
     return 0;
   const char *last = text + text_len;
   size_t printed_chars_count{};
-  const bool is_last_char_new_line{ text != nullptr && text_len > 0 && text[text_len - 1] == '\n' };
+  bool is_last_char_new_line{ text != nullptr && text_len > 0 && text[text_len - 1] == '\n' };
 
   if (print_to_richedit_control) {
 
@@ -5321,6 +5324,23 @@ size_t print_colored_text(HWND re_control, const char *text, const bool print_to
     COLORREF bg_color{ color::black };
     COLORREF fg_color{ color::white };
     set_rich_edit_control_colors(re_control, fg_color, bg_color);
+
+    ostringstream os;
+    string text_str;
+    if (is_log_current_date_time) {
+      const std::chrono::time_point<std::chrono::system_clock> now =
+        std::chrono::system_clock::now();
+      const time_t t_c = std::chrono::system_clock::to_time_t(now);
+      tm time_info{};
+      localtime_s(&time_info, &t_c);
+      os << "^5" << put_time(&time_info, "%Y-%b-%d %T") << ":\n";
+      os << text;
+      text_str = os.str();
+      text = text_str.c_str();
+      last = text + text_str.length();
+      text_len = text_str.length();
+      is_last_char_new_line = text_len > 0 && text[text_len - 1] == '\n';
+    }
 
     for (; *text; ++text) {
       if (text + black_bg_color_length <= last && str_compare_n(text, black_bg_color, black_bg_color_length) == 0) {
@@ -6487,8 +6507,7 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
   SetFocus(app_handles.hwnd_close_button);
 
   MSG wnd_msg{};
-  while (GetMessage(&wnd_msg, NULL, NULL, NULL) != 0)
-    {
+  while (GetMessage(&wnd_msg, NULL, NULL, NULL) != 0) {
     if (WM_KEYDOWN == wnd_msg.message && VK_ESCAPE == wnd_msg.wParam) {
       EnableWindow(app_handles.hwnd_main_window, TRUE);
       SetFocus(app_handles.hwnd_e_user_input);
@@ -7411,4 +7430,16 @@ HWND CreateAVerticalScrollBar(HWND hwndParent, HINSTANCE hInstance, const int sb
     NULL
     // pointer not needed
     ));
+}
+
+std::string get_current_date_time_str()
+{
+  ostringstream os;
+  const std::chrono::time_point<std::chrono::system_clock> now =
+    std::chrono::system_clock::now();
+  const time_t t_c = std::chrono::system_clock::to_time_t(now);
+  tm time_info{};
+  localtime_s(&time_info, &t_c);
+  os << "^5[" << put_time(&time_info, "%Y-%b-%d %T") << "]";
+  return os.str();
 }

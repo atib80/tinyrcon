@@ -461,3 +461,4 @@ void prepare_players_data_for_display_of_getstatus_response(const bool is_log_st
 size_t get_file_size_in_bytes(const char *) noexcept;
 HWND CreateAHorizontalScrollBar(HWND hwndParent, HINSTANCE hInstance, const int sbHeight);
 HWND CreateAVerticalScrollBar(HWND hwndParent, HINSTANCE hInstance, const int sbWidth);
+std::string get_current_date_time_str();
