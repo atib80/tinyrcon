@@ -5,7 +5,7 @@
 #define IDI_TINYRCONGUI                 107
 #define IDI_SMALL                       108
 #define IDC_TINYRCONGUI                 109
-#define ID_BUTTON                       110
+#define ID_EDIT_ADMIN_NAME					    110
 #define ID_TIMER                        111
 #define ID_CLEARMESSAGESCREENBUTTON     112
 #define ID_USEREDIT                     113
@@ -310,6 +310,7 @@
 #define ID_EDIT_CONFIGURATION_COD4_PATH 413
 #define ID_EDIT_CONFIGURATION_COD5_PATH 414
 #define ID_PRINTPLAYERINFORMATION_ACTION 415
+#define IDR_ACCELERATOR1 416
 #define IDC_STATIC                      -1
 
 // Next default values for new objects

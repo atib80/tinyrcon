@@ -1,8 +1,6 @@
 #pragma once
 
-#include <atomic>
 #include <string>
-#include <string_view>
 #include <utility>
 #include <vector>
 #include <CommCtrl.h>
@@ -44,6 +42,7 @@ struct tiny_rcon_handles
   HWND hwnd_re_confirmation_message;
   HWND hwnd_e_reason;
   HWND hwnd_configuration_dialog;
+  HWND hwnd_user_name;
   HWND hwnd_server_name;
   HWND hwnd_server_ip_address;
   HWND hwnd_server_port;
@@ -462,4 +461,3 @@ void prepare_players_data_for_display_of_getstatus_response(const bool is_log_st
 size_t get_file_size_in_bytes(const char *) noexcept;
 HWND CreateAHorizontalScrollBar(HWND hwndParent, HINSTANCE hInstance, const int sbHeight);
 HWND CreateAVerticalScrollBar(HWND hwndParent, HINSTANCE hInstance, const int sbWidth);
-// void redraw(HWND);

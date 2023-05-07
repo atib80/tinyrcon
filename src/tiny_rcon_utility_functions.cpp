@@ -5686,13 +5686,13 @@ void construct_tinyrcon_gui(HWND hWnd) noexcept
 
   app_handles.hwnd_e_user_input = CreateWindowEx(0, "Edit", nullptr, WS_GROUP | WS_TABSTOP | WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT, 130, screen_height - 77, 260, 20, hWnd, reinterpret_cast<HMENU>(ID_USEREDIT), app_handles.hInstance, nullptr);
 
-  app_handles.hwnd_button_warn = CreateWindowEx(NULL, "Button", "Warn", WS_GROUP | WS_TABSTOP | BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 10, screen_height - 123, 80, 30, hWnd, reinterpret_cast<HMENU>(ID_WARNBUTTON), app_handles.hInstance, NULL);
+  app_handles.hwnd_button_warn = CreateWindowEx(NULL, "Button", "&Warn", WS_GROUP | WS_TABSTOP | BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 10, screen_height - 123, 80, 30, hWnd, reinterpret_cast<HMENU>(ID_WARNBUTTON), app_handles.hInstance, NULL);
 
-  app_handles.hwnd_button_kick = CreateWindowEx(NULL, "Button", "Kick", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 110, screen_height - 123, 80, 30, hWnd, reinterpret_cast<HMENU>(ID_KICKBUTTON), app_handles.hInstance, NULL);
+  app_handles.hwnd_button_kick = CreateWindowEx(NULL, "Button", "&Kick", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 110, screen_height - 123, 80, 30, hWnd, reinterpret_cast<HMENU>(ID_KICKBUTTON), app_handles.hInstance, NULL);
 
-  app_handles.hwnd_button_tempban = CreateWindowEx(NULL, "Button", "Tempban", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 210, screen_height - 123, 100, 30, hWnd, reinterpret_cast<HMENU>(ID_TEMPBANBUTTON), app_handles.hInstance, NULL);
+  app_handles.hwnd_button_tempban = CreateWindowEx(NULL, "Button", "&Tempban", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 210, screen_height - 123, 100, 30, hWnd, reinterpret_cast<HMENU>(ID_TEMPBANBUTTON), app_handles.hInstance, NULL);
 
-  app_handles.hwnd_button_ipban = CreateWindowEx(NULL, "Button", "Ban IP", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 330, screen_height - 123, 100, 30, hWnd, reinterpret_cast<HMENU>(ID_IPBANBUTTON), app_handles.hInstance, NULL);
+  app_handles.hwnd_button_ipban = CreateWindowEx(NULL, "Button", "Ban &IP", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 330, screen_height - 123, 100, 30, hWnd, reinterpret_cast<HMENU>(ID_IPBANBUTTON), app_handles.hInstance, NULL);
 
   app_handles.hwnd_button_view_tempbans = CreateWindowEx(NULL, "Button", "View temporary bans", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 450, screen_height - 123, 170, 30, hWnd, reinterpret_cast<HMENU>(ID_VIEWTEMPBANSBUTTON), app_handles.hInstance, NULL);
 
@@ -5706,13 +5706,13 @@ void construct_tinyrcon_gui(HWND hWnd) noexcept
 
   app_handles.hwnd_tell_button = CreateWindowEx(NULL, "Button", "Send private message", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 903, screen_height - 82, 160, 30, hWnd, reinterpret_cast<HMENU>(ID_TELL_BUTTON), app_handles.hInstance, NULL);
 
-  app_handles.hwnd_quit_button = CreateWindowEx(NULL, "Button", "Exit", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, screen_width - 100, screen_height - 80, 70, 25, hWnd, reinterpret_cast<HMENU>(ID_QUITBUTTON), app_handles.hInstance, NULL);
+  app_handles.hwnd_quit_button = CreateWindowEx(NULL, "Button", "E&xit", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, screen_width - 100, screen_height - 80, 70, 25, hWnd, reinterpret_cast<HMENU>(ID_QUITBUTTON), app_handles.hInstance, NULL);
 
   app_handles.hwnd_clear_messages_button = CreateWindowEx(NULL, "Button", "Clear messages", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, screen_width / 2 + 170, 8, 120, 28, hWnd, reinterpret_cast<HMENU>(ID_CLEARMESSAGESCREENBUTTON), app_handles.hInstance, NULL);
 
   app_handles.hwnd_configure_server_settings_button = CreateWindowEx(NULL, "Button", "Configure settings", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, screen_width / 2 + 310, 8, 130, 28, hWnd, reinterpret_cast<HMENU>(ID_BUTTON_CONFIGURE_SERVER_SETTINGS), app_handles.hInstance, NULL);
 
-  app_handles.hwnd_refresh_players_data_button = CreateWindowEx(NULL, "Button", "Refresh data", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, screen_width / 2 + 460, 8, 120, 28, hWnd, reinterpret_cast<HMENU>(ID_REFRESHDATABUTTON), app_handles.hInstance, NULL);
+  app_handles.hwnd_refresh_players_data_button = CreateWindowEx(NULL, "Button", "&Refresh data", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, screen_width / 2 + 460, 8, 120, 28, hWnd, reinterpret_cast<HMENU>(ID_REFRESHDATABUTTON), app_handles.hInstance, NULL);
 
   app_handles.hwnd_combo_box_sortmode = CreateWindowEx(NULL, "Combobox", NULL, WS_GROUP | WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL | WS_HSCROLL, 810, screen_height - 120, 255, 210, hWnd, reinterpret_cast<HMENU>(ID_COMBOBOX_SORTMODE), app_handles.hInstance, NULL);
 
@@ -6241,27 +6241,37 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
   if (app_handles.hwnd_configuration_dialog) {
     DestroyWindow(app_handles.hwnd_configuration_dialog);
   }
-  app_handles.hwnd_configuration_dialog = CreateWindowEx(NULL, wcex_configuration_dialog.lpszClassName, title, WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME /*WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX*/, 0, 0, 920, 700, app_handles.hwnd_main_window, nullptr, app_handles.hInstance, nullptr);
+  app_handles.hwnd_configuration_dialog = CreateWindowEx(NULL, wcex_configuration_dialog.lpszClassName, title, WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME /*WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX*/, 0, 0, 920, 730, app_handles.hwnd_main_window, nullptr, app_handles.hInstance, nullptr);
 
   if (!app_handles.hwnd_configuration_dialog)
     return false;
 
-  (void)CreateWindowEx(0, "Static", "Server name:", WS_CHILD | WS_VISIBLE | SS_LEFT, 10, 10, 120, 20, app_handles.hwnd_configuration_dialog, NULL, app_handles.hInstance, nullptr);
+  (void)CreateWindowEx(0, "Static", "Admin name:", WS_CHILD | WS_VISIBLE | SS_LEFT, 10, 10, 120, 20, app_handles.hwnd_configuration_dialog, NULL, app_handles.hInstance, nullptr);
+
+  if (app_handles.hwnd_user_name) {
+    DestroyWindow(app_handles.hwnd_user_name);
+  }
+
+  app_handles.hwnd_user_name = CreateWindowEx(0, "Edit", nullptr, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT, 220, 10, 450, 20, app_handles.hwnd_configuration_dialog, (HMENU)ID_EDIT_ADMIN_NAME, app_handles.hInstance, nullptr);
+  if (!app_handles.hwnd_user_name)
+    return false;
+
+  (void)CreateWindowEx(0, "Static", "Server name:", WS_CHILD | WS_VISIBLE | SS_LEFT, 10, 40, 120, 20, app_handles.hwnd_configuration_dialog, NULL, app_handles.hInstance, nullptr);
 
   if (app_handles.hwnd_server_name) {
     DestroyWindow(app_handles.hwnd_server_name);
   }
 
-  app_handles.hwnd_server_name = CreateWindowEx(0, "Edit", nullptr, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT, 220, 10, 450, 20, app_handles.hwnd_configuration_dialog, (HMENU)ID_EDIT_SERVER_NAME, app_handles.hInstance, nullptr);
+  app_handles.hwnd_server_name = CreateWindowEx(0, "Edit", nullptr, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT, 220, 40, 450, 20, app_handles.hwnd_configuration_dialog, (HMENU)ID_EDIT_SERVER_NAME, app_handles.hInstance, nullptr);
   if (!app_handles.hwnd_server_name)
     return false;
 
   if (app_handles.hwnd_server_ip_address) {
     DestroyWindow(app_handles.hwnd_server_ip_address);
   }
-  (void)CreateWindowEx(0, "Static", "Server IP address:", WS_CHILD | WS_VISIBLE | SS_LEFT, 10, 40, 130, 20, app_handles.hwnd_configuration_dialog, NULL, app_handles.hInstance, nullptr);
+  (void)CreateWindowEx(0, "Static", "Server IP address:", WS_CHILD | WS_VISIBLE | SS_LEFT, 10, 70, 130, 20, app_handles.hwnd_configuration_dialog, NULL, app_handles.hInstance, nullptr);
 
-  app_handles.hwnd_server_ip_address = CreateWindowEx(0, "Edit", nullptr, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT, 220, 40, 450, 20, app_handles.hwnd_configuration_dialog, (HMENU)ID_EDIT_SERVER_IP, app_handles.hInstance, nullptr);
+  app_handles.hwnd_server_ip_address = CreateWindowEx(0, "Edit", nullptr, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT, 220, 70, 450, 20, app_handles.hwnd_configuration_dialog, (HMENU)ID_EDIT_SERVER_IP, app_handles.hInstance, nullptr);
 
   if (!app_handles.hwnd_server_ip_address)
     return false;
@@ -6269,9 +6279,9 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
   if (app_handles.hwnd_server_port) {
     DestroyWindow(app_handles.hwnd_server_port);
   }
-  (void)CreateWindowEx(0, "Static", "Server port:", WS_CHILD | WS_VISIBLE | SS_LEFT, 10, 70, 120, 20, app_handles.hwnd_configuration_dialog, NULL, app_handles.hInstance, nullptr);
+  (void)CreateWindowEx(0, "Static", "Server port:", WS_CHILD | WS_VISIBLE | SS_LEFT, 10, 100, 120, 20, app_handles.hwnd_configuration_dialog, NULL, app_handles.hInstance, nullptr);
 
-  app_handles.hwnd_server_port = CreateWindowEx(0, "Edit", nullptr, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT, 220, 70, 450, 20, app_handles.hwnd_configuration_dialog, (HMENU)ID_EDIT_SERVER_PORT, app_handles.hInstance, nullptr);
+  app_handles.hwnd_server_port = CreateWindowEx(0, "Edit", nullptr, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT, 220, 100, 450, 20, app_handles.hwnd_configuration_dialog, (HMENU)ID_EDIT_SERVER_PORT, app_handles.hInstance, nullptr);
 
   if (!app_handles.hwnd_server_port)
     return false;
@@ -6279,9 +6289,9 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
   if (app_handles.hwnd_rcon_password) {
     DestroyWindow(app_handles.hwnd_rcon_password);
   }
-  (void)CreateWindowEx(0, "Static", "Rcon password:", WS_CHILD | WS_VISIBLE | SS_LEFT, 10, 100, 140, 20, app_handles.hwnd_configuration_dialog, NULL, app_handles.hInstance, nullptr);
+  (void)CreateWindowEx(0, "Static", "Rcon password:", WS_CHILD | WS_VISIBLE | SS_LEFT, 10, 130, 140, 20, app_handles.hwnd_configuration_dialog, NULL, app_handles.hInstance, nullptr);
 
-  app_handles.hwnd_rcon_password = CreateWindowEx(0, "Edit", nullptr, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT, 220, 100, 450, 20, app_handles.hwnd_configuration_dialog, (HMENU)ID_EDIT_SERVER_RCON, app_handles.hInstance, nullptr);
+  app_handles.hwnd_rcon_password = CreateWindowEx(0, "Edit", nullptr, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT, 220, 130, 450, 20, app_handles.hwnd_configuration_dialog, (HMENU)ID_EDIT_SERVER_RCON, app_handles.hInstance, nullptr);
 
   if (!app_handles.hwnd_rcon_password)
     return false;
@@ -6289,9 +6299,9 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
   if (app_handles.hwnd_refresh_time_period) {
     DestroyWindow(app_handles.hwnd_refresh_time_period);
   }
-  (void)CreateWindowEx(0, "Static", "Refresh time period:", WS_CHILD | WS_VISIBLE | SS_LEFT, 10, 130, 140, 20, app_handles.hwnd_configuration_dialog, NULL, app_handles.hInstance, nullptr);
+  (void)CreateWindowEx(0, "Static", "Refresh time period:", WS_CHILD | WS_VISIBLE | SS_LEFT, 10, 160, 140, 20, app_handles.hwnd_configuration_dialog, NULL, app_handles.hInstance, nullptr);
 
-  app_handles.hwnd_refresh_time_period = CreateWindowEx(0, "Edit", nullptr, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT, 220, 130, 450, 20, app_handles.hwnd_configuration_dialog, (HMENU)ID_EDIT_REFRESH_TIME_PERIOD, app_handles.hInstance, nullptr);
+  app_handles.hwnd_refresh_time_period = CreateWindowEx(0, "Edit", nullptr, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT, 220, 160, 450, 20, app_handles.hwnd_configuration_dialog, (HMENU)ID_EDIT_REFRESH_TIME_PERIOD, app_handles.hInstance, nullptr);
 
   if (!app_handles.hwnd_refresh_time_period)
     return false;
@@ -6299,9 +6309,9 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
   if (app_handles.hwnd_cod1_path_edit) {
     DestroyWindow(app_handles.hwnd_cod1_path_edit);
   }
-  (void)CreateWindowEx(0, "Static", "Call of Duty installation path:", WS_CHILD | WS_VISIBLE | SS_LEFT, 10, 165, 200, 25, app_handles.hwnd_configuration_dialog, NULL, app_handles.hInstance, nullptr);
+  (void)CreateWindowEx(0, "Static", "Call of Duty installation path:", WS_CHILD | WS_VISIBLE | SS_LEFT, 10, 195, 200, 25, app_handles.hwnd_configuration_dialog, NULL, app_handles.hInstance, nullptr);
 
-  app_handles.hwnd_cod1_path_edit = CreateWindowEx(0, "Edit", nullptr, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT | ES_MULTILINE | ES_AUTOHSCROLL | WS_HSCROLL, 220, 160, 450, 40, app_handles.hwnd_configuration_dialog, (HMENU)ID_EDIT_CONFIGURATION_COD1_PATH, app_handles.hInstance, nullptr);
+  app_handles.hwnd_cod1_path_edit = CreateWindowEx(0, "Edit", nullptr, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT | ES_MULTILINE | ES_AUTOHSCROLL | WS_HSCROLL, 220, 190, 450, 40, app_handles.hwnd_configuration_dialog, (HMENU)ID_EDIT_CONFIGURATION_COD1_PATH, app_handles.hInstance, nullptr);
 
   if (!app_handles.hwnd_cod1_path_edit)
     return false;
@@ -6311,16 +6321,16 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
   if (app_handles.hwnd_cod1_path_button) {
     DestroyWindow(app_handles.hwnd_cod1_path_button);
   }
-  app_handles.hwnd_cod1_path_button = CreateWindowEx(NULL, "Button", "Browse for codmp.exe", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 680, 170, 190, 25, app_handles.hwnd_configuration_dialog, (HMENU)ID_BUTTON_CONFIGURATION_COD1_PATH, app_handles.hInstance, NULL);
+  app_handles.hwnd_cod1_path_button = CreateWindowEx(NULL, "Button", "Browse for codmp.exe", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 680, 200, 190, 25, app_handles.hwnd_configuration_dialog, (HMENU)ID_BUTTON_CONFIGURATION_COD1_PATH, app_handles.hInstance, NULL);
   if (!app_handles.hwnd_cod1_path_button)
     return false;
 
   if (app_handles.hwnd_cod2_path_edit) {
     DestroyWindow(app_handles.hwnd_cod2_path_edit);
   }
-  (void)CreateWindowEx(0, "Static", "Call of Duty 2 installation path:", WS_CHILD | WS_VISIBLE | SS_LEFT, 10, 215, 200, 25, app_handles.hwnd_configuration_dialog, NULL, app_handles.hInstance, nullptr);
+  (void)CreateWindowEx(0, "Static", "Call of Duty 2 installation path:", WS_CHILD | WS_VISIBLE | SS_LEFT, 10, 245, 200, 25, app_handles.hwnd_configuration_dialog, NULL, app_handles.hInstance, nullptr);
 
-  app_handles.hwnd_cod2_path_edit = CreateWindowEx(0, "Edit", nullptr, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT | ES_MULTILINE | ES_AUTOHSCROLL | WS_HSCROLL, 220, 210, 450, 40, app_handles.hwnd_configuration_dialog, (HMENU)ID_EDIT_CONFIGURATION_COD2_PATH, app_handles.hInstance, nullptr);
+  app_handles.hwnd_cod2_path_edit = CreateWindowEx(0, "Edit", nullptr, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT | ES_MULTILINE | ES_AUTOHSCROLL | WS_HSCROLL, 220, 240, 450, 40, app_handles.hwnd_configuration_dialog, (HMENU)ID_EDIT_CONFIGURATION_COD2_PATH, app_handles.hInstance, nullptr);
 
   if (!app_handles.hwnd_cod2_path_edit)
     return false;
@@ -6328,16 +6338,16 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
   if (app_handles.hwnd_cod2_path_button) {
     DestroyWindow(app_handles.hwnd_cod2_path_button);
   }
-  app_handles.hwnd_cod2_path_button = CreateWindowEx(NULL, "Button", "Browse for cod2mp_s.exe", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 680, 220, 190, 25, app_handles.hwnd_configuration_dialog, (HMENU)ID_BUTTON_CONFIGURATION_COD2_PATH, app_handles.hInstance, NULL);
+  app_handles.hwnd_cod2_path_button = CreateWindowEx(NULL, "Button", "Browse for cod2mp_s.exe", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 680, 250, 190, 25, app_handles.hwnd_configuration_dialog, (HMENU)ID_BUTTON_CONFIGURATION_COD2_PATH, app_handles.hInstance, NULL);
   if (!app_handles.hwnd_cod2_path_button)
     return false;
 
   if (app_handles.hwnd_cod4_path_edit) {
     DestroyWindow(app_handles.hwnd_cod4_path_edit);
   }
-  (void)CreateWindowEx(0, "Static", "Call of Duty 4 installation path:", WS_CHILD | WS_VISIBLE | SS_LEFT, 10, 265, 200, 25, app_handles.hwnd_configuration_dialog, NULL, app_handles.hInstance, nullptr);
+  (void)CreateWindowEx(0, "Static", "Call of Duty 4 installation path:", WS_CHILD | WS_VISIBLE | SS_LEFT, 10, 295, 200, 25, app_handles.hwnd_configuration_dialog, NULL, app_handles.hInstance, nullptr);
 
-  app_handles.hwnd_cod4_path_edit = CreateWindowEx(0, "Edit", nullptr, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT | ES_MULTILINE | ES_AUTOHSCROLL | WS_HSCROLL, 220, 260, 450, 40, app_handles.hwnd_configuration_dialog, (HMENU)ID_EDIT_CONFIGURATION_COD4_PATH, app_handles.hInstance, nullptr);
+  app_handles.hwnd_cod4_path_edit = CreateWindowEx(0, "Edit", nullptr, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT | ES_MULTILINE | ES_AUTOHSCROLL | WS_HSCROLL, 220, 290, 450, 40, app_handles.hwnd_configuration_dialog, (HMENU)ID_EDIT_CONFIGURATION_COD4_PATH, app_handles.hInstance, nullptr);
 
   if (!app_handles.hwnd_cod4_path_edit)
     return false;
@@ -6345,16 +6355,16 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
   if (app_handles.hwnd_cod4_path_button) {
     DestroyWindow(app_handles.hwnd_cod4_path_button);
   }
-  app_handles.hwnd_cod4_path_button = CreateWindowEx(NULL, "Button", "Browse for iw3mp.exe", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 680, 270, 190, 25, app_handles.hwnd_configuration_dialog, (HMENU)ID_BUTTON_CONFIGURATION_COD4_PATH, app_handles.hInstance, NULL);
+  app_handles.hwnd_cod4_path_button = CreateWindowEx(NULL, "Button", "Browse for iw3mp.exe", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 680, 300, 190, 25, app_handles.hwnd_configuration_dialog, (HMENU)ID_BUTTON_CONFIGURATION_COD4_PATH, app_handles.hInstance, NULL);
   if (!app_handles.hwnd_cod4_path_button)
     return false;
 
   if (app_handles.hwnd_cod5_path_edit) {
     DestroyWindow(app_handles.hwnd_cod5_path_edit);
   }
-  (void)CreateWindowEx(0, "Static", "Call of Duty 5 installation path:", WS_CHILD | WS_VISIBLE | SS_LEFT, 10, 315, 200, 25, app_handles.hwnd_configuration_dialog, NULL, app_handles.hInstance, nullptr);
+  (void)CreateWindowEx(0, "Static", "Call of Duty 5 installation path:", WS_CHILD | WS_VISIBLE | SS_LEFT, 10, 345, 200, 25, app_handles.hwnd_configuration_dialog, NULL, app_handles.hInstance, nullptr);
 
-  app_handles.hwnd_cod5_path_edit = CreateWindowEx(0, "Edit", nullptr, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_MULTILINE | ES_AUTOHSCROLL | WS_HSCROLL, 220, 310, 450, 40, app_handles.hwnd_configuration_dialog, (HMENU)ID_EDIT_CONFIGURATION_COD5_PATH, app_handles.hInstance, nullptr);
+  app_handles.hwnd_cod5_path_edit = CreateWindowEx(0, "Edit", nullptr, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_MULTILINE | ES_AUTOHSCROLL | WS_HSCROLL, 220, 340, 450, 40, app_handles.hwnd_configuration_dialog, (HMENU)ID_EDIT_CONFIGURATION_COD5_PATH, app_handles.hInstance, nullptr);
 
   if (!app_handles.hwnd_cod5_path_edit)
     return false;
@@ -6362,7 +6372,7 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
   if (app_handles.hwnd_cod5_path_button) {
     DestroyWindow(app_handles.hwnd_cod5_path_button);
   }
-  app_handles.hwnd_cod5_path_button = CreateWindowEx(NULL, "Button", "Browse for cod5mp.exe", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 680, 320, 190, 25, app_handles.hwnd_configuration_dialog, (HMENU)ID_BUTTON_CONFIGURATION_COD5_PATH, app_handles.hInstance, NULL);
+  app_handles.hwnd_cod5_path_button = CreateWindowEx(NULL, "Button", "Browse for cod5mp.exe", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 680, 350, 190, 25, app_handles.hwnd_configuration_dialog, (HMENU)ID_BUTTON_CONFIGURATION_COD5_PATH, app_handles.hInstance, NULL);
   if (!app_handles.hwnd_cod5_path_button)
     return false;
 
@@ -6370,7 +6380,7 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
     DestroyWindow(app_handles.hwnd_re_confirmation_message);
   }
 
-  app_handles.hwnd_re_confirmation_message = CreateWindowEx(0, RICHEDIT_CLASS, nullptr, WS_BORDER | WS_VISIBLE | WS_CHILD | WS_VSCROLL | ES_MULTILINE | ES_LEFT | ES_AUTOVSCROLL | ES_READONLY, 220, 360, 450, 260, app_handles.hwnd_configuration_dialog, nullptr, app_handles.hInstance, nullptr);
+  app_handles.hwnd_re_confirmation_message = CreateWindowEx(0, RICHEDIT_CLASS, nullptr, WS_BORDER | WS_VISIBLE | WS_CHILD | WS_VSCROLL | ES_MULTILINE | ES_LEFT | ES_AUTOVSCROLL | ES_READONLY, 220, 390, 450, 260, app_handles.hwnd_configuration_dialog, nullptr, app_handles.hInstance, nullptr);
   if (!app_handles.hwnd_re_confirmation_message)
     return false;
 
@@ -6386,7 +6396,7 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
   if (app_handles.hwnd_save_settings_button) {
     DestroyWindow(app_handles.hwnd_save_settings_button);
   }
-  app_handles.hwnd_save_settings_button = CreateWindowEx(NULL, "Button", "Save changes", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 220, 630, 120, 25, app_handles.hwnd_configuration_dialog, (HMENU)ID_BUTTON_SAVE_CHANGES, app_handles.hInstance, NULL);
+  app_handles.hwnd_save_settings_button = CreateWindowEx(NULL, "Button", "Save changes", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 220, 660, 120, 25, app_handles.hwnd_configuration_dialog, (HMENU)ID_BUTTON_SAVE_CHANGES, app_handles.hInstance, NULL);
   if (!app_handles.hwnd_save_settings_button)
     return false;
 
@@ -6394,7 +6404,7 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
     DestroyWindow(app_handles.hwnd_test_connection_button);
   }
 
-  app_handles.hwnd_test_connection_button = CreateWindowEx(NULL, "Button", "Test connection", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 360, 630, 140, 25, app_handles.hwnd_configuration_dialog, (HMENU)ID_BUTTON_TEST_CONNECTION, app_handles.hInstance, NULL);
+  app_handles.hwnd_test_connection_button = CreateWindowEx(NULL, "Button", "Test connection", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 360, 660, 140, 25, app_handles.hwnd_configuration_dialog, (HMENU)ID_BUTTON_TEST_CONNECTION, app_handles.hInstance, NULL);
 
   if (!app_handles.hwnd_test_connection_button)
     return false;
@@ -6402,7 +6412,7 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
   if (app_handles.hwnd_close_button) {
     DestroyWindow(app_handles.hwnd_close_button);
   }
-  app_handles.hwnd_close_button = CreateWindowEx(NULL, "Button", "Cancel", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 520, 630, 60, 25, app_handles.hwnd_configuration_dialog, (HMENU)ID_BUTTON_CANCEL, app_handles.hInstance, NULL);
+  app_handles.hwnd_close_button = CreateWindowEx(NULL, "Button", "Cancel", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 520, 660, 60, 25, app_handles.hwnd_configuration_dialog, (HMENU)ID_BUTTON_CANCEL, app_handles.hInstance, NULL);
 
   if (!app_handles.hwnd_close_button)
     return false;
@@ -6410,13 +6420,12 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
   if (app_handles.hwnd_exit_tinyrcon_button) {
     DestroyWindow(app_handles.hwnd_exit_tinyrcon_button);
   }
-  app_handles.hwnd_exit_tinyrcon_button = CreateWindowEx(NULL, "Button", "Exit TinyRcon", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 600, 630, 120, 25, app_handles.hwnd_configuration_dialog, reinterpret_cast<HMENU>(ID_BUTTON_CONFIGURATION_EXIT_TINYRCON), app_handles.hInstance, NULL);
+  app_handles.hwnd_exit_tinyrcon_button = CreateWindowEx(NULL, "Button", "Exit TinyRcon", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 600, 660, 120, 25, app_handles.hwnd_configuration_dialog, reinterpret_cast<HMENU>(ID_BUTTON_CONFIGURATION_EXIT_TINYRCON), app_handles.hInstance, NULL);
 
   if (!app_handles.hwnd_exit_tinyrcon_button)
     return false;
 
-  // const string ip_address{ main_app.get_game_server().get_server_ip_address() };
-
+  SetWindowText(app_handles.hwnd_user_name, main_app.get_username().c_str());
   SetWindowText(app_handles.hwnd_server_name, main_app.get_game_server_name().c_str());
   SetWindowText(app_handles.hwnd_server_ip_address, main_app.get_game_server().get_server_ip_address().c_str());
   char buffer_port[8];
@@ -6478,8 +6487,8 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
   SetFocus(app_handles.hwnd_close_button);
 
   MSG wnd_msg{};
-  while (GetMessage(&wnd_msg, NULL, NULL, NULL) != 0) {
-
+  while (GetMessage(&wnd_msg, NULL, NULL, NULL) != 0)
+    {
     if (WM_KEYDOWN == wnd_msg.message && VK_ESCAPE == wnd_msg.wParam) {
       EnableWindow(app_handles.hwnd_main_window, TRUE);
       SetFocus(app_handles.hwnd_e_user_input);
@@ -6538,6 +6547,7 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
       else if (focused_hwnd == app_handles.hwnd_exit_tinyrcon_button)
         SetFocus(app_handles.hwnd_save_settings_button);
     }
+    TranslateMessage(&wnd_msg);
     DispatchMessage(&wnd_msg);
   }
 
@@ -6548,6 +6558,7 @@ void process_button_save_changes_click_event(HWND hwnd)
 {
 
   static char msg_buffer[1024];
+  string new_user_name;
   string new_server_name;
   string new_server_ip;
   uint_least16_t new_port{};
@@ -6555,12 +6566,23 @@ void process_button_save_changes_click_event(HWND hwnd)
   int new_refresh_time_period{ 5 };
   bool is_invalid_entry{};
 
-  GetWindowText(app_handles.hwnd_server_name, msg_buffer, std::size(msg_buffer));
+  GetWindowText(app_handles.hwnd_user_name, msg_buffer, std::size(msg_buffer));
   if (stl::helper::len(msg_buffer) > 0) {
-    new_server_name.assign(msg_buffer);
+    new_user_name.assign(msg_buffer);
   } else {
     is_invalid_entry = true;
-    print_colored_text(app_handles.hwnd_re_confirmation_message, "^1Server name cannot be left empty!\n", true, false, false);
+    print_colored_text(app_handles.hwnd_re_confirmation_message, "^1Admin name cannot be left empty!\n", true, false, false);
+  }
+
+  if (!is_invalid_entry) {
+
+    GetWindowText(app_handles.hwnd_server_name, msg_buffer, std::size(msg_buffer));
+    if (stl::helper::len(msg_buffer) > 0) {
+      new_server_name.assign(msg_buffer);
+    } else {
+      is_invalid_entry = true;
+      print_colored_text(app_handles.hwnd_re_confirmation_message, "^1Server name cannot be left empty!\n", true, false, false);
+    }
   }
 
   if (!is_invalid_entry) {
@@ -6614,7 +6636,7 @@ void process_button_save_changes_click_event(HWND hwnd)
   }
 
   if (!is_invalid_entry) {
-    (void)snprintf(msg_buffer, std::size(msg_buffer), "\n^2Testing connection with the specified game server (^5%s^2) at ^5%s:%d ^2using the following ^5Tiny^6Rcon ^2settings:\n^1Server name: ^5%s\n^1Server IP address: ^5%s\n^1Server port number: ^5%d\n^1Server rcon password: ^5%s\n^1Refresh time period: ^5%d second(s)\n", new_server_name.c_str(), new_server_ip.c_str(), new_port, new_server_name.c_str(), new_server_ip.c_str(), new_port, new_rcon_password.c_str(), new_refresh_time_period);
+    (void)snprintf(msg_buffer, std::size(msg_buffer), "\n^2Testing connection with the specified game server (^5%s^2) at ^5%s:%d ^2using the following ^5Tiny^6Rcon ^2settings:\n^1Admin name: ^5%s\n^1Server name: ^5%s\n^1Server IP address: ^5%s\n^1Server port number: ^5%d\n^1Server rcon password: ^5%s\n^1Refresh time period: ^5%d second(s)\n", new_server_name.c_str(), new_server_ip.c_str(), new_port, new_user_name.c_str(), new_server_name.c_str(), new_server_ip.c_str(), new_port, new_rcon_password.c_str(), new_refresh_time_period);
     print_colored_text(app_handles.hwnd_re_confirmation_message, msg_buffer, true, false, false);
     const auto [test_result, game_name] = check_if_specified_server_ip_port_and_rcon_password_are_valid(new_server_ip.c_str(), new_port, new_rcon_password.c_str());
     if (test_result) {
@@ -6625,9 +6647,10 @@ void process_button_save_changes_click_event(HWND hwnd)
       print_colored_text(app_handles.hwnd_re_confirmation_message, "^1Testing connection FAILED!\n", true, false, false);
     }
 
-    (void)snprintf(msg_buffer, std::size(msg_buffer), "\n^2Saving the following ^5Tiny^6Rcon ^2settings:\n^1Server name: ^5%s\n^1Server IP address: ^5%s\n^1Server port number: ^5%d\n^1Server rcon password: ^5%s\n^1Refresh time period: ^5%d\n", new_server_name.c_str(), new_server_ip.c_str(), new_port, new_rcon_password.c_str(), new_refresh_time_period);
+    (void)snprintf(msg_buffer, std::size(msg_buffer), "\n^2Saving the following ^5Tiny^6Rcon ^2settings:\n^1Admin name: ^5%s\n^1Server name: ^5%s\n^1Server IP address: ^5%s\n^1Server port number: ^5%d\n^1Server rcon password: ^5%s\n^1Refresh time period: ^5%d\n", new_user_name.c_str(), new_server_name.c_str(), new_server_ip.c_str(), new_port, new_rcon_password.c_str(), new_refresh_time_period);
     print_colored_text(app_handles.hwnd_re_confirmation_message, msg_buffer, true, false, false);
 
+    main_app.set_username(std::move(new_user_name));
     main_app.set_game_name(game_name);
     main_app.set_game_server_name(std::move(new_server_name));
     main_app.get_game_server().set_server_ip_address(std::move(new_server_ip));
@@ -6674,12 +6697,21 @@ void process_button_save_changes_click_event(HWND hwnd)
 void process_button_test_connection_click_event(HWND)
 {
   static char msg_buffer[1024];
+  string new_user_name;
   string new_server_name;
   string new_server_ip;
   uint_least16_t new_port{};
   string new_rcon_password;
   int new_refresh_time_period{ 5 };
   bool is_invalid_entry{};
+
+  GetWindowText(app_handles.hwnd_user_name, msg_buffer, std::size(msg_buffer));
+  if (stl::helper::len(msg_buffer) > 0) {
+    new_user_name.assign(msg_buffer);
+  } else {
+    is_invalid_entry = true;
+    print_colored_text(app_handles.hwnd_re_confirmation_message, "^1Admin name text field cannot be empty!\n", true, false, false);
+  }
 
   GetWindowText(app_handles.hwnd_server_name, msg_buffer, std::size(msg_buffer));
   if (stl::helper::len(msg_buffer) > 0) {
@@ -6688,6 +6720,7 @@ void process_button_test_connection_click_event(HWND)
     is_invalid_entry = true;
     print_colored_text(app_handles.hwnd_re_confirmation_message, "^1Server name text field cannot be empty!\n", true, false, false);
   }
+
 
   GetWindowText(app_handles.hwnd_server_ip_address, msg_buffer, std::size(msg_buffer));
   const auto ip_len{ stl::helper::len(msg_buffer) };
@@ -6733,7 +6766,7 @@ void process_button_test_connection_click_event(HWND)
   }
 
   if (!is_invalid_entry) {
-    (void)snprintf(msg_buffer, std::size(msg_buffer), "\n^2Testing connection with the specified game server (^5%s^2) at ^5%s:%d ^2using the following ^5Tiny^6Rcon ^2settings:\n^1Server name: ^5%s\n^1Server IP address: ^5%s\n^1Server port number: ^5%d\n^1Server rcon password: ^5%s\n^1Refresh time period: ^5%d second(s)\n", new_server_name.c_str(), new_server_ip.c_str(), new_port, new_server_name.c_str(), new_server_ip.c_str(), new_port, new_rcon_password.c_str(), new_refresh_time_period);
+    (void)snprintf(msg_buffer, std::size(msg_buffer), "\n^2Testing connection with the specified game server (^5%s^2) at ^5%s:%d ^2using the following ^5Tiny^6Rcon ^2settings:\n^1Admin name: ^5%s\n^1Server name: ^5%s\n^1Server IP address: ^5%s\n^1Server port number: ^5%d\n^1Server rcon password: ^5%s\n^1Refresh time period: ^5%d second(s)\n", new_server_name.c_str(), new_server_ip.c_str(), new_port, new_user_name.c_str(), new_server_name.c_str(), new_server_ip.c_str(), new_port, new_rcon_password.c_str(), new_refresh_time_period);
     print_colored_text(app_handles.hwnd_re_confirmation_message, msg_buffer, true, false, false);
     const auto [test_result, game_name] = check_if_specified_server_ip_port_and_rcon_password_are_valid(new_server_ip.c_str(), new_port, new_rcon_password.c_str());
     if (test_result) {
@@ -7379,59 +7412,3 @@ HWND CreateAVerticalScrollBar(HWND hwndParent, HINSTANCE hInstance, const int sb
     // pointer not needed
     ));
 }
-
-//void redraw(HWND hWnd)
-//{
-//  char msg_buffer[256];
-//  PAINTSTRUCT ps{};
-//
-//  HDC hdc = BeginPaint(hWnd, &ps);
-//
-//  SetBkMode(hdc, OPAQUE);
-//  SetBkColor(hdc, color::black);
-//  SetTextColor(hdc, color::red);
-//
-//  RECT bounding_rectangle = {
-//    screen_width / 2 + 170, screen_height / 2 + 27, screen_width / 2 + 210, screen_height / 2 + 47
-//  };
-//  DrawText(hdc, "Map:", -1, &bounding_rectangle, DT_SINGLELINE | DT_TOP | DT_LEFT);
-//
-//  bounding_rectangle = { screen_width / 2 + 370, screen_height / 2 + 27, screen_width / 2 + 450, screen_height / 2 + 47 };
-//  DrawText(hdc, "Gametype:", -1, &bounding_rectangle, DT_SINGLELINE | DT_TOP | DT_LEFT);
-//
-//  bounding_rectangle = {
-//    10,
-//    screen_height - 75,
-//    120,
-//    screen_height - 55
-//  };
-//
-//  DrawText(hdc, prompt_message, -1, &bounding_rectangle, DT_SINGLELINE | DT_TOP | DT_LEFT | DT_END_ELLIPSIS);
-//
-//  bounding_rectangle = {
-//    screen_width - 270,
-//    screen_height - 105,
-//    screen_width - 5,
-//    screen_height - 85,
-//  };
-//
-//  if (!is_tinyrcon_initialized) {
-//    DrawText(hdc, "Configuring and initializing tinyrcon.", -1, &bounding_rectangle, DT_SINGLELINE | DT_TOP | DT_LEFT);
-//
-//  } else {
-//
-//    const size_t time_period = main_app.get_game_server().get_check_for_banned_players_time_period();
-//
-//    atomic_counter.store(std::min<size_t>(atomic_counter.load(), time_period));
-//
-//    if (atomic_counter.load() == time_period) {
-//      DrawText(hdc, "Refreshing players data now...", -1, &bounding_rectangle, DT_SINGLELINE | DT_TOP | DT_LEFT);
-//    } else {
-//      const size_t remaining_seconds{ time_period - atomic_counter.load() };
-//      (void)snprintf(msg_buffer, std::size(msg_buffer), refresh_players_data_fmt_str, remaining_seconds, (remaining_seconds != 1 ? "seconds" : "second"));
-//      DrawText(hdc, msg_buffer, -1, &bounding_rectangle, DT_SINGLELINE | DT_TOP | DT_LEFT);
-//    }
-//  }
-//
-//  EndPaint(hWnd, &ps);
-//}

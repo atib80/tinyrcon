@@ -105,7 +105,7 @@
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <EnableModules>false</EnableModules>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>include;I:\Programming\source\repos\TinyRconGUI\deps\asio-1.26.0\include;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include;$(SolutionDir)deps\asio-1.26.0\include;I:\Programming\source\repos\TinyRconGUI\deps\asio-1.26.0\include;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -131,7 +131,7 @@
       <ExceptionHandling>Sync</ExceptionHandling>
       <StringPooling>true</StringPooling>
       <EnableModules>false</EnableModules>
-      <AdditionalIncludeDirectories>include;I:\Programming\source\repos\TinyRconGUI\deps\asio-1.26.0\include;$(SolutionDir)include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include;$(SolutionDir)deps\asio-1.26.0\include;deps\asio-1.26.0\include;$(SolutionDir)include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -155,7 +155,7 @@
       <Optimization>MaxSpeed</Optimization>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <EnableModules>true</EnableModules>
-      <AdditionalIncludeDirectories>include;I:\Programming\source\repos\TinyRconGUI\deps\asio-1.26.0\include;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include;$(SolutionDir)deps\asio-1.26.0\include;I:\Programming\source\repos\TinyRconGUI\deps\asio-1.26.0\include;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -174,7 +174,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <EnableModules>true</EnableModules>
-      <AdditionalIncludeDirectories>include;I:\Programming\source\repos\TinyRconGUI\deps\asio-1.26.0\include;$(SolutionDir)include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include;$(SolutionDir)deps\asio-1.26.0\include;I:\Programming\source\repos\TinyRconGUI\deps\asio-1.26.0\include;$(SolutionDir)include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -191,7 +191,7 @@
     <ClInclude Include="include\json_parser.hpp" />
     <ClInclude Include="include\simple_grid.h" />
     <ClInclude Include="include\stl_helper_functions.hpp" />
-    <ClInclude Include="include\targetver.h" />
+    <ClInclude Include="targetver.h" />
     <ClInclude Include="include\tiny_rcon.h" />
     <ClInclude Include="include\tiny_cod2_rcon_client_application.h" />
     <ClInclude Include="include\tiny_rcon_utility_functions.h" />
@@ -465,7 +465,6 @@
     <Image Include="data\images\flags\za.bmp" />
     <Image Include="data\images\flags\zm.bmp" />
     <Image Include="data\images\flags\zw.bmp" />
-    <Image Include="small.ico" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".clang-format" />

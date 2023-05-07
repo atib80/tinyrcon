@@ -75,32 +75,39 @@ extern const char *user_help_message =
 ^3>> Press ^1F4 ^3to sort players data by their 'name' values in ascending/descending order.
 ^5>> Press ^1F5 ^5to sort players data by their 'IP address' values in ascending/descending order.
 ^3>> Press ^1F6 ^3to sort players data by their 'country - city' values in ascending/descending order.
-^5>> Press ^1F8 ^5to refresh current status of players data.)";
+^5>> Press ^1F8 ^5to refresh current status of players data.
+^5>> Press ^1Ctrl + W ^5to warn player.
+^5>> Press ^1Ctrl + K ^5to kick player.
+^5>> Press ^1Ctrl + T ^5to temp-ban player.
+^5>> Press ^1Ctrl + B ^5to ban IP address of player.
+^5>> Press ^1Ctrl + S ^5to refresh players' data.
+^5>> Press ^1Ctrl + J ^5to connect to game server.
+^5>> Press ^1Ctrl + X ^5to exit TinyRcon.)";
 
 
 extern const std::unordered_map<string, sort_type> sort_mode_names_dict;
 
 extern const std::unordered_map<int, string> button_id_to_label_text{
-  { ID_WARNBUTTON, "Warn" },
-  { ID_KICKBUTTON, "Kick" },
-  { ID_TEMPBANBUTTON, "Tempban" },
-  { ID_IPBANBUTTON, "Ban IP" },
-  { ID_VIEWTEMPBANSBUTTON, "View temporary bans" },
-  { ID_VIEWIPBANSBUTTON, "View IP bans" },
-  { ID_REFRESHDATABUTTON, "Refresh data" },
-  { ID_CONNECTBUTTON, "Join server" },
-  { ID_CONNECTPRIVATESLOTBUTTON, "Join server (private slot)" },
-  { ID_SAY_BUTTON, "Send public message" },
-  { ID_TELL_BUTTON, "Send private message" },
-  { ID_QUITBUTTON, "Exit" },
-  { ID_LOADBUTTON, "Load map" },
+  { ID_WARNBUTTON, "&Warn" },
+  { ID_KICKBUTTON, "&Kick" },
+  { ID_TEMPBANBUTTON, "&Tempban" },
+  { ID_IPBANBUTTON, "&Ban IP" },
+  { ID_VIEWTEMPBANSBUTTON, "&View temporary bans" },
+  { ID_VIEWIPBANSBUTTON, "View &IP bans" },
+  { ID_REFRESHDATABUTTON, "Refre&sh data" },
+  { ID_CONNECTBUTTON, "&Join server" },
+  { ID_CONNECTPRIVATESLOTBUTTON, "Joi&n server (private slot)" },
+  { ID_SAY_BUTTON, "Send &public message" },
+  { ID_TELL_BUTTON, "Send p&rivate message" },
+  { ID_QUITBUTTON, "E&xit" },
+  { ID_LOADBUTTON, "&Load map" },
   { ID_YES_BUTTON, "Yes" },
   { ID_NO_BUTTON, "No" },
   { ID_BUTTON_SAVE_CHANGES, "Save changes" },
   { ID_BUTTON_TEST_CONNECTION, "Test connection" },
   { ID_BUTTON_CANCEL, "Cancel" },
-  { ID_BUTTON_CONFIGURE_SERVER_SETTINGS, "Configure settings" },
-  { ID_CLEARMESSAGESCREENBUTTON, "Clear messages" },
+  { ID_BUTTON_CONFIGURE_SERVER_SETTINGS, "Confi&gure settings" },
+  { ID_CLEARMESSAGESCREENBUTTON, "&Clear messages" },
   { ID_BUTTON_CONFIGURATION_EXIT_TINYRCON, "Exit TinyRcon" },
   { ID_BUTTON_CONFIGURATION_COD1_PATH, "Browse for codmp.exe" },
   { ID_BUTTON_CONFIGURATION_COD2_PATH, "Browse for cod2mp_s.exe" },
@@ -119,7 +126,6 @@ extern const size_t max_players_grid_rows;
 tiny_rcon_handles app_handles{};
 
 WNDCLASSEX wcex, wcex_confirmation_dialog, wcex_configuration_dialog;
-HFONT hfontbody{};
 
 int selected_row{};
 int selected_col{};
@@ -139,6 +145,9 @@ const HBRUSH RED_BRUSH{ CreateSolidBrush(color::red) };
 atomic<int> admin_choice{ 0 };
 string admin_reason{ "not specified" };
 extern HIMAGELIST hImageList;
+HFONT hfontbody{};
+// HFONT btnFontForUnderNormalText{};
+// HFONT btnFontForUnderLinedText{};
 
 ATOM MyRegisterClass(HINSTANCE hInstance);
 BOOL InitInstance(HINSTANCE, int);
@@ -155,11 +164,24 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   InitCommonControls();
   LoadLibrary("Riched20.dll");
 
+  HACCEL hAccel = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDR_ACCELERATOR1));
+
   MyRegisterClass(hInstance);
+
 
   if (!InitInstance(hInstance, nCmdShow)) {
     return FALSE;
   }
+
+  // LOGFONT buttonLabelLogFont{};
+  //// ZeroMemory(&buttonLabelLogFont, sizeof(buttonLabelLogFont));
+  // buttonLabelLogFont.lfHeight = 14;
+  // buttonLabelLogFont.lfWeight = FW_HEAVY;
+  // buttonLabelLogFont.lfUnderline = 1;
+  // lstrcpy(buttonLabelLogFont.lfFaceName, "Arial");
+  // btnFontForUnderLinedText = ::CreateFontIndirect(&buttonLabelLogFont);
+  // buttonLabelLogFont.lfUnderline = 0;
+  // btnFontForUnderNormalText = ::CreateFontIndirect(&buttonLabelLogFont);
 
   parse_tiny_cod2_rcon_tool_config_file("config\\tinyrcon.json");
 
@@ -268,13 +290,23 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   task_thread.detach();
 
   while (GetMessage(&msg, nullptr, 0, 0)) {
-
-    if (IsDialogMessage(app_handles.hwnd_main_window, &msg) == 0) {
+    if (TranslateAccelerator(app_handles.hwnd_main_window, hAccel, &msg) != 0) {
+      TranslateMessage(&msg);
+      DispatchMessage(&msg);
+      SetWindowText(app_handles.hwnd_e_user_input, "");
+    } else if (IsDialogMessage(app_handles.hwnd_main_window, &msg) == 0) {
       TranslateMessage(&msg);
       if (msg.message == WM_KEYDOWN) {
         process_key_down_message(msg);
       }
       DispatchMessage(&msg);
+      // SetWindowText(app_handles.hwnd_e_user_input, "");
+    } else if (msg.message == WM_KEYDOWN) {
+      process_key_down_message(msg);
+    } else if (msg.message == WM_RBUTTONDOWN && app_handles.hwnd_players_grid == GetFocus()) {
+      const int x{ GET_X_LPARAM(msg.lParam) };
+      const int y{ GET_Y_LPARAM(msg.lParam) };
+      display_context_menu_over_grid(x, y, selected_row);
     }
 
     if (is_main_window_constructed && !is_tinyrcon_initialized) {
@@ -303,15 +335,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       SendMessage(app_handles.hwnd_progress_bar, PBM_SETPOS, 0, 0);
       SetTimer(app_handles.hwnd_main_window, ID_TIMER, 1000, nullptr);
     }
-
-
-    if (msg.message == WM_KEYDOWN) {
-      process_key_down_message(msg);
-    } else if (msg.message == WM_RBUTTONDOWN && app_handles.hwnd_players_grid == GetFocus()) {
-      const int x{ GET_X_LPARAM(msg.lParam) };
-      const int y{ GET_Y_LPARAM(msg.lParam) };
-      display_context_menu_over_grid(x, y, selected_row);
-    }
   }
 
   is_terminate_program.store(true);
@@ -327,6 +350,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
   log_message("Exiting TinyRcon program.", true);
 
+  DestroyAcceleratorTable(hAccel);
+
   // export_geoip_data(main_app.get_connection_manager().get_geoip_data(), "plugins/geoIP/geo.dat");
 
   if (wcex.hbrBackground != nullptr)
@@ -335,6 +360,10 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     DeleteObject((HGDIOBJ)RED_BRUSH);
   if (hfontbody != NULL)
     DeleteFont(hfontbody);
+  // if (btnFontForUnderLinedText != NULL)
+  //   DeleteFont(btnFontForUnderLinedText);
+  // if (btnFontForUnderNormalText != NULL)
+  //   DeleteFont(btnFontForUnderNormalText);
   if (hImageList)
     ImageList_Destroy(hImageList);
   UnregisterClass(wcex.lpszClassName, app_handles.hInstance);
@@ -551,7 +580,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
         SetTextColor(item->hdc, color::red);
         SetBkMode(item->hdc, TRANSPARENT);
-        DrawText(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
+        DrawTextEx(item->hdc, (char *)button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER, nullptr);
         return CDRF_SKIPDEFAULT;
       } else {
         if (item->uItemState & CDIS_HOT) {
@@ -571,7 +600,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
           SetTextColor(item->hdc, color::red);
           SetBkMode(item->hdc, TRANSPARENT);
-          DrawText(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
+          DrawTextEx(item->hdc, (char *)button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER, nullptr);
           return CDRF_SKIPDEFAULT;
         }
 
@@ -591,7 +620,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
         SetTextColor(item->hdc, color::red);
         SetBkMode(item->hdc, TRANSPARENT);
-        DrawText(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
+        DrawTextEx(item->hdc, (char *)button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER, nullptr);
         return CDRF_SKIPDEFAULT;
       }
     }

@@ -1,7 +1,6 @@
 #pragma once
 #define ASIO_STANDALONE
 #include <asio.hpp>
-#include <asio/system_error.hpp>
 #include <string>
 #include "tiny_rcon_utility_functions.h"
 
