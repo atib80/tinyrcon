@@ -191,6 +191,7 @@
     <ClInclude Include="include\json_parser.hpp" />
     <ClInclude Include="include\simple_grid.h" />
     <ClInclude Include="include\stl_helper_functions.hpp" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="include\tiny_rcon.h" />
     <ClInclude Include="include\tiny_cod2_rcon_client_application.h" />
