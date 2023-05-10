@@ -253,10 +253,10 @@ public:
     max_private_clients = new_max_private_clients;
   }
 
-  std::vector<player_data> &get_tempbanned_players_to_unban() noexcept
-  {
-    return tempbanned_players_to_unban;
-  }
+  //std::vector<player_data> &get_tempbanned_players_to_unban() noexcept
+  //{
+  //  return tempbanned_players_to_unban;
+  //}
 
   std::vector<player_data> &get_players_data() noexcept
   {
@@ -668,7 +668,7 @@ private:
   unordered_set<string> banned_ip_addresses;
   vector<player_data> players_data;
   vector<player_data> tempbanned_players_data;
-  vector<player_data> tempbanned_players_to_unban;
+  // vector<player_data> tempbanned_players_to_unban;
   vector<player_data> banned_players_data;
   unordered_map<int, player_data> warned_players_data;
   string short_version{ "1.0" };

@@ -238,21 +238,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
       display_tempbanned_players_remaining_time_period();
 
-
-      for (auto &temp_banned_player_data : main_app.get_game_server().get_tempbanned_players_to_unban()) {
-
-        const time_t ban_expires_time = temp_banned_player_data.banned_start_time + (temp_banned_player_data.ban_duration_in_hours * 3600);
-        string message{ main_app.get_automatic_remove_temp_ban_msg() };
-        main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
-        main_app.get_tinyrcon_dict()["{PLAYERNAME}"] = temp_banned_player_data.player_name;
-        main_app.get_tinyrcon_dict()["{TEMP_BAN_START_DATE}"] = get_date_and_time_for_time_t(temp_banned_player_data.banned_start_time);
-        main_app.get_tinyrcon_dict()["{TEMP_BAN_END_DATE}"] = get_date_and_time_for_time_t(ban_expires_time);
-        main_app.get_tinyrcon_dict()["{REASON}"] = temp_banned_player_data.reason;
-        build_tiny_rcon_message(message);
-        remove_temp_banned_ip_address(temp_banned_player_data.ip_address, message, true);
-      }
-
-      main_app.get_game_server().get_tempbanned_players_to_unban().clear();
       is_main_window_constructed = true;
 
       while (!should_program_terminate()) {

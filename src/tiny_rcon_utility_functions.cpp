@@ -1401,14 +1401,13 @@ void parse_tempbans_data_file()
     }
   } else {
     main_app.get_game_server().get_temp_banned_players_data().clear();
-    string readData;
-    const time_t current_time = std::time(nullptr);
+    string readData;    
     while (getline(banned_tempbans_file_read, readData)) {
       stl::helper::trim_in_place(readData, " \t\n");
       vector<string> parts{ stl::helper::str_split(readData, "\\", "", true, false) };
       for (auto &part : parts)
         stl::helper::trim_in_place(part, " \t\n");
-      player_data temp_banned_player_data;
+      player_data temp_banned_player_data{};
       if (parts.size() < 6)
         continue;
       strcpy_s(temp_banned_player_data.ip_address, std::size(temp_banned_player_data.ip_address), parts[0].c_str());
@@ -1421,14 +1420,9 @@ void parse_tempbans_data_file()
         main_app.get_connection_manager().get_geoip_data(),
         temp_banned_player_data.ip_address,
         temp_banned_player_data);
-      const time_t ban_expires_time = temp_banned_player_data.banned_start_time + (temp_banned_player_data.ban_duration_in_hours * 3600);
-      if (ban_expires_time <= current_time) {
-        main_app.get_game_server().get_tempbanned_players_to_unban().push_back(std::move(temp_banned_player_data));
-      } else {
-        main_app.get_game_server().add_ip_address_to_set_of_temp_banned_ip_addresses(
-          temp_banned_player_data.ip_address);
-        main_app.get_game_server().get_temp_banned_players_data().emplace_back(std::move(temp_banned_player_data));
-      }
+      main_app.get_game_server().add_ip_address_to_set_of_temp_banned_ip_addresses(
+        temp_banned_player_data.ip_address);
+      main_app.get_game_server().get_temp_banned_players_data().emplace_back(std::move(temp_banned_player_data));
     }
   }
 }
@@ -1675,7 +1669,7 @@ bool remove_temp_banned_ip_address(const std::string &ip_address, std::string &m
       message.assign(buffer);
     }
 
-    rcon_say(message);
+    rcon_say(message, true);
 
     temp_banned_players.erase(remove_if(std::begin(temp_banned_players), std::end(temp_banned_players), [&ip_address](const player_data &p) {
       return ip_address == p.ip_address;
@@ -5650,7 +5644,7 @@ void display_tempbanned_players_remaining_time_period()
       main_app.get_tinyrcon_dict()["{TEMP_BAN_START_DATE}"] = get_date_and_time_for_time_t(pl.banned_start_time);
       main_app.get_tinyrcon_dict()["{TEMP_BAN_END_DATE}"] = get_date_and_time_for_time_t(ban_expires_time);
       main_app.get_tinyrcon_dict()["{REASON}"] = pl.reason;
-      string message;
+      string message{ main_app.get_automatic_remove_temp_ban_msg() };
       build_tiny_rcon_message(message);
       remove_temp_banned_ip_address(pl.ip_address, message, true);
     }

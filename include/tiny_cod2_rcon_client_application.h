@@ -29,17 +29,17 @@ class tiny_cod2_rcon_client_application
   string cod5mp_exe_path;
   string command_line_info;
   std::unordered_map<std::string, std::string> admin_messages{
-    { "user_defined_warn_msg", "^1{ADMINNAME}: ^7{PLAYERNAME} ^1you have been warned by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}" },
-    { "user_defined_kick_msg", "^1{ADMINNAME}: ^7{PLAYERNAME} ^1you are being kicked by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}" },
-    { "user_defined_temp_ban_msg", "^1{ADMINNAME}: ^7{PLAYERNAME} ^1you are being temporarily banned by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}" },
-    { "user_defined_ban_msg", "^1{ADMINNAME}: ^7{PLAYERNAME} ^1you are being banned by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}" },
-    { "user_defined_ip_ban_msg", "^1{ADMINNAME}: ^7{PLAYERNAME} ^1you are being permanently banned by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}" },
-    { "automatic_remove_temp_ban_msg", "^1{ADMINNAME}: ^7{PLAYERNAME}'s ^1tempban ^7[start date: ^3{TEMP_BAN_START_DATE} ^7expired on ^3{TEMP_BAN_END_DATE}] ^7has been automatically removed." },
+    { "user_defined_warn_msg", "^7{PLAYERNAME} ^1you have been warned by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}" },
+    { "user_defined_kick_msg", "^7{PLAYERNAME} ^1you are being kicked by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}" },
+    { "user_defined_temp_ban_msg", "^7{PLAYERNAME} ^7you are being ^1temporarily banned ^7for ^1{TEMPBAN_DURATION} hours ^7by ^1admin {ADMINNAME}.{{br}} ^3Reason: ^1{REASON}" },
+    { "user_defined_ban_msg", "^7{PLAYERNAME} ^1you are being banned by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}" },
+    { "user_defined_ip_ban_msg", "^7{PLAYERNAME} ^1you are being permanently banned by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}" },
+    { "automatic_remove_temp_ban_msg", "^1{ADMINNAME}: ^7{PLAYERNAME}'s ^1tempban ^7[start date: ^3{TEMP_BAN_START_DATE} ^7expired on ^3{TEMP_BAN_END_DATE}]{{br}} ^7has automatically been removed. ^5Reason of ban: ^1{REASON}" },
+    { "automatic_kick_temp_ban_msg", "^1{ADMINNAME}: ^7Temporarily banned player {PLAYERNAME} ^7is being automatically ^1kicked.{{br}} ^7Your temporary ban expires on ^1{TEMP_BAN_END_DATE}.{{br}} ^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{TEMP_BAN_START_DATE}" },
     {
-      "automatic_kick_temp_ban_msg",
-      "^1{ADMINNAME}: ^7Temporarily banned player {PLAYERNAME} ^7is being automatically ^1kicked.{{br}}^7Your temporary ban expires on ^1{TEMP_BAN_END_DATE}",
-    },
-    { "automatic_kick_ip_ban_msg", "^1{ADMINNAME}: ^7Player {PLAYERNAME} ^7with a previously ^1banned IP address ^7is being automatically ^1kicked." }
+      "automatic_kick_ip_ban_msg",
+      "^1{ADMINNAME}: ^7Player {PLAYERNAME} ^7with a previously ^1banned IP address ^7is being automatically ^1kicked.{{br}} ^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{IP_BAN_DATE}",
+    }
   };
 
   const std::unordered_map<game_name_t, std::string> game_names{
@@ -281,11 +281,6 @@ public:
   {
     is_draw_border_lines = new_value;
   }
-
-  //  bool get_is_log_file_open() const noexcept
-  //  {
-  //    return is_log_file_open;
-  //  }
 
   bool open_log_file(const char *file_path) noexcept
   {
