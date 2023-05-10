@@ -3880,23 +3880,34 @@ void build_tiny_rcon_message(std::string &msg)
 
 string get_time_interval_info_string_for_seconds(const time_t seconds)
 {
-  constexpr time_t seconds_in_day{ 24 * 3600 };
+  constexpr time_t seconds_in_day{ 3600LL * 24 };
   const time_t days = seconds / seconds_in_day;
   const time_t hours = (seconds - days * seconds_in_day) / 3600;
   const time_t minutes = (seconds - (days * seconds_in_day + hours * 3600)) / 60;
+  const time_t remaining_seconds = seconds - (days * seconds_in_day + hours * 3600 + minutes * 60);
   ostringstream oss;
   if (days != 0) {
-    oss << days << (days != 1 ? " days : " : " day : ");
+    oss << days << (days != 1 ? " days" : " day");
+    if (hours != 0 || minutes != 0)
+      oss << " : ";
   }
 
   if (hours != 0) {
-    oss << hours << (hours != 1 ? " hours : " : " hour : ");
+    oss << hours << (hours != 1 ? " hours" : " hour");
+    if (minutes != 0)
+      oss << " : ";
   }
 
   if (minutes != 0) {
     oss << minutes << (minutes != 1 ? " minutes" : " minute");
   }
 
+  string result{ oss.str() };
+  if (!result.empty())
+    return result;
+  if (remaining_seconds == 0)
+    return "just now";
+  oss << remaining_seconds << (remaining_seconds != 1 ? " seconds" : " second");
   return oss.str();
 }
 
