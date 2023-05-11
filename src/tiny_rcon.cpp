@@ -515,12 +515,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     bounding_rectangle = {
       10,
-      screen_height - 70,
-      120,
-      screen_height - 50
+      screen_height - 75,
+      130,
+      screen_height - 55
     };
 
-    DrawText(hdc, prompt_message, -1, &bounding_rectangle, DT_SINGLELINE | DT_TOP | DT_LEFT | DT_END_ELLIPSIS);
+    // DrawText(hdc, prompt_message, -1, &bounding_rectangle, DT_SINGLELINE | DT_TOP | DT_LEFT | DT_END_ELLIPSIS);
+    InvalidateRect(hWnd, &bounding_rectangle, TRUE);
     EndPaint(hWnd, &ps);
   }
 
@@ -621,14 +622,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     switch (wmId) {
 
     case ID_QUITBUTTON:
-      if (show_user_confirmation_dialog("^3Do you really want to quit?\n", "Quit TinyRcon?")) {
-        is_terminate_program.store(true);
-        {
-          unique_lock<mutex> ul{ mu };
-          exit_flag.notify_one();
-        }
-        PostQuitMessage(0);
+      // if (show_user_confirmation_dialog("^3Do you really want to exit?\n", "Exit TinyRcon?")) {
+      is_terminate_program.store(true);
+      {
+        unique_lock<mutex> ul{ mu };
+        exit_flag.notify_one();
       }
+      PostQuitMessage(0);
+      // }
       break;
 
     case ID_CLEARMESSAGESCREENBUTTON: {
@@ -911,9 +912,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     bounding_rectangle = {
       10,
-      screen_height - 70,
-      120,
-      screen_height - 50
+      screen_height - 75,
+      130,
+      screen_height - 55
     };
 
     DrawText(hdc, prompt_message, -1, &bounding_rectangle, DT_SINGLELINE | DT_TOP | DT_LEFT | DT_END_ELLIPSIS);
@@ -959,14 +960,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       return 0;
     break;
   case WM_CLOSE:
-    if (show_user_confirmation_dialog("^3Do you really want to quit?", "Quit TinyRcon?")) {
-      is_terminate_program.store(true);
-      {
-        lock_guard<mutex> ul{ mu };
-        exit_flag.notify_one();
-      }
-      DestroyWindow(app_handles.hwnd_main_window);
+    // if (show_user_confirmation_dialog("^3Do you really want to exit?", "Exit TinyRcon?")) {
+    is_terminate_program.store(true);
+    {
+      lock_guard<mutex> ul{ mu };
+      exit_flag.notify_one();
     }
+    DestroyWindow(app_handles.hwnd_main_window);
+    // }
     return 0;
 
 

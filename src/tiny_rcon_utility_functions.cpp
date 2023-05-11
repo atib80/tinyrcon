@@ -1401,7 +1401,7 @@ void parse_tempbans_data_file()
     }
   } else {
     main_app.get_game_server().get_temp_banned_players_data().clear();
-    string readData;    
+    string readData;
     while (getline(banned_tempbans_file_read, readData)) {
       stl::helper::trim_in_place(readData, " \t\n");
       vector<string> parts{ stl::helper::str_split(readData, "\\", "", true, false) };
@@ -5709,7 +5709,7 @@ void construct_tinyrcon_gui(HWND hWnd) noexcept
     print_colored_text(app_handles.hwnd_re_help_data, user_help_message, true, false, false);
   }
 
-  app_handles.hwnd_e_user_input = CreateWindowEx(0, "Edit", nullptr, WS_GROUP | WS_TABSTOP | WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT, 130, screen_height - 77, 260, 20, hWnd, reinterpret_cast<HMENU>(ID_USEREDIT), app_handles.hInstance, nullptr);
+  app_handles.hwnd_e_user_input = CreateWindowEx(0, "Edit", nullptr, WS_GROUP | WS_TABSTOP | WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT, 140, screen_height - 77, 250, 20, hWnd, reinterpret_cast<HMENU>(ID_USEREDIT), app_handles.hInstance, nullptr);
 
   app_handles.hwnd_button_warn = CreateWindowEx(NULL, "Button", "&Warn", WS_GROUP | WS_TABSTOP | BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 10, screen_height - 123, 80, 30, hWnd, reinterpret_cast<HMENU>(ID_WARNBUTTON), app_handles.hInstance, NULL);
 
@@ -6851,6 +6851,8 @@ void display_context_menu_over_grid(const int mouse_x, const int mouse_y, const 
   }
   InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_CONNECTBUTTON, "Join the game server");
   InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_CONNECTPRIVATESLOTBUTTON, "Join the game server using a private slot");
+  InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_SEPARATOR, NULL, nullptr);
+  InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_QUITBUTTON, "E&xit TinyRcon");
   SetForegroundWindow(app_handles.hwnd_main_window);
   POINT p{ mouse_x, mouse_y };
   ClientToScreen(app_handles.hwnd_players_grid, &p);
