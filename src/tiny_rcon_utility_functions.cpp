@@ -29,7 +29,7 @@ extern PROCESS_INFORMATION pr_info;
 extern sort_type type_of_sort;
 
 extern WNDCLASSEX wcex_confirmation_dialog, wcex_configuration_dialog;
-extern HFONT hfontbody;
+extern HFONT font_for_players_grid_data;
 extern RECT client_rect;
 
 extern const int screen_width;
@@ -41,7 +41,6 @@ extern const size_t max_players_grid_rows{ 64 };
 extern bool is_tinyrcon_initialized;
 std::atomic<bool> is_terminate_program{ false };
 volatile std::atomic<bool> is_terminate_tinyrcon_settings_configuration_dialog_window{ false };
-// extern volatile std::atomic<bool> is_refreshing_players_data;
 extern volatile std::atomic<bool> is_refresh_players_data_event;
 extern volatile std::atomic<bool> is_display_permanently_banned_players_data_event;
 extern volatile std::atomic<bool> is_display_temporarily_banned_players_data_event;
@@ -5872,7 +5871,7 @@ void initialize_players_grid(HWND hgrid, const size_t cols, const size_t rows, c
     }
   }
 
-  Grid_OnSetFont(app_handles.hwnd_players_grid, hfontbody, TRUE);
+  Grid_OnSetFont(app_handles.hwnd_players_grid, font_for_players_grid_data, TRUE);
   ShowHscroll(app_handles.hwnd_players_grid);
 
   const int players_grid_width{ screen_width / 2 + 130 };

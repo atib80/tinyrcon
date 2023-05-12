@@ -19,10 +19,10 @@ using namespace std::chrono;
 extern const string program_version{ "2.4" };
 
 extern char const *const tempbans_file_path =
-  "data\\tempbans.txt";
+  "data/tempbans.txt";
 
 extern char const *const banned_ip_addresses_file_path =
-  "data\\bans.txt";
+  "data/bans.txt";
 
 extern const std::regex ip_address_and_port_regex;
 
@@ -145,9 +145,7 @@ const HBRUSH RED_BRUSH{ CreateSolidBrush(color::red) };
 atomic<int> admin_choice{ 0 };
 string admin_reason{ "not specified" };
 extern HIMAGELIST hImageList;
-HFONT hfontbody{};
-// HFONT btnFontForUnderNormalText{};
-// HFONT btnFontForUnderLinedText{};
+HFONT font_for_players_grid_data{};
 
 ATOM MyRegisterClass(HINSTANCE hInstance);
 BOOL InitInstance(HINSTANCE, int);
@@ -173,17 +171,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     return FALSE;
   }
 
-  // LOGFONT buttonLabelLogFont{};
-  //// ZeroMemory(&buttonLabelLogFont, sizeof(buttonLabelLogFont));
-  // buttonLabelLogFont.lfHeight = 14;
-  // buttonLabelLogFont.lfWeight = FW_HEAVY;
-  // buttonLabelLogFont.lfUnderline = 1;
-  // lstrcpy(buttonLabelLogFont.lfFaceName, "Arial");
-  // btnFontForUnderLinedText = ::CreateFontIndirect(&buttonLabelLogFont);
-  // buttonLabelLogFont.lfUnderline = 0;
-  // btnFontForUnderNormalText = ::CreateFontIndirect(&buttonLabelLogFont);
-
-  parse_tiny_cod2_rcon_tool_config_file("config\\tinyrcon.json");
+  parse_tiny_cod2_rcon_tool_config_file("config/tinyrcon.json");
 
   main_app.set_command_line_info(user_help_message);
 
@@ -201,7 +189,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   get_status_grid_column_header_titles[3] = main_app.get_game_server().get_header_player_name_color() + "Player name"s;
 
   construct_tinyrcon_gui(app_handles.hwnd_main_window);
-  main_app.open_log_file("log\\commands_history.log");
+  main_app.open_log_file("log/commands_history.log");
 
   print_colored_text(app_handles.hwnd_re_messages_data, "^3Started parsing ^1tinyrcon.json ^3file.\n", true, true, true);
   print_colored_text(app_handles.hwnd_re_messages_data, "^2Finished parsing ^1tinyrcon.json ^3file.\n", true, true, true);
@@ -327,10 +315,10 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     exit_flag.notify_one();
   }
 
-  if (!check_if_call_of_duty_2_game_is_running()) {
+  if (pr_info.hProcess != NULL)
     CloseHandle(pr_info.hProcess);
+  if (pr_info.hThread != NULL)
     CloseHandle(pr_info.hThread);
-  }
 
   log_message("Exiting TinyRcon program.", true);
 
@@ -342,19 +330,15 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     DeleteObject((HGDIOBJ)wcex.hbrBackground);
   if (RED_BRUSH != NULL)
     DeleteObject((HGDIOBJ)RED_BRUSH);
-  if (hfontbody != NULL)
-    DeleteFont(hfontbody);
-  // if (btnFontForUnderLinedText != NULL)
-  //   DeleteFont(btnFontForUnderLinedText);
-  // if (btnFontForUnderNormalText != NULL)
-  //   DeleteFont(btnFontForUnderNormalText);
+  if (font_for_players_grid_data != NULL)
+    DeleteFont(font_for_players_grid_data);
   if (hImageList)
     ImageList_Destroy(hImageList);
   UnregisterClass(wcex.lpszClassName, app_handles.hInstance);
   UnregisterClass(wcex_confirmation_dialog.lpszClassName, app_handles.hInstance);
   UnregisterClass(wcex_configuration_dialog.lpszClassName, app_handles.hInstance);
 
-  return (int)msg.wParam;
+  return static_cast<int>(msg.wParam);
 }
 
 //
@@ -441,14 +425,11 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
   icex.dwICC = ICC_PROGRESS_CLASS;
   InitCommonControlsEx(&icex);
 
-  hfontbody = CreateFont(0, 0, 0, 0, FW_DONTCARE, FALSE, FALSE, FALSE, RUSSIAN_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, PROOF_QUALITY, FIXED_PITCH | FF_DECORATIVE, "Lucida Console");
+  font_for_players_grid_data = CreateFont(0, 0, 0, 0, FW_DONTCARE, FALSE, FALSE, FALSE, RUSSIAN_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, PROOF_QUALITY, FIXED_PITCH | FF_DECORATIVE, "Lucida Console");
 
   // AdjustWindowRectEx(&client_rect, WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME, FALSE, 0);
 
   app_handles.hwnd_main_window = CreateWindowEx(0, wcex.lpszClassName, "Welcome to TinyRcon | version: 2.4", WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME /*WS_OVERLAPPEDWINDOW | WS_HSCROLL | WS_VSCROLL*/, client_rect.left, client_rect.top, client_rect.right - client_rect.left, client_rect.bottom - client_rect.top, nullptr, nullptr, hInstance, nullptr);
-
-  // CreateAHorizontalScrollBar(app_handles.hwnd_main_window, hInstance, 20);
-  // CreateAVerticalScrollBar(app_handles.hwnd_main_window, hInstance, 20);
 
   if (!app_handles.hwnd_main_window)
     return FALSE;
@@ -476,8 +457,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
   HBRUSH defaultbrush{};
   HBRUSH hotbrush{};
   HBRUSH selectbrush{};
-  HPEN pen{};
   PAINTSTRUCT ps;
+  static HPEN red_pen{};
+  static HPEN light_blue_pen{};
 
   switch (message) {
 
@@ -552,16 +534,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         if (!selectbrush)
           selectbrush = CreateSolidBrush(color::yellow);
 
-        if (!pen) pen = CreatePen(PS_SOLID, 2, color::red);
+        if (!red_pen)
+          red_pen = CreatePen(PS_SOLID, 2, color::red);
 
-        HGDIOBJ old_pen = SelectObject(item->hdc, pen);
+        HGDIOBJ old_pen = SelectObject(item->hdc, red_pen);
         HGDIOBJ old_brush = SelectObject(item->hdc, selectbrush);
 
         Rectangle(item->hdc, item->rc.left, item->rc.top, item->rc.right, item->rc.bottom);
 
         SelectObject(item->hdc, old_pen);
         SelectObject(item->hdc, old_brush);
-        DeleteObject(pen);
 
         SetTextColor(item->hdc, color::red);
         SetBkMode(item->hdc, TRANSPARENT);
@@ -572,16 +554,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
           if (!hotbrush)
             hotbrush = CreateSolidBrush(color::yellow);
 
-          if (!pen) pen = CreatePen(PS_SOLID, 2, color::red);
+          if (!red_pen)
+            red_pen = CreatePen(PS_SOLID, 2, color::red);
 
-          HGDIOBJ old_pen = SelectObject(item->hdc, pen);
+          HGDIOBJ old_pen = SelectObject(item->hdc, red_pen);
           HGDIOBJ old_brush = SelectObject(item->hdc, hotbrush);
 
           Rectangle(item->hdc, item->rc.left, item->rc.top, item->rc.right, item->rc.bottom);
 
           SelectObject(item->hdc, old_pen);
           SelectObject(item->hdc, old_brush);
-          DeleteObject(pen);
 
           SetTextColor(item->hdc, color::red);
           SetBkMode(item->hdc, TRANSPARENT);
@@ -592,16 +574,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         if (defaultbrush == NULL)
           defaultbrush = CreateSolidBrush(color::light_blue);
 
-        if (!pen) pen = CreatePen(PS_SOLID, 2, color::light_blue);
+        if (!light_blue_pen)
+          light_blue_pen = CreatePen(PS_SOLID, 2, color::light_blue);
 
-        HGDIOBJ old_pen = SelectObject(item->hdc, pen);
+        HGDIOBJ old_pen = SelectObject(item->hdc, light_blue_pen);
         HGDIOBJ old_brush = SelectObject(item->hdc, defaultbrush);
 
         Rectangle(item->hdc, item->rc.left, item->rc.top, item->rc.right, item->rc.bottom);
 
         SelectObject(item->hdc, old_pen);
         SelectObject(item->hdc, old_brush);
-        DeleteObject(pen);
 
         SetTextColor(item->hdc, color::red);
         SetBkMode(item->hdc, TRANSPARENT);
@@ -721,7 +703,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
           }
         }
       } else {
-        print_colored_text(app_handles.hwnd_re_messages_data, "\n^3You have selected an empty line ^1(invalid pid index)\n ^3in the players' data table!\n^5Please, select a non-empty, valid player's row.\n", true, true, true);
+        print_colored_text(app_handles.hwnd_re_messages_data, "^3You have selected an empty line ^1(invalid pid index)\n ^3in the players' data table!\n^5Please, select a non-empty, valid player's row.\n", true, true, true);
       }
     } break;
 
@@ -741,7 +723,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
           }
         }
       } else {
-        print_colored_text(app_handles.hwnd_re_messages_data, "\n^3You have selected an empty line ^1(invalid pid index)\n ^3in the players' data table!\n^5Please, select a non-empty, valid player's row.\n", true, true, true);
+        print_colored_text(app_handles.hwnd_re_messages_data, "^3You have selected an empty line ^1(invalid pid index)\n ^3in the players' data table!\n^5Please, select a non-empty, valid player's row.\n", true, true, true);
       }
 
     } break;
@@ -762,7 +744,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
           }
         }
       } else {
-        print_colored_text(app_handles.hwnd_re_messages_data, "\n^3You have selected an empty line ^1(invalid pid index)\n ^3in the players' data table!\n^5Please, select a non-empty, valid player's row.\n", true, true, true);
+        print_colored_text(app_handles.hwnd_re_messages_data, "^3You have selected an empty line ^1(invalid pid index)\n ^3in the players' data table!\n^5Please, select a non-empty, valid player's row.\n", true, true, true);
       }
 
     } break;
@@ -783,7 +765,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
           }
         }
       } else {
-        print_colored_text(app_handles.hwnd_re_messages_data, "\n^3You have selected an empty line ^1(invalid pid index)\n ^3in the players' data table!\n^5Please, select a non-empty, valid player's row.\n", true, true, true);
+        print_colored_text(app_handles.hwnd_re_messages_data, "^3You have selected an empty line ^1(invalid pid index)\n ^3in the players' data table!\n^5Please, select a non-empty, valid player's row.\n", true, true, true);
       }
 
     } break;
@@ -982,6 +964,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     if (defaultbrush) DeleteBrush(defaultbrush);
     if (hotbrush) DeleteBrush(hotbrush);
     if (selectbrush) DeleteBrush(selectbrush);
+    if (red_pen) DeletePen(red_pen);
+    if (light_blue_pen) DeletePen(light_blue_pen);
     PostQuitMessage(0);
     return 0;
 
@@ -1048,6 +1032,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 LRESULT CALLBACK ComboProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubClass, DWORD_PTR)
 {
   static char buf[512];
+  static HPEN red_pen{};
+  static HPEN black_pen{};
   HBRUSH selectbrush{};
 
   switch (msg) {
@@ -1067,11 +1053,11 @@ LRESULT CALLBACK ComboProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UI
       if (!selectbrush)
         selectbrush = CreateSolidBrush(color::yellow);
 
-      // Create pen for button border
-      auto pen = CreatePen(PS_SOLID, 2, color::red);
+      // Create red_pen for button border
+      if (!red_pen) red_pen = CreatePen(PS_SOLID, 2, color::red);
 
       // Select our brush into hDC
-      HGDIOBJ old_pen = SelectObject(hdc, pen);
+      HGDIOBJ old_pen = SelectObject(hdc, red_pen);
       HGDIOBJ old_brush = SelectObject(hdc, selectbrush);
       SetBkMode(hdc, OPAQUE);
       SetBkColor(hdc, color::yellow);
@@ -1086,14 +1072,13 @@ LRESULT CALLBACK ComboProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UI
       // Clean up
       SelectObject(hdc, old_pen);
       SelectObject(hdc, old_brush);
-      DeleteObject(pen);
 
     } else {
 
       auto brush = CreateSolidBrush(color::light_blue);
-      auto pen = CreatePen(PS_SOLID, 2, color::black);
+      if (!black_pen) black_pen = CreatePen(PS_SOLID, 2, color::black);
       auto oldbrush = SelectObject(hdc, brush);
-      auto oldpen = SelectObject(hdc, pen);
+      auto oldpen = SelectObject(hdc, black_pen);
       SelectObject(hdc, (HFONT)SendMessage(hwnd, WM_GETFONT, 0, 0));
       SetBkMode(hdc, OPAQUE);
       SetBkColor(hdc, color::light_blue);
@@ -1104,7 +1089,6 @@ LRESULT CALLBACK ComboProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UI
       SelectObject(hdc, oldpen);
       SelectObject(hdc, oldbrush);
       DeleteObject(brush);
-      DeleteObject(pen);
     }
 
     if (GetFocus() == hwnd) {
@@ -1129,6 +1113,8 @@ LRESULT CALLBACK ComboProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UI
 
   case WM_NCDESTROY: {
     if (selectbrush) DeleteBrush(selectbrush);
+    if (red_pen) DeletePen(red_pen);
+    if (black_pen) DeletePen(black_pen);
     RemoveWindowSubclass(hwnd, ComboProc, uIdSubClass);
     break;
   }
@@ -1144,7 +1130,8 @@ LRESULT CALLBACK WndProcForConfirmationDialog(HWND hWnd, UINT message, WPARAM wP
   HBRUSH defaultbrush{};
   HBRUSH hotbrush{};
   HBRUSH selectbrush{};
-  HPEN pen{};
+  static HPEN red_pen{};
+  static HPEN light_blue_pen{};
 
   switch (message) {
 
@@ -1165,17 +1152,16 @@ LRESULT CALLBACK WndProcForConfirmationDialog(HWND hWnd, UINT message, WPARAM wP
         if (!selectbrush)
           selectbrush = CreateSolidBrush(color::yellow);
 
-        if (!pen)
-          pen = CreatePen(PS_SOLID, 2, color::red);
+        if (!red_pen)
+          red_pen = CreatePen(PS_SOLID, 2, color::red);
 
-        HGDIOBJ old_pen = SelectObject(item->hdc, pen);
+        HGDIOBJ old_pen = SelectObject(item->hdc, red_pen);
         HGDIOBJ old_brush = SelectObject(item->hdc, selectbrush);
 
         Rectangle(item->hdc, item->rc.left, item->rc.top, item->rc.right, item->rc.bottom);
 
         SelectObject(item->hdc, old_pen);
         SelectObject(item->hdc, old_brush);
-        DeleteObject(pen);
 
         SetTextColor(item->hdc, color::red);
         SetBkMode(item->hdc, TRANSPARENT);
@@ -1186,17 +1172,16 @@ LRESULT CALLBACK WndProcForConfirmationDialog(HWND hWnd, UINT message, WPARAM wP
           if (!hotbrush)
             hotbrush = CreateSolidBrush(color::yellow);
 
-          if (!pen)
-            pen = CreatePen(PS_SOLID, 2, color::red);
+          if (!red_pen)
+            red_pen = CreatePen(PS_SOLID, 2, color::red);
 
-          HGDIOBJ old_pen = SelectObject(item->hdc, pen);
+          HGDIOBJ old_pen = SelectObject(item->hdc, red_pen);
           HGDIOBJ old_brush = SelectObject(item->hdc, hotbrush);
 
           Rectangle(item->hdc, item->rc.left, item->rc.top, item->rc.right, item->rc.bottom);
 
           SelectObject(item->hdc, old_pen);
           SelectObject(item->hdc, old_brush);
-          DeleteObject(pen);
 
           SetTextColor(item->hdc, color::red);
           SetBkMode(item->hdc, TRANSPARENT);
@@ -1207,17 +1192,16 @@ LRESULT CALLBACK WndProcForConfirmationDialog(HWND hWnd, UINT message, WPARAM wP
         if (defaultbrush == NULL)
           defaultbrush = CreateSolidBrush(color::light_blue);
 
-        if (!pen)
-          pen = CreatePen(PS_SOLID, 2, color::light_blue);
+        if (!light_blue_pen)
+          light_blue_pen = CreatePen(PS_SOLID, 2, color::light_blue);
 
-        HGDIOBJ old_pen = SelectObject(item->hdc, pen);
+        HGDIOBJ old_pen = SelectObject(item->hdc, light_blue_pen);
         HGDIOBJ old_brush = SelectObject(item->hdc, defaultbrush);
 
         Rectangle(item->hdc, item->rc.left, item->rc.top, item->rc.right, item->rc.bottom);
 
         SelectObject(item->hdc, old_pen);
         SelectObject(item->hdc, old_brush);
-        DeleteObject(pen);
 
         SetTextColor(item->hdc, color::red);
         SetBkMode(item->hdc, TRANSPARENT);
@@ -1291,7 +1275,8 @@ LRESULT CALLBACK WndProcForConfirmationDialog(HWND hWnd, UINT message, WPARAM wP
     if (defaultbrush) DeleteBrush(defaultbrush);
     if (hotbrush) DeleteBrush(hotbrush);
     if (selectbrush) DeleteBrush(selectbrush);
-    if (pen) DeletePen(pen);
+    if (red_pen) DeletePen(red_pen);
+    if (light_blue_pen) DeletePen(light_blue_pen);
     PostQuitMessage(admin_choice.load());
     return 0;
 
@@ -1330,7 +1315,8 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
   HBRUSH defaultbrush{};
   HBRUSH hotbrush{};
   HBRUSH selectbrush{};
-  HPEN pen{};
+  static HPEN red_pen{};
+  static HPEN light_blue_pen{};
 
   switch (message) {
 
@@ -1351,17 +1337,16 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
         if (!selectbrush)
           selectbrush = CreateSolidBrush(color::yellow);
 
-        if (!pen)
-          pen = CreatePen(PS_SOLID, 2, color::red);
+        if (!red_pen)
+          red_pen = CreatePen(PS_SOLID, 2, color::red);
 
-        HGDIOBJ old_pen = SelectObject(item->hdc, pen);
+        HGDIOBJ old_pen = SelectObject(item->hdc, red_pen);
         HGDIOBJ old_brush = SelectObject(item->hdc, selectbrush);
 
         Rectangle(item->hdc, item->rc.left, item->rc.top, item->rc.right, item->rc.bottom);
 
         SelectObject(item->hdc, old_pen);
         SelectObject(item->hdc, old_brush);
-        DeleteObject(pen);
 
         SetTextColor(item->hdc, color::red);
         SetBkMode(item->hdc, TRANSPARENT);
@@ -1372,17 +1357,16 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
           if (!hotbrush)
             hotbrush = CreateSolidBrush(color::yellow);
 
-          if (!pen)
-            pen = CreatePen(PS_SOLID, 2, color::red);
+          if (!red_pen)
+            red_pen = CreatePen(PS_SOLID, 2, color::red);
 
-          HGDIOBJ old_pen = SelectObject(item->hdc, pen);
+          HGDIOBJ old_pen = SelectObject(item->hdc, red_pen);
           HGDIOBJ old_brush = SelectObject(item->hdc, hotbrush);
 
           Rectangle(item->hdc, item->rc.left, item->rc.top, item->rc.right, item->rc.bottom);
 
           SelectObject(item->hdc, old_pen);
           SelectObject(item->hdc, old_brush);
-          DeleteObject(pen);
 
           SetTextColor(item->hdc, color::red);
           SetBkMode(item->hdc, TRANSPARENT);
@@ -1393,17 +1377,16 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
         if (defaultbrush == NULL)
           defaultbrush = CreateSolidBrush(color::light_blue);
 
-        if (!pen)
-          pen = CreatePen(PS_SOLID, 2, color::light_blue);
+        if (!light_blue_pen)
+          light_blue_pen = CreatePen(PS_SOLID, 2, color::light_blue);
 
-        HGDIOBJ old_pen = SelectObject(item->hdc, pen);
+        HGDIOBJ old_pen = SelectObject(item->hdc, light_blue_pen);
         HGDIOBJ old_brush = SelectObject(item->hdc, defaultbrush);
 
         Rectangle(item->hdc, item->rc.left, item->rc.top, item->rc.right, item->rc.bottom);
 
         SelectObject(item->hdc, old_pen);
         SelectObject(item->hdc, old_brush);
-        DeleteObject(pen);
 
         SetTextColor(item->hdc, color::red);
         SetBkMode(item->hdc, TRANSPARENT);
@@ -1550,7 +1533,8 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
     if (defaultbrush) DeleteBrush(defaultbrush);
     if (hotbrush) DeleteBrush(hotbrush);
     if (selectbrush) DeleteBrush(selectbrush);
-    if (pen) DeletePen(pen);
+    if (red_pen) DeletePen(red_pen);
+    if (light_blue_pen) DeletePen(light_blue_pen);
     PostQuitMessage(0);
     return 0;
 

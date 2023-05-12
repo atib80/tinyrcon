@@ -33,7 +33,7 @@ struct player_data
   std::string reason;
 };
 
-class alignas(size_t) game_server
+class game_server
 {
 public:
   game_server() : players_data(64, player_data{})

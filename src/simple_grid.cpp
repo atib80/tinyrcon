@@ -66,9 +66,7 @@
 #include <uxtheme.h>
 #include <shellapi.h>
 #include <tchar.h>
-// #include <malloc.h>
 #include <cstdio>
-// #include <wctype.h>
 #include "simple_grid.h"
 #include "stl_helper_functions.hpp"
 #include "tiny_rcon_utility_functions.h"

@@ -47,8 +47,6 @@
 #define WC_SIMPLEGRIDA "SimpleGridCtl"
 #define WC_SIMPLEGRIDW L"SimpleGridCtl"
 
-#include <string>
-
 #ifdef UNICODE
 #define WC_SIMPLEGRID WC_SIMPLEGRIDW
 #else
