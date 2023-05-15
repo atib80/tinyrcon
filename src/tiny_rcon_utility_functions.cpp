@@ -2263,7 +2263,7 @@ void process_user_input(std::string &user_input)
         initiate_sending_rcon_status_command_now();
       } else if (command_parts[0] == "q" || command_parts[0] == "!q" || command_parts[0] == "!quit" || command_parts[0] == "e" || command_parts[0] == "!e" || command_parts[0] == "exit") {
         user_input = "q";
-      } else if (command_parts[0] == "h" || command_parts[0] == "!h" || command_parts[0] == "!help" || command_parts[0] == "help" || command_parts[0] == "list") {
+      } else if (command_parts[0] == "h" || command_parts[0] == "!h" || command_parts[0] == "!help" || command_parts[0] == "help" || command_parts[0] == "list" || command_parts[0] == "!list") {
         print_help_information(command_parts);
       } else if (command_parts[0] == "!cls" || command_parts[0] == "cls") {
         Edit_SetText(app_handles.hwnd_re_messages_data, "");
@@ -3189,7 +3189,7 @@ void display_temporarily_banned_ip_addresses()
   oss << string{ "^5"s + decoration_line + "\n\n"s };
   log << string{ decoration_line + "\n\n"s };
   const string message{ oss.str() };
-  print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), true, true, true);
+  print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), true, false, true);
   log_message(log.str(), true);
 }
 
@@ -3298,7 +3298,7 @@ void display_permanently_banned_ip_addresses()
   oss << string{ "^5"s + decoration_line + "\n\n"s };
   log << string{ decoration_line + "\n\n"s };
   const string message{ oss.str() };
-  print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), true, true, true);
+  print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), true, false, true);
   log_message(log.str(), true);
 }
 

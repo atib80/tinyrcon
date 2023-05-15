@@ -253,10 +253,10 @@ public:
     max_private_clients = new_max_private_clients;
   }
 
-  //std::vector<player_data> &get_tempbanned_players_to_unban() noexcept
+  // std::vector<player_data> &get_tempbanned_players_to_unban() noexcept
   //{
-  //  return tempbanned_players_to_unban;
-  //}
+  //   return tempbanned_players_to_unban;
+  // }
 
   std::vector<player_data> &get_players_data() noexcept
   {

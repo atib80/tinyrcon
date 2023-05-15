@@ -76,13 +76,13 @@ extern const char *user_help_message =
 ^5>> Press ^1F5 ^5to sort players data by their 'IP address' values in ascending/descending order.
 ^3>> Press ^1F6 ^3to sort players data by their 'country - city' values in ascending/descending order.
 ^5>> Press ^1F8 ^5to refresh current status of players data.
-^5>> Press ^1Ctrl + W ^5to warn player.
+^3>> Press ^1Ctrl + W ^3to warn player.
 ^5>> Press ^1Ctrl + K ^5to kick player.
-^5>> Press ^1Ctrl + T ^5to temp-ban player.
+^3>> Press ^1Ctrl + T ^3to temp-ban player.
 ^5>> Press ^1Ctrl + B ^5to ban IP address of player.
-^5>> Press ^1Ctrl + S ^5to refresh players' data.
+^3>> Press ^1Ctrl + S ^3to refresh players' data.
 ^5>> Press ^1Ctrl + J ^5to connect to game server.
-^5>> Press ^1Ctrl + X ^5to exit TinyRcon.)";
+^3>> Press ^1Ctrl + X ^3to exit TinyRcon.)";
 
 
 extern const std::unordered_map<string, sort_type> sort_mode_names_dict;
