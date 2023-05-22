@@ -459,6 +459,8 @@ void prepare_players_data_for_display(const bool is_log_status_table = false);
 void prepare_players_data_for_display_of_getstatus_response(const bool is_log_status_table = false);
 
 size_t get_file_size_in_bytes(const char *) noexcept;
-HWND CreateAHorizontalScrollBar(HWND hwndParent, HINSTANCE hInstance, const int sbHeight);
-HWND CreateAVerticalScrollBar(HWND hwndParent, HINSTANCE hInstance, const int sbWidth);
+// HWND CreateAHorizontalScrollBar(HWND hwndParent, HINSTANCE hInstance, const int sbHeight);
+// HWND CreateAVerticalScrollBar(HWND hwndParent, HINSTANCE hInstance, const int sbWidth);
 std::string get_current_date_time_str();
+
+void correct_truncated_player_names(const char *ip_address, const uint_least16_t port_number, const char *rcon_password);

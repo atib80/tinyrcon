@@ -92,7 +92,7 @@ extern const std::unordered_map<int, string> button_id_to_label_text{
   { ID_KICKBUTTON, "&Kick" },
   { ID_TEMPBANBUTTON, "&Tempban" },
   { ID_IPBANBUTTON, "&Ban IP" },
-  { ID_VIEWTEMPBANSBUTTON, "&View temporary bans" },
+  { ID_VIEWTEMPBANSBUTTON, "View temporary bans" },
   { ID_VIEWIPBANSBUTTON, "View &IP bans" },
   { ID_REFRESHDATABUTTON, "Refre&sh data" },
   { ID_CONNECTBUTTON, "&Join server" },
@@ -107,7 +107,7 @@ extern const std::unordered_map<int, string> button_id_to_label_text{
   { ID_BUTTON_TEST_CONNECTION, "Test connection" },
   { ID_BUTTON_CANCEL, "Cancel" },
   { ID_BUTTON_CONFIGURE_SERVER_SETTINGS, "Confi&gure settings" },
-  { ID_CLEARMESSAGESCREENBUTTON, "&Clear messages" },
+  { ID_CLEARMESSAGESCREENBUTTON, "Clear messages" },
   { ID_BUTTON_CONFIGURATION_EXIT_TINYRCON, "Exit TinyRcon" },
   { ID_BUTTON_CONFIGURATION_COD1_PATH, "Browse for codmp.exe" },
   { ID_BUTTON_CONFIGURATION_COD2_PATH, "Browse for cod2mp_s.exe" },
@@ -457,11 +457,21 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
   HBRUSH defaultbrush{};
   HBRUSH hotbrush{};
   HBRUSH selectbrush{};
+  HMENU m_hmenu;
   PAINTSTRUCT ps;
+
   static HPEN red_pen{};
   static HPEN light_blue_pen{};
 
   switch (message) {
+
+  case WM_CONTEXTMENU: {
+    if (reinterpret_cast<HWND>(wParam) == app_handles.hwnd_re_messages_data) {
+      m_hmenu = CreatePopupMenu();
+      InsertMenu(m_hmenu, 0, MF_BYCOMMAND | MF_STRING | MF_ENABLED, IDC_COPY, "&Copy");
+      TrackPopupMenu(m_hmenu, TPM_TOPALIGN | TPM_LEFTALIGN, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam), 0, hWnd, nullptr);
+    }
+  } break;
 
   case WM_TIMER: {
 
@@ -602,6 +612,34 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     const int wparam_high_word = HIWORD(wParam);
 
     switch (wmId) {
+
+    case IDC_COPY: {
+      SetForegroundWindow(app_handles.hwnd_re_messages_data);
+      INPUT ip;
+      ip.type = INPUT_KEYBOARD;
+      ip.ki.wScan = 0;
+      ip.ki.time = 0;
+      ip.ki.dwExtraInfo = 0;
+      // Press the "Ctrl" key
+      ip.ki.wVk = VK_CONTROL;
+      ip.ki.dwFlags = 0;// 0 for key press
+      SendInput(1, &ip, sizeof(INPUT));
+
+      // Press the "C" key
+      ip.ki.wVk = 'C';
+      ip.ki.dwFlags = 0;// 0 for key press
+      SendInput(1, &ip, sizeof(INPUT));
+
+      // Release the "C" key
+      ip.ki.wVk = 'C';
+      ip.ki.dwFlags = KEYEVENTF_KEYUP;
+      SendInput(1, &ip, sizeof(INPUT));
+
+      // Release the "Ctrl" key
+      ip.ki.wVk = VK_CONTROL;
+      ip.ki.dwFlags = KEYEVENTF_KEYUP;
+      SendInput(1, &ip, sizeof(INPUT));
+    } break;
 
     case ID_QUITBUTTON:
       // if (show_user_confirmation_dialog("^3Do you really want to exit?\n", "Exit TinyRcon?")) {

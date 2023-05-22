@@ -10,7 +10,7 @@ class connection_manager
 {
   using rcv_timeout_option =
     asio::detail::socket_option::integer<SOL_SOCKET, SO_RCVTIMEO>;
-  inline static constexpr size_t receive_buffer_size{ 9999 };
+  inline static constexpr size_t receive_buffer_size{ 2048 };
 
 public:
   connection_manager();
@@ -25,9 +25,9 @@ public:
 
   size_t send_rcon_command(const std::string &send_buffer, const char *remote_ip, const uint_least16_t remote_port) const;
 
-  size_t receive_data_from_server(const char *remote_ip, const uint_least16_t remote_port, std::string &reply_buffer) const;
+  size_t receive_data_from_server(const char *remote_ip, const uint_least16_t remote_port, std::string &reply_buffer, const bool is_process_reply = true) const;
 
-  void send_and_receive_rcon_data(const char *send_buffer, std::string &reply_buffer, const char *remote_ip, const uint_least16_t remote_port, const char *rcon_password, const bool = true) const;
+  void send_and_receive_rcon_data(const char *command_to_send, std::string &reply_buffer, const char *remote_ip, const uint_least16_t remote_port, const char *rcon_password, const bool is_wait_for_reply = true, const bool is_process_reply = true) const;
 
   inline std::vector<geoip_data> &get_geoip_data() noexcept { return geoip_db; }
 

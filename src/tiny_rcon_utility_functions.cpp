@@ -6851,6 +6851,8 @@ void display_context_menu_over_grid(const int mouse_x, const int mouse_y, const 
   InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_CONNECTBUTTON, "Join the game server");
   InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_CONNECTPRIVATESLOTBUTTON, "Join the game server using a private slot");
   InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_SEPARATOR, NULL, nullptr);
+  InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_CLEARMESSAGESCREENBUTTON, "&Clear TinyRcon messages");
+  InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_SEPARATOR, NULL, nullptr);
   InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_QUITBUTTON, "E&xit TinyRcon");
   SetForegroundWindow(app_handles.hwnd_main_window);
   POINT p{ mouse_x, mouse_y };
@@ -7384,59 +7386,59 @@ size_t get_file_size_in_bytes(const char *file_path) noexcept
   return static_cast<size_t>(file_size);
 }
 
-HWND CreateAHorizontalScrollBar(HWND hwndParent, HINSTANCE hInstance, const int sbHeight)
-{
-  RECT rect{};
-
-  // Get the dimensions of the parent window's client area;
-  if (!GetClientRect(hwndParent, &rect))
-    return NULL;
-
-  // Create the scroll bar.
-  return (CreateWindowEx(
-    0,// no extended styles
-    "SCROLLBAR",// scroll bar control class
-    NULL,// no window text
-    WS_CHILD | WS_VISIBLE// window styles
-      | SBS_HORZ,// horizontal scroll bar style
-    rect.left,// horizontal position
-    rect.bottom - sbHeight,// vertical position
-    rect.right - rect.left,// width of the scroll bar
-    sbHeight,// height of the scroll bar
-    hwndParent,// handle to main window
-    NULL,// no menu
-    hInstance,// instance owning this window
-    NULL
-    // pointer not needed
-    ));
-}
-
-HWND CreateAVerticalScrollBar(HWND hwndParent, HINSTANCE hInstance, const int sbWidth)
-{
-  RECT rect{};
-
-  // Get the dimensions of the parent window's client area;
-  if (!GetClientRect(hwndParent, &rect))
-    return NULL;
-
-  // Create the scroll bar.
-  return (CreateWindowEx(
-    0,// no extended styles
-    "SCROLLBAR",// scroll bar control class
-    NULL,// no window text
-    WS_CHILD | WS_VISIBLE// window styles
-      | SBS_VERT,// horizontal scroll bar style
-    rect.right - sbWidth,// horizontal position
-    rect.top,// vertical position
-    sbWidth,// width of the scroll bar
-    rect.bottom - rect.top,// height of the scroll bar
-    hwndParent,// handle to main window
-    NULL,// no menu
-    hInstance,// instance owning this window
-    NULL
-    // pointer not needed
-    ));
-}
+// HWND CreateAHorizontalScrollBar(HWND hwndParent, HINSTANCE hInstance, const int sbHeight)
+//{
+//   RECT rect{};
+//
+//   // Get the dimensions of the parent window's client area;
+//   if (!GetClientRect(hwndParent, &rect))
+//     return NULL;
+//
+//   // Create the scroll bar.
+//   return (CreateWindowEx(
+//     0,// no extended styles
+//     "SCROLLBAR",// scroll bar control class
+//     NULL,// no window text
+//     WS_CHILD | WS_VISIBLE// window styles
+//       | SBS_HORZ,// horizontal scroll bar style
+//     rect.left,// horizontal position
+//     rect.bottom - sbHeight,// vertical position
+//     rect.right - rect.left,// width of the scroll bar
+//     sbHeight,// height of the scroll bar
+//     hwndParent,// handle to main window
+//     NULL,// no menu
+//     hInstance,// instance owning this window
+//     NULL
+//     // pointer not needed
+//     ));
+// }
+//
+// HWND CreateAVerticalScrollBar(HWND hwndParent, HINSTANCE hInstance, const int sbWidth)
+//{
+//   RECT rect{};
+//
+//   // Get the dimensions of the parent window's client area;
+//   if (!GetClientRect(hwndParent, &rect))
+//     return NULL;
+//
+//   // Create the scroll bar.
+//   return (CreateWindowEx(
+//     0,// no extended styles
+//     "SCROLLBAR",// scroll bar control class
+//     NULL,// no window text
+//     WS_CHILD | WS_VISIBLE// window styles
+//       | SBS_VERT,// horizontal scroll bar style
+//     rect.right - sbWidth,// horizontal position
+//     rect.top,// vertical position
+//     sbWidth,// width of the scroll bar
+//     rect.bottom - rect.top,// height of the scroll bar
+//     hwndParent,// handle to main window
+//     NULL,// no menu
+//     hInstance,// instance owning this window
+//     NULL
+//     // pointer not needed
+//     ));
+// }
 
 std::string get_current_date_time_str()
 {
@@ -7448,4 +7450,120 @@ std::string get_current_date_time_str()
   localtime_s(&time_info, &t_c);
   os << "^5[" << put_time(&time_info, "%Y-%b-%d %T") << "]";
   return os.str();
+}
+
+void correct_truncated_player_names(const char *ip_address, const uint_least16_t port_number, const char *rcon_password)
+{
+  connection_manager cm;
+  string reply;
+  cm.send_and_receive_rcon_data("getstatus", reply, ip_address, port_number, rcon_password, true, false);
+
+  if (reply.find("statusResponse") != string::npos && reply[4] == 's') {
+
+    constexpr size_t off{ 20U };
+
+    const size_t new_line_pos = reply.find('\n', off);
+
+    unordered_map<string, int> unique_player_names;
+
+    auto &players_data = main_app.get_game_server().get_players_data();
+
+    size_t start{ new_line_pos + 1 }, pl_index{};
+
+    while (start < reply.length()) {
+
+      // Extracting player's score value from received UDP data packet for
+      // getstatus command
+      while (' ' == reply[start])
+        ++start;
+      size_t last{ start };
+      while (reply[last] != ' ')
+        ++last;
+      string temp_score{ reply.substr(start, last - start) };
+      trim_in_place(temp_score);
+      int player_score;
+      if (!is_valid_decimal_whole_number(temp_score, player_score))
+        player_score = 0;
+
+      // Extracting player_name information from received UDP data packet
+      // for getstatus command
+      start = last;
+      while (reply[start] != '"')
+        ++start;
+      last = ++start;
+      while (reply[last] != '"')
+        ++last;
+
+      string unique_player_name{ reply.substr(start, last - start) };
+      trim_in_place(unique_player_name);
+      if (unique_player_name == players_data[pl_index].player_name) {
+        players_data[pl_index].score = player_score;
+      }
+      unique_player_names[std::move(unique_player_name)]++;
+      ++pl_index;
+      start = ++last;
+      if (reply[start] == '\n')
+        ++start;
+    }
+
+    vector<pair<size_t, string>> truncated_player_names;
+
+    for (size_t i{}; i < main_app.get_game_server().get_number_of_players(); ++i) {
+
+      auto &p = players_data[i];
+
+      string key{ p.player_name };
+      const auto found_iter = unique_player_names.find(key);
+      if (found_iter != end(unique_player_names)) {
+        --found_iter->second;
+        if (found_iter->second <= 0)
+          unique_player_names.erase(found_iter);
+      } else {
+        truncated_player_names.emplace_back(i, std::move(key));
+      }
+    }
+
+    if (!truncated_player_names.empty()) {
+
+      for (const auto &pd : truncated_player_names) {
+        for (auto &unique_player_name : unique_player_names) {
+          if (unique_player_name.second > 0) {
+
+            if ((unique_player_name.first.length() - pd.second.length() <= 2) && (unique_player_name.first.ends_with(pd.second) || unique_player_name.first.starts_with(pd.second))) {
+              /*char buffer[128]{};
+              (void)snprintf(buffer, std::size(buffer), "^2Corrected truncated player name from ^7%s ^2to ^7%s\n", pd.second.c_str(), unique_player_name.first.c_str());
+              print_colored_text(app_handles.hwnd_re_messages_data, buffer, true, true, true);*/
+              strcpy_s(players_data[pd.first].player_name, 33, unique_player_name.first.c_str());
+              --unique_player_name.second;
+              break;
+            }
+
+            if (unique_player_name.first.length() > pd.second.length() && !pd.second.empty()) {
+              size_t i{}, k{ unique_player_name.first.length() }, j{ pd.second.length() };
+
+              for (; i < pd.second.length(); ++i) {
+                if (pd.second[i] != unique_player_name.first[i])
+                  break;
+              }
+
+              for (; j > 0; --j, --k) {
+                if (pd.second[j - 1] != unique_player_name.first[k - 1])
+                  break;
+              }
+
+              if (j - i <= 1) {
+
+                /*char buffer[128]{};
+                (void)snprintf(buffer, std::size(buffer), "^2Corrected truncated player name from ^7%s ^2to ^7%s\n", pd.second.c_str(), unique_player_name.first.c_str());
+                print_colored_text(app_handles.hwnd_re_messages_data, buffer, true, true, true);*/
+                strcpy_s(players_data[pd.first].player_name, 33, unique_player_name.first.c_str());
+                --unique_player_name.second;
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 }
