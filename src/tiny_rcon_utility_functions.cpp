@@ -3821,28 +3821,28 @@ player_data &get_player_data_for_pid(const int pid)
 
 std::string get_player_information(const int pid, const bool is_every_property_on_new_line)
 {
-  static char buffer[512];
+  char buffer[512];
   const auto &players_data = main_app.get_game_server().get_players_data();
   for (size_t i{}; i < main_app.get_game_server().get_number_of_players(); ++i) {
     if (pid == players_data[i].pid) {
       const auto &p = players_data[i];
-      (void)snprintf(buffer, 512, "^3Player name: ^7%s %s ^3PID: ^1%d %s ^3Score: ^5%d %s ^3Ping: ^5%s\n ^3IP: ^5%s %s ^3Country, region, city: ^5%s, %s, %s", p.player_name, (is_every_property_on_new_line ? "\n" : "^3|"), p.pid, (is_every_property_on_new_line ? "\n" : "^3|"), p.score, (is_every_property_on_new_line ? "\n" : "^3|"), p.ping, p.ip_address, (is_every_property_on_new_line ? "\n" : "^3|"), p.country_name, p.region, p.city);
+      (void)snprintf(buffer, std::size(buffer), "^3Player name: ^7%s %s ^3PID: ^1%d %s ^3Score: ^5%d %s ^3Ping: ^5%s\n ^3IP: ^5%s %s ^3Country, region, city: ^5%s, %s, %s", p.player_name, (is_every_property_on_new_line ? "\n" : "^3|"), p.pid, (is_every_property_on_new_line ? "\n" : "^3|"), p.score, (is_every_property_on_new_line ? "\n" : "^3|"), p.ping, p.ip_address, (is_every_property_on_new_line ? "\n" : "^3|"), p.country_name, p.region, p.city);
       return buffer;
     }
   }
 
-  (void)snprintf(buffer, 512, "^3Player name: ^5n/a %s ^1PID: ^1%d %s ^3Score: ^5n/a %s ^3Ping: ^5n/a\n ^3IP: ^5n/a %s ^3Country, region, city: ^5n/a", (is_every_property_on_new_line ? "\n" : "^3|"), pid, (is_every_property_on_new_line ? "\n" : "^3|"), (is_every_property_on_new_line ? "\n" : "^3|"), (is_every_property_on_new_line ? "\n" : "^3|"));
+  (void)snprintf(buffer, std::size(buffer), "^3Player name: ^5n/a %s ^1PID: ^1%d %s ^3Score: ^5n/a %s ^3Ping: ^5n/a\n ^3IP: ^5n/a %s ^3Country, region, city: ^5n/a", (is_every_property_on_new_line ? "\n" : "^3|"), pid, (is_every_property_on_new_line ? "\n" : "^3|"), (is_every_property_on_new_line ? "\n" : "^3|"), (is_every_property_on_new_line ? "\n" : "^3|"));
   return buffer;
 }
 
 std::string get_player_information_for_player(player_data &p)
 {
-  static char buffer[512];
+  char buffer[512];
   if (strlen(p.country_name) == 0 || strcmp(p.country_name, "n/a") == 0) {
     convert_guid_key_to_country_name(main_app.get_connection_manager().get_geoip_data(), p.ip_address, p);
   }
 
-  (void)snprintf(buffer, 512, "^3Player name: ^7%s ^3| ^1PID: ^1%d ^3| ^3Score: ^5%d ^3| ^3Ping: ^5%s\n ^3GUID: ^5%s ^3|IP: ^5%s ^3| Country, region, city: ^5%s, %s, %s", p.player_name, p.pid, p.score, p.ping, p.guid_key, p.ip_address, p.country_name, p.region, p.city);
+  (void)snprintf(buffer, std::size(buffer), "^3Player name: ^7%s ^3| ^1PID: ^1%d ^3| ^3Score: ^5%d ^3| ^3Ping: ^5%s\n ^3GUID: ^5%s ^3|IP: ^5%s ^3| Country, region, city: ^5%s, %s, %s", p.player_name, p.pid, p.score, p.ping, p.guid_key, p.ip_address, p.country_name, p.region, p.city);
   return buffer;
 }
 
@@ -6453,11 +6453,11 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
   SetWindowText(app_handles.hwnd_server_name, main_app.get_game_server_name().c_str());
   SetWindowText(app_handles.hwnd_server_ip_address, main_app.get_game_server().get_server_ip_address().c_str());
   char buffer_port[8];
-  (void)snprintf(buffer_port, 8, "%d", main_app.get_game_server().get_server_port());
+  (void)snprintf(buffer_port, std::size(buffer_port), "%d", main_app.get_game_server().get_server_port());
   SetWindowText(app_handles.hwnd_server_port, buffer_port);
   SetWindowText(app_handles.hwnd_rcon_password, main_app.get_game_server().get_rcon_password().c_str());
   char buffer_rt[8];
-  (void)snprintf(buffer_rt, 8, "%zu", main_app.get_game_server().get_check_for_banned_players_time_period());
+  (void)snprintf(buffer_rt, std::size(buffer_rt), "%zu", main_app.get_game_server().get_check_for_banned_players_time_period());
   SetWindowText(app_handles.hwnd_refresh_time_period, buffer_rt);
 
   if (!main_app.get_codmp_exe_path().empty() && (str_contains(main_app.get_cod2mp_exe_path(), "-applaunch 2620") || check_if_file_path_exists(main_app.get_codmp_exe_path().c_str()))) {
@@ -6816,19 +6816,19 @@ void display_context_menu_over_grid(const int mouse_x, const int mouse_y, const 
     if (int pid{ -1 }; is_valid_decimal_whole_number(selected_pid_str, pid)) {
       auto &player_data = get_player_data_for_pid(pid);
       if (player_data.pid == pid) {
-        (void)snprintf(info_player_command, 128, "Display information about player (name: %s | pid: %d)", player_data.player_name, pid);
+        (void)snprintf(info_player_command, std::size(info_player_command), "Display information about player (name: %s | pid: %d)", player_data.player_name, pid);
         remove_all_color_codes(info_player_command);
         InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_PRINTPLAYERINFORMATION_ACTION, info_player_command);
-        (void)snprintf(warn_player_command, 128, "Warn player (name: %s | pid: %d)", player_data.player_name, pid);
+        (void)snprintf(warn_player_command, std::size(warn_player_command), "Warn player (name: %s | pid: %d)", player_data.player_name, pid);
         remove_all_color_codes(warn_player_command);
         InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_WARNBUTTON, warn_player_command);
-        (void)snprintf(kick_player_command, 128, "Kick player (name: %s | pid: %d)", player_data.player_name, pid);
+        (void)snprintf(kick_player_command, std::size(kick_player_command), "Kick player (name: %s | pid: %d)", player_data.player_name, pid);
         remove_all_color_codes(kick_player_command);
         InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_KICKBUTTON, kick_player_command);
-        (void)snprintf(tempban_player_command, 128, "Temporarily ban player's IP (name: %s | pid: %d)", player_data.player_name, pid);
+        (void)snprintf(tempban_player_command, std::size(tempban_player_command), "Temporarily ban player's IP (name: %s | pid: %d)", player_data.player_name, pid);
         remove_all_color_codes(tempban_player_command);
         InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_TEMPBANBUTTON, tempban_player_command);
-        (void)snprintf(ipban_player_command, 128, "Ban player's IP (name: %s | pid: %d)", player_data.player_name, pid);
+        (void)snprintf(ipban_player_command, std::size(ipban_player_command), "Ban player's IP (name: %s | pid: %d)", player_data.player_name, pid);
         remove_all_color_codes(ipban_player_command);
         InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_IPBANBUTTON, ipban_player_command);
         InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_SEPARATOR, NULL, nullptr);
@@ -7175,7 +7175,7 @@ void initiate_sending_rcon_status_command_now()
 void prepare_players_data_for_display(const bool is_log_status_table)
 {
 
-  static char buffer[256];
+  char buffer[256];
   size_t longest_name_length{ 32 };
   size_t longest_country_length{ 32 };
 
@@ -7244,7 +7244,7 @@ void prepare_players_data_for_display(const bool is_log_status_table)
 
       const player_data &p{ players[i] };
 
-      snprintf(buffer, 5, "%s%d", pd.c_str(), p.pid);
+      snprintf(buffer, std::size(buffer), "%s%d", pd.c_str(), p.pid);
       strcpy_s(displayed_players_data[i].pid, std::size(displayed_players_data[i].pid), buffer);
 
       snprintf(buffer, std::size(buffer), "%s%d", sd.c_str(), p.score);
@@ -7291,7 +7291,7 @@ void prepare_players_data_for_display(const bool is_log_status_table)
 
 void prepare_players_data_for_display_of_getstatus_response(const bool is_log_status_table)
 {
-  static char buffer[256];
+  char buffer[256];
   size_t longest_name_length{ 32 };
 
   auto &players = main_app.get_game_server().get_players_data();
@@ -7339,7 +7339,7 @@ void prepare_players_data_for_display_of_getstatus_response(const bool is_log_st
 
       const player_data &p{ players[i] };
 
-      snprintf(buffer, 5, "%s%d", pd.c_str(), p.pid);
+      snprintf(buffer, std::size(buffer), "%s%d", pd.c_str(), p.pid);
       strcpy_s(displayed_players_data[i].pid, std::size(displayed_players_data[i].pid), buffer);
 
       snprintf(buffer, std::size(buffer), "%s%d", sd.c_str(), p.score);
@@ -7530,10 +7530,8 @@ void correct_truncated_player_names(const char *ip_address, const uint_least16_t
           if (unique_player_name.second > 0) {
 
             if ((unique_player_name.first.length() - pd.second.length() <= 2) && (unique_player_name.first.ends_with(pd.second) || unique_player_name.first.starts_with(pd.second))) {
-              /*char buffer[128]{};
-              (void)snprintf(buffer, std::size(buffer), "^2Corrected truncated player name from ^7%s ^2to ^7%s\n", pd.second.c_str(), unique_player_name.first.c_str());
-              print_colored_text(app_handles.hwnd_re_messages_data, buffer, true, true, true);*/
-              strcpy_s(players_data[pd.first].player_name, 33, unique_player_name.first.c_str());
+              // print_message_about_corrected_player_name(app_handles.hwnd_re_messages_data, pd.second.c_str(), unique_player_name.first.c_str());
+              strcpy_s(players_data[pd.first].player_name, std::size(players_data[pd.first].player_name), unique_player_name.first.c_str());
               --unique_player_name.second;
               break;
             }
@@ -7546,17 +7544,14 @@ void correct_truncated_player_names(const char *ip_address, const uint_least16_t
                   break;
               }
 
-              for (; j > 0; --j, --k) {
+              for (; j >= i; --j, --k) {
                 if (pd.second[j - 1] != unique_player_name.first[k - 1])
                   break;
               }
 
               if (j - i <= 1) {
-
-                /*char buffer[128]{};
-                (void)snprintf(buffer, std::size(buffer), "^2Corrected truncated player name from ^7%s ^2to ^7%s\n", pd.second.c_str(), unique_player_name.first.c_str());
-                print_colored_text(app_handles.hwnd_re_messages_data, buffer, true, true, true);*/
-                strcpy_s(players_data[pd.first].player_name, 33, unique_player_name.first.c_str());
+                // print_message_about_corrected_player_name(app_handles.hwnd_re_messages_data, pd.second.c_str(), unique_player_name.first.c_str());
+                strcpy_s(players_data[pd.first].player_name, std::size(players_data[pd.first].player_name), unique_player_name.first.c_str());
                 --unique_player_name.second;
                 break;
               }
@@ -7565,5 +7560,14 @@ void correct_truncated_player_names(const char *ip_address, const uint_least16_t
         }
       }
     }
+  }
+}
+
+void print_message_about_corrected_player_name(HWND re_hwnd, const char *truncated_name, const char *corrected_name) noexcept
+{
+  if (truncated_name && corrected_name) {
+    char buffer[128]{};
+    (void)snprintf(buffer, std::size(buffer), "^2Corrected truncated player name from ^7%s ^2to ^7%s\n", truncated_name, corrected_name);
+    print_colored_text(re_hwnd, buffer, true, true, true);
   }
 }

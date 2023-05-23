@@ -464,3 +464,4 @@ size_t get_file_size_in_bytes(const char *) noexcept;
 std::string get_current_date_time_str();
 
 void correct_truncated_player_names(const char *ip_address, const uint_least16_t port_number, const char *rcon_password);
+void print_message_about_corrected_player_name(HWND re_hwnd, const char *truncated_name, const char *corrected_name) noexcept;
