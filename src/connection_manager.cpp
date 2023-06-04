@@ -11,7 +11,7 @@ extern tiny_rcon_handles app_handles;
 extern string previous_map;
 extern int selected_row;
 
-static const std::regex ip_address_regex{ R"((\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:-?\d+\s+-?\d+\s+\d+))" };
+static const std::regex ip_address_regex{ R"((\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:-?\d+\s*(-?\d+)?\s*(\d+)?))" };
 
 using namespace asio;
 
