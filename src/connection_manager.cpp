@@ -127,7 +127,7 @@ size_t connection_manager::receive_data_from_server(
           noOfReceivedBytes = udp_socket.receive_from(buffer(incoming_data_buffer, receive_buffer_size), destination, 0, err2);
           noOfAllReceivedBytes += noOfReceivedBytes;
           if (err2) {
-            is_server_empty_or_error_receiving_udp_datagrams = true;
+            // is_server_empty_or_error_receiving_udp_datagrams = true;
             break;
           }
 
@@ -139,8 +139,8 @@ size_t connection_manager::receive_data_from_server(
           }
         }
 
-        if (!is_process_reply)
-          return noOfAllReceivedBytes;
+        /*if (!is_process_reply)
+          return noOfAllReceivedBytes;*/
 
         auto &ip_address_frequency = main_app.get_game_server().get_ip_address_frequency();
         ip_address_frequency.clear();

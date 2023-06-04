@@ -1529,7 +1529,7 @@ bool temp_ban_player_ip_address(player_data &pd)
     ostringstream oss;
     tm time_info{};
     localtime_s(&time_info, &t_c);
-    oss << put_time(&time_info, "%Y-%b-%d %T");
+    oss << put_time(&time_info, "%Y-%b-%d %R");
     const string banned_date_time_str{ oss.str() };
     strcpy_s(pd.banned_date_time, std::size(pd.banned_date_time), banned_date_time_str.c_str());
     temp_banned_data_file_to_write << pd.ip_address << '\\'
@@ -1548,7 +1548,7 @@ bool temp_ban_player_ip_address(player_data &pd)
     ostringstream oss;
     tm time_info{};
     localtime_s(&time_info, &t_c);
-    oss << put_time(&time_info, "%Y-%b-%d %T");
+    oss << put_time(&time_info, "%Y-%b-%d %R");
     const string banned_date_time_str{ oss.str() };
     strcpy_s(pd.banned_date_time, std::size(pd.banned_date_time), banned_date_time_str.c_str());
     temp_banned_data_file_to_read << pd.ip_address << '\\'
@@ -1614,7 +1614,7 @@ bool global_ban_player_ip_address(player_data &pd)
     ostringstream oss;
     tm time_info{};
     localtime_s(&time_info, &t_c);
-    oss << put_time(&time_info, "%Y-%b-%d %T");
+    oss << put_time(&time_info, "%Y-%b-%d %R");
     const string banned_date_time_str{ oss.str() };
     strcpy_s(pd.banned_date_time, std::size(pd.banned_date_time), banned_date_time_str.c_str());
     bannedIPsFileToWrite << pd.ip_address << '\\'
@@ -1630,7 +1630,7 @@ bool global_ban_player_ip_address(player_data &pd)
     ostringstream oss;
     tm time_info{};
     localtime_s(&time_info, &t_c);
-    oss << put_time(&time_info, "%Y-%b-%d %T");
+    oss << put_time(&time_info, "%Y-%b-%d %R");
     const string banned_date_time_str{ oss.str() };
     strcpy_s(pd.banned_date_time, std::size(pd.banned_date_time), banned_date_time_str.c_str());
     bannedIPsFileToRead << pd.ip_address << '\\'
@@ -2561,7 +2561,7 @@ void process_user_command(const std::vector<string> &user_cmd)
       tm time_info{};
       localtime_s(&time_info, &t_c);
       ostringstream oss;
-      oss << "^2Current time: ^1" << put_time(&time_info, "%Y-%b-%d %T\n");
+      oss << "^2Current time: ^1" << put_time(&time_info, "%Y-%b-%d %R\n");
       const string time_str{ oss.str() };
       print_colored_text(app_handles.hwnd_re_messages_data, time_str.c_str(), true, true, true);
     } else if (user_cmd[0] == "!list") {
@@ -3783,7 +3783,7 @@ void log_message(const string &msg, const bool is_log_current_date_time)
     const time_t t_c = std::chrono::system_clock::to_time_t(now);
     tm time_info{};
     localtime_s(&time_info, &t_c);
-    os << "[" << put_time(&time_info, "%Y-%b-%d %T") << "] ";
+    os << "[" << put_time(&time_info, "%Y-%b-%d %R") << "] ";
   }
   os << msg;
   if (msg.back() != '\n') {
@@ -3910,7 +3910,7 @@ string get_date_and_time_for_time_t(const time_t t_c)
   ostringstream oss;
   tm time_info{};
   localtime_s(&time_info, &t_c);
-  oss << put_time(&time_info, "%Y-%b-%d %T");
+  oss << put_time(&time_info, "%Y-%b-%d %R");
   return oss.str();
 }
 
@@ -5337,7 +5337,7 @@ size_t print_colored_text(HWND re_control, const char *text, const bool print_to
       const time_t t_c = std::chrono::system_clock::to_time_t(now);
       tm time_info{};
       localtime_s(&time_info, &t_c);
-      os << "^5" << put_time(&time_info, "%Y-%b-%d %T") << ":\n";
+      os << "^5" << put_time(&time_info, "%Y-%b-%d %R") << ":\n";
       os << text;
       text_str = os.str();
       text = text_str.c_str();
@@ -7448,7 +7448,7 @@ std::string get_current_date_time_str()
   const time_t t_c = std::chrono::system_clock::to_time_t(now);
   tm time_info{};
   localtime_s(&time_info, &t_c);
-  os << "^5[" << put_time(&time_info, "%Y-%b-%d %T") << "]";
+  os << "^5[" << put_time(&time_info, "%Y-%b-%d %R") << "]";
   return os.str();
 }
 
