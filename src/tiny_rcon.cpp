@@ -87,7 +87,7 @@ extern const char *user_help_message =
 
 extern const std::unordered_map<string, sort_type> sort_mode_names_dict;
 
-extern const std::unordered_map<int, string> button_id_to_label_text{
+extern const std::unordered_map<int, const char*> button_id_to_label_text{
   { ID_WARNBUTTON, "&Warn" },
   { ID_KICKBUTTON, "&Kick" },
   { ID_TEMPBANBUTTON, "&Tempban" },
@@ -557,7 +557,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
         SetTextColor(item->hdc, color::red);
         SetBkMode(item->hdc, TRANSPARENT);
-        DrawTextEx(item->hdc, (char *)button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER, nullptr);
+        DrawTextEx(item->hdc, (char *)button_id_to_label_text.at(some_item->idFrom), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER, nullptr);
         return CDRF_SKIPDEFAULT;
       } else {
         if (item->uItemState & CDIS_HOT) {
@@ -577,7 +577,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
           SetTextColor(item->hdc, color::red);
           SetBkMode(item->hdc, TRANSPARENT);
-          DrawTextEx(item->hdc, (char *)button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER, nullptr);
+          DrawTextEx(item->hdc, (char *)button_id_to_label_text.at(some_item->idFrom), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER, nullptr);
           return CDRF_SKIPDEFAULT;
         }
 
@@ -597,7 +597,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
         SetTextColor(item->hdc, color::red);
         SetBkMode(item->hdc, TRANSPARENT);
-        DrawTextEx(item->hdc, (char *)button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER, nullptr);
+        DrawTextEx(item->hdc, (char *)button_id_to_label_text.at(some_item->idFrom), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER, nullptr);
         return CDRF_SKIPDEFAULT;
       }
     }
@@ -1203,7 +1203,7 @@ LRESULT CALLBACK WndProcForConfirmationDialog(HWND hWnd, UINT message, WPARAM wP
 
         SetTextColor(item->hdc, color::red);
         SetBkMode(item->hdc, TRANSPARENT);
-        DrawText(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
+        DrawText(item->hdc, button_id_to_label_text.at(some_item->idFrom), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
         return CDRF_SKIPDEFAULT;
       } else {
         if (item->uItemState & CDIS_HOT) {
@@ -1223,7 +1223,7 @@ LRESULT CALLBACK WndProcForConfirmationDialog(HWND hWnd, UINT message, WPARAM wP
 
           SetTextColor(item->hdc, color::red);
           SetBkMode(item->hdc, TRANSPARENT);
-          DrawText(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
+          DrawText(item->hdc, button_id_to_label_text.at(some_item->idFrom), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
           return CDRF_SKIPDEFAULT;
         }
 
@@ -1243,7 +1243,7 @@ LRESULT CALLBACK WndProcForConfirmationDialog(HWND hWnd, UINT message, WPARAM wP
 
         SetTextColor(item->hdc, color::red);
         SetBkMode(item->hdc, TRANSPARENT);
-        DrawText(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
+        DrawText(item->hdc, button_id_to_label_text.at(some_item->idFrom), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
         return CDRF_SKIPDEFAULT;
       }
     }
@@ -1388,7 +1388,7 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
 
         SetTextColor(item->hdc, color::red);
         SetBkMode(item->hdc, TRANSPARENT);
-        DrawText(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
+        DrawText(item->hdc, button_id_to_label_text.at(some_item->idFrom), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
         return CDRF_SKIPDEFAULT;
       } else {
         if (item->uItemState & CDIS_HOT) {
@@ -1408,7 +1408,7 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
 
           SetTextColor(item->hdc, color::red);
           SetBkMode(item->hdc, TRANSPARENT);
-          DrawText(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
+          DrawText(item->hdc, button_id_to_label_text.at(some_item->idFrom), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
           return CDRF_SKIPDEFAULT;
         }
 
@@ -1428,7 +1428,7 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
 
         SetTextColor(item->hdc, color::red);
         SetBkMode(item->hdc, TRANSPARENT);
-        DrawText(item->hdc, button_id_to_label_text.at(some_item->idFrom).c_str(), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
+        DrawText(item->hdc, button_id_to_label_text.at(some_item->idFrom), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER | DT_NOPREFIX);
         return CDRF_SKIPDEFAULT;
       }
     }

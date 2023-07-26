@@ -5718,17 +5718,17 @@ void construct_tinyrcon_gui(HWND hWnd) noexcept
 
   app_handles.hwnd_button_ipban = CreateWindowEx(NULL, "Button", "Ban &IP", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 330, screen_height - 123, 100, 30, hWnd, reinterpret_cast<HMENU>(ID_IPBANBUTTON), app_handles.hInstance, NULL);
 
-  app_handles.hwnd_button_view_tempbans = CreateWindowEx(NULL, "Button", "View temporary bans", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 450, screen_height - 123, 170, 30, hWnd, reinterpret_cast<HMENU>(ID_VIEWTEMPBANSBUTTON), app_handles.hInstance, NULL);
+  app_handles.hwnd_button_view_tempbans = CreateWindowEx(NULL, "Button", "View temporary bans", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 450, screen_height - 123, 180, 30, hWnd, reinterpret_cast<HMENU>(ID_VIEWTEMPBANSBUTTON), app_handles.hInstance, NULL);
 
-  app_handles.hwnd_button_view_ipbans = CreateWindowEx(NULL, "Button", "View IP bans", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 640, screen_height - 123, 140, 30, hWnd, reinterpret_cast<HMENU>(ID_VIEWIPBANSBUTTON), app_handles.hInstance, NULL);
+  app_handles.hwnd_button_view_ipbans = CreateWindowEx(NULL, "Button", "View IP bans", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 650, screen_height - 123, 140, 30, hWnd, reinterpret_cast<HMENU>(ID_VIEWIPBANSBUTTON), app_handles.hInstance, NULL);
 
   app_handles.hwnd_connect_button = CreateWindowEx(NULL, "Button", "Join server", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 413, screen_height - 82, 100, 30, hWnd, reinterpret_cast<HMENU>(ID_CONNECTBUTTON), app_handles.hInstance, NULL);
 
-  app_handles.hwnd_connect_private_slot_button = CreateWindowEx(NULL, "Button", "Join server (private slot)", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 533, screen_height - 82, 180, 30, hWnd, reinterpret_cast<HMENU>(ID_CONNECTPRIVATESLOTBUTTON), app_handles.hInstance, NULL);
+  app_handles.hwnd_connect_private_slot_button = CreateWindowEx(NULL, "Button", "Join server (private slot)", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 533, screen_height - 82, 200, 30, hWnd, reinterpret_cast<HMENU>(ID_CONNECTPRIVATESLOTBUTTON), app_handles.hInstance, NULL);
 
-  app_handles.hwnd_say_button = CreateWindowEx(NULL, "Button", "Send public message", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 733, screen_height - 82, 150, 30, hWnd, reinterpret_cast<HMENU>(ID_SAY_BUTTON), app_handles.hInstance, NULL);
+  app_handles.hwnd_say_button = CreateWindowEx(NULL, "Button", "Send public message", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 753, screen_height - 82, 170, 30, hWnd, reinterpret_cast<HMENU>(ID_SAY_BUTTON), app_handles.hInstance, NULL);
 
-  app_handles.hwnd_tell_button = CreateWindowEx(NULL, "Button", "Send private message", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 903, screen_height - 82, 160, 30, hWnd, reinterpret_cast<HMENU>(ID_TELL_BUTTON), app_handles.hInstance, NULL);
+  app_handles.hwnd_tell_button = CreateWindowEx(NULL, "Button", "Send private message", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 943, screen_height - 82, 170, 30, hWnd, reinterpret_cast<HMENU>(ID_TELL_BUTTON), app_handles.hInstance, NULL);
 
   app_handles.hwnd_quit_button = CreateWindowEx(NULL, "Button", "E&xit", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, screen_width - 100, screen_height - 80, 70, 25, hWnd, reinterpret_cast<HMENU>(ID_QUITBUTTON), app_handles.hInstance, NULL);
 
@@ -5877,12 +5877,12 @@ void initialize_players_grid(HWND hgrid, const size_t cols, const size_t rows, c
   const int players_grid_width{ screen_width / 2 + 130 };
 
   SimpleGrid_SetColWidth(hgrid, 0, 50);
-  SimpleGrid_SetColWidth(hgrid, 1, 60);
-  SimpleGrid_SetColWidth(hgrid, 2, 50);
-  SimpleGrid_SetColWidth(hgrid, 3, 210);
+  SimpleGrid_SetColWidth(hgrid, 1, 70);
+  SimpleGrid_SetColWidth(hgrid, 2, 60);
+  SimpleGrid_SetColWidth(hgrid, 3, 270);
   if (is_for_rcon_status) {
-    SimpleGrid_SetColWidth(hgrid, 4, 160);
-    SimpleGrid_SetColWidth(hgrid, 5, players_grid_width - 580);
+    SimpleGrid_SetColWidth(hgrid, 4, 190);
+    SimpleGrid_SetColWidth(hgrid, 5, players_grid_width - 690);
     SimpleGrid_SetColWidth(hgrid, 6, 50);
   }
   SimpleGrid_SetSelectionMode(app_handles.hwnd_players_grid, GSO_FULLROW);
@@ -5938,11 +5938,11 @@ void display_players_data_in_players_grid(HWND hgrid) noexcept
   const int players_grid_width{ screen_width / 2 + 130 };
   const int player_name_column_width{ findLongestTextWidthInColumn(hgrid, 3) };
   SimpleGrid_SetColWidth(hgrid, 0, 50);
-  SimpleGrid_SetColWidth(hgrid, 1, 60);
-  SimpleGrid_SetColWidth(hgrid, 2, 50);
+  SimpleGrid_SetColWidth(hgrid, 1, 70);
+  SimpleGrid_SetColWidth(hgrid, 2, 60);
   SimpleGrid_SetColWidth(hgrid, 3, player_name_column_width);
-  SimpleGrid_SetColWidth(hgrid, 4, 160);
-  SimpleGrid_SetColWidth(hgrid, 5, players_grid_width - (player_name_column_width + 370));
+  SimpleGrid_SetColWidth(hgrid, 4, 190);
+  SimpleGrid_SetColWidth(hgrid, 5, players_grid_width - (player_name_column_width + 420));
   SimpleGrid_SetColWidth(hgrid, 6, 50);
   SimpleGrid_EnableEdit(hgrid, FALSE);
 }
@@ -6816,36 +6816,36 @@ void display_context_menu_over_grid(const int mouse_x, const int mouse_y, const 
     if (int pid{ -1 }; is_valid_decimal_whole_number(selected_pid_str, pid)) {
       auto &player_data = get_player_data_for_pid(pid);
       if (player_data.pid == pid) {
-        (void)snprintf(info_player_command, std::size(info_player_command), "Display information about player (name: %s | pid: %d)", player_data.player_name, pid);
+        (void)snprintf(info_player_command, std::size(info_player_command), "Display information about player (Name: %s | PID: %d)", player_data.player_name, pid);
         remove_all_color_codes(info_player_command);
         InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_PRINTPLAYERINFORMATION_ACTION, info_player_command);
-        (void)snprintf(warn_player_command, std::size(warn_player_command), "Warn player (name: %s | pid: %d)", player_data.player_name, pid);
+        (void)snprintf(warn_player_command, std::size(warn_player_command), "Warn player (Name: %s | PID: %d)", player_data.player_name, pid);
         remove_all_color_codes(warn_player_command);
         InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_WARNBUTTON, warn_player_command);
-        (void)snprintf(kick_player_command, std::size(kick_player_command), "Kick player (name: %s | pid: %d)", player_data.player_name, pid);
+        (void)snprintf(kick_player_command, std::size(kick_player_command), "Kick player (Name: %s | PID: %d)", player_data.player_name, pid);
         remove_all_color_codes(kick_player_command);
         InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_KICKBUTTON, kick_player_command);
-        (void)snprintf(tempban_player_command, std::size(tempban_player_command), "Temporarily ban player's IP (name: %s | pid: %d)", player_data.player_name, pid);
+        (void)snprintf(tempban_player_command, std::size(tempban_player_command), "Temporarily ban player's IP address (Name: %s | PID: %d)", player_data.player_name, pid);
         remove_all_color_codes(tempban_player_command);
         InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_TEMPBANBUTTON, tempban_player_command);
-        (void)snprintf(ipban_player_command, std::size(ipban_player_command), "Ban player's IP (name: %s | pid: %d)", player_data.player_name, pid);
+        (void)snprintf(ipban_player_command, std::size(ipban_player_command), "Ban player's IP address (Name: %s | PID: %d)", player_data.player_name, pid);
         remove_all_color_codes(ipban_player_command);
         InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_IPBANBUTTON, ipban_player_command);
         InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_SEPARATOR, NULL, nullptr);
       }
     }
   }
-  InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_VIEWTEMPBANSBUTTON, "View temporary bans");
-  InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_VIEWIPBANSBUTTON, "View permanent bans");
-  InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_REFRESHDATABUTTON, "Refresh players data");
+  InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_VIEWTEMPBANSBUTTON, "View temporarily banned IP addresses");
+  InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_VIEWIPBANSBUTTON, "View permanently banned IP addresses");
+  InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_REFRESHDATABUTTON, "Refresh players' data");
   InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_SEPARATOR, NULL, nullptr);
   if (main_app.get_game_server().get_number_of_players() > 0) {
-    InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_SORT_PLAYERS_DATA_BY_PID, "Sort players data by PID");
-    InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_SORT_PLAYERS_DATA_BY_SCORE, "Sort players data by score");
-    InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_SORT_PLAYERS_DATA_BY_PING, "Sort players data by ping");
-    InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_SORT_PLAYERS_DATA_BY_NAME, "Sort players data by player name");
-    InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_SORT_PLAYERS_DATA_BY_IP, "Sort players data by IP address");
-    InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_SORT_PLAYERS_DATA_BY_GEO, "Sort players data by geoinformation");
+    InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_SORT_PLAYERS_DATA_BY_PID, "Sort players' data by 'PID'");
+    InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_SORT_PLAYERS_DATA_BY_SCORE, "Sort players' data by 'SCORE'");
+    InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_SORT_PLAYERS_DATA_BY_PING, "Sort players' data by 'PING'");
+    InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_SORT_PLAYERS_DATA_BY_NAME, "Sort players' data by 'PLAYER NAME'");
+    InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_SORT_PLAYERS_DATA_BY_IP, "Sort players' data by 'IP ADDRESS'");
+    InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_SORT_PLAYERS_DATA_BY_GEO, "Sort players' data by 'GEOINFORMATION'");
     InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_SEPARATOR, NULL, nullptr);
   }
   InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_CONNECTBUTTON, "Join the game server");
@@ -6862,10 +6862,9 @@ void display_context_menu_over_grid(const int mouse_x, const int mouse_y, const 
 
 const std::regex &get_appropriate_status_regex_for_specified_game_name(const game_name_t game_name)
 {
+  static const std::regex status_regex_for_cod1{ R"(^\s*(\d+)\s+(-?\d+)\s+(-?\d+|[a-zA-Z]{4})\s+(\d*)\s*([^\n]+?)\s+(\d+)\s+(\d+\.\d+\.\d+\.\d+):(-?\d+)\s+(-?\d+)\s+(\d+)$)" };
 
-  static const std::regex status_regex_for_cod1{ R"(^\s*(\d+)\s+(-?\d+)\s+(-?\d+|[a-zA-Z]{4})\s+(\d*)\s+([^\n]+?)\s+(\d+)\s+(\d+\.\d+\.\d+\.\d+):(-?\d+)\s+(-?\d+)\s+(\d+)$)" };
-
-  static const std::regex status_regex_for_cod2{ R"(^\s*(\d+)\s+(-?\d+)\s+(-?\d+|[a-zA-Z]{4})\s+(\d*)\s+([^\n]+?)\s+(\d+)\s+(\d+\.\d+\.\d+\.\d+):(-?\d+)?\s*(-?\d+)?\s*(\d+)?$)" };
+  static const std::regex status_regex_for_cod2{ R"(^\s*(\d+)\s+(-?\d+)\s+(-?\d+|[a-zA-Z]{4})\s+(\d*)\s+([^\n]+?)\s+(\d*)\s+(\d+\.\d+\.\d+\.\d+):(-?\d+)?\s*(-?\d+)?\s*(\d+)?$)" };
 
   static const std::regex status_regex_for_cod4{ R"(^\s*(\d+)\s+(-?\d+)\s+(-?\d+|[a-zA-Z]{4})\s+([0-9a-fA-F]{32}?)\s+([^\n]+?)\s+(\d+)\s+(\d+\.\d+\.\d+\.\d+):(-?\d+)\s+(-?\d+)\s+(\d+)$)" };
 

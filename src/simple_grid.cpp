@@ -59,7 +59,7 @@
 // DWM 2.2.1: Changes labled thus.
 //          (1) included bug fix suggestion provided by Hans-Peter Kalb
 
-#define WIN32_LEAN_AND_MEAN /* speed up compilations */
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <windowsx.h>
 #include <commctrl.h>
@@ -4373,8 +4373,8 @@ int findLongestTextWidthInColumn(HWND hwnd, const int col)
   SelectObject(hdc, holdfont);
   ReleaseDC(hwnd, hdc);
 
-  if (longest_line >= 260)
-    return 260;
+  if (longest_line >= 270)
+    return 270;
 
   return std::max<int>(160, longest_line);
 }

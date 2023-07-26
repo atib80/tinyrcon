@@ -11,7 +11,8 @@ extern tiny_rcon_handles app_handles;
 extern string previous_map;
 extern int selected_row;
 
-static const std::regex ip_address_regex{ R"((\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:-?\d+\s*(-?\d+)?\s*(\d+)?))" };
+// static const std::regex ip_address_regex{ R"((\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:-?\d+\s*(-?\d+)?\s*(\d+)?))" };
+static const std::regex ip_address_regex{ R"(\d+\.\d+\.\d+\.\d+:(-?\d+)?\s*(-?\d+)?\s*(\d+)?)" };
 
 using namespace asio;
 
@@ -90,7 +91,6 @@ size_t connection_manager::receive_data_from_server(
       main_app.set_is_connection_settings_valid(false);
       main_app.add_command_to_queue({ "getstatus" }, command_type::rcon, true);
     } else {
-      // incoming_data_buffer[noOfAllReceivedBytes] = '\0';
       const char *current{}, *last{};
 
       const auto [rcon_status_response_needle1, rcon_status_response_needle2] = get_appropriate_rcon_status_response_header(main_app.get_game_name());
@@ -121,26 +121,24 @@ size_t connection_manager::receive_data_from_server(
           received_reply.erase(begin(received_reply), begin(received_reply) + digit_pos);
         }
 
-        while (strstr(incoming_data_buffer, "\n\n") == nullptr) {
+        // while (strstr(incoming_data_buffer, "\n\n") == nullptr) {
+        while (true) {
           asio::error_code err2{};
           ZeroMemory(incoming_data_buffer, receive_buffer_size);
           noOfReceivedBytes = udp_socket.receive_from(buffer(incoming_data_buffer, receive_buffer_size), destination, 0, err2);
           noOfAllReceivedBytes += noOfReceivedBytes;
-          if (err2) {
-            // is_server_empty_or_error_receiving_udp_datagrams = true;
+          if (noOfReceivedBytes > 0U) {
+            const size_t new_line_pos = stl::helper::str_index_of(incoming_data_buffer, "\xFF\xFF\xFF\xFFprint\n");
+            if (new_line_pos != string::npos) {
+              received_reply.append(incoming_data_buffer + new_line_pos + 10);
+            } else {
+              received_reply.append(incoming_data_buffer);
+            }
+          }
+
+          if (err2)
             break;
-          }
-
-          const size_t new_line_pos = stl::helper::str_index_of(incoming_data_buffer, "\xFF\xFF\xFF\xFFprint\n");
-          if (new_line_pos != string::npos) {
-            received_reply.append(incoming_data_buffer + new_line_pos + 10);
-          } else {
-            received_reply.append(incoming_data_buffer);
-          }
         }
-
-        /*if (!is_process_reply)
-          return noOfAllReceivedBytes;*/
 
         auto &ip_address_frequency = main_app.get_game_server().get_ip_address_frequency();
         ip_address_frequency.clear();
@@ -177,11 +175,13 @@ size_t connection_manager::receive_data_from_server(
           const auto &status_regex = get_appropriate_status_regex_for_specified_game_name(main_app.get_game_name());
 
           for (const string &player_line : lines) {
-
             std::smatch matches{};
 
             if (std::regex_search(player_line, matches, status_regex)) {
-              const int player_pid{ stoi(matches[1].str()) };
+              const string pid{ matches[1].str() };
+              int player_pid;
+              if (!is_valid_decimal_whole_number(pid, player_pid))
+                player_pid = -1;
 
               const string score{ matches[2].str() };
               int player_score{};

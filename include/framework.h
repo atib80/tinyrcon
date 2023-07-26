@@ -9,7 +9,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define ASIO_STANDALONE
 // Windows Header Files
-#include <windows.h>
+#include <Windows.h>
 // C RunTime Header Files
 #include <memory.h>
 #include <tchar.h>
