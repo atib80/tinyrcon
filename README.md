@@ -8,3 +8,5 @@ I plan to to make it cross-platform in the near future.
 ![tinyrcon_01](https://github.com/atib80/tinyrcon/assets/12786541/e43c9054-9dac-4e5f-92d3-048353a9785c)
 
 ![tinyrcon_02](https://github.com/atib80/tinyrcon/assets/12786541/f8bb68aa-4c49-407c-908e-ff9874a6ac20)
+
+![tinyrcon_03](https://github.com/atib80/tinyrcon/assets/12786541/581110a2-9411-485c-a392-90e67ad032ae)
