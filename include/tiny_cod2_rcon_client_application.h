@@ -60,6 +60,9 @@ class tiny_cod2_rcon_client_application
   };
 
   std::string program_title{ "Welcome to TinyRcon!" };
+  std::string ftp_download_site_ip_address;
+  std::string ftp_download_folder_path;
+  std::string ftp_download_file_pattern;
   std::ofstream log_file;
   std::recursive_mutex command_queue_mutex{};
 
@@ -280,6 +283,36 @@ public:
   void set_is_draw_border_lines(const bool new_value) noexcept
   {
     is_draw_border_lines = new_value;
+  }
+
+  const std::string &get_ftp_download_site_ip_address() const noexcept
+  {
+    return ftp_download_site_ip_address;
+  }
+
+  void set_ftp_download_site_ip_address(string new_ftp_download_site) noexcept
+  {
+    ftp_download_site_ip_address = std::move(new_ftp_download_site);
+  }
+
+  const std::string &get_ftp_download_folder_path() const noexcept
+  {
+    return ftp_download_folder_path;
+  }
+
+  void set_ftp_download_folder_path(string new_ftp_download_folder_path) noexcept
+  {
+    ftp_download_folder_path = std::move(new_ftp_download_folder_path);
+  }
+
+  const std::string &get_ftp_download_file_pattern() const noexcept
+  {
+    return ftp_download_file_pattern;
+  }
+
+  void set_ftp_download_file_pattern(string new_ftp_download_file_pattern) noexcept
+  {
+    ftp_download_file_pattern = std::move(new_ftp_download_file_pattern);
   }
 
   bool open_log_file(const char *file_path) noexcept

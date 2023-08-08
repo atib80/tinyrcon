@@ -444,7 +444,7 @@ inline std::pair<const char *, const char *> get_appropriate_rcon_status_respons
   }
 }
 
-const std::regex &get_appropriate_status_regex_for_specified_game_name(const game_name_t game_name);
+// const std::regex &get_appropriate_status_regex_for_specified_game_name(const game_name_t game_name);
 
 const std::map<std::string, std::string> &get_rcon_map_names_to_full_map_names_for_specified_game_name(const game_name_t) noexcept;
 

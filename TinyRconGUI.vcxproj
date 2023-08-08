@@ -43,14 +43,14 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>Unicode</CharacterSet>
+    <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -75,23 +75,27 @@
     <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)$(Configuration)\Intermediate\</IntDir>
     <IncludePath>$(IncludePath)</IncludePath>
-    <LibraryPath>$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(VCToolsInstallDir)atlmfc\lib\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
     <TargetName>TinyRcon</TargetName>
     <IntDir>$(SolutionDir)$(Configuration)\Intermediate\</IntDir>
+    <LibraryPath>$(VCToolsInstallDir)atlmfc\lib\;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <TargetName>TinyRcon</TargetName>
     <IntDir>$(SolutionDir)$(Configuration)\Intermediate\</IntDir>
     <IncludePath>$(IncludePath)</IncludePath>
-    <LibraryPath>$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(VCToolsInstallDir)atlmfc\lib\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
     <TargetName>TinyRcon</TargetName>
     <IntDir>$(SolutionDir)$(Configuration)\Intermediate\</IntDir>
+    <LibraryPath>$(VCToolsInstallDir)atlmfc\lib\;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -110,6 +114,7 @@
       <EnableModules>false</EnableModules>
       <LanguageStandard_C>Default</LanguageStandard_C>
       <AdditionalIncludeDirectories>include;$(SolutionDir)deps\asio-1.26.0\include</AdditionalIncludeDirectories>
+      <FloatingPointModel>Fast</FloatingPointModel>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -136,6 +141,7 @@
       <StringPooling>true</StringPooling>
       <EnableModules>false</EnableModules>
       <AdditionalIncludeDirectories>include;$(SolutionDir)deps\asio-1.26.0\include;$(SolutionDir)include</AdditionalIncludeDirectories>
+      <FloatingPointModel>Fast</FloatingPointModel>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -151,7 +157,7 @@
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions);_WIN32_WINNT=0x0601</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <OmitFramePointers>false</OmitFramePointers>
       <WholeProgramOptimization>false</WholeProgramOptimization>
@@ -160,6 +166,7 @@
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <EnableModules>true</EnableModules>
       <AdditionalIncludeDirectories>include;$(SolutionDir)deps\asio-1.26.0\include;I:\Programming\source\repos\TinyRconGUI\deps\asio-1.26.0\include;</AdditionalIncludeDirectories>
+      <FloatingPointModel>Fast</FloatingPointModel>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -176,9 +183,10 @@
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <EnableModules>true</EnableModules>
       <AdditionalIncludeDirectories>include;$(SolutionDir)deps\asio-1.26.0\include;I:\Programming\source\repos\TinyRconGUI\deps\asio-1.26.0\include;$(SolutionDir)include</AdditionalIncludeDirectories>
+      <FloatingPointModel>Fast</FloatingPointModel>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -188,6 +196,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="include\autoupdate.h" />
     <ClInclude Include="include\connection_manager.h" />
     <ClInclude Include="include\detail\stl_helper_functions_impl.hpp" />
     <ClInclude Include="include\framework.h" />
@@ -203,6 +212,7 @@
     <ClInclude Include="include\resource.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\autoupdate.cpp" />
     <ClCompile Include="src\connection_manager.cpp" />
     <ClCompile Include="src\simple_grid.cpp" />
     <ClCompile Include="src\tiny_rcon.cpp" />

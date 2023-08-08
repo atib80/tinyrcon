@@ -1,7 +1,8 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
 // Used by TinyRconGUI.rc
-//
+
+#define IDI_ICON1                       101
 #define IDC_COPY 106
 #define IDI_TINYRCONGUI                 107
 #define IDI_SMALL                       108

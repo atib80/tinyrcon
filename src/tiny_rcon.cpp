@@ -16,7 +16,7 @@ using namespace stl::helper;
 using namespace std::string_literals;
 using namespace std::chrono;
 
-extern const string program_version{ "2.4" };
+extern const string program_version{ "2.4.0.6" };
 
 extern char const *const tempbans_file_path =
   "data/tempbans.txt";
@@ -28,7 +28,6 @@ extern const std::regex ip_address_and_port_regex;
 
 extern std::atomic<bool> is_terminate_program;
 extern volatile std::atomic<bool> is_terminate_tinyrcon_settings_configuration_dialog_window;
-// volatile std::atomic<bool> is_refreshing_players_data{false};
 extern string g_message_data_contents;
 
 tiny_cod2_rcon_client_application main_app;
@@ -36,7 +35,6 @@ sort_type type_of_sort{ sort_type::pid_asc };
 
 PROCESS_INFORMATION pr_info{};
 
-// static once_flag task_to_run_one_time{};
 condition_variable exit_flag{};
 mutex mu{};
 
@@ -87,7 +85,7 @@ extern const char *user_help_message =
 
 extern const std::unordered_map<string, sort_type> sort_mode_names_dict;
 
-extern const std::unordered_map<int, const char*> button_id_to_label_text{
+extern const std::unordered_map<int, const char *> button_id_to_label_text{
   { ID_WARNBUTTON, "&Warn" },
   { ID_KICKBUTTON, "&Kick" },
   { ID_TEMPBANBUTTON, "&Tempban" },
@@ -147,8 +145,8 @@ string admin_reason{ "not specified" };
 extern HIMAGELIST hImageList;
 HFONT font_for_players_grid_data{};
 
-ATOM MyRegisterClass(HINSTANCE hInstance);
-BOOL InitInstance(HINSTANCE, int);
+ATOM register_window_classes(HINSTANCE hInstance);
+bool initialize_main_app(HINSTANCE, const int);
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK ComboProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubClass, DWORD_PTR);
 LRESULT CALLBACK WndProcForConfirmationDialog(HWND, UINT, WPARAM, LPARAM);
@@ -164,12 +162,11 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
   HACCEL hAccel = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDR_ACCELERATOR1));
 
-  MyRegisterClass(hInstance);
+  register_window_classes(hInstance);
 
+  if (!initialize_main_app(hInstance, nCmdShow))
+    return 0;
 
-  if (!InitInstance(hInstance, nCmdShow)) {
-    return FALSE;
-  }
 
   parse_tiny_cod2_rcon_tool_config_file("config/tinyrcon.json");
 
@@ -197,6 +194,10 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   SetWindowText(app_handles.hwnd_main_window, program_title.c_str());
 
   CenterWindow(app_handles.hwnd_main_window);
+
+  {
+    auto_update_manager au{ main_app };
+  }
 
   MSG msg{};
 
@@ -282,6 +283,15 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     }
 
     if (is_main_window_constructed && !is_tinyrcon_initialized) {
+
+      ifstream temp_messages_file{ "log/temporary_message.log" };
+      if (temp_messages_file) {
+        for (string line; getline(temp_messages_file, line);) {
+          print_colored_text(app_handles.hwnd_re_messages_data, line.c_str(), true, true, true);
+        }
+        temp_messages_file.close();
+      }
+
       string rcon_task_reply;
       is_tinyrcon_initialized = true;
       if (main_app.get_is_connection_settings_valid()) {
@@ -338,15 +348,12 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   UnregisterClass(wcex_confirmation_dialog.lpszClassName, app_handles.hInstance);
   UnregisterClass(wcex_configuration_dialog.lpszClassName, app_handles.hInstance);
 
+  // au.replace_temporary_version();
+
   return static_cast<int>(msg.wParam);
 }
 
-//
-//  FUNCTION: MyRegisterClass()
-//
-//  PURPOSE: Registers the window class.
-//
-ATOM MyRegisterClass(HINSTANCE hInstance)
+ATOM register_window_classes(HINSTANCE hInstance)
 {
   wcex = {};
   wcex.cbSize = sizeof(WNDCLASSEX);
@@ -403,23 +410,13 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
   return status;
 }
 
-//
-//   FUNCTION: InitInstance(HINSTANCE, int)
-//
-//   PURPOSE: Saves instance handle and creates main window
-//
-//   COMMENTS:
-//
-//        In this function, we save the instance handle in a global variable and
-//        create and display the main program window.
-//
-BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
+bool initialize_main_app(HINSTANCE hInstance, const int nCmdShow)
 {
   app_handles.hInstance = hInstance;// Store instance handle in our global variable
 
   InitSimpleGrid(app_handles.hInstance);
 
-  INITCOMMONCONTROLSEX icex;
+  INITCOMMONCONTROLSEX icex{};
 
   icex.dwSize = sizeof(INITCOMMONCONTROLSEX);
   icex.dwICC = ICC_PROGRESS_CLASS;
@@ -429,14 +426,14 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
   // AdjustWindowRectEx(&client_rect, WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME, FALSE, 0);
 
-  app_handles.hwnd_main_window = CreateWindowEx(0, wcex.lpszClassName, "Welcome to TinyRcon | version: 2.4", WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME /*WS_OVERLAPPEDWINDOW | WS_HSCROLL | WS_VSCROLL*/, client_rect.left, client_rect.top, client_rect.right - client_rect.left, client_rect.bottom - client_rect.top, nullptr, nullptr, hInstance, nullptr);
+  app_handles.hwnd_main_window = CreateWindowEx(0, wcex.lpszClassName, "Welcome to TinyRcon | version: 2.4", WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME /*WS_OVERLAPPEDWINDOW | WS_HSCROLL | WS_VSCROLL*/, 0, 0, client_rect.right - client_rect.left, client_rect.bottom - client_rect.top, nullptr, nullptr, hInstance, nullptr);
 
   if (!app_handles.hwnd_main_window)
-    return FALSE;
+    return false;
 
   ShowWindow(app_handles.hwnd_main_window, nCmdShow);
   UpdateWindow(app_handles.hwnd_main_window);
-  return TRUE;
+  return true;
 }
 
 //
@@ -512,7 +509,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       screen_height - 55
     };
 
-    // DrawText(hdc, prompt_message, -1, &bounding_rectangle, DT_SINGLELINE | DT_TOP | DT_LEFT | DT_END_ELLIPSIS);
     InvalidateRect(hWnd, &bounding_rectangle, TRUE);
     EndPaint(hWnd, &ps);
   }

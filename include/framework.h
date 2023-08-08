@@ -24,3 +24,4 @@
 #include <thread>
 #include "simple_grid.h"
 #include "tiny_cod2_rcon_client_application.h"
+#include "autoupdate.h"

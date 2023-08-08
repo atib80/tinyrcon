@@ -82,7 +82,6 @@ size_t connection_manager::receive_data_from_server(
   received_reply.clear();
   if (noOfReceivedBytes > 0) {
     noOfAllReceivedBytes += noOfReceivedBytes;
-    // received_reply.assign(incoming_data_buffer, incoming_data_buffer + noOfReceivedBytes);
     received_reply.assign(incoming_data_buffer);
 
     const char *start =
@@ -121,7 +120,6 @@ size_t connection_manager::receive_data_from_server(
           received_reply.erase(begin(received_reply), begin(received_reply) + digit_pos);
         }
 
-        // while (strstr(incoming_data_buffer, "\n\n") == nullptr) {
         while (true) {
           asio::error_code err2{};
           ZeroMemory(incoming_data_buffer, receive_buffer_size);
@@ -172,69 +170,175 @@ size_t connection_manager::receive_data_from_server(
           }
 
           auto &players_data = main_app.get_game_server().get_players_data();
-          const auto &status_regex = get_appropriate_status_regex_for_specified_game_name(main_app.get_game_name());
 
           for (const string &player_line : lines) {
-            std::smatch matches{};
-
-            if (std::regex_search(player_line, matches, status_regex)) {
-              const string pid{ matches[1].str() };
-              int player_pid;
-              if (!is_valid_decimal_whole_number(pid, player_pid))
-                player_pid = -1;
-
-              const string score{ matches[2].str() };
-              int player_score{};
-              if (!is_valid_decimal_whole_number(score, player_score))
-                player_score = 0;
-
-              string player_ping{ matches[3].str() };
-              stl::helper::trim_in_place(player_ping);
-              int ping_value{};
-              if ("999" == player_ping || "-1" == player_ping || !is_valid_decimal_whole_number(player_ping, ping_value)) {
-                ++number_of_offline_players;
-              } else {
-                ++number_of_online_players;
-              }
-
-              string guid_key{ matches[4].str() };
-
-              string player_name{ matches[5].str() };
-              const size_t pn_len{ player_name.length() };
-              if (player_name.ends_with("^7")) {
-                player_name.pop_back();
-                player_name.pop_back();
-              } else if (pn_len >= 1 && (player_name[pn_len - 1] == '^' || player_name[pn_len - 1] == '7')) {
-                player_name.pop_back();
-              }
-
-              stl::helper::trim_in_place(player_name);
-
-              const string ip_address{ matches[7].str() };
-
-              players_data[pl_index].pid = player_pid;
-              players_data[pl_index].score = player_score;
-              strcpy_s(players_data[pl_index].ping, 5, player_ping.c_str());
-              if (strcmp(player_name.c_str(), players_data[pl_index].player_name) != 0) {
-                const size_t no_of_chars_to_copy{ std::min<size_t>(32, player_name.length()) };
-                strncpy_s(players_data[pl_index].player_name, 33, player_name.c_str(), no_of_chars_to_copy);
-                players_data[pl_index].player_name[no_of_chars_to_copy] = '\0';
-                // stl::helper::trim_in_place(players_data[pl_index].player_name);
-              }
-
-              if (strcmp(ip_address.c_str(), players_data[pl_index].ip_address) != 0) {
-
-                strcpy_s(players_data[pl_index].ip_address, 16, ip_address.c_str());
-                convert_guid_key_to_country_name(
-                  geoip_db, players_data[pl_index].ip_address, players_data[pl_index]);
-              }
-
-
-              if (stl::helper::len(players_data[pl_index].ip_address) > 0) {
-                ++ip_address_frequency[players_data[pl_index].ip_address];
-              }
-              ++pl_index;
+            int j{}, i{ 3 };
+            int digit_count{};
+            // while (!isdigit(player_line[i])) ++i;
+            int player_pid{};
+            while (is_ws(player_line[j]) && j < i) ++j;
+            while (isdigit(player_line[j]) && j < i && digit_count < 2) {
+              player_pid *= 10;
+              player_pid += static_cast<int>(player_line[j] - '0');
+              ++digit_count;
+              ++j;
             }
+
+            if (player_pid >= 64) {
+              player_pid /= 10;
+              --j;
+            }
+
+            i = j + 6;
+
+            while (j < i && !isdigit(player_line[j]) && player_line[j] != '-') ++j;
+
+            int player_score{};
+
+            bool is_player_score_negative{};
+            if (player_line[j] == '-') {
+              is_player_score_negative = true;
+              ++j;
+            }
+
+            while (isdigit(player_line[j]) && j < i) {
+              player_score *= 10;
+              player_score += static_cast<int>(player_line[j] - '0');
+              ++j;
+            }
+
+            if (is_player_score_negative)
+              player_score = -player_score;
+
+
+            i = j + 5;
+
+            while (is_ws(player_line[j]) && j < i) ++j;
+            i = j;
+            int letter_count{};
+            digit_count = 0;
+            while (!is_ws(player_line[j])) {
+              if ((isalnum(player_line[j]) || player_line[j] == '-') && digit_count < 3 && letter_count < 4) {
+                if (isdigit(player_line[j]))
+                  ++digit_count;
+                ++letter_count;
+                ++j;
+
+                if (2 == letter_count && 1 == digit_count && '-' == player_line[i] && '1' == player_line[i + 1]) {
+                  j = i + 2;
+                  break;
+                }
+              } else
+                break;
+            }
+
+            const string player_ping{ player_line.substr(i, letter_count) };
+
+
+            int ping_value{};
+            if (player_ping == "999" || player_ping == "-1" || !is_valid_decimal_whole_number(player_ping, ping_value)) {
+              ++number_of_offline_players;
+            } else {
+              ++number_of_online_players;
+            }
+
+            i = j + 8;
+            while (is_ws(player_line[j]) && j < i) ++j;
+            while (isdigit(player_line[j]) && j < i) ++j;
+
+            while (is_ws(player_line[j])) ++j;
+            const int pn_start{ j };
+
+            j = player_line.rfind(':');
+            if (string::npos == j) {
+              j = player_line.rfind('.');
+
+              if (string::npos != j) {
+                i = j - 1;
+                ++j;
+                digit_count = 0;
+                while (isdigit(player_line[j]) && digit_count < 3) {
+                  ++j;
+                  ++digit_count;
+                }
+
+                digit_count = 0;
+                int dot_count{};
+
+                while (isdigit(player_line[i]) || player_line[i] == '.') {
+                  if (player_line[i] == '.') {
+                    ++dot_count;
+                    if (dot_count > 2)
+                      break;
+                    digit_count = 0;
+                  } else {
+                    ++digit_count;
+                    if (digit_count > 3)
+                      break;
+                  }
+
+                  --i;
+                }
+              }
+            } else {
+
+              i = j - 1;
+              digit_count = 0;
+              int dot_count{};
+
+              while (isdigit(player_line[i]) || player_line[i] == '.') {
+                if (player_line[i] == '.') {
+                  ++dot_count;
+                  if (dot_count > 3)
+                    break;
+                  digit_count = 0;
+                } else {
+                  ++digit_count;
+                  if (digit_count > 3)
+                    break;
+                }
+
+                --i;
+              }
+            }
+
+            const string ip_address{ player_line.substr(i + 1, j - (i + 1)) };
+
+            while (is_ws(player_line[i])) --i;
+            while (isdigit(player_line[i])) --i;
+            while (is_ws(player_line[i])) --i;
+            ++i;
+
+            string player_name(player_line.substr(pn_start, i - pn_start));
+            const size_t pn_len{ player_name.length() };
+            if (player_name.ends_with("^7")) {
+              player_name.pop_back();
+              player_name.pop_back();
+            } else if (pn_len >= 1 && (player_name[pn_len - 1] == '^' || player_name[pn_len - 1] == '7')) {
+              player_name.pop_back();
+            }
+
+            players_data[pl_index].pid = player_pid;
+            players_data[pl_index].score = player_score;
+            strcpy_s(players_data[pl_index].ping, 5, player_ping.c_str());
+            if (strcmp(player_name.c_str(), players_data[pl_index].player_name) != 0) {
+              const size_t no_of_chars_to_copy{ std::min<size_t>(32, player_name.length()) };
+              strncpy_s(players_data[pl_index].player_name, 33, player_name.c_str(), no_of_chars_to_copy);
+              players_data[pl_index].player_name[no_of_chars_to_copy] = '\0';
+            }
+
+            if (strcmp(ip_address.c_str(), players_data[pl_index].ip_address) != 0) {
+
+              strcpy_s(players_data[pl_index].ip_address, 16, ip_address.c_str());
+              convert_guid_key_to_country_name(
+                geoip_db, players_data[pl_index].ip_address, players_data[pl_index]);
+            }
+
+
+            if (stl::helper::len(players_data[pl_index].ip_address) > 0) {
+              ++ip_address_frequency[players_data[pl_index].ip_address];
+            }
+            ++pl_index;
           }
         }
 

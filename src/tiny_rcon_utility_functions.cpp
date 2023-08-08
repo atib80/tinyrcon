@@ -770,6 +770,9 @@ bool write_tiny_rcon_json_settings_to_file(
   config_file << "\"data_player_ip_color\": \"" << main_app.get_game_server().get_data_player_ip_color() << "\",\n";
   config_file << "\"header_player_geoinfo_color\": \"" << main_app.get_game_server().get_header_player_geoinfo_color() << "\",\n";
   config_file << "\"data_player_geoinfo_color\": \"" << main_app.get_game_server().get_data_player_geoinfo_color() << "\",\n";
+  config_file << "\"ftp_download_site_ip_address\": \"" << main_app.get_ftp_download_site_ip_address() << "\",\n";
+  config_file << "\"ftp_download_folder_path\": \"" << main_app.get_ftp_download_folder_path() << "\",\n";
+  config_file << "\"ftp_download_file_pattern\": \"" << main_app.get_ftp_download_file_pattern() << "\",\n";
   config_file << "\"draw_border_lines\": " << (main_app.get_is_draw_border_lines() ? "true" : "false") << '\n';
   config_file << "}" << flush;
   return true;
@@ -1368,6 +1371,39 @@ void parse_tiny_cod2_rcon_tool_config_file(const char *configFileName)
   } else {
     found_missing_config_setting = true;
     main_app.set_is_draw_border_lines(true);
+  }
+
+  if (json_resource["ftp_download_site_ip_address"].exists()) {
+    data_line = json_resource["ftp_download_site_ip_address"].as_str();
+    strip_leading_and_trailing_quotes(data_line);
+    trim_in_place(data_line, "/\\ \t\n\f\v");
+    if (data_line.starts_with("fttp://") || data_line.starts_with("http://")) {
+      data_line.erase(0, 7);
+    }
+    main_app.set_ftp_download_site_ip_address(std::move(data_line));
+  } else {
+    found_missing_config_setting = true;
+    main_app.set_ftp_download_site_ip_address("85.222.189.119");
+  }
+
+  if (json_resource["ftp_download_folder_path"].exists()) {
+    data_line = json_resource["ftp_download_folder_path"].as_str();
+    strip_leading_and_trailing_quotes(data_line);
+    trim_in_place(data_line, "/\\ \t\n\f\v");
+    main_app.set_ftp_download_folder_path(std::move(data_line));
+  } else {
+    found_missing_config_setting = true;
+    main_app.set_ftp_download_folder_path("tinyrcon");
+  }
+
+  if (json_resource["ftp_download_file_pattern"].exists()) {
+    data_line = json_resource["ftp_download_file_pattern"].as_str();
+    strip_leading_and_trailing_quotes(data_line);
+    trim_in_place(data_line);   
+    main_app.set_ftp_download_file_pattern(std::move(data_line));
+  } else {
+    found_missing_config_setting = true;
+    main_app.set_ftp_download_file_pattern("^_U_TinyRcon[\\._-]?v?(\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}\\.\\d{1,2})\\.exe$");
   }
 
   if (found_missing_config_setting) {
@@ -5206,7 +5242,7 @@ bool connect_to_the_game_server(const std::string &server_ip_port_address, const
 
   if (!is_game_installed_via_steam) {
     string game_folder{ game_path };
-    game_folder.erase(cbegin(game_folder) + game_folder.rfind(L'\\'), cend(game_folder));
+    game_folder.erase(cbegin(game_folder) + game_folder.rfind('\\'), cend(game_folder));
     if (!game_folder.empty() && '\\' == game_folder.back())
       game_folder.pop_back();
 
@@ -5372,7 +5408,7 @@ size_t print_colored_text(HWND re_control, const char *text, const bool print_to
 
         fg_color = rich_edit_colors.at(*text);
         set_rich_edit_control_colors(re_control, fg_color, bg_color);
-        msg.push_back(L'^');
+        msg.push_back('^');
         msg.push_back(*text);
         printed_chars_count += 2;
 
@@ -5406,7 +5442,7 @@ size_t print_colored_text(HWND re_control, const char *text, const bool print_to
     string message_without_color_codes{ message };
     remove_all_color_codes(message_without_color_codes);
     if (message_without_color_codes.length() > 0 && message_without_color_codes.back() != '\n') {
-      message_without_color_codes.push_back(L'\n');
+      message_without_color_codes.push_back('\n');
     }
     log_message(message_without_color_codes, is_log_current_date_time);
   }
@@ -6860,31 +6896,31 @@ void display_context_menu_over_grid(const int mouse_x, const int mouse_y, const 
   TrackPopupMenu(hPopupMenu, TPM_TOPALIGN | TPM_LEFTALIGN, p.x, p.y, 0, app_handles.hwnd_main_window, NULL);
 }
 
-const std::regex &get_appropriate_status_regex_for_specified_game_name(const game_name_t game_name)
-{
-  static const std::regex status_regex_for_cod1{ R"(^\s*(\d+)\s+(-?\d+)\s+(-?\d+|[a-zA-Z]{4})\s+(\d*)\s*([^\n]+?)\s+(\d+)\s+(\d+\.\d+\.\d+\.\d+):(-?\d+)\s+(-?\d+)\s+(\d+)$)" };
-
-  static const std::regex status_regex_for_cod2{ R"(^\s*(\d+)\s+(-?\d+)\s+(-?\d+|[a-zA-Z]{4})\s+(\d*)\s+([^\n]+?)\s+(\d*)\s+(\d+\.\d+\.\d+\.\d+):(-?\d+)?\s*(-?\d+)?\s*(\d+)?$)" };
-
-  static const std::regex status_regex_for_cod4{ R"(^\s*(\d+)\s+(-?\d+)\s+(-?\d+|[a-zA-Z]{4})\s+([0-9a-fA-F]{32}?)\s+([^\n]+?)\s+(\d+)\s+(\d+\.\d+\.\d+\.\d+):(-?\d+)\s+(-?\d+)\s+(\d+)$)" };
-
-  static const std::regex status_regex_for_cod5{ R"(^\s*(\d+)\s+(-?\d+)\s+(-?\d+|[a-zA-Z]{4})\s+([0-9a-fA-F]{32}?)\s+([^\n]+?)\s+(\d+)\s+(\d+\.\d+\.\d+\.\d+):(-?\d+)\s+(-?\d+)\s+(\d+)$)" };
-
-  switch (game_name) {
-  case game_name_t::unknown:
-    return status_regex_for_cod2;
-  case game_name_t::cod1:
-    return status_regex_for_cod1;
-  case game_name_t::cod2:
-    return status_regex_for_cod2;
-  case game_name_t::cod4:
-    return status_regex_for_cod4;
-  case game_name_t::cod5:
-    return status_regex_for_cod5;
-  default:
-    return status_regex_for_cod2;
-  }
-}
+// const std::regex &get_appropriate_status_regex_for_specified_game_name(const game_name_t game_name)
+//{
+//   static const std::regex status_regex_for_cod1{ R"(^\s*(\d+)\s+(-?\d+)\s+(-?\d+|[a-zA-Z]{4})\s+(\d*)\s*([^\n]+?)\s+(\d+)\s+(\d+\.\d+\.\d+\.\d+):(-?\d+)\s+(-?\d+)\s+(\d+)$)" };
+//
+//   static const std::regex status_regex_for_cod2{ R"(^\s*(\d{1,2})\s*(-?\d{1,4})\s*(-?\d{1,3}|[a-zA-Z]{4})\s*(\d{1,10})\s*([^\n]+?)\s+(\d*)\s+(\d+\.\d+\.\d+\.\d+):(-?\d+)?\s*(-?\d+)?\s*(\d+)?$)" };
+//
+//   static const std::regex status_regex_for_cod4{ R"(^\s*(\d+)\s+(-?\d+)\s+(-?\d+|[a-zA-Z]{4})\s+([0-9a-fA-F]{32}?)\s+([^\n]+?)\s+(\d+)\s+(\d+\.\d+\.\d+\.\d+):(-?\d+)\s+(-?\d+)\s+(\d+)$)" };
+//
+//   static const std::regex status_regex_for_cod5{ R"(^\s*(\d+)\s+(-?\d+)\s+(-?\d+|[a-zA-Z]{4})\s+([0-9a-fA-F]{32}?)\s+([^\n]+?)\s+(\d+)\s+(\d+\.\d+\.\d+\.\d+):(-?\d+)\s+(-?\d+)\s+(\d+)$)" };
+//
+//   switch (game_name) {
+//   case game_name_t::unknown:
+//     return status_regex_for_cod2;
+//   case game_name_t::cod1:
+//     return status_regex_for_cod1;
+//   case game_name_t::cod2:
+//     return status_regex_for_cod2;
+//   case game_name_t::cod4:
+//     return status_regex_for_cod4;
+//   case game_name_t::cod5:
+//     return status_regex_for_cod5;
+//   default:
+//     return status_regex_for_cod2;
+//   }
+// }
 
 const std::map<std::string, std::string> &get_rcon_map_names_to_full_map_names_for_specified_game_name(const game_name_t game_name) noexcept
 {

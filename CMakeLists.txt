@@ -4,13 +4,6 @@ project(tinyrcon)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED 20)
 
-if (MSVC)
-    add_compile_options(/nologo /std:c++20 /W4 /EHsc /O2 /Ot /Ox /Ob2 /Oy /Oi)
-else ()
-    add_compile_options(-std=c++20 -Wall -Wextra -Wpedantic -mwindows -O3 -Ofast)
-    # add_compile_options(-std=c++20 -Wall -Wextra -Wpedantic -mwindows -m64 -O3 -Ofast -finline-functions)
-endif ()
-
 # Tell CMake to run moc when necessary:
 # set(CMAKE_AUTOMOC ON)
 # As moc files are generated in the binary dir, tell CMake
@@ -44,7 +37,7 @@ set(BOOST_ENABLE_CMAKE ON)
 #)
 # FetchContent_MakeAvailable(Boost)
 
-set(src_files src/simple_grid.cpp src/tiny_rcon_utility_functions.cpp src/connection_manager.cpp src/tiny_rcon.cpp)
+set(src_files src/autoupdate.cpp src/simple_grid.cpp src/tiny_rcon_utility_functions.cpp src/connection_manager.cpp src/tiny_rcon.cpp)
 
 add_executable(tinyrcon ${src_files})
 

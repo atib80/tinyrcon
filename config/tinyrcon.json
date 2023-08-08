@@ -47,5 +47,8 @@
 "data_player_ip_color": "^4",
 "header_player_geoinfo_color": "^4",
 "data_player_geoinfo_color": "^4",
+"ftp_download_site_ip_address": "85.222.189.119",
+"ftp_download_folder_path": "tinyrcon",
+"ftp_download_file_pattern": "^_U_TinyRcon[\._-]?v?(\d{1,2}\.\d{1,2}\.\d{1,2}\.\d{1,2})\.exe$",
 "draw_border_lines": true
 }
