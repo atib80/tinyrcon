@@ -57,6 +57,9 @@
     <ClInclude Include="include\autoupdate.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\internet_handle.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\tiny_rcon.cpp">

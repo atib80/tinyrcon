@@ -1,5 +1,5 @@
 /*
-Source File : AutoUpdate.cpp
+Source File : autoupdate.cpp
 Created for the purpose of demonstration for http://www.codeproject.com
 
 Copyright 2017 Michael Haephrati, Secured Globe Inc.
@@ -10,6 +10,7 @@ http://www.securedglobe.com
 */
 
 #include "autoupdate.h"
+#include "internet_handle.h"
 #include <urlmon.h>
 #include <iostream>
 #include <fstream>
@@ -56,18 +57,16 @@ unsigned long get_version_number(const string &file_name)
   return version_number;
 }
 
-unsigned long get_version_number(const version_data *ver) noexcept
+unsigned long get_version_number(const version_data &ver) noexcept
 {
   unsigned long version_number{};
-  if (ver != nullptr) {
-    version_number += ver->major;
-    version_number *= 100;
-    version_number += ver->minor;
-    version_number *= 100;
-    version_number += ver->revision;
-    version_number *= 100;
-    version_number += ver->sub_revision;
-  }
+  version_number += ver.major;
+  version_number *= 100;
+  version_number += ver.minor;
+  version_number *= 100;
+  version_number += ver.revision;
+  version_number *= 100;
+  version_number += ver.sub_revision;
 
   return version_number;
 }
@@ -106,7 +105,7 @@ auto_update_manager::auto_update_manager(tiny_cod2_rcon_client_application &main
 
     version_data ver{};
     unsigned long version_number{};
-    if (get_file_version(exe_file_path, &ver, version_number))
+    if (get_file_version(exe_file_path, ver, version_number))
       current_version_number = version_number;
 
     replace_temporary_version();
@@ -119,12 +118,15 @@ auto_update_manager::auto_update_manager(tiny_cod2_rcon_client_application &main
     std::snprintf(message_buffer, std::size(message_buffer), "^3Searching for updates at ^1%s\n", ftp_download_site_info.c_str());
     print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, true, true, true);
 
-    internet_open_handle = InternetOpenA("tinyrcon", INTERNET_OPEN_TYPE_DIRECT, nullptr, nullptr, 0);
-    if (NULL != internet_open_handle) {
 
-      internet_connect_handle = InternetConnectA(internet_open_handle, app.get_ftp_download_site_ip_address().c_str(), INTERNET_DEFAULT_FTP_PORT, nullptr, nullptr, INTERNET_SERVICE_FTP, INTERNET_FLAG_PASSIVE, 0);
+    // internet_handle read_file_data_handle{};
 
-      if (NULL != internet_connect_handle) {
+    internet_handle internet_open_handle{ InternetOpenA("tinyrcon", INTERNET_OPEN_TYPE_DIRECT, nullptr, nullptr, 0) };
+    if (NULL != internet_open_handle.get()) {
+
+      internet_handle internet_connect_handle{ InternetConnectA(internet_open_handle.get(), app.get_ftp_download_site_ip_address().c_str(), INTERNET_DEFAULT_FTP_PORT, nullptr, nullptr, INTERNET_SERVICE_FTP, INTERNET_FLAG_PASSIVE, 0) };
+
+      if (NULL != internet_connect_handle.get()) {
 
         WIN32_FIND_DATAA file_data{};
 
@@ -140,8 +142,8 @@ auto_update_manager::auto_update_manager(tiny_cod2_rcon_client_application &main
 
         std::snprintf(download_file_path_pattern, 512, "%s*.exe", folder_path_files_pattern.c_str());
         regex download_file_regex(app.get_ftp_download_file_pattern());
-        read_file_data_handle = FtpFindFirstFileA(internet_connect_handle, download_file_path_pattern, &file_data, INTERNET_FLAG_NEED_FILE, INTERNET_NO_CALLBACK);
-        if (read_file_data_handle != NULL) {
+        internet_handle read_file_data_handle{ FtpFindFirstFileA(internet_connect_handle.get(), download_file_path_pattern, &file_data, INTERNET_FLAG_NEED_FILE, INTERNET_NO_CALLBACK) };
+        if (read_file_data_handle.get() != NULL) {
 
           unsigned long max_version_number{ current_version_number };
 
@@ -149,7 +151,7 @@ auto_update_manager::auto_update_manager(tiny_cod2_rcon_client_application &main
 
             string ftp_download_file_name{ file_data.cFileName };
             smatch matches;
-            if (regex_match(ftp_download_file_name, matches, download_file_regex)) {
+            if (regex_search(ftp_download_file_name, matches, download_file_regex)) {
 
               version_number = get_version_number(matches[1].str());
               next_version_number_str = matches[1].str();
@@ -162,27 +164,17 @@ auto_update_manager::auto_update_manager(tiny_cod2_rcon_client_application &main
 
             Sleep(50);
             ZeroMemory(&file_data, sizeof(WIN32_FIND_DATAA));
-            InternetFindNextFileA(read_file_data_handle, &file_data);
+            InternetFindNextFileA(read_file_data_handle.get(), &file_data);
           } while (stl::helper::len(file_data.cFileName) > 0);
-
-          InternetCloseHandle(read_file_data_handle);
-          read_file_data_handle = NULL;
         }
-
-
-        InternetCloseHandle(internet_connect_handle);
-        internet_connect_handle = NULL;
       }
-
-      InternetCloseHandle(internet_open_handle);
-      internet_open_handle = NULL;
     }
 
     check_for_updates();
   }
 }
 
-bool auto_update_manager::get_file_version(const string &exe_file, version_data *ver, unsigned long &version_number) const
+bool auto_update_manager::get_file_version(const string &exe_file, version_data &ver, unsigned long &version_number) const
 {
   DWORD dwDummy;
   DWORD dwFVISize = GetFileVersionInfoSizeA(exe_file.c_str(), &dwDummy);
@@ -197,19 +189,19 @@ bool auto_update_manager::get_file_version(const string &exe_file, version_data 
   if (lpFfi && uLen) {
     DWORD dwFileVersionMS = lpFfi->dwFileVersionMS;
     DWORD dwFileVersionLS = lpFfi->dwFileVersionLS;
-    ver->major = HIWORD(dwFileVersionMS);
-    ver->minor = LOWORD(dwFileVersionMS);
-    ver->revision = HIWORD(dwFileVersionLS);
-    ver->sub_revision = LOWORD(dwFileVersionLS);
+    ver.major = HIWORD(dwFileVersionMS);
+    ver.minor = LOWORD(dwFileVersionMS);
+    ver.revision = HIWORD(dwFileVersionLS);
+    ver.sub_revision = LOWORD(dwFileVersionLS);
     version_number = 0UL;
-    version_number += ver->major;
+    version_number += ver.major;
     version_number *= 100;
-    version_number += ver->minor;
+    version_number += ver.minor;
     version_number *= 100;
-    version_number += ver->revision;
+    version_number += ver.revision;
     version_number *= 100;
-    version_number += ver->sub_revision;
-    snprintf(message_buffer, std::size(message_buffer), "^2Current version of ^5Tiny^6Rcon ^2is ^5%d.%d.%d.%d\n", ver->major, ver->minor, ver->revision, ver->sub_revision);
+    version_number += ver.sub_revision;
+    snprintf(message_buffer, std::size(message_buffer), "^2Current version of ^5Tiny^6Rcon ^2is ^5%d.%d.%d.%d\n", ver.major, ver.minor, ver.revision, ver.sub_revision);
     print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, true, true, true);
     return true;
   }

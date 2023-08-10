@@ -16,7 +16,7 @@ using namespace stl::helper;
 using namespace std::string_literals;
 using namespace std::chrono;
 
-extern const string program_version{ "2.4.0.6" };
+extern const string program_version{ "2.4.0.7" };
 
 extern char const *const tempbans_file_path =
   "data/tempbans.txt";

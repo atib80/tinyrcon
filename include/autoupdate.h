@@ -1,5 +1,5 @@
 /*
-Source File : AutoUpdate.h
+Source File : autoupdate.h
 Created for the purpose of demonstration for http://www.codeproject.com
 
 Copyright 2017 Michael Haephrati, Secured Globe Inc.
@@ -34,17 +34,9 @@ class auto_update_manager
 {
 public:
   auto_update_manager(tiny_cod2_rcon_client_application &main_app);
-  ~auto_update_manager()
-  {
-    if (read_file_data_handle != NULL)
-      InternetCloseHandle(read_file_data_handle);
-    if (internet_connect_handle != NULL)
-      InternetCloseHandle(internet_connect_handle);
-    if (internet_open_handle != NULL)
-      InternetCloseHandle(internet_open_handle);
-  }
+  ~auto_update_manager() = default;  
 
-  bool get_file_version(const std::string &exe_file, version_data *ver, unsigned long &version_number) const;
+  bool get_file_version(const std::string &exe_file, version_data& ver, unsigned long &version_number) const;
   const std::string &get_self_full_path() const;
   void replace_temporary_version();
   bool check_for_updates();
@@ -58,9 +50,6 @@ private:
   mutable unsigned long current_version_number{};
   unsigned long next_version_number{};
   string next_version_number_str;
-  HINTERNET internet_open_handle{};
-  HINTERNET internet_connect_handle{};
-  HINTERNET read_file_data_handle{};
   bool is_current_instance_temporary_version{};
   std::string self_current_working_directory;
   std::string self_full_path;
@@ -71,7 +60,7 @@ private:
 };
 
 unsigned long get_version_number(const std::string &);
-unsigned long get_version_number(const version_data *) noexcept;
+unsigned long get_version_number(const version_data&) noexcept;
 std::string GetFileNameFromPath(const std::string &);
 
 class MyCallback : public IBindStatusCallback

@@ -39,7 +39,6 @@ void connection_manager::prepare_rcon_command(
   const char *rconCommandToSend,
   const char *rcon_password) const noexcept
 {
-  // ZeroMemory(buffer, buffer_size);
   if (_strcmpi(rconCommandToSend, "getstatus") == 0 || _strcmpi(rconCommandToSend, "getinfo") == 0) {
     (void)snprintf(buffer, buffer_size, "\xFF\xFF\xFF\xFF%s", rconCommandToSend);
   } else {

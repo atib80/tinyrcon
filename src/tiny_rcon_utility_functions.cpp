@@ -1399,7 +1399,7 @@ void parse_tiny_cod2_rcon_tool_config_file(const char *configFileName)
   if (json_resource["ftp_download_file_pattern"].exists()) {
     data_line = json_resource["ftp_download_file_pattern"].as_str();
     strip_leading_and_trailing_quotes(data_line);
-    trim_in_place(data_line);   
+    trim_in_place(data_line);
     main_app.set_ftp_download_file_pattern(std::move(data_line));
   } else {
     found_missing_config_setting = true;
