@@ -40,36 +40,6 @@ void delete_me()
   CloseHandle(pi.hProcess);
 }
 
-unsigned long get_version_number(const string &file_name)
-{
-  unsigned long version_number{};
-
-  for (size_t start{}, last; (start = file_name.find_first_of("0123456789", start)) != string::npos;) {
-    last = file_name.find_first_not_of("0123456789", start + 1);
-    version_number *= 100;
-    if (string::npos == last) {
-      last = file_name.length();
-    }
-    version_number += stoul(file_name.substr(start, last - start));
-    start = last + 1;
-  }
-
-  return version_number;
-}
-
-unsigned long get_version_number(const version_data &ver) noexcept
-{
-  unsigned long version_number{};
-  version_number += ver.major;
-  version_number *= 100;
-  version_number += ver.minor;
-  version_number *= 100;
-  version_number += ver.revision;
-  version_number *= 100;
-  version_number += ver.sub_revision;
-
-  return version_number;
-}
 
 bool run_executable(const char *file_path_for_executable)
 {
@@ -153,7 +123,7 @@ auto_update_manager::auto_update_manager(tiny_cod2_rcon_client_application &main
             smatch matches;
             if (regex_search(ftp_download_file_name, matches, download_file_regex)) {
 
-              version_number = get_version_number(matches[1].str());
+              version_number = version_data::get_version_number(matches[1].str());
               next_version_number_str = matches[1].str();
 
               if (version_number > max_version_number) {
@@ -162,7 +132,7 @@ auto_update_manager::auto_update_manager(tiny_cod2_rcon_client_application &main
               }
             }
 
-            Sleep(50);
+            Sleep(10);
             ZeroMemory(&file_data, sizeof(WIN32_FIND_DATAA));
             InternetFindNextFileA(read_file_data_handle.get(), &file_data);
           } while (stl::helper::len(file_data.cFileName) > 0);
@@ -174,36 +144,40 @@ auto_update_manager::auto_update_manager(tiny_cod2_rcon_client_application &main
   }
 }
 
-bool auto_update_manager::get_file_version(const string &exe_file, version_data &ver, unsigned long &version_number) const
+bool auto_update_manager::get_file_version(const string &exe_file, version_data &ver, unsigned long &version_number) const noexcept
 {
-  DWORD dwDummy;
-  DWORD dwFVISize = GetFileVersionInfoSizeA(exe_file.c_str(), &dwDummy);
-  auto lp_version_info_buffer = make_unique<BYTE[]>(dwFVISize);
-  if (!lp_version_info_buffer)
-    return false;
+  unique_ptr<BYTE[]> lp_version_info_buffer{};
 
-  GetFileVersionInfoA(exe_file.c_str(), 0, dwFVISize, lp_version_info_buffer.get());
-  UINT uLen;
-  VS_FIXEDFILEINFO *lpFfi;
-  VerQueryValueA(lp_version_info_buffer.get(), "\\", (LPVOID *)&lpFfi, &uLen);
-  if (lpFfi && uLen) {
-    DWORD dwFileVersionMS = lpFfi->dwFileVersionMS;
-    DWORD dwFileVersionLS = lpFfi->dwFileVersionLS;
-    ver.major = HIWORD(dwFileVersionMS);
-    ver.minor = LOWORD(dwFileVersionMS);
-    ver.revision = HIWORD(dwFileVersionLS);
-    ver.sub_revision = LOWORD(dwFileVersionLS);
-    version_number = 0UL;
-    version_number += ver.major;
-    version_number *= 100;
-    version_number += ver.minor;
-    version_number *= 100;
-    version_number += ver.revision;
-    version_number *= 100;
-    version_number += ver.sub_revision;
-    snprintf(message_buffer, std::size(message_buffer), "^2Current version of ^5Tiny^6Rcon ^2is ^5%d.%d.%d.%d\n", ver.major, ver.minor, ver.revision, ver.sub_revision);
-    print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, true, true, true);
-    return true;
+  try {
+    DWORD temp{};
+    const DWORD dwFVISize{ GetFileVersionInfoSizeA(exe_file.c_str(), &temp) };
+    lp_version_info_buffer = make_unique<BYTE[]>(dwFVISize);
+    GetFileVersionInfoA(exe_file.c_str(), 0, dwFVISize, lp_version_info_buffer.get());
+    UINT uLen;
+    VS_FIXEDFILEINFO *lpFfi;
+    VerQueryValueA(lp_version_info_buffer.get(), "\\", (LPVOID *)&lpFfi, &uLen);
+    if (lpFfi && uLen) {
+      DWORD dwFileVersionMS = lpFfi->dwFileVersionMS;
+      DWORD dwFileVersionLS = lpFfi->dwFileVersionLS;
+      ver.major = HIWORD(dwFileVersionMS);
+      ver.minor = LOWORD(dwFileVersionMS);
+      ver.revision = HIWORD(dwFileVersionLS);
+      ver.sub_revision = LOWORD(dwFileVersionLS);
+      version_number = 0UL;
+      version_number += ver.major;
+      version_number *= 100;
+      version_number += ver.minor;
+      version_number *= 100;
+      version_number += ver.revision;
+      version_number *= 100;
+      version_number += ver.sub_revision;
+      snprintf(message_buffer, std::size(message_buffer), "^2Current version of ^5Tiny^6Rcon ^2is ^5%d.%d.%d.%d\n", ver.major, ver.minor, ver.revision, ver.sub_revision);
+      print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, true, true, true);
+      return true;
+    }
+  } catch (exception &) {
+
+    return false;
   }
 
   return false;
@@ -240,12 +214,12 @@ void auto_update_manager::replace_temporary_version()
     is_current_instance_temporary_version = true;
     const string deleted_file_path{ self_current_working_directory + self_file_name.substr(3) };
     while (PathFileExistsA(deleted_file_path.c_str())) {
-      Sleep(200);
+      Sleep(10);
       DeleteFileA(deleted_file_path.c_str());
     }
     const string copy_file_path{ self_current_working_directory + self_file_name };
     while (!CopyFileA(copy_file_path.c_str(), deleted_file_path.c_str(), FALSE)) {
-      Sleep(100);
+      Sleep(10);
     }
     if (run_executable(deleted_file_path.c_str())) {
       if (pr_info.hProcess != NULL)
@@ -261,7 +235,7 @@ void auto_update_manager::replace_temporary_version()
     const string temp_file_path{ self_current_working_directory + "_U_"s + self_file_name };
     while (PathFileExistsA(temp_file_path.c_str())) {
       DeleteFileA(temp_file_path.c_str());
-      Sleep(200);
+      Sleep(10);
     }
   }
 }
@@ -314,5 +288,5 @@ bool auto_update_manager::check_for_updates()
     print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, true, true, true);
   }
 
-  return SUCCEEDED(hr) ? true : false;
+  return SUCCEEDED(hr);
 }

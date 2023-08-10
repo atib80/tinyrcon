@@ -28,15 +28,45 @@ struct version_data
   int minor;
   int revision;
   int sub_revision;
+
+  static unsigned long get_version_number(const version_data& ver)
+  {
+    unsigned long version_number{};
+    version_number += ver.major;
+    version_number *= 100;
+    version_number += ver.minor;
+    version_number *= 100;
+    version_number += ver.revision;
+    version_number *= 100;
+    version_number += ver.sub_revision;
+    return version_number;
+  }
+
+  static unsigned long get_version_number(const std::string &file_name)
+  {
+    unsigned long version_number{};
+
+    for (size_t start{}, last; (start = file_name.find_first_of("0123456789", start)) != std::string::npos;) {
+      last = file_name.find_first_not_of("0123456789", start + 1);
+      version_number *= 100;
+      if (std::string::npos == last) {
+        last = file_name.length();
+      }
+      version_number += stoul(file_name.substr(start, last - start));
+      start = last + 1;
+    }
+
+    return version_number;
+  }
 };
 
 class auto_update_manager
 {
 public:
   auto_update_manager(tiny_cod2_rcon_client_application &main_app);
-  ~auto_update_manager() = default;  
+  ~auto_update_manager() = default;
 
-  bool get_file_version(const std::string &exe_file, version_data& ver, unsigned long &version_number) const;
+  bool get_file_version(const std::string &exe_file, version_data &ver, unsigned long &version_number) const noexcept;
   const std::string &get_self_full_path() const;
   void replace_temporary_version();
   bool check_for_updates();
@@ -59,8 +89,7 @@ private:
   mutable char message_buffer[512]{};
 };
 
-unsigned long get_version_number(const std::string &);
-unsigned long get_version_number(const version_data&) noexcept;
+
 std::string GetFileNameFromPath(const std::string &);
 
 class MyCallback : public IBindStatusCallback
