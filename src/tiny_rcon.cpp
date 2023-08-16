@@ -16,7 +16,7 @@ using namespace stl::helper;
 using namespace std::string_literals;
 using namespace std::chrono;
 
-extern const string program_version{ "2.4.0.7" };
+extern const string program_version{ "2.4.0.10" };
 
 extern char const *const tempbans_file_path =
   "data/tempbans.txt";
@@ -188,16 +188,10 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   construct_tinyrcon_gui(app_handles.hwnd_main_window);
   main_app.open_log_file("log/commands_history.log");
 
-  print_colored_text(app_handles.hwnd_re_messages_data, "^3Started parsing ^1tinyrcon.json ^3file.\n", true, true, true);
-  print_colored_text(app_handles.hwnd_re_messages_data, "^2Finished parsing ^1tinyrcon.json ^3file.\n", true, true, true);
   const string program_title{ main_app.get_program_title() + " | "s + main_app.get_game_server_name() + " | "s + "version: "s + program_version };
   SetWindowText(app_handles.hwnd_main_window, program_title.c_str());
 
   CenterWindow(app_handles.hwnd_main_window);
-
-  {
-    auto_update_manager au{ main_app };
-  }
 
   MSG msg{};
 
@@ -207,6 +201,11 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   std::thread task_thread{
     [&]() {
       IsGUIThread(TRUE);
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3Started parsing ^1tinyrcon.json ^3file.\n", true, true, true);
+      print_colored_text(app_handles.hwnd_re_messages_data, "^2Finished parsing ^1tinyrcon.json ^3file.\n", true, true, true);
+      {
+        auto_update_manager au{};
+      }
       print_colored_text(app_handles.hwnd_re_messages_data, "^3Started importing serialized binary geological data from\n ^1'plugins/geoIP/geo.dat' ^3file.\n", true, true, true);
       // parse_geodata_lite_csv_file("plugins/geoIP/IP2LOCATION-LITE-DB3.csv");
       import_geoip_data(main_app.get_connection_manager().get_geoip_data(), "plugins/geoIP/geo.dat");

@@ -248,6 +248,9 @@ size_t connection_manager::receive_data_from_server(
             while (is_ws(player_line[j])) ++j;
             const int pn_start{ j };
 
+            string ip_address;
+            ip_address.reserve(16);
+
             j = player_line.rfind(':');
             if (string::npos == j) {
               j = player_line.rfind('.');
@@ -255,57 +258,91 @@ size_t connection_manager::receive_data_from_server(
               if (string::npos != j) {
                 i = j - 1;
                 ++j;
-                digit_count = 0;
-                while (isdigit(player_line[j]) && digit_count < 3) {
+                int octet{};
+                while (isdigit(player_line[j])) {
                   ++j;
-                  ++digit_count;
+                  octet *= 10;
+                  octet += static_cast<int>(player_line[j] - '0');
+                  if (octet > 255) {
+                    break;
+                  }
+                  ip_address.push_back(player_line[j]);
                 }
 
-                digit_count = 0;
-                int dot_count{};
+                ip_address.insert(0, 1, '.');
 
+                int dot_count{};
+                octet = 0;
+                int factor{ 1 };
                 while (isdigit(player_line[i]) || player_line[i] == '.') {
                   if (player_line[i] == '.') {
                     ++dot_count;
                     if (dot_count > 2)
                       break;
-                    digit_count = 0;
+                    factor = 1;
+                    octet = 0;
                   } else {
-                    ++digit_count;
-                    if (digit_count > 3)
-                      break;
+
+                    octet += factor * static_cast<int>(player_line[i] - '0');
+                    factor *= 10;
+                    if (octet > 255) {
+                      ++dot_count;
+                      if (dot_count > 2)
+                        break;
+                      octet = 0;
+                      factor = 1;
+                      ip_address.insert(0, 1, '.');
+                      continue;
+                    }
                   }
 
+                  ip_address.insert(0, 1, player_line[i]);
                   --i;
                 }
               }
             } else {
 
               i = j - 1;
-              digit_count = 0;
               int dot_count{};
+              int octet{};
+              int factor{ 1 };
 
               while (isdigit(player_line[i]) || player_line[i] == '.') {
                 if (player_line[i] == '.') {
                   ++dot_count;
                   if (dot_count > 3)
                     break;
-                  digit_count = 0;
+                  factor = 1;
+                  octet = 0;
                 } else {
-                  ++digit_count;
-                  if (digit_count > 3)
-                    break;
+                  octet += factor * static_cast<int>(player_line[i] - '0');
+                  factor *= 10;
+                  if (octet > 255) {
+                    ++dot_count;              
+                    if (dot_count > 3)
+                      break;
+                    octet = 0;
+                    factor = 1;
+                    ip_address.insert(0, 1, '.');
+                    continue;
+                  }
                 }
 
+                ip_address.insert(0, 1, player_line[i]);
                 --i;
               }
             }
 
-            const string ip_address{ player_line.substr(i + 1, j - (i + 1)) };
+            // const string ip_address{ player_line.substr(i + 1, j - (i + 1)) };
+            if (isdigit(player_line[i])) {
+              while (isdigit(player_line[i])) --i;
+              while (is_ws(player_line[i])) --i;
+            } else {
+              while (is_ws(player_line[i])) --i;
+              while (isdigit(player_line[i])) --i;
+              while (is_ws(player_line[i])) --i;
+            }
 
-            while (is_ws(player_line[i])) --i;
-            while (isdigit(player_line[i])) --i;
-            while (is_ws(player_line[i])) --i;
             ++i;
 
             string player_name(player_line.substr(pn_start, i - pn_start));

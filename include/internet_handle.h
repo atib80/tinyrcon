@@ -8,6 +8,7 @@ class internet_handle
   HINTERNET handle;
 
 public:
+  internet_handle() : handle{} {}
   explicit internet_handle(HINTERNET&& new_handle) : handle{ std::move(new_handle) } {}
   ~internet_handle() noexcept
   {
@@ -22,7 +23,7 @@ public:
     return handle;
   }
 
-  HINTERNET set(HINTERNET&& new_handle) noexcept
+  void set(HINTERNET&& new_handle) noexcept
   {
     handle = std::move(new_handle);
   }

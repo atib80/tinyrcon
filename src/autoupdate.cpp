@@ -10,16 +10,17 @@ http://www.securedglobe.com
 */
 
 #include "autoupdate.h"
-#include "internet_handle.h"
 #include <urlmon.h>
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <cstring>
 
 #pragma comment(lib, "urlmon.lib")
 #pragma comment(lib, "Version.lib")
 #pragma comment(lib, "Wininet.lib")
 
+extern tiny_cod2_rcon_client_application main_app;
 extern tiny_rcon_handles app_handles;
 extern PROCESS_INFORMATION pr_info;
 
@@ -62,7 +63,7 @@ std::string get_file_name_from_path(const std::string &file_path)
   return file_path.substr(slash_pos + 1);
 }
 
-auto_update_manager::auto_update_manager(tiny_cod2_rcon_client_application &main_app) : app{ main_app }
+auto_update_manager::auto_update_manager()
 {
   char exe_file_path[MAX_PATH];
 
@@ -83,25 +84,52 @@ auto_update_manager::auto_update_manager(tiny_cod2_rcon_client_application &main
     if (is_current_instance_temporary_version)
       return;
 
-    const string ftp_download_site_info{ "ftp://"s + app.get_ftp_download_site_ip_address() + (!app.get_ftp_download_folder_path().empty() ? "/"s + app.get_ftp_download_folder_path() + "/"s : "/"s) };
+    const string ftp_download_site_info{ "ftp://"s + main_app.get_ftp_download_site_ip_address() + (!main_app.get_ftp_download_folder_path().empty() ? "/"s + main_app.get_ftp_download_folder_path() + "/"s : "/"s) };
 
     std::snprintf(message_buffer, std::size(message_buffer), "^3Searching for updates at ^1%s\n", ftp_download_site_info.c_str());
     print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, true, true, true);
 
+    internet_connection_handles threadParam;
+    threadParam.internet_open_handle.set(InternetOpenA("tinyrcon", INTERNET_OPEN_TYPE_DIRECT, nullptr, nullptr, 0));
+    if (NULL != threadParam.internet_open_handle.get()) {
 
-    // internet_handle read_file_data_handle{};
+      // Create a worker thread
+      HANDLE hThread{};
+      DWORD dwThreadID{};
+      DWORD dwExitCode{};
+      DWORD dwTimeout{ 1000 };// 1s for timeout delay
 
-    internet_handle internet_open_handle{ InternetOpenA("tinyrcon", INTERNET_OPEN_TYPE_DIRECT, nullptr, nullptr, 0) };
-    if (NULL != internet_open_handle.get()) {
+      hThread = CreateThread(
+        nullptr,// Pointer to thread security attributes
+        0,// Initial thread stack size, in bytes
+        worker_function,// Pointer to thread function
+        &threadParam,// The argument for the new thread
+        0,// Creation flags
+        &dwThreadID// Pointer to returned thread identifier
+      );
 
-      internet_handle internet_connect_handle{ InternetConnectA(internet_open_handle.get(), app.get_ftp_download_site_ip_address().c_str(), INTERNET_DEFAULT_FTP_PORT, nullptr, nullptr, INTERNET_SERVICE_FTP, INTERNET_FLAG_PASSIVE, 0) };
+      if (0 != hThread) {
 
-      if (NULL != internet_connect_handle.get()) {
+        // Wait for the call to InternetConnect in worker function to complete
+        if (WaitForSingleObject(hThread, dwTimeout) == WAIT_TIMEOUT) {
+          snprintf(message_buffer, std::size(message_buffer), "^3Could not connect to ^5%s ^3to check for ^5Tiny^6Rcon ^3updates!\n ^5The FTP download site ^3might be offline at the moment. ^2Please, try again later.\n", ftp_download_site_info.c_str());
+          print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, true, true, true);
+          // Wait until the worker thread exits
+          WaitForSingleObject(hThread, INFINITE);
+          GetExitCodeThread(hThread, &dwExitCode);
+          CloseHandle(hThread);
+          if (dwExitCode)
+            return;
+        }
+      }
+
+
+      if (NULL != threadParam.internet_connect_handle.get()) {
 
         WIN32_FIND_DATAA file_data{};
 
         string folder_path_files_pattern{
-          app.get_ftp_download_folder_path()
+          main_app.get_ftp_download_folder_path()
         };
 
         if (!folder_path_files_pattern.empty() && folder_path_files_pattern.front() != '/')
@@ -111,8 +139,8 @@ auto_update_manager::auto_update_manager(tiny_cod2_rcon_client_application &main
           folder_path_files_pattern.push_back('/');
 
         std::snprintf(download_file_path_pattern, 512, "%s*.exe", folder_path_files_pattern.c_str());
-        regex download_file_regex(app.get_ftp_download_file_pattern());
-        internet_handle read_file_data_handle{ FtpFindFirstFileA(internet_connect_handle.get(), download_file_path_pattern, &file_data, INTERNET_FLAG_NEED_FILE, INTERNET_NO_CALLBACK) };
+        regex download_file_regex(main_app.get_ftp_download_file_pattern());
+        internet_handle read_file_data_handle{ FtpFindFirstFileA(threadParam.internet_connect_handle.get(), download_file_path_pattern, &file_data, INTERNET_FLAG_NEED_FILE, INTERNET_NO_CALLBACK) };
         if (read_file_data_handle.get() != NULL) {
 
           unsigned long max_version_number{ current_version_number };
@@ -137,10 +165,14 @@ auto_update_manager::auto_update_manager(tiny_cod2_rcon_client_application &main
             InternetFindNextFileA(read_file_data_handle.get(), &file_data);
           } while (stl::helper::len(file_data.cFileName) > 0);
         }
+      } else {
+        snprintf(message_buffer, std::size(message_buffer), "^3Could not connect to ^5%s ^3to check for ^5Tiny^6Rcon ^3updates!\n ^5The FTP download site ^3might be offline at the moment. ^2Please, try again later.\n", ftp_download_site_info.c_str());
+        print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, true, true, true);
+        return;
       }
-    }
 
-    check_for_updates();
+      check_for_updates();
+    }
   }
 }
 
@@ -244,7 +276,7 @@ void auto_update_manager::replace_temporary_version()
 bool auto_update_manager::check_for_updates()
 {
 
-  const string ftp_download_site_info{ "ftp://"s + app.get_ftp_download_site_ip_address() + (!app.get_ftp_download_folder_path().empty() ? "/"s + app.get_ftp_download_folder_path() + "/"s : "/"s) };
+  const string ftp_download_site_info{ "ftp://"s + main_app.get_ftp_download_site_ip_address() + (!main_app.get_ftp_download_folder_path().empty() ? "/"s + main_app.get_ftp_download_folder_path() + "/"s : "/"s) };
 
   if (is_current_instance_temporary_version || latest_version_to_download.empty() || current_version_number >= next_version_number) {
     snprintf(message_buffer, std::size(message_buffer), "^2There is no newer version of ^5Tiny^6Rcon ^2at ^5%s\n", ftp_download_site_info.c_str());
@@ -255,7 +287,7 @@ bool auto_update_manager::check_for_updates()
   MyCallback pCallback;
   const string exe_file_name{ self_current_working_directory + "_U_"s + self_file_name };
   char download_url_buffer[256];
-  snprintf(download_url_buffer, 256, "ftp://%s/%s/%s", app.get_ftp_download_site_ip_address().c_str(), app.get_ftp_download_folder_path().c_str(), latest_version_to_download.c_str());
+  snprintf(download_url_buffer, 256, "ftp://%s/%s/%s", main_app.get_ftp_download_site_ip_address().c_str(), main_app.get_ftp_download_folder_path().c_str(), latest_version_to_download.c_str());
 
   snprintf(message_buffer, std::size(message_buffer), "^3Searching for updates at ^1%s\n", ftp_download_site_info.c_str());
   print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, true, true, true);
@@ -289,4 +321,30 @@ bool auto_update_manager::check_for_updates()
   }
 
   return SUCCEEDED(hr);
+}
+
+/////////////////// WorkerFunction //////////////////////
+DWORD WINAPI worker_function(LPVOID vThreadParm)
+/*
+Purpose:
+    Call InternetConnect to establish a FTP session
+Arguments:
+    vThreadParm - points to PARM passed to thread
+Returns:
+    returns 0
+*/
+{
+  internet_connection_handles *pThreadParm{ reinterpret_cast<internet_connection_handles *>(vThreadParm) };
+  if (pThreadParm->internet_open_handle.get() != NULL) {
+    DWORD internet_option_connect_timeout{ 1000 };
+    InternetSetOptionA(pThreadParm->internet_open_handle.get(), INTERNET_OPTION_CONNECT_TIMEOUT, &internet_option_connect_timeout, sizeof(internet_option_connect_timeout));
+    pThreadParm->internet_connect_handle.set(InternetConnectA(pThreadParm->internet_open_handle.get(), main_app.get_ftp_download_site_ip_address().c_str(), INTERNET_DEFAULT_FTP_PORT, nullptr, nullptr, INTERNET_SERVICE_FTP, INTERNET_FLAG_PASSIVE, 0));
+
+    if (!pThreadParm->internet_connect_handle.get())
+      return 1;
+
+    return 0;
+  }
+
+  return 1;
 }

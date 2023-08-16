@@ -20,6 +20,15 @@ http://www.securedglobe.com
 #include <Wininet.h>
 #include <string>
 #include "tiny_cod2_rcon_client_application.h"
+#include "internet_handle.h"
+
+DWORD WINAPI worker_function(LPVOID);
+
+struct internet_connection_handles
+{
+  internet_handle internet_open_handle;
+  internet_handle internet_connect_handle;
+};
 
 struct version_data
 {
@@ -29,7 +38,7 @@ struct version_data
   int revision;
   int sub_revision;
 
-  static unsigned long get_version_number(const version_data& ver)
+  static unsigned long get_version_number(const version_data &ver)
   {
     unsigned long version_number{};
     version_number += ver.major;
@@ -63,7 +72,7 @@ struct version_data
 class auto_update_manager
 {
 public:
-  auto_update_manager(tiny_cod2_rcon_client_application &main_app);
+  auto_update_manager();
   ~auto_update_manager() = default;
 
   bool get_file_version(const std::string &exe_file, version_data &ver, unsigned long &version_number) const noexcept;
@@ -76,7 +85,6 @@ public:
   void set_self_file_name(std::string file_name);
 
 private:
-  tiny_cod2_rcon_client_application &app;
   mutable unsigned long current_version_number{};
   unsigned long next_version_number{};
   string next_version_number_str;
