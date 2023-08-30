@@ -87,6 +87,7 @@ size_t connection_manager::receive_data_from_server(
       stl::helper::strstr(incoming_data_buffer, "\xFF\xFF\xFF\xFFprint\nInvalid password.");
     if (start != nullptr) {
       main_app.set_is_connection_settings_valid(false);
+      set_admin_actions_buttons_active(FALSE);
       main_app.add_command_to_queue({ "getstatus" }, command_type::rcon, true);
     } else {
       const char *current{}, *last{};
@@ -96,7 +97,11 @@ size_t connection_manager::receive_data_from_server(
       if ((strstr(incoming_data_buffer, rcon_status_response_needle1)
             != nullptr)
           || (rcon_status_response_needle2 != nullptr && strstr(incoming_data_buffer, rcon_status_response_needle2) != nullptr)) {
-        main_app.set_is_connection_settings_valid(true);
+        if (!main_app.get_is_connection_settings_valid()) {
+          main_app.set_is_connection_settings_valid(true);
+          set_admin_actions_buttons_active(TRUE);
+        }
+
         start = received_reply.c_str() + 15;
         last = start;
         while (*last != 0x0A)
@@ -172,8 +177,7 @@ size_t connection_manager::receive_data_from_server(
 
           for (const string &player_line : lines) {
             int j{}, i{ 3 };
-            int digit_count{};
-            // while (!isdigit(player_line[i])) ++i;
+            int digit_count{};           
             int player_pid{};
             while (is_ws(player_line[j]) && j < i) ++j;
             while (isdigit(player_line[j]) && j < i && digit_count < 2) {
@@ -318,7 +322,7 @@ size_t connection_manager::receive_data_from_server(
                   octet += factor * static_cast<int>(player_line[i] - '0');
                   factor *= 10;
                   if (octet > 255) {
-                    ++dot_count;              
+                    ++dot_count;
                     if (dot_count > 3)
                       break;
                     octet = 0;

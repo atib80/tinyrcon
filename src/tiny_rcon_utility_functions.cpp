@@ -2971,7 +2971,7 @@ void process_rcon_command(const std::vector<string> &rcon_cmd, const bool)
         main_app.get_connection_manager().send_and_receive_rcon_data(
           r_command.c_str(), reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str(), true);
       }
-      if (!reply.empty()) {
+      if (!reply.empty() && rcon_cmd[0] != "getstatus") {
         while (true) {
           const size_t pos =
             stl::helper::str_index_of(reply, "\377\377\377\377print\n");
@@ -7171,7 +7171,8 @@ bool initialize_and_verify_server_connection_settings()
       print_colored_text(app_handles.hwnd_re_messages_data, "^2Initializing network settings has completed.\n", true, true, true);
     } else {
       main_app.set_is_connection_settings_valid(false);
-      /*show_error(app_handles.hwnd_main_window, "Failed to establish test connection with the specified game server!\nPlease verify your game server's IP address, port and rcon password settings.", 0);*/
+      set_admin_actions_buttons_active(FALSE);
+
       if (!show_and_process_tinyrcon_configuration_panel("Configure and verify your game server's settings.")) {
         show_error(app_handles.hwnd_main_window, "Failed to construct and show TinyRcon configuration dialog!", 0);
       }
@@ -7179,8 +7180,7 @@ bool initialize_and_verify_server_connection_settings()
       if (is_terminate_program.load())
         return false;
 
-      if (is_terminate_tinyrcon_settings_configuration_dialog_window.load())
-        break;
+      if (is_terminate_tinyrcon_settings_configuration_dialog_window.load()) break;
     }
   } while (main_app.get_game_name() == game_name_t::unknown);
 
@@ -7605,4 +7605,15 @@ void print_message_about_corrected_player_name(HWND re_hwnd, const char *truncat
     (void)snprintf(buffer, std::size(buffer), "^2Corrected truncated player name from ^7%s ^2to ^7%s\n", truncated_name, corrected_name);
     print_colored_text(re_hwnd, buffer, true, true, true);
   }
+}
+
+void set_admin_actions_buttons_active(const BOOL is_enable) noexcept
+{
+  EnableWindow(app_handles.hwnd_button_warn, is_enable);
+  EnableWindow(app_handles.hwnd_button_kick, is_enable);
+  EnableWindow(app_handles.hwnd_button_tempban, is_enable);
+  EnableWindow(app_handles.hwnd_button_ipban, is_enable);
+  EnableWindow(app_handles.hwnd_say_button, is_enable);
+  EnableWindow(app_handles.hwnd_tell_button, is_enable);
+  EnableWindow(app_handles.hwnd_button_load, is_enable);
 }
