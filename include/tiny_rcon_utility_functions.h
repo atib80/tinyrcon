@@ -227,7 +227,7 @@ size_t find_longest_player_country_city_info_length(
   const std::vector<player_data> &,
   const size_t number_of_players_to_process) noexcept;
 
-void parse_tiny_cod2_rcon_tool_config_file(const char *);
+void parse_tinyrcon_tool_config_file(const char *);
 
 void parse_tempbans_data_file();
 
@@ -460,8 +460,6 @@ void prepare_players_data_for_display(const bool is_log_status_table = false);
 void prepare_players_data_for_display_of_getstatus_response(const bool is_log_status_table = false);
 
 size_t get_file_size_in_bytes(const char *) noexcept;
-// HWND CreateAHorizontalScrollBar(HWND hwndParent, HINSTANCE hInstance, const int sbHeight);
-// HWND CreateAVerticalScrollBar(HWND hwndParent, HINSTANCE hInstance, const int sbWidth);
 std::string get_current_date_time_str();
 
 void correct_truncated_player_names(const char *ip_address, const uint_least16_t port_number, const char *rcon_password);

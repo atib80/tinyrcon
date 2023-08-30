@@ -168,7 +168,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     return 0;
 
 
-  parse_tiny_cod2_rcon_tool_config_file("config/tinyrcon.json");
+  parse_tinyrcon_tool_config_file("config/tinyrcon.json");
 
   main_app.set_command_line_info(user_help_message);
 

@@ -899,7 +899,7 @@ size_t find_longest_player_country_city_info_length(
   return max_geodata_info_length;
 }
 
-void parse_tiny_cod2_rcon_tool_config_file(const char *configFileName)
+void parse_tinyrcon_tool_config_file(const char *configFileName)
 {
   ifstream configFile{ configFileName };
 
@@ -1123,7 +1123,7 @@ void parse_tiny_cod2_rcon_tool_config_file(const char *configFileName)
     main_app.get_admin_messages()["automatic_remove_temp_ban_msg"] = std::move(data_line);
   } else {
     found_missing_config_setting = true;
-    main_app.get_admin_messages()["automatic_remove_temp_ban_msg"] = "^1{ADMINNAME}: ^7{PLAYERNAME}'s ^1tempban ^7[start date: ^3{TEMP_BAN_START_DATE} ^7expired on ^3{TEMP_BAN_END_DATE}] ^7has been automatically removed.";
+    main_app.get_admin_messages()["automatic_remove_temp_ban_msg"] = "^1{ADMINNAME}: ^7{PLAYERNAME}'s ^1temporary ban ^7[start date: ^3{TEMP_BAN_START_DATE} ^7expired on ^3{TEMP_BAN_END_DATE}] ^7has been automatically removed.";
   }
 
   if (json_resource["automatic_kick_temp_ban_msg"].exists()) {
@@ -1413,7 +1413,6 @@ void parse_tiny_cod2_rcon_tool_config_file(const char *configFileName)
 
 void parse_tempbans_data_file()
 {
-  // lock_guard lg{ protect_banned_players_data };
   string property_key, property_value;
 
   ifstream banned_tempbans_file_read{ tempbans_file_path };
@@ -1422,14 +1421,14 @@ void parse_tempbans_data_file()
     char buffer[buffer_size];
     strerror_s(buffer, buffer_size, static_cast<int>(GetLastError()));
     string errorMessage{
-      "Couldn't open banned tempbans data file at specified path ("s + tempbans_file_path + ")! "s + buffer
+      "Couldn't open 'tempbans.txt' data file at specified path ("s + tempbans_file_path + ")! "s + buffer
     };
     show_error(app_handles.hwnd_main_window, errorMessage.c_str(), 0);
     ofstream banned_tempbans_file_to_write{ tempbans_file_path };
     if (!banned_tempbans_file_to_write) {
       strerror_s(buffer, buffer_size, static_cast<int>(GetLastError()));
       errorMessage.assign(
-        "Couldn't create banned tempbans data file at "s
+        "Couldn't create 'tempbans.txt' for holding temporary bans' data at "s
         "data\\tempbans.txt!"s
         + buffer);
       show_error(app_handles.hwnd_main_window, errorMessage.c_str(), 0);
@@ -1542,14 +1541,14 @@ bool temp_ban_player_ip_address(player_data &pd)
     char buffer[buffer_size];
     strerror_s(buffer, buffer_size, static_cast<int>(GetLastError()));
     string errorMessage{
-      "Couldn't open temporarily banned IP addresses data file at specified path ("s + tempbans_file_path + ")! "s + buffer
+      "Couldn't open 'tempbans.txt' data file at specified path ("s + tempbans_file_path + ")! "s + buffer
     };
     show_error(app_handles.hwnd_main_window, errorMessage.c_str(), 0);
     ofstream temp_banned_data_file_to_write{ tempbans_file_path };
     if (!temp_banned_data_file_to_write) {
       strerror_s(buffer, buffer_size, static_cast<int>(GetLastError()));
       errorMessage.assign(
-        "Couldn't create temporarily banned IP addresses data file at "s
+        "Couldn't create 'tempbans.txt' file for holding temporarily banned IP addresses at "s
         "data\\tempbans.txt!"s
         + buffer);
       show_error(app_handles.hwnd_main_window, errorMessage.c_str(), 0);
@@ -5669,7 +5668,7 @@ void display_tempbanned_players_remaining_time_period()
     const time_t ban_expires_time = pl.banned_start_time + (pl.ban_duration_in_hours * 3600);
     if (ban_expires_time > now_in_seconds) {
       ostringstream oss;
-      oss << "^3Player's (^7" << pl.player_name << "^3) tempban (banned on ^1" << get_date_and_time_for_time_t(pl.banned_start_time)
+      oss << "^3Player's (^7" << pl.player_name << "^3) temporary ban (banned on ^1" << get_date_and_time_for_time_t(pl.banned_start_time)
           << " ^3with reason: ^1" << pl.reason << "^3)\n will automatically be removed in ^1" << get_time_interval_info_string_for_seconds(ban_expires_time - now_in_seconds) << '\n';
       const string message{ oss.str() };
       print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), true, true, true);
@@ -7414,66 +7413,11 @@ size_t get_file_size_in_bytes(const char *file_path) noexcept
 
   ifstream input{ file_path, std::ios::binary | std::ios::in | std::ios::ate };
   if (!input) {
-    perror(file_path);
     return 0;
   }
   const std::fstream::pos_type file_size = input.tellg();
   return static_cast<size_t>(file_size);
 }
-
-// HWND CreateAHorizontalScrollBar(HWND hwndParent, HINSTANCE hInstance, const int sbHeight)
-//{
-//   RECT rect{};
-//
-//   // Get the dimensions of the parent window's client area;
-//   if (!GetClientRect(hwndParent, &rect))
-//     return NULL;
-//
-//   // Create the scroll bar.
-//   return (CreateWindowEx(
-//     0,// no extended styles
-//     "SCROLLBAR",// scroll bar control class
-//     NULL,// no window text
-//     WS_CHILD | WS_VISIBLE// window styles
-//       | SBS_HORZ,// horizontal scroll bar style
-//     rect.left,// horizontal position
-//     rect.bottom - sbHeight,// vertical position
-//     rect.right - rect.left,// width of the scroll bar
-//     sbHeight,// height of the scroll bar
-//     hwndParent,// handle to main window
-//     NULL,// no menu
-//     hInstance,// instance owning this window
-//     NULL
-//     // pointer not needed
-//     ));
-// }
-//
-// HWND CreateAVerticalScrollBar(HWND hwndParent, HINSTANCE hInstance, const int sbWidth)
-//{
-//   RECT rect{};
-//
-//   // Get the dimensions of the parent window's client area;
-//   if (!GetClientRect(hwndParent, &rect))
-//     return NULL;
-//
-//   // Create the scroll bar.
-//   return (CreateWindowEx(
-//     0,// no extended styles
-//     "SCROLLBAR",// scroll bar control class
-//     NULL,// no window text
-//     WS_CHILD | WS_VISIBLE// window styles
-//       | SBS_VERT,// horizontal scroll bar style
-//     rect.right - sbWidth,// horizontal position
-//     rect.top,// vertical position
-//     sbWidth,// width of the scroll bar
-//     rect.bottom - rect.top,// height of the scroll bar
-//     hwndParent,// handle to main window
-//     NULL,// no menu
-//     hInstance,// instance owning this window
-//     NULL
-//     // pointer not needed
-//     ));
-// }
 
 std::string get_current_date_time_str()
 {
