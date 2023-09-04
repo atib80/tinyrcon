@@ -64,6 +64,21 @@ struct tiny_rcon_handles
   HWND hwnd_cod5_path_button;
 };
 
+enum class is_append_message_to_richedit_control {
+  no,
+  yes
+};
+
+enum class is_log_message {
+  no,
+  yes
+};
+
+enum class is_log_datetime {
+  no,
+  yes
+};
+
 enum class game_name_t {
   unknown,
   cod1,
@@ -241,7 +256,7 @@ bool remove_temp_banned_ip_address(const std::string &ip_address, std::string &m
 
 bool remove_permanently_banned_ip_address(const std::string &ip_address, std::string &message);
 
-size_t print_colored_text(HWND re_control, const char *text, const bool = true, const bool = true, const bool = true);
+size_t print_colored_text(HWND re_control, const char *text, const is_append_message_to_richedit_control = is_append_message_to_richedit_control::yes, const is_log_message = is_log_message::yes, const is_log_datetime = is_log_datetime::yes);
 
 size_t print_colored_text_to_grid_cell(HDC hdc, RECT &rect, const char *text, DWORD formatting_style);
 
@@ -309,7 +324,7 @@ void replace_all_escaped_new_lines_with_new_lines(std::string &) noexcept;
 
 bool change_server_setting(const std::vector<std::string> &) noexcept;
 
-void log_message(const std::string &, const bool = true);
+void log_message(const std::string &, const is_log_datetime = is_log_datetime::yes);
 
 std::string get_player_name_for_pid(const int);
 
@@ -346,7 +361,7 @@ void say(HWND control, const char *szoveg, Args... args) noexcept
   static char outbuffer[8196];
 
   if (-1 == snprintf(outbuffer, std::size(outbuffer), szoveg, args...)) return;
-  print_colored_text(control, outbuffer, true);
+  print_colored_text(control, outbuffer, is_append_message_to_richedit_control::yes);
 }
 
 template<typename... Args>
@@ -356,7 +371,7 @@ void csay(HWND control, const char *szoveg, Args... args) noexcept
 
   if (-1 == snprintf(outbuffer, std::size(outbuffer), szoveg, args...)) return;
 
-  print_colored_text(control, outbuffer, true);
+  print_colored_text(control, outbuffer, is_append_message_to_richedit_control::yes);
 }
 
 bool remove_dir_path_sep_char(char *) noexcept;
@@ -460,8 +475,10 @@ void prepare_players_data_for_display(const bool is_log_status_table = false);
 void prepare_players_data_for_display_of_getstatus_response(const bool is_log_status_table = false);
 
 size_t get_file_size_in_bytes(const char *) noexcept;
-std::string get_current_date_time_str();
+std::string get_current_date_time_str(const char *date_time_format_str);
 
 void correct_truncated_player_names(const char *ip_address, const uint_least16_t port_number, const char *rcon_password);
 void print_message_about_corrected_player_name(HWND re_hwnd, const char *truncated_name, const char *corrected_name) noexcept;
 void set_admin_actions_buttons_active(const BOOL is_enable = TRUE) noexcept;
+void invalidate_unnecessary_players_data(const size_t start_index);
+void set_available_sort_methods(const BOOL is_admin = TRUE);

@@ -16,7 +16,7 @@ using namespace stl::helper;
 using namespace std::string_literals;
 using namespace std::chrono;
 
-extern const string program_version{ "2.4.0.10" };
+extern const string program_version{ "2.4.1.2" };
 
 extern char const *const tempbans_file_path =
   "data/tempbans.txt";
@@ -201,24 +201,24 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   std::thread task_thread{
     [&]() {
       IsGUIThread(TRUE);
-      print_colored_text(app_handles.hwnd_re_messages_data, "^3Started parsing ^1tinyrcon.json ^3file.\n", true, true, true);
-      print_colored_text(app_handles.hwnd_re_messages_data, "^2Finished parsing ^1tinyrcon.json ^3file.\n", true, true, true);
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3Started parsing ^1tinyrcon.json ^3file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      print_colored_text(app_handles.hwnd_re_messages_data, "^2Finished parsing ^1tinyrcon.json ^3file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
       {
         auto_update_manager au{};
       }
-      print_colored_text(app_handles.hwnd_re_messages_data, "^3Started importing serialized binary geological data from\n ^1'plugins/geoIP/geo.dat' ^3file.\n", true, true, true);
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3Started importing serialized binary geological data from\n ^1'plugins/geoIP/geo.dat' ^3file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
       // parse_geodata_lite_csv_file("plugins/geoIP/IP2LOCATION-LITE-DB3.csv");
       import_geoip_data(main_app.get_connection_manager().get_geoip_data(), "plugins/geoIP/geo.dat");
 
-      print_colored_text(app_handles.hwnd_re_messages_data, "^2Finished importing serialized binary geological data from\n ^1'plugins/geoIP/geo.dat' ^2file.\n", true, true, true);
+      print_colored_text(app_handles.hwnd_re_messages_data, "^2Finished importing serialized binary geological data from\n ^1'plugins/geoIP/geo.dat' ^2file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
 
-      print_colored_text(app_handles.hwnd_re_messages_data, "^3Started parsing ^1tempbans.txt ^3file.\n", true, true, true);
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3Started parsing ^1tempbans.txt ^3file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
       parse_tempbans_data_file();
-      print_colored_text(app_handles.hwnd_re_messages_data, "^2Finished parsing ^1tempbans.txt ^3file.\n", true, true, true);
+      print_colored_text(app_handles.hwnd_re_messages_data, "^2Finished parsing ^1tempbans.txt ^3file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
 
-      print_colored_text(app_handles.hwnd_re_messages_data, "^3Started parsing ^1bans.txt ^3file.\n", true, true, true);
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3Started parsing ^1bans.txt ^3file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
       parse_banned_ip_addresses_file();
-      print_colored_text(app_handles.hwnd_re_messages_data, "^2Finished parsing ^1bans.txt ^3file.\n", true, true, true);
+      print_colored_text(app_handles.hwnd_re_messages_data, "^2Finished parsing ^1bans.txt ^3file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
 
       if (!initialize_and_verify_server_connection_settings()) {
         PostQuitMessage(0);
@@ -286,7 +286,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       ifstream temp_messages_file{ "log/temporary_message.log" };
       if (temp_messages_file) {
         for (string line; getline(temp_messages_file, line);) {
-          print_colored_text(app_handles.hwnd_re_messages_data, line.c_str(), true, true, true);
+          print_colored_text(app_handles.hwnd_re_messages_data, line.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
         }
         temp_messages_file.close();
       }
@@ -294,14 +294,14 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       string rcon_task_reply;
       is_tinyrcon_initialized = true;
       if (main_app.get_is_connection_settings_valid()) {
-        print_colored_text(app_handles.hwnd_re_messages_data, "^2Sending rcon command ^1'g_gametype' ^2to the game server.\n", true, true, true);
+        print_colored_text(app_handles.hwnd_re_messages_data, "^2Sending rcon command ^1'g_gametype' ^2to the game server.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
         main_app.get_connection_manager().send_and_receive_rcon_data("g_gametype", rcon_task_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
-        print_colored_text(app_handles.hwnd_re_messages_data, "^2Sending rcon command ^1'status' ^2to the game server.\n", true, true, true);
+        print_colored_text(app_handles.hwnd_re_messages_data, "^2Sending rcon command ^1'status' ^2to the game server.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
         main_app.get_connection_manager().send_and_receive_rcon_data("status", rcon_task_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
         prepare_players_data_for_display();
 
       } else {
-        print_colored_text(app_handles.hwnd_re_messages_data, "^2Sending rcon command ^1'getstatus' ^2to the game server.\n", true, true, true);
+        print_colored_text(app_handles.hwnd_re_messages_data, "^2Sending rcon command ^1'getstatus' ^2to the game server.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
         main_app.get_connection_manager().send_and_receive_rcon_data("getstatus", rcon_task_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
         prepare_players_data_for_display_of_getstatus_response();
       }
@@ -329,7 +329,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   if (pr_info.hThread != NULL)
     CloseHandle(pr_info.hThread);
 
-  log_message("Exiting TinyRcon program.", true);
+  log_message("Exiting TinyRcon program.", is_log_datetime::yes);
 
   DestroyAcceleratorTable(hAccel);
 
@@ -346,8 +346,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   UnregisterClass(wcex.lpszClassName, app_handles.hInstance);
   UnregisterClass(wcex_confirmation_dialog.lpszClassName, app_handles.hInstance);
   UnregisterClass(wcex_configuration_dialog.lpszClassName, app_handles.hInstance);
-
-  // au.replace_temporary_version();
 
   return static_cast<int>(msg.wParam);
 }
@@ -714,7 +712,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         if (int pid{ -1 }; is_valid_decimal_whole_number(selected_pid_str, pid)) {
           const string player_information{ get_player_information(pid, true) };
           (void)snprintf(message_buffer, std::size(message_buffer), "^5Information about selected player:\n ^7%s\n", player_information.c_str());
-          print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, true, true, true);
+          print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
         }
       }
 
@@ -736,7 +734,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
           }
         }
       } else {
-        print_colored_text(app_handles.hwnd_re_messages_data, "^3You have selected an empty line ^1(invalid pid index)\n ^3in the players' data table!\n^5Please, select a non-empty, valid player's row.\n", true, true, true);
+        print_colored_text(app_handles.hwnd_re_messages_data, "^3You have selected an empty line ^1(invalid pid index)\n ^3in the players' data table!\n^5Please, select a non-empty, valid player's row.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
       }
     } break;
 
@@ -756,7 +754,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
           }
         }
       } else {
-        print_colored_text(app_handles.hwnd_re_messages_data, "^3You have selected an empty line ^1(invalid pid index)\n ^3in the players' data table!\n^5Please, select a non-empty, valid player's row.\n", true, true, true);
+        print_colored_text(app_handles.hwnd_re_messages_data, "^3You have selected an empty line ^1(invalid pid index)\n ^3in the players' data table!\n^5Please, select a non-empty, valid player's row.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
       }
 
     } break;
@@ -777,7 +775,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
           }
         }
       } else {
-        print_colored_text(app_handles.hwnd_re_messages_data, "^3You have selected an empty line ^1(invalid pid index)\n ^3in the players' data table!\n^5Please, select a non-empty, valid player's row.\n", true, true, true);
+        print_colored_text(app_handles.hwnd_re_messages_data, "^3You have selected an empty line ^1(invalid pid index)\n ^3in the players' data table!\n^5Please, select a non-empty, valid player's row.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
       }
 
     } break;
@@ -798,7 +796,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
           }
         }
       } else {
-        print_colored_text(app_handles.hwnd_re_messages_data, "^3You have selected an empty line ^1(invalid pid index)\n ^3in the players' data table!\n^5Please, select a non-empty, valid player's row.\n", true, true, true);
+        print_colored_text(app_handles.hwnd_re_messages_data, "^3You have selected an empty line ^1(invalid pid index)\n ^3in the players' data table!\n^5Please, select a non-empty, valid player's row.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
       }
 
     } break;
@@ -1472,8 +1470,8 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
       const char *cod1_game_path = BrowseFolder(install_path, msg_buffer);
 
       if (lstrcmp(cod1_game_path, "") == 0 || lstrcmp(cod1_game_path, "C:\\") == 0) {
-        print_colored_text(app_handles.hwnd_re_messages_data, "^1Error! You haven't selected a valid folder for your game installation.\n", true, true, true);
-        print_colored_text(app_handles.hwnd_re_messages_data, "^5You have to select your ^1game's installation directory\n ^5and click the OK button.\n", true, true, true);
+        print_colored_text(app_handles.hwnd_re_messages_data, "^1Error! You haven't selected a valid folder for your game installation.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        print_colored_text(app_handles.hwnd_re_messages_data, "^5You have to select your ^1game's installation directory\n ^5and click the OK button.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
       } else {
         (void)snprintf(exe_file_path, max_path_length, "%s\\codmp.exe", cod1_game_path);
       }
@@ -1492,8 +1490,8 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
       const char *cod2_game_path = BrowseFolder(install_path, msg_buffer);
 
       if (lstrcmp(cod2_game_path, "") == 0 || lstrcmp(cod2_game_path, "C:\\") == 0) {
-        print_colored_text(app_handles.hwnd_re_messages_data, "^1Error! You haven't selected a valid folder for your game installation.\n", true, true, true);
-        print_colored_text(app_handles.hwnd_re_messages_data, "^5You have to select your ^1game's installation directory\n ^5and click the OK button.\n", true, true, true);
+        print_colored_text(app_handles.hwnd_re_messages_data, "^1Error! You haven't selected a valid folder for your game installation.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        print_colored_text(app_handles.hwnd_re_messages_data, "^5You have to select your ^1game's installation directory\n ^5and click the OK button.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
       } else {
         (void)snprintf(exe_file_path, max_path_length, "%s\\cod2mp_s.exe", cod2_game_path);
       }
@@ -1512,8 +1510,8 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
       const char *cod4_game_path = BrowseFolder(install_path, msg_buffer);
 
       if (lstrcmp(cod4_game_path, "") == 0 || lstrcmp(cod4_game_path, "C:\\") == 0) {
-        print_colored_text(app_handles.hwnd_re_messages_data, "^1Error! You haven't selected a valid folder for your game installation.\n", true, true, true);
-        print_colored_text(app_handles.hwnd_re_messages_data, "^5You have to select your ^1game's installation directory\n ^5and click the OK button.\n", true, true, true);
+        print_colored_text(app_handles.hwnd_re_messages_data, "^1Error! You haven't selected a valid folder for your game installation.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        print_colored_text(app_handles.hwnd_re_messages_data, "^5You have to select your ^1game's installation directory\n ^5and click the OK button.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
       } else {
         (void)snprintf(exe_file_path, max_path_length, "%s\\iw3mp.exe", cod4_game_path);
       }
@@ -1532,8 +1530,8 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
       const char *cod5_game_path = BrowseFolder(install_path, msg_buffer);
 
       if (lstrcmp(cod5_game_path, "") == 0 || lstrcmp(cod5_game_path, "C:\\") == 0) {
-        print_colored_text(app_handles.hwnd_re_messages_data, "^1Error! You haven't selected a valid folder for your game installation.\n", true, true, true);
-        print_colored_text(app_handles.hwnd_re_messages_data, "^5You have to select your ^1game's installation directory\n ^5and click the OK button.\n", true, true, true);
+        print_colored_text(app_handles.hwnd_re_messages_data, "^1Error! You haven't selected a valid folder for your game installation.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        print_colored_text(app_handles.hwnd_re_messages_data, "^5You have to select your ^1game's installation directory\n ^5and click the OK button.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
       } else {
         (void)snprintf(exe_file_path, max_path_length, "%s\\cod5mp.exe", cod5_game_path);
       }

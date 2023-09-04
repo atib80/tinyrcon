@@ -5,9 +5,11 @@
 #include <regex>
 
 using namespace std;
+using namespace stl::helper;
 
 extern tiny_cod2_rcon_client_application main_app;
 extern tiny_rcon_handles app_handles;
+extern const size_t max_players_grid_rows;
 extern string previous_map;
 extern int selected_row;
 
@@ -88,11 +90,11 @@ size_t connection_manager::receive_data_from_server(
     if (start != nullptr) {
       main_app.set_is_connection_settings_valid(false);
       set_admin_actions_buttons_active(FALSE);
-      main_app.add_command_to_queue({ "getstatus" }, command_type::rcon, true);
+      // main_app.add_command_to_queue({ "getstatus" }, command_type::rcon, true);
     } else {
       const char *current{}, *last{};
 
-      const auto [rcon_status_response_needle1, rcon_status_response_needle2] = get_appropriate_rcon_status_response_header(main_app.get_game_name());
+      auto [rcon_status_response_needle1, rcon_status_response_needle2] = get_appropriate_rcon_status_response_header(main_app.get_game_name());
 
       if ((strstr(incoming_data_buffer, rcon_status_response_needle1)
             != nullptr)
@@ -110,6 +112,8 @@ size_t connection_manager::receive_data_from_server(
         if (previous_map.empty() || current_map != previous_map) {
           selected_row = 0;
           previous_map = current_map;
+          invalidate_unnecessary_players_data(0);
+          clear_players_data_in_players_grid(app_handles.hwnd_players_grid, 0, max_players_grid_rows, 7);
         }
         main_app.get_game_server().set_current_map(std::move(current_map));
 
@@ -151,7 +155,7 @@ size_t connection_manager::receive_data_from_server(
 
         if (!is_server_empty_or_error_receiving_udp_datagrams) {
 
-          vector<string> lines{ stl::helper::str_split(received_reply, "\n", nullptr, true) };
+          vector<string> lines{ stl::helper::str_split(received_reply, "\n", nullptr) };
 
           for (size_t i{}; i < lines.size(); ++i) {
             auto first = lines[i].cbegin();
@@ -177,7 +181,7 @@ size_t connection_manager::receive_data_from_server(
 
           for (const string &player_line : lines) {
             int j{}, i{ 3 };
-            int digit_count{};           
+            int digit_count{};
             int player_pid{};
             while (is_ws(player_line[j]) && j < i) ++j;
             while (isdigit(player_line[j]) && j < i && digit_count < 2) {
@@ -386,13 +390,14 @@ size_t connection_manager::receive_data_from_server(
         main_app.get_game_server().set_number_of_online_players(number_of_online_players);
         main_app.get_game_server().set_number_of_offline_players(number_of_offline_players);
         correct_truncated_player_names(main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
+        // invalidate_unnecessary_players_data(pl_index);
         check_for_temp_banned_ip_addresses();
         check_for_banned_ip_addresses();
         check_for_warned_players();
 
       } else if (strstr(incoming_data_buffer, "infoResponse") != nullptr && incoming_data_buffer[4] == 'i') {
         current = incoming_data_buffer + 18;
-        auto parsedData = stl::helper::str_split(current, "\\", "", true);
+        auto parsedData = str_split(current, "\\", nullptr, split_on_whole_needle_t::yes);
         for (size_t i{}; i + 1 < parsedData.size(); i += 2) {
           update_game_server_setting(std::move(parsedData[i]),
             std::move(parsedData[i + 1]));
@@ -406,7 +411,7 @@ size_t connection_manager::receive_data_from_server(
 
         const char *lastIndex = strchr(current, '\n');
         const string &server_info{ current, lastIndex };
-        auto parsedData = stl::helper::str_split(server_info, "\\", "", true);
+        auto parsedData = str_split(server_info, "\\", nullptr, split_on_whole_needle_t::yes);
         for (size_t i{}; i + 1 < parsedData.size(); i += 2) {
           update_game_server_setting(std::move(parsedData[i]),
             std::move(parsedData[i + 1]));
@@ -561,6 +566,8 @@ size_t connection_manager::receive_data_from_server(
           if (previous_map.empty() || current_map != previous_map) {
             selected_row = 0;
             previous_map = current_map;
+            invalidate_unnecessary_players_data(0);
+            clear_players_data_in_players_grid(app_handles.hwnd_players_grid, 0, max_players_grid_rows, 7);
           }
           main_app.get_game_server().set_current_map(std::move(current_map));
         }

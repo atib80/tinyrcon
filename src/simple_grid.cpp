@@ -1704,7 +1704,7 @@ static int FindLongestLine(HDC hdc, const char *text, PSIZE size)
   int longest{};
 
   // strcpy_s(temptext, str_len + 1, text);
-  const vector<string> parts{ str_split(temptext, "\n", nullptr, true) };
+  const vector<string> parts{ str_split(temptext, "\n", nullptr, split_on_whole_needle_t::yes) };
   // p = _tcstok(temptext, _T("\n"));
   for (const auto &p : parts) {
     GetTextExtentPoint32A(hdc, p.c_str(), p.length(), size);
@@ -4356,9 +4356,12 @@ int findLongestTextWidthInColumn(HWND hwnd, const int col)
     for (; *text; ++text) {
       if (text + 4 <= last && *text == '^' && *(text + 1) == '^' && (*(text + 2) >= '0' && *(text + 2) <= '9') && (*(text + 3) >= '0' && *(text + 3) <= '9') && *(text + 2) == *(text + 3)) {
         text += 3;
+        buffer[index] = '^';
+        ++index;
+        buffer[index] = *text;
+        ++index;
       } else if (text + 2 <= last && *text == '^' && (*(text + 1) >= '0' && *(text + 1) <= '9')) {
         ++text;
-
       } else {
         buffer[index] = *text;
         ++index;
@@ -4373,8 +4376,8 @@ int findLongestTextWidthInColumn(HWND hwnd, const int col)
   SelectObject(hdc, holdfont);
   ReleaseDC(hwnd, hdc);
 
-  if (longest_line >= 270)
-    return 270;
+  if (longest_line >= 330)
+    return 330;
 
   return std::max<int>(160, longest_line);
 }

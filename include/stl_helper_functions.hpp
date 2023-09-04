@@ -10872,6 +10872,16 @@ std::pair<std::size_t, std::size_t> str_find_first_needle_position(
   return { first_needle_pos, needle_len };
 }
 
+enum class split_on_whole_needle_t {
+  no,
+  yes
+};
+
+enum class ignore_empty_string_t {
+  no,
+  yes
+};
+
 template<
   typename T,
   typename U,
@@ -10893,8 +10903,8 @@ std::vector<std::basic_string<get_char_type_t<T>>> str_split(
   const T &src,
   const U &needle,
   const V &needle_parts_separator_token = nullptr,
-  const bool split_on_whole_needle = true,
-  const bool ignore_empty_string = true,
+  const split_on_whole_needle_t split_on_whole_needle = split_on_whole_needle_t::yes,
+  const ignore_empty_string_t ignore_empty_string = ignore_empty_string_t::yes,
   size_t const max_count = std::basic_string<get_char_type_t<T>>::npos)
 {
   using char_type = get_char_type_t<T>;
@@ -10969,7 +10979,7 @@ std::vector<std::basic_string<get_char_type_t<T>>> str_split(
 
   std::vector<std::basic_string_view<char_type>> needle_parts{};
 
-  if (!split_on_whole_needle) {
+  if (split_on_whole_needle == split_on_whole_needle_t::no) {
     if (needle_parts_separator_token_len > 0U) {
       size_t start_pos{};
 
@@ -11010,7 +11020,7 @@ std::vector<std::basic_string<get_char_type_t<T>>> str_split(
       parts.emplace_back(std::cbegin(src_sv) + prev,
         std::cbegin(src_sv) + current);
       ++number_of_parts;
-    } else if (!ignore_empty_string) {
+    } else if (ignore_empty_string == ignore_empty_string_t::no) {
       parts.emplace_back();
       ++number_of_parts;
     }
@@ -11024,7 +11034,7 @@ std::vector<std::basic_string<get_char_type_t<T>>> str_split(
   if (parts.size() < max_count) {
     if (prev < src_len)
       parts.emplace_back(std::cbegin(src_sv) + prev, std::cend(src_sv));
-    else if (!ignore_empty_string)
+    else if (ignore_empty_string == ignore_empty_string_t::no)
       parts.emplace_back();
   }
 
@@ -11051,8 +11061,8 @@ std::vector<
     IteratorType last,
     const NeedleType &needle,
     const NeedleSeparatorType &needle_parts_separator_token = nullptr,
-    const bool split_on_whole_needle = true,
-    const bool ignore_empty_string = true,
+    const split_on_whole_needle_t split_on_whole_needle = split_on_whole_needle_t::yes,
+    const ignore_empty_string_t ignore_empty_string = ignore_empty_string_t::yes,
     const size_t max_count = std::string::npos)
 {
   using char_type = typename std::iterator_traits<IteratorType>::value_type;
@@ -11126,7 +11136,7 @@ std::vector<
     }
   }
 
-  if (!split_on_whole_needle) {
+  if (split_on_whole_needle == split_on_whole_needle_t::no) {
     if (needle_parts_separator_token_len > 0U) {
       size_t start_pos{};
 
@@ -11167,7 +11177,7 @@ std::vector<
       parts.emplace_back(std::cbegin(src_sv) + prev,
         std::cbegin(src_sv) + current);
       number_of_parts++;
-    } else if (!ignore_empty_string) {
+    } else if (ignore_empty_string == ignore_empty_string_t::no) {
       parts.emplace_back();
       number_of_parts++;
     }
@@ -11181,12 +11191,22 @@ std::vector<
   if (parts.size() < max_count) {
     if (prev < src_len)
       parts.emplace_back(std::cbegin(src_sv) + prev, std::cend(src_sv));
-    else if (!ignore_empty_string)
+    else if (ignore_empty_string == ignore_empty_string_t::no)
       parts.emplace_back();
   }
 
   return parts;
 }
+
+enum class split_on_whole_sequence_t {
+  no,
+  yes
+};
+
+enum class ignore_empty_sequence_t {
+  no,
+  yes
+};
 
 template<typename SrcIterType, typename DstIterType>
 std::vector<std::pair<SrcIterType, SrcIterType>> split(
@@ -11194,8 +11214,8 @@ std::vector<std::pair<SrcIterType, SrcIterType>> split(
   const SrcIterType src_last,
   const DstIterType needle_first,
   const DstIterType needle_last,
-  const bool split_on_whole_sequence = true,
-  const bool ignore_empty_sequence = true,
+  const split_on_whole_sequence_t split_on_whole_sequence = split_on_whole_sequence_t::yes,
+  const ignore_empty_sequence_t ignore_empty_sequence = ignore_empty_sequence_t::yes,
   const size_t max_count = std::string::npos)
 {
   const typename std::iterator_traits<SrcIterType>::difference_type
@@ -11229,13 +11249,13 @@ std::vector<std::pair<SrcIterType, SrcIterType>> split(
   }
 
   const size_t needle_sequence_len{
-    split_on_whole_sequence ? static_cast<size_t>(needle_distance) : 1U
+    split_on_whole_sequence == split_on_whole_sequence_t::yes ? static_cast<size_t>(needle_distance) : 1U
   };
 
   SrcIterType next;
 
   while (prev != src_last) {
-    if (split_on_whole_sequence)
+    if (split_on_whole_sequence == split_on_whole_sequence_t::yes)
       next = std::search(prev, src_last, needle_first, needle_last);
     else
       next = std::find_first_of(prev, src_last, needle_first, needle_last);
@@ -11243,7 +11263,7 @@ std::vector<std::pair<SrcIterType, SrcIterType>> split(
     if (src_last == next)
       break;
 
-    if ((std::distance(prev, next) > 0 || !ignore_empty_sequence) && number_of_parts < max_count) {
+    if ((std::distance(prev, next) > 0 || ignore_empty_sequence == ignore_empty_sequence_t::no) && (number_of_parts < max_count)) {
       parts.emplace_back(prev, next);
       ++number_of_parts;
     }
@@ -11252,7 +11272,7 @@ std::vector<std::pair<SrcIterType, SrcIterType>> split(
     std::advance(prev, needle_sequence_len);
   }
 
-  if ((std::distance(prev, src_last) > 0 || !ignore_empty_sequence) && number_of_parts < max_count)
+  if ((std::distance(prev, src_last) > 0 || ignore_empty_sequence == ignore_empty_sequence_t::no) && (number_of_parts < max_count))
     parts.emplace_back(prev, src_last);
 
   return parts;

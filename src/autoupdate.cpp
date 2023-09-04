@@ -87,7 +87,7 @@ auto_update_manager::auto_update_manager()
     const string ftp_download_site_info{ "ftp://"s + main_app.get_ftp_download_site_ip_address() + (!main_app.get_ftp_download_folder_path().empty() ? "/"s + main_app.get_ftp_download_folder_path() + "/"s : "/"s) };
 
     std::snprintf(message_buffer, std::size(message_buffer), "^3Searching for updates at ^1%s\n", ftp_download_site_info.c_str());
-    print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, true, true, true);
+    print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
 
     internet_connection_handles threadParam;
     threadParam.internet_open_handle.set(InternetOpenA("tinyrcon", INTERNET_OPEN_TYPE_DIRECT, nullptr, nullptr, 0));
@@ -113,7 +113,7 @@ auto_update_manager::auto_update_manager()
         // Wait for the call to InternetConnect in worker function to complete
         if (WaitForSingleObject(hThread, dwTimeout) == WAIT_TIMEOUT) {
           snprintf(message_buffer, std::size(message_buffer), "^3Could not connect to ^5%s ^3to check for ^5Tiny^6Rcon ^3updates!\n ^5The FTP download site ^3might be offline at the moment. ^2Please, try again later.\n", ftp_download_site_info.c_str());
-          print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, true, true, true);
+          print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
           // Wait until the worker thread exits
           WaitForSingleObject(hThread, INFINITE);
           GetExitCodeThread(hThread, &dwExitCode);
@@ -167,7 +167,7 @@ auto_update_manager::auto_update_manager()
         }
       } else {
         snprintf(message_buffer, std::size(message_buffer), "^3Could not connect to ^5%s ^3to check for ^5Tiny^6Rcon ^3updates!\n ^5The FTP download site ^3might be offline at the moment. ^2Please, try again later.\n", ftp_download_site_info.c_str());
-        print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, true, true, true);
+        print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
         return;
       }
 
@@ -204,7 +204,7 @@ bool auto_update_manager::get_file_version(const string &exe_file, version_data 
       version_number *= 100;
       version_number += ver.sub_revision;
       snprintf(message_buffer, std::size(message_buffer), "^2Current version of ^5Tiny^6Rcon ^2is ^5%d.%d.%d.%d\n", ver.major, ver.minor, ver.revision, ver.sub_revision);
-      print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, true, true, true);
+      print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
       return true;
     }
   } catch (exception &) {
@@ -280,7 +280,7 @@ bool auto_update_manager::check_for_updates()
 
   if (is_current_instance_temporary_version || latest_version_to_download.empty() || current_version_number >= next_version_number) {
     snprintf(message_buffer, std::size(message_buffer), "^2There is no newer version of ^5Tiny^6Rcon ^2at ^5%s\n", ftp_download_site_info.c_str());
-    print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, true, true, true);
+    print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
     return true;
   }
 
@@ -290,7 +290,7 @@ bool auto_update_manager::check_for_updates()
   snprintf(download_url_buffer, 256, "ftp://%s/%s/%s", main_app.get_ftp_download_site_ip_address().c_str(), main_app.get_ftp_download_folder_path().c_str(), latest_version_to_download.c_str());
 
   snprintf(message_buffer, std::size(message_buffer), "^3Searching for updates at ^1%s\n", ftp_download_site_info.c_str());
-  print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, true, true, true);
+  print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
   DeleteFileA(exe_file_name.c_str());
   DeleteUrlCacheEntry(download_url_buffer);
   HRESULT hr = URLDownloadToFileA(
@@ -301,7 +301,7 @@ bool auto_update_manager::check_for_updates()
     &pCallback);
   if (SUCCEEDED(hr)) {
     snprintf(message_buffer, std::size(message_buffer), "^2Downloaded latest version of ^5Tiny^6Rcon^2: ^1v%s\n", next_version_number_str.c_str());
-    print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, true, true, true);
+    print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
 
     if (run_executable(exe_file_name.c_str())) {
       if (pr_info.hProcess != NULL)
@@ -312,12 +312,12 @@ bool auto_update_manager::check_for_updates()
       _exit(0);
     } else {
       snprintf(message_buffer, std::size(message_buffer), "^1Couldn't start the temporary version: ^3%s\n", exe_file_name.c_str());
-      print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, true, true, true);
+      print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
     }
 
   } else {
     snprintf(message_buffer, std::size(message_buffer), "^2There is no newer version of ^5Tiny^6Rcon ^2at ^5%s\n", ftp_download_site_info.c_str());
-    print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, true, true, true);
+    print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
   }
 
   return SUCCEEDED(hr);

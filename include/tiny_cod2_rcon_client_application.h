@@ -14,10 +14,11 @@ using std::string;
 
 class tiny_cod2_rcon_client_application
 {
-  std::atomic<bool> is_connection_settings_valid{ false };
+  std::atomic<bool> is_connection_settings_valid{ true };
   bool is_enable_automatic_connection_flood_ip_ban{ true };
   bool is_log_file_open{};
   bool is_draw_border_lines{ true };
+  bool is_disable_automatic_kick_messages{ false };
   size_t minimum_number_of_connections_from_same_ip_for_automatic_ban{ 5 };
   size_t maximum_number_of_warnings_for_automatic_kick{ 2 };
   game_name_t game_name{ game_name_t::unknown };
@@ -84,6 +85,16 @@ public:
   bool get_is_enable_automatic_connection_flood_ip_ban() const noexcept
   {
     return is_enable_automatic_connection_flood_ip_ban;
+  }
+
+  bool get_is_disable_automatic_kick_messages() const noexcept
+  {
+    return is_disable_automatic_kick_messages;
+  }
+
+  void set_is_disable_automatic_kick_messages(const bool new_value) noexcept
+  {
+    is_disable_automatic_kick_messages = new_value;
   }
 
   void set_is_enable_automatic_connection_flood_ip_ban(const bool new_value) noexcept
