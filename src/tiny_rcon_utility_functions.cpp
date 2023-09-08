@@ -1,6 +1,7 @@
 ﻿#include "tiny_cod2_rcon_client_application.h"
 #include "game_server.h"
 #include "stl_helper_functions.hpp"
+#include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <Psapi.h>
@@ -10,14 +11,28 @@
 #include "json_parser.hpp"
 #include "resource.h"
 #include "simple_grid.h"
+#include <bit7z.hpp>
+#include <bit7zlibrary.hpp>
+#include <bitextractor.hpp>
+#include <bitexception.hpp>
+#include <bittypes.hpp>
 
 // Call of duty steam appid: 2620
 // Call of duty 2 steam appid: 2630
 // Call of duty 4: Modern Warfare steam appid: 7940
 // Call of duty 5: World at war steam appid: 10090
 
+#if defined(_DEBUG)
+    #pragma comment(lib, "bit7z_d.lib")
+#else
+    #pragma comment(lib, "bit7z.lib")
+#endif 
+
 using namespace std;
 using namespace stl::helper;
+using namespace std::filesystem;
+
+using stl::helper::trim_in_place;
 
 extern tiny_cod2_rcon_client_application main_app;
 extern tiny_rcon_handles app_handles;
@@ -221,7 +236,8 @@ extern const map<string, string> user_commands_help{
   { "!cp", "^5!cp [IP:PORT] ^2-> launches your Call of Duty game and connects to currently configured game server or optionally specified game server address ^5[IP:PORT] using a private slot." },
   { "!rt", "^5!rt time_period ^2-> sets time period (automatic checking for banned players) to time_period (1-30 seconds)." },
   { "!config", "^5!config [rcon|private|address|name] [new_rcon_password|new_private_password|new_server_address|new_name]\n ^2-> you change tinyrcon's ^1rcon ^2or ^1private slot password^2, registered server ^1IP:port ^2address or your ^1username ^2using this command.\nFor example ^1!config rcon abc123 ^2changes currently used ^1rcon_password ^2to ^1abc123^2\n ^1!config private abc123 ^2changes currently used ^1sv_privatepassword ^2to ^1abc123^2\n ^1!config address 123.101.102.103:28960 ^2changes currently used server ^1IP:port ^2to ^1123.101.102.103:28960\n ^1!config name Administrator ^2changes currently used ^1username ^2to ^1Administrator" },
-  { "!border", "Turns ^3on^5|^3off border lines around displayed ^3GUI controls^5." }
+  { "!border", "Turns ^3on^5|^3off ^5border lines around displayed ^3GUI controls^5." },
+  { "!messages", "Turns ^3on^5|^3off ^5messages for temporarily and permanently banned players." }
 };
 
 extern const unordered_set<string> user_commands_set{
@@ -269,7 +285,9 @@ extern const unordered_set<string> user_commands_set{
   "!rt",
   "!refreshtime",
   "border",
-  "!border"
+  "!border",
+  "messages",
+  "!messages"
 };
 
 extern const unordered_set<string> rcon_status_commands{ "s", "!s", "status", "!status", "gs", "!gs", "getstatus", "!getstatus" };
@@ -708,6 +726,49 @@ bool parse_geodata_lite_csv_file(const char *file_path)
   return true;
 }
 
+bool create_necessary_folders_and_files(const std::vector<string> &folder_file_paths)
+{
+
+  unordered_set<string> created_folders;
+
+  for (const auto file_path : folder_file_paths) {
+    const directory_entry entry{ file_path };
+    if (!check_if_file_path_exists(file_path.c_str())) {
+
+      string file_name;
+
+      size_t last_sep_pos{ file_path.find_last_of("./\\") };
+      if (string::npos != last_sep_pos && '.' == file_path[last_sep_pos]) {
+        last_sep_pos = file_path.find_last_of("/\\", last_sep_pos - 1);
+        file_name = file_path.substr(last_sep_pos != string::npos ? last_sep_pos + 1 : 0);
+      } else {
+        last_sep_pos = file_path.length();
+      }
+
+      string parent_path{ string::npos != last_sep_pos ? file_path.substr(0, last_sep_pos) : ""s };
+
+      if (!created_folders.contains(parent_path)) {
+        error_code ec{};
+        create_directories(parent_path, ec);
+        if (ec.value() != 0)
+          return false;
+        created_folders.emplace(std::move(parent_path));
+      }
+
+      if (!file_name.empty() && !check_if_file_path_exists(entry.path().string().c_str())) {
+        ofstream file_to_create{ entry.path().string().c_str() };
+        if (!file_to_create)
+          return false;
+        if (file_name == "tinyrcon.json") {
+          write_tiny_rcon_json_settings_to_file(entry.path().string().c_str());
+        }
+      }
+    }
+  }
+
+  return true;
+}
+
 bool write_tiny_rcon_json_settings_to_file(
   const char *file_path) noexcept
 {
@@ -737,6 +798,8 @@ bool write_tiny_rcon_json_settings_to_file(
   config_file << "\"minimum_number_of_connections_from_same_ip_for_automatic_ban\": " << main_app.get_minimum_number_of_connections_from_same_ip_for_automatic_ban() << ",\n";
   config_file << "\"number_of_warnings_for_automatic_kick\": " << main_app.get_maximum_number_of_warnings_for_automatic_kick() << ",\n";
   config_file << "\"disable_automatic_kick_messages\": " << (main_app.get_is_disable_automatic_kick_messages() ? "true" : "false")
+              << ",\n";
+  config_file << "\"use_original_admin_messages\": " << (main_app.get_is_use_original_admin_messages() ? "true" : "false")
               << ",\n";
   config_file << "\"user_defined_warn_msg\": \"" << main_app.get_admin_messages()["user_defined_warn_msg"] << "\",\n";
   config_file << "\"user_defined_kick_msg\": \"" << main_app.get_admin_messages()["user_defined_kick_msg"] << "\",\n";
@@ -772,10 +835,11 @@ bool write_tiny_rcon_json_settings_to_file(
   config_file << "\"data_player_ip_color\": \"" << main_app.get_game_server().get_data_player_ip_color() << "\",\n";
   config_file << "\"header_player_geoinfo_color\": \"" << main_app.get_game_server().get_header_player_geoinfo_color() << "\",\n";
   config_file << "\"data_player_geoinfo_color\": \"" << main_app.get_game_server().get_data_player_geoinfo_color() << "\",\n";
+  config_file << "\"draw_border_lines\": " << (main_app.get_is_draw_border_lines() ? "true" : "false") << ",\n";
   config_file << "\"ftp_download_site_ip_address\": \"" << main_app.get_ftp_download_site_ip_address() << "\",\n";
   config_file << "\"ftp_download_folder_path\": \"" << main_app.get_ftp_download_folder_path() << "\",\n";
   config_file << "\"ftp_download_file_pattern\": \"" << main_app.get_ftp_download_file_pattern() << "\",\n";
-  config_file << "\"draw_border_lines\": " << (main_app.get_is_draw_border_lines() ? "true" : "false") << '\n';
+  config_file << "\"plugins_geoIP_geo_dat_md5\": \"" << main_app.get_plugins_geoIP_geo_dat_md5() << "\"\n";
   config_file << "}" << flush;
   return true;
 }
@@ -1081,76 +1145,115 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
     main_app.set_is_disable_automatic_kick_messages(false);
   }
 
-  if (json_resource["user_defined_warn_msg"].exists()) {
-    data_line = json_resource["user_defined_warn_msg"].as_str();
-    strip_leading_and_trailing_quotes(data_line);
-    main_app.get_admin_messages()["user_defined_warn_msg"] = std::move(data_line);
+  if (json_resource["use_original_admin_messages"].exists()) {
+    main_app.set_is_use_original_admin_messages(json_resource["use_original_admin_messages"].as<bool>());
   } else {
     found_missing_config_setting = true;
-    main_app.get_admin_messages()["user_defined_warn_msg"] = "^1{ADMINNAME}: ^7{PLAYERNAME} ^1you have been warned by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}";
+    main_app.set_is_use_original_admin_messages(true);
+  }
+
+  if (json_resource["user_defined_warn_msg"].exists()) {
+    if (!main_app.get_is_use_original_admin_messages()) {
+      data_line = json_resource["user_defined_warn_msg"].as_str();
+      strip_leading_and_trailing_quotes(data_line);
+      main_app.get_admin_messages()["user_defined_warn_msg"] = std::move(data_line);
+    } else {
+      main_app.get_admin_messages()["user_defined_warn_msg"] = "^7{PLAYERNAME} ^1you have been warned by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}";
+    }
+  } else {
+    found_missing_config_setting = true;
+    main_app.get_admin_messages()["user_defined_warn_msg"] = "^7{PLAYERNAME} ^1you have been warned by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}";
   }
 
   if (json_resource["user_defined_kick_msg"].exists()) {
-    data_line = json_resource["user_defined_kick_msg"].as_str();
-    strip_leading_and_trailing_quotes(data_line);
-    main_app.get_admin_messages()["user_defined_kick_msg"] = std::move(data_line);
+    if (!main_app.get_is_use_original_admin_messages()) {
+      data_line = json_resource["user_defined_kick_msg"].as_str();
+      strip_leading_and_trailing_quotes(data_line);
+      main_app.get_admin_messages()["user_defined_kick_msg"] = std::move(data_line);
+    } else {
+      main_app.get_admin_messages()["user_defined_kick_msg"] = "^7{PLAYERNAME} ^1you are being kicked by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}";
+    }
   } else {
     found_missing_config_setting = true;
-    main_app.get_admin_messages()["user_defined_kick_msg"] = "^1{ADMINNAME}: ^7{PLAYERNAME} ^1you are being kicked by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}";
+    main_app.get_admin_messages()["user_defined_kick_msg"] = "^7{PLAYERNAME} ^1you are being kicked by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}";
   }
 
   if (json_resource["user_defined_temp_ban_msg"].exists()) {
-    data_line = json_resource["user_defined_temp_ban_msg"].as_str();
-    strip_leading_and_trailing_quotes(data_line);
-    main_app.get_admin_messages()["user_defined_temp_ban_msg"] = std::move(data_line);
+    if (!main_app.get_is_use_original_admin_messages()) {
+      data_line = json_resource["user_defined_temp_ban_msg"].as_str();
+      strip_leading_and_trailing_quotes(data_line);
+      main_app.get_admin_messages()["user_defined_temp_ban_msg"] = std::move(data_line);
+    } else {
+      main_app.get_admin_messages()["user_defined_temp_ban_msg"] = "^7{PLAYERNAME} ^7you are being ^1temporarily banned ^7for ^1{TEMPBAN_DURATION} hours ^7by ^1admin {ADMINNAME}.{{br}}^3Reason: ^1{REASON}";
+    }
   } else {
     found_missing_config_setting = true;
-    main_app.get_admin_messages()["user_defined_temp_ban_msg"] = "^1{ADMINNAME}: ^7{PLAYERNAME} ^1you are being temporarily banned by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}";
+    main_app.get_admin_messages()["user_defined_temp_ban_msg"] = "^7{PLAYERNAME} ^7you are being ^1temporarily banned ^7for ^1{TEMPBAN_DURATION} hours ^7by ^1admin {ADMINNAME}.{{br}}^3Reason: ^1{REASON}";
   }
 
   if (json_resource["user_defined_ban_msg"].exists()) {
-    data_line = json_resource["user_defined_ban_msg"].as_str();
-    strip_leading_and_trailing_quotes(data_line);
-    main_app.get_admin_messages()["user_defined_ban_msg"] = std::move(data_line);
+    if (!main_app.get_is_use_original_admin_messages()) {
+      data_line = json_resource["user_defined_ban_msg"].as_str();
+      strip_leading_and_trailing_quotes(data_line);
+      main_app.get_admin_messages()["user_defined_ban_msg"] = std::move(data_line);
+    } else {
+      main_app.get_admin_messages()["user_defined_ban_msg"] = "^7{PLAYERNAME} ^1you are being banned by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}";
+    }
   } else {
     found_missing_config_setting = true;
-    main_app.get_admin_messages()["user_defined_ban_msg"] = "^1{ADMINNAME}: ^7{PLAYERNAME} ^1you are being banned by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}";
+    main_app.get_admin_messages()["user_defined_ban_msg"] = "^7{PLAYERNAME} ^1you are being banned by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}";
   }
 
   if (json_resource["user_defined_ip_ban_msg"].exists()) {
-    data_line = json_resource["user_defined_ip_ban_msg"].as_str();
-    strip_leading_and_trailing_quotes(data_line);
-    main_app.get_admin_messages()["user_defined_ip_ban_msg"] = std::move(data_line);
+    if (!main_app.get_is_use_original_admin_messages()) {
+      data_line = json_resource["user_defined_ip_ban_msg"].as_str();
+      strip_leading_and_trailing_quotes(data_line);
+      main_app.get_admin_messages()["user_defined_ip_ban_msg"] = std::move(data_line);
+    } else {
+      main_app.get_admin_messages()["user_defined_ip_ban_msg"] = "^7{PLAYERNAME} ^1you are being permanently banned by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}";
+    }
   } else {
     found_missing_config_setting = true;
-    main_app.get_admin_messages()["user_defined_ip_ban_msg"] = "^1{ADMINNAME}: ^7{PLAYERNAME} ^1you are being permanently banned by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}";
+    main_app.get_admin_messages()["user_defined_ip_ban_msg"] = "^7{PLAYERNAME} ^1you are being permanently banned by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}";
   }
 
   if (json_resource["automatic_remove_temp_ban_msg"].exists()) {
-    data_line = json_resource["automatic_remove_temp_ban_msg"].as_str();
-    strip_leading_and_trailing_quotes(data_line);
-    main_app.get_admin_messages()["automatic_remove_temp_ban_msg"] = std::move(data_line);
+    if (!main_app.get_is_use_original_admin_messages()) {
+      data_line = json_resource["automatic_remove_temp_ban_msg"].as_str();
+      strip_leading_and_trailing_quotes(data_line);
+      main_app.get_admin_messages()["automatic_remove_temp_ban_msg"] = std::move(data_line);
+    } else {
+      main_app.get_admin_messages()["automatic_remove_temp_ban_msg"] = "^1{ADMINNAME}: ^7{PLAYERNAME}'s ^1temporary ban ^7[start date: ^3{TEMP_BAN_START_DATE} ^7expired on ^3{TEMP_BAN_END_DATE}]{{br}}^7has automatically been removed. ^5Reason of ban: ^1{REASON}";
+    }
   } else {
     found_missing_config_setting = true;
-    main_app.get_admin_messages()["automatic_remove_temp_ban_msg"] = "^1{ADMINNAME}: ^7{PLAYERNAME}'s ^1temporary ban ^7[start date: ^3{TEMP_BAN_START_DATE} ^7expired on ^3{TEMP_BAN_END_DATE}] ^7has been automatically removed.";
+    main_app.get_admin_messages()["automatic_remove_temp_ban_msg"] = "^1{ADMINNAME}: ^7{PLAYERNAME}'s ^1temporary ban ^7[start date: ^3{TEMP_BAN_START_DATE} ^7expired on ^3{TEMP_BAN_END_DATE}]{{br}}^7has automatically been removed. ^5Reason of ban: ^1{REASON}";
   }
 
   if (json_resource["automatic_kick_temp_ban_msg"].exists()) {
-    data_line = json_resource["automatic_kick_temp_ban_msg"].as_str();
-    strip_leading_and_trailing_quotes(data_line);
-    main_app.get_admin_messages()["automatic_kick_temp_ban_msg"] = std::move(data_line);
+    if (!main_app.get_is_use_original_admin_messages()) {
+      data_line = json_resource["automatic_kick_temp_ban_msg"].as_str();
+      strip_leading_and_trailing_quotes(data_line);
+      main_app.get_admin_messages()["automatic_kick_temp_ban_msg"] = std::move(data_line);
+    } else {
+      main_app.get_admin_messages()["automatic_kick_temp_ban_msg"] = "^1{ADMINNAME}: ^7Temporarily banned player {PLAYERNAME} ^7is being automatically ^1kicked.{{br}}^7Your temporary ban expires on ^1{TEMP_BAN_END_DATE}.{{br}}^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{TEMP_BAN_START_DATE}";
+    }
   } else {
     found_missing_config_setting = true;
-    main_app.get_admin_messages()["automatic_kick_temp_ban_msg"] = "^1{ADMINNAME}: ^7Temporarily banned player {PLAYERNAME} ^7is being automatically ^1kicked.{{br}}^7Your temporary ban expires on ^1{TEMP_BAN_END_DATE}";
+    main_app.get_admin_messages()["automatic_kick_temp_ban_msg"] = "^1{ADMINNAME}: ^7Temporarily banned player {PLAYERNAME} ^7is being automatically ^1kicked.{{br}}^7Your temporary ban expires on ^1{TEMP_BAN_END_DATE}.{{br}}^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{TEMP_BAN_START_DATE}";
   }
 
   if (json_resource["automatic_kick_ip_ban_msg"].exists()) {
-    data_line = json_resource["automatic_kick_ip_ban_msg"].as_str();
-    strip_leading_and_trailing_quotes(data_line);
-    main_app.get_admin_messages()["automatic_kick_ip_ban_msg"] = std::move(data_line);
+    if (!main_app.get_is_use_original_admin_messages()) {
+      data_line = json_resource["automatic_kick_ip_ban_msg"].as_str();
+      strip_leading_and_trailing_quotes(data_line);
+      main_app.get_admin_messages()["automatic_kick_ip_ban_msg"] = std::move(data_line);
+    } else {
+      main_app.get_admin_messages()["automatic_kick_ip_ban_msg"] = "^1{ADMINNAME}: ^7Player {PLAYERNAME} ^7with a previously ^1banned IP address ^7is being automatically ^1kicked.{{br}}^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{IP_BAN_DATE}";
+    }
   } else {
     found_missing_config_setting = true;
-    main_app.get_admin_messages()["automatic_kick_ip_ban_msg"] = "^1{ADMINNAME}: ^7Player {PLAYERNAME} ^7with a previously ^1banned IP address ^7is being automatically ^1kicked.";
+    main_app.get_admin_messages()["automatic_kick_ip_ban_msg"] = "^1{ADMINNAME}: ^7Player {PLAYERNAME} ^7with a previously ^1banned IP address ^7is being automatically ^1kicked.{{br}}^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{IP_BAN_DATE}";
   }
 
   if (json_resource["current_match_info"].exists()) {
@@ -1414,6 +1517,17 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
     found_missing_config_setting = true;
     main_app.set_ftp_download_file_pattern("^_U_TinyRcon[\\._-]?v?(\\d{1,2}\\.\\d{1,2}\\.\\d{1,2}\\.\\d{1,2})\\.exe$");
   }
+
+  if (json_resource["plugins_geoIP_geo_dat_md5"].exists()) {
+    data_line = json_resource["plugins_geoIP_geo_dat_md5"].as_str();
+    strip_leading_and_trailing_quotes(data_line);
+    trim_in_place(data_line);
+    main_app.set_plugins_geoIP_geo_dat_md5(std::move(data_line));
+  } else {
+    found_missing_config_setting = true;
+    main_app.set_plugins_geoIP_geo_dat_md5("");
+  }
+
 
   if (found_missing_config_setting) {
     write_tiny_rcon_json_settings_to_file(configFileName);
@@ -1886,7 +2000,8 @@ void print_help_information(const std::vector<std::string> &input_parts)
  ^1!config private abc123 ^5-> changes currently used ^1sv_privatepassword ^5to ^1abc123
  ^1!config address 123.101.102.103:28960 ^3-> changes currently used server ^1IP:port ^5to ^1123.101.102.103:28960
  ^1!config name Administrator ^5-> changes currently used ^1username ^5to ^1Administrator
- ^1!border on|off ^5-> Turns ^3on^5|^3off border lines around displayed ^3GUI controls^5. 
+ ^1!border on|off ^5-> Turns ^3on^5|^3off ^5border lines around displayed ^3GUI controls^5. 
+ ^1!messages on|off ^5-> Turns ^3on^5|^3off ^5messages for temporarily and permanently banned players.
 )"
     };
     print_colored_text(app_handles.hwnd_re_messages_data, help_message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
@@ -2807,7 +2922,6 @@ void process_user_command(const std::vector<string> &user_cmd)
       if (main_app.get_is_draw_border_lines() != new_setting) {
         main_app.set_is_draw_border_lines(new_setting);
 
-
         if (new_setting) {
           print_colored_text(app_handles.hwnd_re_messages_data, "^2You have successfully turned on the border lines\n around displayed ^3GUI controls^2.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
         } else {
@@ -2816,6 +2930,20 @@ void process_user_command(const std::vector<string> &user_cmd)
 
         construct_tinyrcon_gui(app_handles.hwnd_main_window);
 
+        write_tiny_rcon_json_settings_to_file("config\\tinyrcon.json");
+      }
+    } else if ((user_cmd.size() >= 2) && (user_cmd[0] == "messages" || user_cmd[0] == "!messages") && (user_cmd[1] == "on" || user_cmd[1] == "off")) {
+
+      const bool new_setting{ user_cmd[1] == "on" ? false : true };
+      const string re_msg{ "^2You have successfully executed command: ^1" + user_cmd[0] + " " + user_cmd[1] + "\n"s };
+      print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      if (main_app.get_is_disable_automatic_kick_messages() != new_setting) {
+        main_app.set_is_disable_automatic_kick_messages(new_setting);
+        if (!new_setting) {
+          print_colored_text(app_handles.hwnd_re_messages_data, "^2You have successfully turned on ^1automatic kick messages\n ^2for ^1temporarily ^2and ^1permanently banned players^2.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        } else {
+          print_colored_text(app_handles.hwnd_re_messages_data, "^2You have successfully turned off ^1automatic kick messages\n ^2for ^1temporarily ^2and ^1permanently banned players^2.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        }
         write_tiny_rcon_json_settings_to_file("config\\tinyrcon.json");
       }
     }
@@ -5392,8 +5520,8 @@ bool connect_to_the_game_server(const std::string &server_ip_port_address, const
 
 bool check_if_file_path_exists(const char *file_path) noexcept
 {
-  const ifstream input{ file_path, ios::binary };
-  return !input.fail();
+  const directory_entry dir_entry{ file_path };
+  return dir_entry.exists();
 }
 
 bool delete_temporary_game_file() noexcept
@@ -5644,8 +5772,8 @@ void process_key_down_message(const MSG &msg)
     if (show_user_confirmation_dialog("^3Do you really want to quit?", "Exit program?", "Reason")) {
       is_terminate_program.store(true);
       {
-        lock_guard<mutex> ul{ mu };
-        exit_flag.notify_one();
+        lock_guard ul{ mu };
+        exit_flag.notify_all();
       }
       PostQuitMessage(0);
     }
@@ -5673,8 +5801,8 @@ void process_key_down_message(const MSG &msg)
     if (get_user_input()) {
       is_terminate_program.store(true);
       {
-        lock_guard<mutex> ul{ mu };
-        exit_flag.notify_one();
+        lock_guard ul{ mu };
+        exit_flag.notify_all();
       }
       PostQuitMessage(0);
     }
@@ -6629,8 +6757,8 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
         DestroyWindow(app_handles.hwnd_configuration_dialog);
         is_terminate_program.store(true);
         {
-          lock_guard<mutex> ul{ mu };
-          exit_flag.notify_one();
+          lock_guard ul{ mu };
+          exit_flag.notify_all();
         }
       }
 
@@ -7664,5 +7792,19 @@ void set_available_sort_methods(const BOOL is_admin)
   } else {
     SendMessage(app_handles.hwnd_combo_box_sortmode, CB_SELECTSTRING, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>("Sort by score in descending order"));
     type_of_sort = sort_type::score_desc;
+  }
+}
+
+std::pair<bool, std::string> extract_7z_file_to_specified_path(const wchar_t *compressed_7z_file_path, const wchar_t *destination_path)
+{
+  try {
+    using namespace bit7z;
+    Bit7zLibrary lib{ L"7za.dll" };
+    BitExtractor extractor{ lib, BitFormat::SevenZip };
+    extractor.extract(compressed_7z_file_path, destination_path);// extracting a simple archive
+    return make_pair(true, string{});
+
+  } catch (const std::exception &ex) {
+    return make_pair(false, ex.what());
   }
 }

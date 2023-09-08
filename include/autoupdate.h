@@ -1,28 +1,13 @@
-/*
-Source File : autoupdate.h
-Created for the purpose of demonstration for http://www.codeproject.com
-
-Copyright 2017 Michael Haephrati, Secured Globe Inc.
-See also: https://www.codeproject.com/script/Membership/View.aspx?mid=5956881
-
-Secured Globe, Inc.
-http://www.securedglobe.com
-*/
-
 #pragma once
 
 #include <SDKDDKVer.h>
-
-#define _ATL_CSTRING_EXPLICIT_CONSTRUCTORS// some CString constructors will be explicit
-
 #include <atlbase.h>
-#include <atlstr.h>
 #include <Wininet.h>
 #include <string>
 #include "tiny_cod2_rcon_client_application.h"
 #include "internet_handle.h"
 
-DWORD WINAPI worker_function(LPVOID);
+DWORD WINAPI worker_function(void *param);
 
 struct internet_connection_handles
 {
@@ -78,11 +63,14 @@ public:
   bool get_file_version(const std::string &exe_file, version_data &ver, unsigned long &version_number) const noexcept;
   const std::string &get_self_full_path() const;
   void replace_temporary_version();
-  bool check_for_updates();
+  void downloaded_latest_version_of_program() const;
   void set_self_current_working_directory(std::string cwd) noexcept;
+  const std::string &get_self_current_working_directory() const noexcept;
   void set_self_full_path(std::string path) noexcept;
   const std::string &get_self_file_name() const;
   void set_self_file_name(std::string file_name);
+  std::vector<std::string> get_file_name_matches_for_specified_file_pattern(internet_handle &internet_connect_handle, const char *relative_path, const char *file_pattern) const;
+  bool download_file(const char *url, const char *downloaded_file_path) const;
 
 private:
   mutable unsigned long current_version_number{};
@@ -93,7 +81,7 @@ private:
   std::string self_full_path;
   std::string self_file_name;
   std::string latest_version_to_download;
-  char download_file_path_pattern[512]{};
+  mutable char download_file_path_pattern[512]{};
   mutable char message_buffer[512]{};
 };
 

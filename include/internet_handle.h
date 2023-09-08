@@ -25,6 +25,16 @@ public:
 
   void set(HINTERNET &&new_handle) noexcept
   {
+    if (handle != NULL)
+      InternetCloseHandle(handle);
     handle = std::move(new_handle);
+  }
+
+  void close() noexcept
+  {
+    if (NULL != handle) {
+      InternetCloseHandle(handle);
+      handle = NULL;
+    }
   }
 };

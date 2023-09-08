@@ -212,6 +212,7 @@ struct row_of_player_data_to_display
   const char *country_code{};
 };
 
+bool create_necessary_folders_and_files(const std::vector<std::string> &folder_file_paths);
 void set_rich_edit_control_colors(HWND richEditCtrl, const COLORREF fg_color, const COLORREF bg_color = color::black, const char *font_face_name = "Consolas") noexcept;
 CHARFORMAT get_char_fmt(HWND hwnd, DWORD range = SCF_SELECTION) noexcept;
 void set_char_fmt(HWND hwnd, const CHARFORMAT2 &cf, DWORD range = SCF_SELECTION) noexcept;
@@ -482,3 +483,4 @@ void print_message_about_corrected_player_name(HWND re_hwnd, const char *truncat
 void set_admin_actions_buttons_active(const BOOL is_enable = TRUE) noexcept;
 void invalidate_unnecessary_players_data(const size_t start_index);
 void set_available_sort_methods(const BOOL is_admin = TRUE);
+std::pair<bool, std::string> extract_7z_file_to_specified_path(const wchar_t *compressed_7z_file_path, const wchar_t *destination_path);

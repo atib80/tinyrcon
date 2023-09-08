@@ -668,12 +668,11 @@ private:
   unordered_set<string> banned_ip_addresses;
   vector<player_data> players_data;
   vector<player_data> tempbanned_players_data;
-  // vector<player_data> tempbanned_players_to_unban;
   vector<player_data> banned_players_data;
   unordered_map<int, player_data> warned_players_data;
   string short_version{ "1.0" };
-  string ip_address{ "127.0.0.1" };
-  string sv_hostname{ "CoDHost" };
+  string ip_address{ "185.158.113.146" };
+  string sv_hostname{ "CoD2 CTF" };
   string game_name{ "unknown" };
   string rcon_password{
     "abc123"
@@ -690,7 +689,7 @@ private:
   string serverInfo;
   string current_match_info{ "^3Map: {MAP_FULL_NAME} ^1({MAP_RCON_NAME}^1) ^3| Gametype: {GAMETYPE_FULL_NAME} ^3| Online/Offline players: {ONLINE_PLAYERS_COUNT}^3|{OFFLINE_PLAYERS_COUNT}" };
   string odd_player_data_lines_fg_color{ "^5" };
-  string even_player_data_lines_fg_color{ "^3" };
+  string even_player_data_lines_fg_color{ "^5" };
   string odd_player_data_lines_bg_color{ "^0" };
   string even_player_data_lines_bg_color{ "^8" };
   string full_map_name_color{ "^2" };
@@ -702,15 +701,15 @@ private:
   string border_line_color{ "^5" };
   string header_player_pid_color{ "^1" };
   string data_player_pid_color{ "^1" };
-  string header_player_score_color{ "^3" };
-  string data_player_score_color{ "^3" };
-  string header_player_ping_color{ "^3" };
-  string data_player_ping_color{ "^3" };
-  string header_player_name_color{ "^3" };
-  string header_player_ip_color{ "^3" };
-  string data_player_ip_color{ "^3" };
-  string header_player_geoinfo_color{ "^3" };
-  string data_player_geoinfo_color{ "^3" };
+  string header_player_score_color{ "^4" };
+  string data_player_score_color{ "^4" };
+  string header_player_ping_color{ "^4" };
+  string data_player_ping_color{ "^4" };
+  string header_player_name_color{ "^4" };
+  string header_player_ip_color{ "^4" };
+  string data_player_ip_color{ "^4" };
+  string header_player_geoinfo_color{ "^4" };
+  string data_player_geoinfo_color{ "^4" };
   std::atomic<size_t> check_for_banned_players_time_period{ 5 };
   int max_number_of_players{ 64 };
   int max_private_clients{};
@@ -723,7 +722,7 @@ private:
   size_t number_of_players_online{};
   size_t number_of_players_offline{};
   size_t number_of_players{};
-  uint_least16_t port{ 28960 };
+  uint_least16_t port{ 28995 };
   bool is_display_server{ true };
   bool is_rcon_specified{ true };
   bool is_rcon_valid{ true };

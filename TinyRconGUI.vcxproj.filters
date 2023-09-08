@@ -60,6 +60,9 @@
     <ClInclude Include="include\internet_handle.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\md5.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\tiny_rcon.cpp">
@@ -75,6 +78,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\autoupdate.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\md5.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

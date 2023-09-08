@@ -41,6 +41,6 @@ set(src_files src/autoupdate.cpp src/simple_grid.cpp src/tiny_rcon_utility_funct
 
 add_executable(tinyrcon ${src_files})
 
-target_include_directories(tinyrcon PUBLIC include)
-target_include_directories(tinyrcon PUBLIC deps/asio-1.26.0/include)
-target_link_libraries(tinyrcon PUBLIC kernel32 shell32 advapi32 user32 gdi32 comctl32 uxtheme ws2_32)
+target_include_directories(tinyrcon PUBLIC include deps/asio-1.26.0/include deps/bit7z-v3.2.0-msvc2019_mt_x86/bit7z/include)
+target_link_directories(tinyrcon PUBLIC deps/asio-1.26.0/include deps/bit7z-v3.2.0-msvc2019_mt_x86/bit7z/lib)
+target_link_libraries(tinyrcon PUBLIC kernel32 shell32 advapi32 user32 gdi32 comctl32 uxtheme ws2_32 bit7z.lib)

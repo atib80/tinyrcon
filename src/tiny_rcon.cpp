@@ -15,8 +15,11 @@ using namespace std;
 using namespace stl::helper;
 using namespace std::string_literals;
 using namespace std::chrono;
+using namespace std::filesystem;
 
-extern const string program_version{ "2.4.1.2" };
+extern const string program_version{ "2.4.1.6" };
+
+extern char const *const tinyrcon_config_file_path = "config/tinyrcon.json";
 
 extern char const *const tempbans_file_path =
   "data/tempbans.txt";
@@ -167,6 +170,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   if (!initialize_main_app(hInstance, nCmdShow))
     return 0;
 
+  if (!create_necessary_folders_and_files({ tinyrcon_config_file_path, tempbans_file_path, banned_ip_addresses_file_path, "log", "plugins\\geoIP" })) {
+    show_error(app_handles.hwnd_main_window, "Error creating necessary program folders and files!", 0);
+  }
 
   parse_tinyrcon_tool_config_file("config/tinyrcon.json");
 
@@ -205,10 +211,13 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       print_colored_text(app_handles.hwnd_re_messages_data, "^2Finished parsing ^1tinyrcon.json ^3file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
       {
         auto_update_manager au{};
+        main_app.set_current_working_directory(au.get_self_current_working_directory());
       }
       print_colored_text(app_handles.hwnd_re_messages_data, "^3Started importing serialized binary geological data from\n ^1'plugins/geoIP/geo.dat' ^3file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-      // parse_geodata_lite_csv_file("plugins/geoIP/IP2LOCATION-LITE-DB3.csv");
-      import_geoip_data(main_app.get_connection_manager().get_geoip_data(), "plugins/geoIP/geo.dat");
+      // const string geo_dat_file_path{ main_app.get_current_working_directory() + "plugins\\geoIP\\IP2LOCATION-LITE-DB3.csv" };
+      // parse_geodata_lite_csv_file(geo_dat_file_path.c_str());
+      const string geo_dat_file_path{ main_app.get_current_working_directory() + "plugins\\geoIP\\geo.dat" };
+      import_geoip_data(main_app.get_connection_manager().get_geoip_data(), geo_dat_file_path.c_str());
 
       print_colored_text(app_handles.hwnd_re_messages_data, "^2Finished importing serialized binary geological data from\n ^1'plugins/geoIP/geo.dat' ^2file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
 
@@ -220,9 +229,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       parse_banned_ip_addresses_file();
       print_colored_text(app_handles.hwnd_re_messages_data, "^2Finished parsing ^1bans.txt ^3file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
 
-      if (!initialize_and_verify_server_connection_settings()) {
-        PostQuitMessage(0);
-      }
+      initialize_and_verify_server_connection_settings();
 
       display_tempbanned_players_remaining_time_period();
 
@@ -230,31 +237,34 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
       while (!should_program_terminate()) {
         {
-          unique_lock<mutex> ul{ mu };
-          exit_flag.wait_for(ul, std::chrono::milliseconds(25), [&]() {
+          unique_lock ul{ mu };
+          exit_flag.wait_for(ul, 25ms, [&]() {
             return is_terminate_program.load();
           });
         }
 
-        string rcon_reply;
+        if (!is_terminate_program.load()) {
 
-        while (!main_app.is_command_queue_empty()) {
-          auto cmd = main_app.get_command_from_queue();
-          main_app.process_queue_command(std::move(cmd));
-        }
+          string rcon_reply;
 
-        if (is_refresh_players_data_event.load()) {
-          if (main_app.get_is_connection_settings_valid()) {
-            main_app.get_connection_manager().send_and_receive_rcon_data("g_gametype", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
-            main_app.get_connection_manager().send_and_receive_rcon_data("status", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
-            prepare_players_data_for_display(false);
-          } else {
-            main_app.get_connection_manager().send_and_receive_rcon_data("getstatus", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
-            prepare_players_data_for_display_of_getstatus_response(false);
+          while (!main_app.is_command_queue_empty()) {
+            auto cmd = main_app.get_command_from_queue();
+            main_app.process_queue_command(std::move(cmd));
           }
 
-          is_refresh_players_data_event.store(false);
-          is_refreshed_players_data_ready_event.store(true);
+          if (is_refresh_players_data_event.load()) {
+            if (main_app.get_is_connection_settings_valid()) {
+              main_app.get_connection_manager().send_and_receive_rcon_data("g_gametype", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
+              main_app.get_connection_manager().send_and_receive_rcon_data("status", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
+              prepare_players_data_for_display(false);
+            } else {
+              main_app.get_connection_manager().send_and_receive_rcon_data("getstatus", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
+              prepare_players_data_for_display_of_getstatus_response(false);
+            }
+
+            is_refresh_players_data_event.store(false);
+            is_refreshed_players_data_ready_event.store(true);
+          }
         }
       }
     }
@@ -262,7 +272,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
   task_thread.detach();
 
-  while (GetMessage(&msg, nullptr, 0, 0)) {
+  while (GetMessage(&msg, nullptr, 0, 0) > 0) {
     if (TranslateAccelerator(app_handles.hwnd_main_window, hAccel, &msg) != 0) {
       TranslateMessage(&msg);
       DispatchMessage(&msg);
@@ -320,8 +330,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
   is_terminate_program.store(true);
   {
-    unique_lock<mutex> ul{ mu };
-    exit_flag.notify_one();
+    lock_guard ul{ mu };
+    exit_flag.notify_all();
   }
 
   if (pr_info.hProcess != NULL)
@@ -332,8 +342,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   log_message("Exiting TinyRcon program.", is_log_datetime::yes);
 
   DestroyAcceleratorTable(hAccel);
-
-  // export_geoip_data(main_app.get_connection_manager().get_geoip_data(), "plugins/geoIP/geo.dat");
+  const string geo_dat_file_path{ main_app.get_current_working_directory() + "plugins\\geoIP\\geo.dat" };
+  // export_geoip_data(main_app.get_connection_manager().get_geoip_data(), geo_dat_file_path.c_str());
 
   if (wcex.hbrBackground != nullptr)
     DeleteObject((HGDIOBJ)wcex.hbrBackground);
@@ -638,8 +648,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       // if (show_user_confirmation_dialog("^3Do you really want to exit?\n", "Exit TinyRcon?")) {
       is_terminate_program.store(true);
       {
-        unique_lock<mutex> ul{ mu };
-        exit_flag.notify_one();
+        lock_guard ul{ mu };
+        exit_flag.notify_all();
       }
       PostQuitMessage(0);
       // }
@@ -887,8 +897,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         show_error(app_handles.hwnd_main_window, "Failed to construct and show TinyRcon configuration dialog!", 0);
       }
       if (is_terminate_program.load()) {
-        lock_guard<mutex> ul{ mu };
-        exit_flag.notify_one();
+        lock_guard ul{ mu };
+        exit_flag.notify_all();
         PostQuitMessage(0);
       }
       break;
@@ -976,7 +986,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     // if (show_user_confirmation_dialog("^3Do you really want to exit?", "Exit TinyRcon?")) {
     is_terminate_program.store(true);
     {
-      lock_guard<mutex> ul{ mu };
+      lock_guard ul{ mu };
       exit_flag.notify_one();
     }
     DestroyWindow(app_handles.hwnd_main_window);
@@ -1457,8 +1467,8 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
       DestroyWindow(app_handles.hwnd_configuration_dialog);
       is_terminate_program.store(true);
       {
-        lock_guard<mutex> ul{ mu };
-        exit_flag.notify_one();
+        lock_guard ul{ mu };
+        exit_flag.notify_all();
       }
     } break;
 

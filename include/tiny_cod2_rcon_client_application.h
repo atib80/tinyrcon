@@ -19,11 +19,14 @@ class tiny_cod2_rcon_client_application
   bool is_log_file_open{};
   bool is_draw_border_lines{ true };
   bool is_disable_automatic_kick_messages{ false };
-  size_t minimum_number_of_connections_from_same_ip_for_automatic_ban{ 5 };
+  bool is_use_original_admin_messages{ true };
+  size_t minimum_number_of_connections_from_same_ip_for_automatic_ban{ 12 };
   size_t maximum_number_of_warnings_for_automatic_kick{ 2 };
   game_name_t game_name{ game_name_t::unknown };
-  string username{ "^1Administrator" };
-  string game_server_name;
+  string username{ "^1Admin" };
+  string game_server_name{
+    "185.158.113.146:28995 CoD2 CTF"
+  };
   string codmp_exe_path;
   string cod2mp_s_exe_path;
   string iw3mp_exe_path;
@@ -32,14 +35,14 @@ class tiny_cod2_rcon_client_application
   std::unordered_map<std::string, std::string> admin_messages{
     { "user_defined_warn_msg", "^7{PLAYERNAME} ^1you have been warned by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}" },
     { "user_defined_kick_msg", "^7{PLAYERNAME} ^1you are being kicked by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}" },
-    { "user_defined_temp_ban_msg", "^7{PLAYERNAME} ^7you are being ^1temporarily banned ^7for ^1{TEMPBAN_DURATION} hours ^7by ^1admin {ADMINNAME}.{{br}} ^3Reason: ^1{REASON}" },
+    { "user_defined_temp_ban_msg", "^7{PLAYERNAME} ^7you are being ^1temporarily banned ^7for ^1{TEMPBAN_DURATION} hours ^7by ^1admin {ADMINNAME}.{{br}}^3Reason: ^1{REASON}" },
     { "user_defined_ban_msg", "^7{PLAYERNAME} ^1you are being banned by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}" },
     { "user_defined_ip_ban_msg", "^7{PLAYERNAME} ^1you are being permanently banned by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}" },
-    { "automatic_remove_temp_ban_msg", "^1{ADMINNAME}: ^7{PLAYERNAME}'s ^1temporary ban ^7[start date: ^3{TEMP_BAN_START_DATE} ^7expired on ^3{TEMP_BAN_END_DATE}]{{br}} ^7has automatically been removed. ^5Reason of ban: ^1{REASON}" },
-    { "automatic_kick_temp_ban_msg", "^1{ADMINNAME}: ^7Temporarily banned player {PLAYERNAME} ^7is being automatically ^1kicked.{{br}} ^7Your temporary ban expires on ^1{TEMP_BAN_END_DATE}.{{br}} ^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{TEMP_BAN_START_DATE}" },
+    { "automatic_remove_temp_ban_msg", "^1{ADMINNAME}: ^7{PLAYERNAME}'s ^1temporary ban ^7[start date: ^3{TEMP_BAN_START_DATE} ^7expired on ^3{TEMP_BAN_END_DATE}]{{br}}^7has automatically been removed. ^5Reason of ban: ^1{REASON}" },
+    { "automatic_kick_temp_ban_msg", "^1{ADMINNAME}: ^7Temporarily banned player {PLAYERNAME} ^7is being automatically ^1kicked.{{br}}^7Your temporary ban expires on ^1{TEMP_BAN_END_DATE}.{{br}}^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{TEMP_BAN_START_DATE}" },
     {
       "automatic_kick_ip_ban_msg",
-      "^1{ADMINNAME}: ^7Player {PLAYERNAME} ^7with a previously ^1banned IP address ^7is being automatically ^1kicked.{{br}} ^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{IP_BAN_DATE}",
+      "^1{ADMINNAME}: ^7Player {PLAYERNAME} ^7with a previously ^1banned IP address ^7is being automatically ^1kicked.{{br}}^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{IP_BAN_DATE}",
     }
   };
 
@@ -60,10 +63,12 @@ class tiny_cod2_rcon_client_application
     { "{REASON}", "not specified" }
   };
 
-  std::string program_title{ "Welcome to TinyRcon!" };
-  std::string ftp_download_site_ip_address;
-  std::string ftp_download_folder_path;
-  std::string ftp_download_file_pattern;
+  std::string program_title{ "Welcome to TinyRcon" };
+  std::string current_working_directory;
+  std::string ftp_download_site_ip_address{ "85.222.189.119" };
+  std::string ftp_download_folder_path{ "tinyrcon" };
+  std::string ftp_download_file_pattern{ R"(^_U_TinyRcon[\._-]?v?(\d{1,2}\.\d{1,2}\.\d{1,2}\.\d{1,2})\.exe$)" };
+  std::string plugins_geoIP_geo_dat_md5;
   std::ofstream log_file;
   std::recursive_mutex command_queue_mutex{};
 
@@ -95,6 +100,16 @@ public:
   void set_is_disable_automatic_kick_messages(const bool new_value) noexcept
   {
     is_disable_automatic_kick_messages = new_value;
+  }
+
+  bool get_is_use_original_admin_messages() const noexcept
+  {
+    return is_use_original_admin_messages;
+  }
+
+  void set_is_use_original_admin_messages(const bool new_value) noexcept
+  {
+    is_use_original_admin_messages = new_value;
   }
 
   void set_is_enable_automatic_connection_flood_ip_ban(const bool new_value) noexcept
@@ -296,6 +311,16 @@ public:
     is_draw_border_lines = new_value;
   }
 
+  const std::string &get_current_working_directory() const noexcept
+  {
+    return current_working_directory;
+  }
+
+  void set_current_working_directory(string new_current_working_directory) noexcept
+  {
+    current_working_directory = std::move(new_current_working_directory);
+  }
+
   const std::string &get_ftp_download_site_ip_address() const noexcept
   {
     return ftp_download_site_ip_address;
@@ -324,6 +349,16 @@ public:
   void set_ftp_download_file_pattern(string new_ftp_download_file_pattern) noexcept
   {
     ftp_download_file_pattern = std::move(new_ftp_download_file_pattern);
+  }
+
+  const std::string &get_plugins_geoIP_geo_dat_md5() const noexcept
+  {
+    return plugins_geoIP_geo_dat_md5;
+  }
+
+  void set_plugins_geoIP_geo_dat_md5(string new_plugins_geoIP_geo_dat_md5) noexcept
+  {
+    plugins_geoIP_geo_dat_md5 = std::move(new_plugins_geoIP_geo_dat_md5);
   }
 
   bool open_log_file(const char *file_path) noexcept
