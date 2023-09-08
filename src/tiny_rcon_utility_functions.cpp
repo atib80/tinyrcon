@@ -23,10 +23,10 @@
 // Call of duty 5: World at war steam appid: 10090
 
 #if defined(_DEBUG)
-    #pragma comment(lib, "bit7z_d.lib")
+#pragma comment(lib, "bit7z_d.lib")
 #else
-    #pragma comment(lib, "bit7z.lib")
-#endif 
+#pragma comment(lib, "bit7z.lib")
+#endif
 
 using namespace std;
 using namespace stl::helper;
@@ -731,7 +731,7 @@ bool create_necessary_folders_and_files(const std::vector<string> &folder_file_p
 
   unordered_set<string> created_folders;
 
-  for (const auto file_path : folder_file_paths) {
+  for (auto &&file_path : folder_file_paths) {
     const directory_entry entry{ file_path };
     if (!check_if_file_path_exists(file_path.c_str())) {
 
@@ -747,7 +747,7 @@ bool create_necessary_folders_and_files(const std::vector<string> &folder_file_p
 
       string parent_path{ string::npos != last_sep_pos ? file_path.substr(0, last_sep_pos) : ""s };
 
-      if (!created_folders.contains(parent_path)) {
+      if (!parent_path.empty() && !created_folders.contains(parent_path)) {
         error_code ec{};
         create_directories(parent_path, ec);
         if (ec.value() != 0)
