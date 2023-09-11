@@ -17,7 +17,7 @@ using namespace std::string_literals;
 using namespace std::chrono;
 using namespace std::filesystem;
 
-extern const string program_version{ "2.4.1.6" };
+extern const string program_version{ "2.4.1.8" };
 
 extern char const *const tinyrcon_config_file_path = "config/tinyrcon.json";
 
@@ -235,42 +235,40 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
       is_main_window_constructed = true;
 
-      while (!should_program_terminate()) {
+      while (true) {
         {
           unique_lock ul{ mu };
-          exit_flag.wait_for(ul, 25ms, [&]() {
+          exit_flag.wait_for(ul, 20ms, [&]() {
             return is_terminate_program.load();
           });
         }
 
-        if (!is_terminate_program.load()) {
+        if (is_terminate_program.load())
+          break;
 
-          string rcon_reply;
+        string rcon_reply;
 
-          while (!main_app.is_command_queue_empty()) {
-            auto cmd = main_app.get_command_from_queue();
-            main_app.process_queue_command(std::move(cmd));
+        while (!main_app.is_command_queue_empty()) {
+          auto cmd = main_app.get_command_from_queue();
+          main_app.process_queue_command(std::move(cmd));
+        }
+
+        if (is_refresh_players_data_event.load()) {
+          if (main_app.get_is_connection_settings_valid()) {
+            main_app.get_connection_manager().send_and_receive_rcon_data("g_gametype", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
+            main_app.get_connection_manager().send_and_receive_rcon_data("status", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
+            prepare_players_data_for_display(false);
+          } else {
+            main_app.get_connection_manager().send_and_receive_rcon_data("getstatus", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
+            prepare_players_data_for_display_of_getstatus_response(false);
           }
 
-          if (is_refresh_players_data_event.load()) {
-            if (main_app.get_is_connection_settings_valid()) {
-              main_app.get_connection_manager().send_and_receive_rcon_data("g_gametype", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
-              main_app.get_connection_manager().send_and_receive_rcon_data("status", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
-              prepare_players_data_for_display(false);
-            } else {
-              main_app.get_connection_manager().send_and_receive_rcon_data("getstatus", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
-              prepare_players_data_for_display_of_getstatus_response(false);
-            }
-
-            is_refresh_players_data_event.store(false);
-            is_refreshed_players_data_ready_event.store(true);
-          }
+          is_refresh_players_data_event.store(false);
+          is_refreshed_players_data_ready_event.store(true);
         }
       }
     }
   };
-
-  task_thread.detach();
 
   while (GetMessage(&msg, nullptr, 0, 0) > 0) {
     if (TranslateAccelerator(app_handles.hwnd_main_window, hAccel, &msg) != 0) {
@@ -333,6 +331,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     lock_guard ul{ mu };
     exit_flag.notify_all();
   }
+
+  task_thread.join();
 
   if (pr_info.hProcess != NULL)
     CloseHandle(pr_info.hProcess);

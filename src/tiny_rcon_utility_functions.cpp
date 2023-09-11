@@ -5904,7 +5904,7 @@ void construct_tinyrcon_gui(HWND hWnd) noexcept
     DestroyWindow(app_handles.hwnd_re_messages_data);
   }
 
-  app_handles.hwnd_re_messages_data = CreateWindowEx(0, RICHEDIT_CLASS, nullptr, draw_border_lines_flag | WS_VISIBLE | WS_CHILD | WS_VSCROLL | WS_HSCROLL | ES_MULTILINE | ES_LEFT | ES_AUTOVSCROLL | ES_NOHIDESEL | ES_READONLY, screen_width / 2 + 170, 45, screen_width / 2 - 190, screen_height / 2 - 30, hWnd, reinterpret_cast<HMENU>(ID_BANNEDEDIT), app_handles.hInstance, nullptr);
+  app_handles.hwnd_re_messages_data = CreateWindowEx(0, RICHEDIT_CLASS, nullptr, draw_border_lines_flag | WS_VISIBLE | WS_CHILD | WS_VSCROLL | WS_HSCROLL | ES_MULTILINE | ES_LEFT /*| ES_AUTOVSCROLL*/ | ES_NOHIDESEL | ES_READONLY, screen_width / 2 + 170, 45, screen_width / 2 - 190, screen_height / 2 - 30, hWnd, reinterpret_cast<HMENU>(ID_BANNEDEDIT), app_handles.hInstance, nullptr);
   if (!app_handles.hwnd_re_messages_data)
     FatalAppExit(0, "Couldn't create 'g_banned_players_data' richedit control!");
 
