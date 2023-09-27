@@ -17,7 +17,7 @@ using namespace std::string_literals;
 using namespace std::chrono;
 using namespace std::filesystem;
 
-extern const string program_version{ "2.4.1.8" };
+extern const string program_version{ "2.4.2.0" };
 
 extern char const *const tinyrcon_config_file_path = "config/tinyrcon.json";
 

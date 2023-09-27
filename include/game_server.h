@@ -337,7 +337,7 @@ public:
   bool add_ip_address_to_set_of_temp_banned_ip_addresses(
     const string &new_ip_address)
   {
-    if (temp_banned_ip_addresses.count(new_ip_address) == 1U)
+    if (temp_banned_ip_addresses.contains(new_ip_address))
       return false;
     temp_banned_ip_addresses.emplace(new_ip_address);
     return true;
@@ -346,7 +346,7 @@ public:
   bool remove_ip_address_from_set_of_temp_banned_ip_addresses(
     const string &new_ip_address)
   {
-    if (temp_banned_ip_addresses.count(new_ip_address) == 0)
+    if (!temp_banned_ip_addresses.contains(new_ip_address))
       return false;
     temp_banned_ip_addresses.erase(new_ip_address);
     return true;
@@ -360,7 +360,7 @@ public:
   bool add_ip_address_to_set_of_banned_ip_addresses(
     const string &new_ip_address)
   {
-    if (banned_ip_addresses.count(new_ip_address) == 1U)
+    if (banned_ip_addresses.contains(new_ip_address))
       return false;
     banned_ip_addresses.emplace(new_ip_address);
     return true;
@@ -369,7 +369,7 @@ public:
   bool remove_ip_address_from_set_of_banned_ip_addresses(
     const string &new_ip_address)
   {
-    if (banned_ip_addresses.count(new_ip_address) == 0)
+    if (!banned_ip_addresses.contains(new_ip_address))
       return false;
     banned_ip_addresses.erase(new_ip_address);
     return true;

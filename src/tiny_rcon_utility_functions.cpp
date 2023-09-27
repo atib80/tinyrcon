@@ -932,9 +932,9 @@ size_t find_longest_player_name_length(
 {
   if (0 == number_of_players_to_process)
     return 0;
-
-  size_t max_player_name_length = count_color_codes ? len(players[0].player_name) : get_number_of_characters_without_color_codes(players[0].player_name);
-  for (size_t i{ 1 }; i < number_of_players_to_process; ++i) {
+  size_t max_player_name_length{ 8 };
+  // size_t max_player_name_length = count_color_codes ? len(players[0].player_name) : get_number_of_characters_without_color_codes(players[0].player_name);
+  for (size_t i{}; i < number_of_players_to_process; ++i) {
     max_player_name_length =
       max(count_color_codes ? len(players[i].player_name) : get_number_of_characters_without_color_codes(players[i].player_name), max_player_name_length);
   }
@@ -949,12 +949,12 @@ size_t find_longest_player_country_city_info_length(
   if (0 == number_of_players_to_process)
     return 0;
 
-  size_t country_len = len(players[0].country_name);
-  size_t region_len = len(players[0].region);
-  size_t city_len = len(players[0].city);
+  size_t country_len{ 8 };
+  size_t region_len{ 8 };
+  size_t city_len{ 8 };
 
   size_t max_geodata_info_length = (country_len != 0 ? country_len : region_len) + city_len + 2;
-  for (size_t i{ 1 }; i < number_of_players_to_process; ++i) {
+  for (size_t i{}; i < number_of_players_to_process; ++i) {
     country_len = len(players[i].country_name);
     region_len = len(players[i].region);
     city_len = len(players[i].city);
@@ -1618,7 +1618,6 @@ void parse_banned_ip_addresses_file()
       player_data bannedPlayerData{};
       if (parts.size() < 5)
         continue;
-
       strcpy_s(bannedPlayerData.ip_address, std::size(bannedPlayerData.ip_address), parts[0].c_str());
       strcpy_s(bannedPlayerData.guid_key, std::size(bannedPlayerData.guid_key), parts[1].c_str());
       strcpy_s(bannedPlayerData.player_name, std::size(bannedPlayerData.player_name), parts[2].c_str());
@@ -1640,11 +1639,13 @@ bool temp_ban_player_ip_address(player_data &pd)
   using namespace std::literals;
 
   // lock_guard lg{ protect_banned_players_data };
-  if (main_app.get_game_server().get_set_of_temp_banned_ip_addresses().count(pd.ip_address) == 1U)
+  if (main_app.get_game_server().get_set_of_temp_banned_ip_addresses().contains(pd.ip_address))
     return true;
 
   main_app.get_game_server().add_ip_address_to_set_of_temp_banned_ip_addresses(
     pd.ip_address);
+
+  // pd.is_banned = true;
 
   unsigned long guid{};
   if (!check_ip_address_validity(pd.ip_address, guid)) {
@@ -1727,11 +1728,13 @@ bool global_ban_player_ip_address(player_data &pd)
   using namespace std::literals;
 
   // lock_guard lg{ protect_banned_players_data };
-  if (main_app.get_game_server().get_set_of_banned_ip_addresses().count(pd.ip_address) == 1U)
+  if (main_app.get_game_server().get_set_of_banned_ip_addresses().contains(pd.ip_address))
     return true;
 
   main_app.get_game_server().add_ip_address_to_set_of_banned_ip_addresses(
     pd.ip_address);
+
+  // pd.is_banned = true;
 
   unsigned long guid{};
   if (!check_ip_address_validity(pd.ip_address, guid)) {
@@ -1804,9 +1807,8 @@ bool global_ban_player_ip_address(player_data &pd)
 bool remove_temp_banned_ip_address(const std::string &ip_address, std::string &message, const bool is_automatic_temp_ban_remove)
 {
   // lock_guard lg{ protect_banned_players_data };
-  if (main_app.get_game_server().get_set_of_temp_banned_ip_addresses().find(
-        ip_address)
-      == cend(main_app.get_game_server().get_set_of_temp_banned_ip_addresses())) {
+  if (!main_app.get_game_server().get_set_of_temp_banned_ip_addresses().contains(
+        ip_address)) {
     return false;
   }
 
@@ -1820,6 +1822,7 @@ bool remove_temp_banned_ip_address(const std::string &ip_address, std::string &m
   });
 
   if (found_iter != std::end(temp_banned_players)) {
+    // found_iter->is_banned = false;
     if (!is_automatic_temp_ban_remove) {
       char buffer[512];
       (void)snprintf(buffer, std::size(buffer), "^7Admin (%s^7) has manually removed ^1temporarily banned IP address ^7for player %s ^7(reason: ^1%s^7)\n", main_app.get_username().c_str(), found_iter->player_name, found_iter->reason.c_str());
@@ -1901,9 +1904,24 @@ bool remove_permanently_banned_ip_address(const std::string &ip_address, std::st
   return true;
 }
 
-bool is_valid_decimal_whole_number(const std::string &number_str, int &number) noexcept
+bool is_valid_decimal_whole_number(const std::string &str, int &number) noexcept
 {
-  try {
+  // const string str{ trim(number_str, " \t\n\f\v") };
+  if (str.empty()) return false;
+  const bool is_negative{ '-' == str[0] };
+  size_t index{ is_negative || '+' == str[0] ? 1U : 0U };
+  number = 0;
+  for (; index < str.length(); ++index) {
+    if (!isdigit(str[index]))
+      return false;
+    number *= 10;
+    number += static_cast<int>(str[index] - '0');
+  }
+  if (is_negative)
+    number = -number;
+
+  return true;
+  /*try {
     number = stoi(number_str);
   } catch (const std::invalid_argument &) {
     return false;
@@ -1916,6 +1934,7 @@ bool is_valid_decimal_whole_number(const std::string &number_str, int &number) n
   }
 
   return true;
+  */
 }
 
 size_t get_number_of_characters_without_color_codes(const char *text) noexcept

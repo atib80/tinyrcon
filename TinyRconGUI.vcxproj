@@ -112,9 +112,10 @@
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <EnableModules>false</EnableModules>
-      <LanguageStandard_C>Default</LanguageStandard_C>
+      <LanguageStandard_C>stdc11</LanguageStandard_C>
       <AdditionalIncludeDirectories>$(SolutionDir)deps\bit7z-v3.2.0-msvc2019_mt_x86\bit7z\include\;include;$(SolutionDir)deps\asio-1.26.0\include;</AdditionalIncludeDirectories>
       <FloatingPointModel>Fast</FloatingPointModel>
+      <DisableLanguageExtensions>false</DisableLanguageExtensions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -143,6 +144,8 @@
       <EnableModules>false</EnableModules>
       <AdditionalIncludeDirectories>$(SolutionDir)deps\bit7z-v3.2.0-msvc2019_mt_x86\bit7z\include\;include;$(SolutionDir)deps\asio-1.26.0\include;$(SolutionDir)include</AdditionalIncludeDirectories>
       <FloatingPointModel>Fast</FloatingPointModel>
+      <DisableLanguageExtensions>false</DisableLanguageExtensions>
+      <LanguageStandard_C>stdc11</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
