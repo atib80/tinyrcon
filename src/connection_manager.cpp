@@ -111,7 +111,7 @@ size_t connection_manager::receive_data_from_server(
         if (previous_map.empty() || current_map != previous_map) {
           selected_row = 0;
           previous_map = current_map;
-          invalidate_unnecessary_players_data(0);
+          initialize_elements_of_container_to_specified_value(main_app.get_game_server().get_players_data(), player_data{}, 0);
           clear_players_data_in_players_grid(app_handles.hwnd_players_grid, 0, max_players_grid_rows, 7);
         }
         main_app.get_game_server().set_current_map(std::move(current_map));
@@ -565,7 +565,8 @@ size_t connection_manager::receive_data_from_server(
           if (previous_map.empty() || current_map != previous_map) {
             selected_row = 0;
             previous_map = current_map;
-            invalidate_unnecessary_players_data(0);
+            initialize_elements_of_container_to_specified_value(
+              main_app.get_game_server().get_players_data(), player_data{}, 0);
             clear_players_data_in_players_grid(app_handles.hwnd_players_grid, 0, max_players_grid_rows, 7);
           }
           main_app.get_game_server().set_current_map(std::move(current_map));

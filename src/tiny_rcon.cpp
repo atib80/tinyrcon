@@ -17,7 +17,7 @@ using namespace std::string_literals;
 using namespace std::chrono;
 using namespace std::filesystem;
 
-extern const string program_version{ "2.4.2.0" };
+extern const string program_version{ "2.4.2.2" };
 
 extern char const *const tinyrcon_config_file_path = "config/tinyrcon.json";
 
@@ -27,6 +27,9 @@ extern char const *const tempbans_file_path =
 extern char const *const banned_ip_addresses_file_path =
   "data/bans.txt";
 
+extern char const *const banned_countries_list_file_path =
+  "data/banned_countries.txt";
+
 extern const std::regex ip_address_and_port_regex;
 
 extern std::atomic<bool> is_terminate_program;
@@ -34,7 +37,7 @@ extern volatile std::atomic<bool> is_terminate_tinyrcon_settings_configuration_d
 extern string g_message_data_contents;
 
 tiny_cod2_rcon_client_application main_app;
-sort_type type_of_sort{ sort_type::pid_asc };
+sort_type type_of_sort{ sort_type::geo_asc };
 
 PROCESS_INFORMATION pr_info{};
 
@@ -83,7 +86,12 @@ extern const char *user_help_message =
 ^5>> Press ^1Ctrl + B ^5to ban IP address of player.
 ^3>> Press ^1Ctrl + S ^3to refresh players' data.
 ^5>> Press ^1Ctrl + J ^5to connect to game server.
-^3>> Press ^1Ctrl + X ^3to exit TinyRcon.)";
+^3>> Press ^1Ctrl + X ^3to exit TinyRcon.
+^5Type ^1!ecb ^5[Enter] to enable country ban (automatic kick for banned countries).
+^3Type ^1!dcb ^3[Enter] to disable country ban (automatic kick for banned countries).
+^5Type ^1!bancountry Iran ^5to enable automatic kick for IP addresses from country ^1Iran
+^3Type ^1!unbancountry Iran ^3to disable automatic kick for IP addresses from country ^1Iran
+)";
 
 
 extern const std::unordered_map<string, sort_type> sort_mode_names_dict;
@@ -170,7 +178,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   if (!initialize_main_app(hInstance, nCmdShow))
     return 0;
 
-  if (!create_necessary_folders_and_files({ tinyrcon_config_file_path, tempbans_file_path, banned_ip_addresses_file_path, "log", "plugins\\geoIP" })) {
+  if (!create_necessary_folders_and_files({ tinyrcon_config_file_path, tempbans_file_path, banned_ip_addresses_file_path, banned_countries_list_file_path, "log", "plugins\\geoIP" })) {
     show_error(app_handles.hwnd_main_window, "Error creating necessary program folders and files!", 0);
   }
 
@@ -987,7 +995,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     is_terminate_program.store(true);
     {
       lock_guard ul{ mu };
-      exit_flag.notify_one();
+      exit_flag.notify_all();
     }
     DestroyWindow(app_handles.hwnd_main_window);
     // }

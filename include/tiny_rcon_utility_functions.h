@@ -6,6 +6,7 @@
 #include <CommCtrl.h>
 #include <Richedit.h>
 #include <regex>
+#include <set>
 #include "stl_helper_functions.hpp"
 
 class tiny_cod2_rcon_client_application;
@@ -480,7 +481,16 @@ std::string get_current_date_time_str(const char *date_time_format_str);
 
 void correct_truncated_player_names(const char *ip_address, const uint_least16_t port_number, const char *rcon_password);
 void print_message_about_corrected_player_name(HWND re_hwnd, const char *truncated_name, const char *corrected_name) noexcept;
-void set_admin_actions_buttons_active(const BOOL is_enable = TRUE) noexcept;
-void invalidate_unnecessary_players_data(const size_t start_index);
-void set_available_sort_methods(const BOOL is_admin = TRUE);
+void set_admin_actions_buttons_active(const BOOL is_enable = TRUE, const bool is_reset_to_default_sort_mode = true) noexcept;
+
+void set_available_sort_methods(const bool is_admin = true, const bool is_reset_to_default_sort_mode = true);
 std::pair<bool, std::string> extract_7z_file_to_specified_path(const wchar_t *compressed_7z_file_path, const wchar_t *destination_path);
+
+void update_banned_countries_file(const char *file_path, const std::set<std::string> &banned_countries);
+template<typename ContainerType, typename ElementValue>
+void initialize_elements_of_container_to_specified_value(ContainerType &data, const ElementValue &value, const size_t start_index = 0)
+{
+  for (size_t i{ start_index }; i < data.size(); ++i) {
+    data[i] = value;
+  }
+}

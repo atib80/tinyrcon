@@ -38,6 +38,7 @@ extern tiny_cod2_rcon_client_application main_app;
 extern tiny_rcon_handles app_handles;
 extern char const *const tempbans_file_path;
 extern char const *const banned_ip_addresses_file_path;
+extern char const *const banned_countries_list_file_path;
 extern const char *prompt_message;
 extern const char *refresh_players_data_fmt_str;
 extern PROCESS_INFORMATION pr_info;
@@ -236,8 +237,12 @@ extern const map<string, string> user_commands_help{
   { "!cp", "^5!cp [IP:PORT] ^2-> launches your Call of Duty game and connects to currently configured game server or optionally specified game server address ^5[IP:PORT] using a private slot." },
   { "!rt", "^5!rt time_period ^2-> sets time period (automatic checking for banned players) to time_period (1-30 seconds)." },
   { "!config", "^5!config [rcon|private|address|name] [new_rcon_password|new_private_password|new_server_address|new_name]\n ^2-> you change tinyrcon's ^1rcon ^2or ^1private slot password^2, registered server ^1IP:port ^2address or your ^1username ^2using this command.\nFor example ^1!config rcon abc123 ^2changes currently used ^1rcon_password ^2to ^1abc123^2\n ^1!config private abc123 ^2changes currently used ^1sv_privatepassword ^2to ^1abc123^2\n ^1!config address 123.101.102.103:28960 ^2changes currently used server ^1IP:port ^2to ^1123.101.102.103:28960\n ^1!config name Administrator ^2changes currently used ^1username ^2to ^1Administrator" },
-  { "!border", "Turns ^3on^5|^3off ^5border lines around displayed ^3GUI controls^5." },
-  { "!messages", "Turns ^3on^5|^3off ^5messages for temporarily and permanently banned players." }
+  { "!border", "^5Turns ^3on^5|^3off ^5border lines around displayed ^3GUI controls^5." },
+  { "!messages", "^5Turns ^3on^5|^3off ^5messages for temporarily and permanently banned players." },
+  { "!bancountry", "^5!bancountry country name ^2-> ^5Adds player's ^3country ^5to list of banned countries!" },
+  { "!unbancountry", "^5unbancountry country name ^2-> ^5Removes player's ^3country ^5from list of banned countries!" },
+  { "!ecb", "^2Enables ^5Tiny^6Rcon's ^2country ban feature!" },
+  { "!dcb", "^3Disables ^5Tiny^6Rcon's ^3country ban feature!" }
 };
 
 extern const unordered_set<string> user_commands_set{
@@ -287,7 +292,11 @@ extern const unordered_set<string> user_commands_set{
   "border",
   "!border",
   "messages",
-  "!messages"
+  "!messages",
+  "!ecb",
+  "!dcb",
+  "!bancountry",
+  "!unbancountry"
 };
 
 extern const unordered_set<string> rcon_status_commands{ "s", "!s", "status", "!status", "gs", "!gs", "getstatus", "!getstatus" };
@@ -794,6 +803,7 @@ bool write_tiny_rcon_json_settings_to_file(
   config_file << "\"cod2mp_s_exe_path\": \"" << main_app.get_cod2mp_exe_path() << "\",\n";
   config_file << "\"iw3mp_exe_path\": \"" << main_app.get_iw3mp_exe_path() << "\",\n";
   config_file << "\"cod5mp_exe_path\": \"" << main_app.get_cod5mp_exe_path() << "\",\n";
+  config_file << "\"is_automatic_country_kick_enabled\": " << (main_app.get_is_automatic_country_kick_enabled() ? "true" : "false") << ",\n";
   config_file << "\"enable_automatic_connection_flood_ip_ban\": " << (main_app.get_is_enable_automatic_connection_flood_ip_ban() ? "true" : "false") << ",\n";
   config_file << "\"minimum_number_of_connections_from_same_ip_for_automatic_ban\": " << main_app.get_minimum_number_of_connections_from_same_ip_for_automatic_ban() << ",\n";
   config_file << "\"number_of_warnings_for_automatic_kick\": " << main_app.get_maximum_number_of_warnings_for_automatic_kick() << ",\n";
@@ -806,9 +816,14 @@ bool write_tiny_rcon_json_settings_to_file(
   config_file << "\"user_defined_temp_ban_msg\": \"" << main_app.get_admin_messages()["user_defined_temp_ban_msg"] << "\",\n";
   config_file << "\"user_defined_ban_msg\": \"" << main_app.get_admin_messages()["user_defined_ban_msg"] << "\",\n";
   config_file << "\"user_defined_ip_ban_msg\": \"" << main_app.get_admin_messages()["user_defined_ip_ban_msg"] << "\",\n";
+  config_file << "\"user_defined_country_ban_msg\": \"" << main_app.get_admin_messages()["user_defined_country_ban_msg"] << "\",\n";
+  config_file << "\"user_defined_country_unban_msg\": \"" << main_app.get_admin_messages()["user_defined_country_unban_msg"] << "\",\n";
+  config_file << "\"user_defined_enable_country_ban_feature_msg\": \"" << main_app.get_admin_messages()["user_defined_enable_country_ban_feature_msg"] << "\",\n";
+  config_file << "\"user_defined_disable_country_ban_feature_msg\": \"" << main_app.get_admin_messages()["user_defined_disable_country_ban_feature_msg"] << "\",\n";
   config_file << "\"automatic_remove_temp_ban_msg\": \"" << main_app.get_admin_messages()["automatic_remove_temp_ban_msg"] << "\",\n";
   config_file << "\"automatic_kick_temp_ban_msg\": \"" << main_app.get_admin_messages()["automatic_kick_temp_ban_msg"] << "\",\n";
   config_file << "\"automatic_kick_ip_ban_msg\": \"" << main_app.get_admin_messages()["automatic_kick_ip_ban_msg"] << "\",\n";
+  config_file << "\"automatic_kick_country_ban_msg\": \"" << main_app.get_admin_messages()["automatic_kick_country_ban_msg"] << "\",\n";
   config_file << "\"current_match_info\": \"" << main_app.get_game_server().get_current_match_info() << "\",\n";
   config_file << "\"use_different_background_colors_for_even_and_odd_lines\": " << (main_app.get_game_server().get_is_use_different_background_colors_for_even_and_odd_lines() ? "true" : "false") << ",\n";
   config_file << "\"odd_player_data_lines_bg_color\": \"" << main_app.get_game_server().get_odd_player_data_lines_bg_color() << "\",\n";
@@ -1004,8 +1019,8 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
     main_app.set_program_title("Welcome to TinyRcon");
   }
 
-  if (json_resource["check_for_banned_players_time_interva"].exists()) {
-    main_app.get_game_server().set_check_for_banned_players_time_period(json_resource["check_for_banned_players_time_interva"].as<int>());
+  if (json_resource["check_for_banned_players_time_interval"].exists()) {
+    main_app.get_game_server().set_check_for_banned_players_time_period(json_resource["check_for_banned_players_time_interval"].as<int>());
   } else {
     found_missing_config_setting = true;
     main_app.get_game_server().set_check_for_banned_players_time_period(5);
@@ -1217,6 +1232,60 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
     main_app.get_admin_messages()["user_defined_ip_ban_msg"] = "^7{PLAYERNAME} ^1you are being permanently banned by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}";
   }
 
+  if (json_resource["user_defined_country_ban_msg"].exists()) {
+    if (!main_app.get_is_use_original_admin_messages()) {
+      data_line = json_resource["user_defined_country_ban_msg"].as_str();
+      strip_leading_and_trailing_quotes(data_line);
+      main_app.get_admin_messages()["user_defined_country_ban_msg"] = std::move(data_line);
+    } else {
+      main_app.get_admin_messages()["user_defined_country_ban_msg"] = "^7Admin ^5{ADMINNAME} ^1has globally banned country: ^5{COUNTRY_NAME}";
+    }
+  } else {
+    found_missing_config_setting = true;
+    main_app.get_admin_messages()["user_defined_country_ban_msg"] = "^7Admin ^5{ADMINNAME} ^1has globally banned country: ^5{COUNTRY_NAME}";
+    ;
+  }
+
+  if (json_resource["user_defined_country_unban_msg"].exists()) {
+    if (!main_app.get_is_use_original_admin_messages()) {
+      data_line = json_resource["user_defined_country_unban_msg"].as_str();
+      strip_leading_and_trailing_quotes(data_line);
+      main_app.get_admin_messages()["user_defined_country_unban_msg"] = std::move(data_line);
+    } else {
+      main_app.get_admin_messages()["user_defined_country_unban_msg"] = "^7Admin ^5{ADMINNAME} ^1has removed previously banned country: ^5{COUNTRY_NAME}";
+    }
+  } else {
+    found_missing_config_setting = true;
+    main_app.get_admin_messages()["user_defined_country_unban_msg"] = "^7Admin ^5{ADMINNAME} ^1has removed previously banned country: ^5{COUNTRY_NAME}";
+  }
+
+
+  if (json_resource["user_defined_enable_country_ban_feature_msg"].exists()) {
+    if (!main_app.get_is_use_original_admin_messages()) {
+      data_line = json_resource["user_defined_enable_country_ban_feature_msg"].as_str();
+      strip_leading_and_trailing_quotes(data_line);
+      main_app.get_admin_messages()["user_defined_enable_country_ban_feature_msg"] = std::move(data_line);
+    } else {
+      main_app.get_admin_messages()["user_defined_enable_country_ban_feature_msg"] = "^7Admin ^5{ADMINNAME} ^7has enabled ^1automatic kick ^7for players with ^1IP addresses ^7from banned countries.";
+    }
+  } else {
+    found_missing_config_setting = true;
+    main_app.get_admin_messages()["user_defined_enable_country_ban_feature_msg"] = "^7Admin ^5{ADMINNAME} ^7has enabled ^1automatic kick ^7for players with ^1IP addresses ^7from banned countries.";
+  }
+
+  if (json_resource["user_defined_disable_country_ban_feature_msg"].exists()) {
+    if (!main_app.get_is_use_original_admin_messages()) {
+      data_line = json_resource["user_defined_disable_country_ban_feature_msg"].as_str();
+      strip_leading_and_trailing_quotes(data_line);
+      main_app.get_admin_messages()["user_defined_disable_country_ban_feature_msg"] = std::move(data_line);
+    } else {
+      main_app.get_admin_messages()["user_defined_disable_country_ban_feature_msg"] = "^7Admin ^5{ADMINNAME} ^7has disabled ^1automatic kick ^7for players with ^1IP addresses ^7from banned countries.";
+    }
+  } else {
+    found_missing_config_setting = true;
+    main_app.get_admin_messages()["user_defined_disable_country_ban_feature_msg"] = "^7Admin ^5{ADMINNAME} ^7has disabled ^1automatic kick ^7for players with ^1IP addresses ^7from banned countries.";
+  }
+
   if (json_resource["automatic_remove_temp_ban_msg"].exists()) {
     if (!main_app.get_is_use_original_admin_messages()) {
       data_line = json_resource["automatic_remove_temp_ban_msg"].as_str();
@@ -1254,6 +1323,19 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
   } else {
     found_missing_config_setting = true;
     main_app.get_admin_messages()["automatic_kick_ip_ban_msg"] = "^1{ADMINNAME}: ^7Player {PLAYERNAME} ^7with a previously ^1banned IP address ^7is being automatically ^1kicked.{{br}}^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{IP_BAN_DATE}";
+  }
+
+  if (json_resource["automatic_kick_country_ban_msg"].exists()) {
+    if (!main_app.get_is_use_original_admin_messages()) {
+      data_line = json_resource["automatic_kick_country_ban_msg"].as_str();
+      strip_leading_and_trailing_quotes(data_line);
+      main_app.get_admin_messages()["automatic_kick_country_ban_msg"] = std::move(data_line);
+    } else {
+      main_app.get_admin_messages()["automatic_kick_country_ban_msg"] = "^1{ADMINNAME}: ^7Player {PLAYERNAME} ^7with an IP address from a ^1banned country:  ^5{COUNTRY_NAME} ^7is being automatically ^1kicked.";
+    }
+  } else {
+    found_missing_config_setting = true;
+    main_app.get_admin_messages()["automatic_kick_country_ban_msg"] = "^1{ADMINNAME}: ^7Player {PLAYERNAME} ^7with an IP address from a ^1banned country:  ^5{COUNTRY_NAME} ^7is being automatically ^1kicked.";
   }
 
   if (json_resource["current_match_info"].exists()) {
@@ -1526,6 +1608,28 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
   } else {
     found_missing_config_setting = true;
     main_app.set_plugins_geoIP_geo_dat_md5("");
+  }
+
+  if (json_resource["is_automatic_country_kick_enabled"].exists()) {
+    main_app.set_is_automatic_country_kick_enabled(json_resource["is_automatic_country_kick_enabled"].as<bool>());
+  } else {
+    found_missing_config_setting = true;
+    main_app.set_is_automatic_country_kick_enabled(false);
+  }
+
+  auto &banned_countries = main_app.get_list_of_countries_for_automatic_kick();
+
+  ifstream input_file(banned_countries_list_file_path, std::ios::in);
+  if (input_file) {
+    for (string banned_country; getline(input_file, banned_country);) {
+      trim_in_place(banned_country);
+      banned_countries.emplace(std::move(banned_country));
+    }
+  }
+
+  if (!banned_countries.contains("Iran")) {
+    banned_countries.emplace("Iran");
+    update_banned_countries_file(banned_countries_list_file_path, banned_countries);
   }
 
 
@@ -2021,6 +2125,10 @@ void print_help_information(const std::vector<std::string> &input_parts)
  ^1!config name Administrator ^5-> changes currently used ^1username ^5to ^1Administrator
  ^1!border on|off ^5-> Turns ^3on^5|^3off ^5border lines around displayed ^3GUI controls^5. 
  ^1!messages on|off ^5-> Turns ^3on^5|^3off ^5messages for temporarily and permanently banned players.
+ ^1!bancountry country ^5-> ^3Adds player's ^1country ^3to list of banned countries!
+ ^1!unbancountry country ^5-> ^2Removes player's ^1country ^2from list of banned countries!
+ ^1!ecb ^5-> ^2Enables ^5Tiny^6Rcon's ^2country ban feature!
+ ^1!dcb ^5-> ^3Enables ^5Tiny^6Rcon's ^3country ban feature!
 )"
     };
     print_colored_text(app_handles.hwnd_re_messages_data, help_message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
@@ -2273,6 +2381,7 @@ void check_for_banned_ip_addresses()
 
   const auto &banned_ip_address =
     main_app.get_game_server().get_set_of_banned_ip_addresses();
+  const auto &banned_countries = main_app.get_list_of_countries_for_automatic_kick();
   const auto &ip_address_frequency = main_app.get_game_server().get_ip_address_frequency();
   auto &players_data = main_app.get_game_server().get_players_data();
   for (size_t i{}; i < main_app.get_game_server().get_number_of_players(); ++i) {
@@ -2313,6 +2422,22 @@ void check_for_banned_ip_addresses()
       (void)snprintf(msg, std::size(msg), "^1Automatic kick ^5for previously ^1banned IP: %s ^5| Reason: ^1%s\n%s\n", online_player.ip_address, pd.reason.c_str(), banned_player_information.c_str());
       print_colored_text(app_handles.hwnd_re_messages_data, msg, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
       kick_player(online_player.pid, message);
+    } else if (main_app.get_is_automatic_country_kick_enabled() && !banned_countries.empty()) {
+      if (banned_countries.contains(online_player.country_name)) {
+        string message{ main_app.get_automatic_kick_country_ban_msg() };
+        if (main_app.get_is_disable_automatic_kick_messages()) {
+          message.clear();
+        } else {
+          main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
+          main_app.get_tinyrcon_dict()["{PLAYERNAME}"] = online_player.player_name;
+          main_app.get_tinyrcon_dict()["{COUNTRY_NAME}"] = online_player.country_name;
+          build_tiny_rcon_message(message);
+        }
+        const string banned_player_information{ get_player_information(online_player.pid) };
+        (void)snprintf(msg, std::size(msg), "^1Automatic kick ^5for player ^7%s ^5with a previously ^1banned country name: %s\n%s\n", online_player.player_name, online_player.country_name, banned_player_information.c_str());
+        print_colored_text(app_handles.hwnd_re_messages_data, msg, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        kick_player(online_player.pid, message);
+      }
     }
   }
 }
@@ -2737,23 +2862,86 @@ void process_user_command(const std::vector<string> &user_cmd)
               }
             }
           }
-          is_display_permanently_banned_players_data_event.store(true);
-        } else {
-          const string re_msg{ "^3You specified an invalid non-existing ^1pid ^3or invalid ^1IP address ^3for the ^1" + user_cmd[0] + " ^3command: ^1"s + user_cmd[1] + "\n"s };
-          print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-          if (user_commands_help.contains(user_cmd[0])) {
-            print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(user_cmd[0]).c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-            print_colored_text(app_handles.hwnd_re_messages_data, "\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::no);
-          }
         }
-      } else {
-        const string re_msg{ "^3Invalid command syntax for user command: ^2"s + user_cmd[0] + "\n"s };
-        print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-        if (user_commands_help.contains(user_cmd[0])) {
-          print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(user_cmd[0]).c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-          print_colored_text(app_handles.hwnd_re_messages_data, "\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::no);
+        is_display_permanently_banned_players_data_event.store(true);
+      }
+
+    } else if (user_cmd[0] == "!ecb") {
+      if (!main_app.get_is_connection_settings_valid()) {
+        print_colored_text(app_handles.hwnd_re_messages_data, "^3You need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        return;
+      }
+      if (!main_app.get_is_automatic_country_kick_enabled()) {
+        main_app.set_is_automatic_country_kick_enabled(true);
+        write_tiny_rcon_json_settings_to_file("config\\tinyrcon.json");
+        const string message{
+          "^2You have successfully executed ^5"s + user_cmd[0] + "\n"s
+        };
+        print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
+        string rcon_message{ main_app.get_user_defined_enable_country_ban_feature_msg() };
+        build_tiny_rcon_message(rcon_message);
+        rcon_say(rcon_message, true);
+      }
+    } else if (user_cmd[0] == "!dcb") {
+      if (!main_app.get_is_connection_settings_valid()) {
+        print_colored_text(app_handles.hwnd_re_messages_data, "^3You need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        return;
+      }
+      if (main_app.get_is_automatic_country_kick_enabled()) {
+        main_app.set_is_automatic_country_kick_enabled(false);
+        write_tiny_rcon_json_settings_to_file("config\\tinyrcon.json");
+        const string message{
+          "^2You have successfully executed ^5"s + user_cmd[0] + "\n"s
+        };
+        print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
+        string rcon_message{ main_app.get_user_defined_disable_country_ban_feature_msg() };
+        build_tiny_rcon_message(rcon_message);
+        rcon_say(rcon_message, true);
+      }
+    } else if (user_cmd[0] == "!bancountry") {
+      if (!main_app.get_is_connection_settings_valid()) {
+        print_colored_text(app_handles.hwnd_re_messages_data, "^3You need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        return;
+      }
+      if (user_cmd.size() > 1 && !user_cmd[1].empty()) {
+        const string banned_country{ trim(str_join(user_cmd.cbegin() + 1, user_cmd.cend(), " ")) };
+        main_app.get_list_of_countries_for_automatic_kick().insert(banned_country);
+        update_banned_countries_file(banned_countries_list_file_path, main_app.get_list_of_countries_for_automatic_kick());
+        const string message{
+          "^2You have successfully executed ^5"s + user_cmd[0] + "^2on country: ^1"s + banned_country + "\n"s
+        };
+        print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
+        main_app.get_tinyrcon_dict()["{COUNTRY_NAME}"] = banned_country;
+        string rcon_message{ main_app.get_user_defined_country_ban_msg() };
+        build_tiny_rcon_message(rcon_message);
+        rcon_say(rcon_message, true);
+      }
+
+    } else if (user_cmd[0] == "!unbancountry") {
+      if (!main_app.get_is_connection_settings_valid()) {
+        print_colored_text(app_handles.hwnd_re_messages_data, "^3You need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        return;
+      }
+      if (user_cmd.size() > 1 && !user_cmd[1].empty()) {
+        const string banned_country_to_unban{ trim(str_join(user_cmd.cbegin() + 1, user_cmd.cend(), " ")) };
+        if (main_app.get_list_of_countries_for_automatic_kick().contains(banned_country_to_unban)) {
+          main_app.get_list_of_countries_for_automatic_kick().erase(banned_country_to_unban);
+          update_banned_countries_file(banned_countries_list_file_path, main_app.get_list_of_countries_for_automatic_kick());
+          const string message{
+            "^2You have successfully executed ^5"s + user_cmd[0] + "^2on country: ^1"s + banned_country_to_unban + "\n"s
+          };
+          print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+          main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
+          main_app.get_tinyrcon_dict()["{COUNTRY_NAME}"] = banned_country_to_unban;
+          string rcon_message{ main_app.get_user_defined_country_unban_msg() };
+          build_tiny_rcon_message(rcon_message);
+          rcon_say(rcon_message, true);
         }
       }
+
     } else if (user_cmd[0] == "s" || user_cmd[0] == "!s" || user_cmd[0] == "status" || user_cmd[0] == "!status") {
       initiate_sending_rcon_status_command_now();
     } else if (user_cmd[0] == "gs" || user_cmd[0] == "!gs" || user_cmd[0] == "getstatus" || user_cmd[0] == "!getstatus") {
@@ -4250,7 +4438,7 @@ static int CALLBACK BrowseCallbackProc(HWND hwnd, UINT uMsg, LPARAM lParam, LPAR
   unused(lParam);
 
   if (uMsg == BFFM_INITIALIZED) {
-    csay(app_handles.hwnd_re_messages_data, "^3\n> Currently selected path: %s\n", (const char *)lpData);
+    // csay(app_handles.hwnd_re_messages_data, "^3\n> Currently selected path: %s\n", (const char *)lpData);
     SendMessage(hwnd, BFFM_SETSELECTION, TRUE, lpData);
     SendMessage(hwnd, BFFM_SETEXPANDED, TRUE, lpData);
     SendMessage(hwnd, BFFM_SETSTATUSTEXT, NULL, lpData);
@@ -4339,7 +4527,7 @@ const char *find_call_of_duty_1_installation_path(const bool is_show_browse_fold
 
             found = true;
             char buffer[1024];
-            (void)snprintf(buffer, std::size(buffer), "^2Successfully built your ^3Call of Duty (Steam) ^2game's launch command: ^5%s\n", exe_file_path);
+            (void)snprintf(buffer, std::size(buffer), "^2Successfully built your ^3Call of Duty (^4Steam version^3) ^2game's launch command: ^5%s\n", exe_file_path);
             print_colored_text(app_handles.hwnd_re_messages_data, buffer);
             *def_game_reg_key = nullptr;
           }
@@ -4380,7 +4568,7 @@ const char *find_call_of_duty_1_installation_path(const bool is_show_browse_fold
 
               found = true;
               char buffer[1024];
-              (void)snprintf(buffer, std::size(buffer), "^2Successfully built your ^3Call of Duty (Steam) ^2game's launch command: ^5%s\n", exe_file_path);
+              (void)snprintf(buffer, std::size(buffer), "^2Successfully built your ^3Call of Duty (^4Steam version^3) ^2game's launch command: ^5%s\n", exe_file_path);
               print_colored_text(app_handles.hwnd_re_messages_data, buffer);
               *def_game_reg_key = nullptr;
             }
@@ -4488,11 +4676,7 @@ const char *find_call_of_duty_1_installation_path(const bool is_show_browse_fold
 
     const char *cod1_game_path = BrowseFolder(install_path, msgbuff);
 
-    if (lstrcmp(cod1_game_path, "") == 0 || lstrcmp(cod1_game_path, "C:\\") == 0) {
-      print_colored_text(app_handles.hwnd_re_messages_data, "^1\n> Error! You haven't selected a valid folder for your game installation.");
-      print_colored_text(app_handles.hwnd_re_messages_data, "^3\n> You have to select your game's installation directory and click the OK button.");
-      print_colored_text(app_handles.hwnd_re_messages_data, "^2\n> Restart the program and try again.\n");
-    } else {
+    if (lstrcmp(cod1_game_path, "") != 0 && lstrcmp(cod1_game_path, "C:\\") != 0) {
       (void)snprintf(exe_file_path, max_path_length, "%s\\codmp.exe", cod1_game_path);
     }
   }
@@ -4616,7 +4800,7 @@ const char *find_call_of_duty_2_installation_path(const bool is_show_browse_fold
 
             found = true;
             char buffer[1024];
-            (void)snprintf(buffer, std::size(buffer), "^2Successfully built your ^3Call of Duty 2 (Steam) ^2game's launch command: ^5%s\n", exe_file_path);
+            (void)snprintf(buffer, std::size(buffer), "^2Successfully built your ^3Call of Duty 2 (^4Steam version^3) ^2game's launch command: ^5%s\n", exe_file_path);
             print_colored_text(app_handles.hwnd_re_messages_data, buffer);
             *def_game_reg_key = nullptr;
           }
@@ -4657,7 +4841,7 @@ const char *find_call_of_duty_2_installation_path(const bool is_show_browse_fold
 
               found = true;
               char buffer[1024];
-              (void)snprintf(buffer, std::size(buffer), "^2Successfully built your ^3Call of Duty 2 (Steam) ^2game's launch command: ^5%s\n", exe_file_path);
+              (void)snprintf(buffer, std::size(buffer), "^2Successfully built your ^3Call of Duty 2 (^4Steam version^3) ^2game's launch command: ^5%s\n", exe_file_path);
               print_colored_text(app_handles.hwnd_re_messages_data, buffer);
               *def_game_reg_key = nullptr;
             }
@@ -4759,11 +4943,7 @@ const char *find_call_of_duty_2_installation_path(const bool is_show_browse_fold
 
     const char *cod2_game_path = BrowseFolder(install_path, msgbuff);
 
-    if (lstrcmp(cod2_game_path, "") == 0 || lstrcmp(cod2_game_path, "C:\\") == 0) {
-      print_colored_text(app_handles.hwnd_re_messages_data, "^1\n> Error! You haven't selected a valid folder for your game installation.");
-      print_colored_text(app_handles.hwnd_re_messages_data, "^3\n> You have to select your game's installation directory and click the OK button.");
-      print_colored_text(app_handles.hwnd_re_messages_data, "^2\n> Restart the program and try again.\n");
-    } else {
+    if (lstrcmp(cod2_game_path, "") != 0 && lstrcmp(cod2_game_path, "C:\\") != 0) {
       (void)snprintf(exe_file_path, max_path_length, "%s\\cod2mp_s.exe", cod2_game_path);
     }
   }
@@ -4887,7 +5067,7 @@ const char *find_call_of_duty_4_installation_path(const bool is_show_browse_fold
 
             found = true;
             char buffer[1024];
-            (void)snprintf(buffer, std::size(buffer), "^2Successfully built your ^3Call of Duty 4: Modern Warfare (Steam) ^2game's launch command: ^5%s\n", exe_file_path);
+            (void)snprintf(buffer, std::size(buffer), "^2Successfully built your ^3Call of Duty 4: Modern Warfare (^4Steam version^3) ^2game's launch command: ^5%s\n", exe_file_path);
             print_colored_text(app_handles.hwnd_re_messages_data, buffer);
             *def_game_reg_key = nullptr;
           }
@@ -4928,7 +5108,7 @@ const char *find_call_of_duty_4_installation_path(const bool is_show_browse_fold
 
               found = true;
               char buffer[1024];
-              (void)snprintf(buffer, std::size(buffer), "^2Successfully built your ^3Call of Duty 4: Modern Warfare (Steam) ^2game's launch command: ^5%s\n", exe_file_path);
+              (void)snprintf(buffer, std::size(buffer), "^2Successfully built your ^3Call of Duty 4: Modern Warfare (^4Steam version^3) ^2game's launch command: ^5%s\n", exe_file_path);
               print_colored_text(app_handles.hwnd_re_messages_data, buffer);
               *def_game_reg_key = nullptr;
             }
@@ -5028,11 +5208,7 @@ const char *find_call_of_duty_4_installation_path(const bool is_show_browse_fold
 
     const char *cod4_game_path = BrowseFolder(install_path, msgbuff);
 
-    if (lstrcmp(cod4_game_path, "") == 0 || lstrcmp(cod4_game_path, "C:\\") == 0) {
-      print_colored_text(app_handles.hwnd_re_messages_data, "^1\n> Error! You haven't selected a valid folder for your game installation.");
-      print_colored_text(app_handles.hwnd_re_messages_data, "^3\n> You have to select your game's installation directory and click the OK button.");
-      print_colored_text(app_handles.hwnd_re_messages_data, "^2\n> Restart the program and try again.\n");
-    } else {
+    if (lstrcmp(cod4_game_path, "") != 0 && lstrcmp(cod4_game_path, "C:\\") != 0) {
       (void)snprintf(exe_file_path, max_path_length, "%s\\iw3mp.exe", cod4_game_path);
     }
   }
@@ -5156,7 +5332,7 @@ const char *find_call_of_duty_5_installation_path(const bool is_show_browse_fold
 
             found = true;
             char buffer[1024];
-            (void)snprintf(buffer, std::size(buffer), "^2Successfully built your ^3Call of Duty 5: World at War (Steam) ^2game's launch command: ^5%s\n", exe_file_path);
+            (void)snprintf(buffer, std::size(buffer), "^2Successfully built your ^3Call of Duty 5: World at War (^4Steam version^3) ^2game's launch command: ^5%s\n", exe_file_path);
             print_colored_text(app_handles.hwnd_re_messages_data, buffer);
             *def_game_reg_key = nullptr;
           }
@@ -5197,7 +5373,7 @@ const char *find_call_of_duty_5_installation_path(const bool is_show_browse_fold
 
               found = true;
               char buffer[1024];
-              (void)snprintf(buffer, std::size(buffer), "^2Successfully built your ^3Call of Duty 5: World at War (Steam) ^2game's launch command: ^5%s\n", exe_file_path);
+              (void)snprintf(buffer, std::size(buffer), "^2Successfully built your ^3Call of Duty 5: World at War (^4Steam version^3) ^2game's launch command: ^5%s\n", exe_file_path);
               print_colored_text(app_handles.hwnd_re_messages_data, buffer);
               *def_game_reg_key = nullptr;
             }
@@ -5298,11 +5474,7 @@ const char *find_call_of_duty_5_installation_path(const bool is_show_browse_fold
 
     const char *cod5_game_path = BrowseFolder(install_path, msgbuff);
 
-    if (lstrcmp(cod5_game_path, "") == 0 || lstrcmp(cod5_game_path, "C:\\") == 0) {
-      print_colored_text(app_handles.hwnd_re_messages_data, "^1\n> Error! You haven't selected a valid folder for your game installation.");
-      print_colored_text(app_handles.hwnd_re_messages_data, "^3\n> You have to select your game's installation directory and click the OK button.");
-      print_colored_text(app_handles.hwnd_re_messages_data, "^2\n> Restart the program and try again.\n");
-    } else {
+    if (lstrcmp(cod5_game_path, "") != 0 && lstrcmp(cod5_game_path, "C:\\") != 0) {
       (void)snprintf(exe_file_path, max_path_length, "%s\\cod5mp.exe", cod5_game_path);
     }
   }
@@ -5791,7 +5963,7 @@ void process_key_down_message(const MSG &msg)
     if (show_user_confirmation_dialog("^3Do you really want to quit?", "Exit program?", "Reason")) {
       is_terminate_program.store(true);
       {
-        lock_guard ul{ mu };
+        lock_guard<mutex> l{ mu };
         exit_flag.notify_all();
       }
       PostQuitMessage(0);
@@ -5820,7 +5992,7 @@ void process_key_down_message(const MSG &msg)
     if (get_user_input()) {
       is_terminate_program.store(true);
       {
-        lock_guard ul{ mu };
+        lock_guard<mutex> l{ mu };
         exit_flag.notify_all();
       }
       PostQuitMessage(0);
@@ -6027,13 +6199,13 @@ void construct_tinyrcon_gui(HWND hWnd) noexcept
   /*for (const auto &[sort_mode_name, sort_mode] : sort_mode_names_dict) {
     SendMessage(app_handles.hwnd_combo_box_sortmode, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(sort_mode_name.c_str()));
   }*/
-  set_available_sort_methods(TRUE);
+  set_available_sort_methods(true);
 
   const auto &rcon_map_names_to_full_map_names = get_rcon_map_names_to_full_map_names_for_specified_game_name(main_app.get_game_name());
 
   SendMessage(app_handles.hwnd_combo_box_map, CB_SELECTSTRING, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>(rcon_map_names_to_full_map_names.at("mp_toujane").c_str()));
   SendMessage(app_handles.hwnd_combo_box_gametype, CB_SELECTSTRING, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>("ctf"));
-  SendMessage(app_handles.hwnd_combo_box_sortmode, CB_SELECTSTRING, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>("Sort by pid in ascending order"));
+  /*SendMessage(app_handles.hwnd_combo_box_sortmode, CB_SELECTSTRING, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>("Sort by pid in ascending order"));*/
 
   UpdateWindow(hWnd);
 }
@@ -6775,10 +6947,8 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
         SetFocus(app_handles.hwnd_e_user_input);
         DestroyWindow(app_handles.hwnd_configuration_dialog);
         is_terminate_program.store(true);
-        {
-          lock_guard ul{ mu };
-          exit_flag.notify_all();
-        }
+        lock_guard<mutex> l{ mu };
+        exit_flag.notify_all();
       }
 
     } else if (WM_KEYDOWN == wnd_msg.message && VK_TAB == wnd_msg.wParam) {
@@ -6906,11 +7076,11 @@ void process_button_save_changes_click_event(HWND hwnd)
     auto [test_result, game_name] = check_if_specified_server_ip_port_and_rcon_password_are_valid(new_server_ip.c_str(), new_port, new_rcon_password.c_str());
     if (test_result) {
       main_app.set_is_connection_settings_valid(true);
-      set_admin_actions_buttons_active(TRUE);
+      set_admin_actions_buttons_active(TRUE, false);
       print_colored_text(app_handles.hwnd_re_confirmation_message, "^2Testing connection SUCCEEDED!\n", is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::no);
     } else {
       main_app.set_is_connection_settings_valid(false);
-      set_admin_actions_buttons_active(FALSE);
+      set_admin_actions_buttons_active(FALSE, false);
       print_colored_text(app_handles.hwnd_re_confirmation_message, "^1Testing connection FAILED!\n", is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::no);
     }
 
@@ -7762,7 +7932,7 @@ void print_message_about_corrected_player_name(HWND re_hwnd, const char *truncat
   }
 }
 
-void set_admin_actions_buttons_active(const BOOL is_enable) noexcept
+void set_admin_actions_buttons_active(const BOOL is_enable, const bool is_reset_to_default_sort_mode) noexcept
 {
   EnableWindow(app_handles.hwnd_button_warn, is_enable);
   EnableWindow(app_handles.hwnd_button_kick, is_enable);
@@ -7771,26 +7941,10 @@ void set_admin_actions_buttons_active(const BOOL is_enable) noexcept
   EnableWindow(app_handles.hwnd_say_button, is_enable);
   EnableWindow(app_handles.hwnd_tell_button, is_enable);
   EnableWindow(app_handles.hwnd_button_load, is_enable);
-  set_available_sort_methods(is_enable);
+  set_available_sort_methods(is_enable, is_reset_to_default_sort_mode);
 }
 
-void invalidate_unnecessary_players_data(const size_t start_index)
-{
-  auto &players_data = main_app.get_game_server().get_players_data();
-  for (size_t i{ start_index }; i < players_data.size(); ++i) {
-    players_data[i].pid = -1;
-    players_data[i].score = 0;
-    players_data[i].ping[0] = '\0';
-    players_data[i].player_name[0] = '\0';
-    players_data[i].ip_address[0] = '\0';
-    players_data[i].country_code = "xy";
-    players_data[i].country_name = "Unknown";
-    players_data[i].region = "Unknown";
-    players_data[i].city = "Unknown";
-  }
-}
-
-void set_available_sort_methods(const BOOL is_admin)
+void set_available_sort_methods(const bool is_admin, const bool is_reset_to_default_sort_mode)
 {
   SendMessage(app_handles.hwnd_combo_box_sortmode, CB_RESETCONTENT, 0, 0);
   SendMessage(app_handles.hwnd_combo_box_sortmode, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>("Sort by pid in ascending order"));
@@ -7806,12 +7960,14 @@ void set_available_sort_methods(const BOOL is_admin)
     SendMessage(app_handles.hwnd_combo_box_sortmode, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>("Sort by IP address in descending order"));
     SendMessage(app_handles.hwnd_combo_box_sortmode, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>("Sort by geoinformation in ascending order"));
     SendMessage(app_handles.hwnd_combo_box_sortmode, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>("Sort by geoinformation in descending order"));
-    SendMessage(app_handles.hwnd_combo_box_sortmode, CB_SELECTSTRING, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>("Sort by pid in ascending order"));
-    type_of_sort = sort_type::pid_asc;
-  } else {
-    SendMessage(app_handles.hwnd_combo_box_sortmode, CB_SELECTSTRING, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>("Sort by score in descending order"));
+    if (is_reset_to_default_sort_mode) {
+      type_of_sort = sort_type::geo_asc;
+    }
+  } else if (is_reset_to_default_sort_mode) {
     type_of_sort = sort_type::score_desc;
   }
+
+  SendMessage(app_handles.hwnd_combo_box_sortmode, CB_SELECTSTRING, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>(sort_type_to_sort_names_dict.at(type_of_sort).c_str()));
 }
 
 std::pair<bool, std::string> extract_7z_file_to_specified_path(const wchar_t *compressed_7z_file_path, const wchar_t *destination_path)
@@ -7826,4 +7982,16 @@ std::pair<bool, std::string> extract_7z_file_to_specified_path(const wchar_t *co
   } catch (const std::exception &ex) {
     return make_pair(false, ex.what());
   }
+}
+
+void update_banned_countries_file(const char *file_path, const set<string> &banned_countries)
+{
+  ofstream output_file(file_path, std::ios::out);
+
+  for (const auto &banned_country : banned_countries) {
+    output_file << banned_country << '\n';
+  }
+
+  output_file << flush;
+  output_file.close();
 }
