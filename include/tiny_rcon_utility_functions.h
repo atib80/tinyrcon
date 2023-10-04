@@ -486,7 +486,10 @@ void set_admin_actions_buttons_active(const BOOL is_enable = TRUE, const bool is
 void set_available_sort_methods(const bool is_admin = true, const bool is_reset_to_default_sort_mode = true);
 std::pair<bool, std::string> extract_7z_file_to_specified_path(const wchar_t *compressed_7z_file_path, const wchar_t *destination_path);
 
-void update_banned_countries_file(const char *file_path, const std::set<std::string> &banned_countries);
+void display_banned_cities(const std::set<std::string> &banned_cities);
+void display_banned_countries(const std::set<std::string> &banned_countries);
+void save_banned_entries_to_file(const char *file_path, const std::set<std::string> &banned_entries);
+
 template<typename ContainerType, typename ElementValue>
 void initialize_elements_of_container_to_specified_value(ContainerType &data, const ElementValue &value, const size_t start_index = 0)
 {

@@ -39,6 +39,7 @@ extern tiny_rcon_handles app_handles;
 extern char const *const tempbans_file_path;
 extern char const *const banned_ip_addresses_file_path;
 extern char const *const banned_countries_list_file_path;
+extern char const *const banned_cities_list_file_path;
 extern const char *prompt_message;
 extern const char *refresh_players_data_fmt_str;
 extern PROCESS_INFORMATION pr_info;
@@ -60,6 +61,8 @@ volatile std::atomic<bool> is_terminate_tinyrcon_settings_configuration_dialog_w
 extern volatile std::atomic<bool> is_refresh_players_data_event;
 extern volatile std::atomic<bool> is_display_permanently_banned_players_data_event;
 extern volatile std::atomic<bool> is_display_temporarily_banned_players_data_event;
+extern volatile std::atomic<bool> is_display_banned_cities_data_event;
+extern volatile std::atomic<bool> is_display_banned_countries_data_event;
 extern std::atomic<int> admin_choice;
 extern std::string admin_reason;
 
@@ -239,10 +242,17 @@ extern const map<string, string> user_commands_help{
   { "!config", "^5!config [rcon|private|address|name] [new_rcon_password|new_private_password|new_server_address|new_name]\n ^2-> you change tinyrcon's ^1rcon ^2or ^1private slot password^2, registered server ^1IP:port ^2address or your ^1username ^2using this command.\nFor example ^1!config rcon abc123 ^2changes currently used ^1rcon_password ^2to ^1abc123^2\n ^1!config private abc123 ^2changes currently used ^1sv_privatepassword ^2to ^1abc123^2\n ^1!config address 123.101.102.103:28960 ^2changes currently used server ^1IP:port ^2to ^1123.101.102.103:28960\n ^1!config name Administrator ^2changes currently used ^1username ^2to ^1Administrator" },
   { "!border", "^5Turns ^3on^5|^3off ^5border lines around displayed ^3GUI controls^5." },
   { "!messages", "^5Turns ^3on^5|^3off ^5messages for temporarily and permanently banned players." },
+  { "!banned cities", "^5Displays lists of all currently ^1banned cities" },
+  { "!banned countries", "^5Displays lists of all currently ^1banned countries" },
+  { "!ecb", "^2Enables ^5Tiny^6Rcon's ^2country ban feature!" },
+  { "!dcb", "^3Disables ^5Tiny^6Rcon's ^3country ban feature!" },
   { "!bancountry", "^5!bancountry country name ^2-> ^5Adds player's ^3country ^5to list of banned countries!" },
   { "!unbancountry", "^5unbancountry country name ^2-> ^5Removes player's ^3country ^5from list of banned countries!" },
-  { "!ecb", "^2Enables ^5Tiny^6Rcon's ^2country ban feature!" },
-  { "!dcb", "^3Disables ^5Tiny^6Rcon's ^3country ban feature!" }
+  { "!egb", "^2Enables ^5Tiny^6Rcon's ^2city ban feature!" },
+  { "!dgb", "^3Disables ^5Tiny^6Rcon's ^3city ban feature!" },
+  { "!bancity", "^5!bancity city name ^2-> ^5Adds player's ^3city ^5to list of banned cities!" },
+  { "!unbancity", "^5!unbancity city name ^2-> ^5Removes player's ^3city ^5from list of banned cities!" },
+
 };
 
 extern const unordered_set<string> user_commands_set{
@@ -293,10 +303,17 @@ extern const unordered_set<string> user_commands_set{
   "!border",
   "messages",
   "!messages",
+  "!egb",
+  "!dgb",
+  "!bancity",
+  "!unbancity",
   "!ecb",
   "!dcb",
   "!bancountry",
-  "!unbancountry"
+  "!unbancountry",
+  "!banned",
+  "!bannedcities",
+  "!bannedcountries"
 };
 
 extern const unordered_set<string> rcon_status_commands{ "s", "!s", "status", "!status", "gs", "!gs", "getstatus", "!getstatus" };
@@ -803,6 +820,7 @@ bool write_tiny_rcon_json_settings_to_file(
   config_file << "\"cod2mp_s_exe_path\": \"" << main_app.get_cod2mp_exe_path() << "\",\n";
   config_file << "\"iw3mp_exe_path\": \"" << main_app.get_iw3mp_exe_path() << "\",\n";
   config_file << "\"cod5mp_exe_path\": \"" << main_app.get_cod5mp_exe_path() << "\",\n";
+  config_file << "\"is_automatic_city_kick_enabled\": " << (main_app.get_is_automatic_city_kick_enabled() ? "true" : "false") << ",\n";
   config_file << "\"is_automatic_country_kick_enabled\": " << (main_app.get_is_automatic_country_kick_enabled() ? "true" : "false") << ",\n";
   config_file << "\"enable_automatic_connection_flood_ip_ban\": " << (main_app.get_is_enable_automatic_connection_flood_ip_ban() ? "true" : "false") << ",\n";
   config_file << "\"minimum_number_of_connections_from_same_ip_for_automatic_ban\": " << main_app.get_minimum_number_of_connections_from_same_ip_for_automatic_ban() << ",\n";
@@ -816,6 +834,10 @@ bool write_tiny_rcon_json_settings_to_file(
   config_file << "\"user_defined_temp_ban_msg\": \"" << main_app.get_admin_messages()["user_defined_temp_ban_msg"] << "\",\n";
   config_file << "\"user_defined_ban_msg\": \"" << main_app.get_admin_messages()["user_defined_ban_msg"] << "\",\n";
   config_file << "\"user_defined_ip_ban_msg\": \"" << main_app.get_admin_messages()["user_defined_ip_ban_msg"] << "\",\n";
+  config_file << "\"user_defined_city_ban_msg\": \"" << main_app.get_admin_messages()["user_defined_city_ban_msg"] << "\",\n";
+  config_file << "\"user_defined_city_unban_msg\": \"" << main_app.get_admin_messages()["user_defined_city_unban_msg"] << "\",\n";
+  config_file << "\"user_defined_enable_city_ban_feature_msg\": \"" << main_app.get_admin_messages()["user_defined_enable_city_ban_feature_msg"] << "\",\n";
+  config_file << "\"user_defined_disable_city_ban_feature_msg\": \"" << main_app.get_admin_messages()["user_defined_disable_city_ban_feature_msg"] << "\",\n";
   config_file << "\"user_defined_country_ban_msg\": \"" << main_app.get_admin_messages()["user_defined_country_ban_msg"] << "\",\n";
   config_file << "\"user_defined_country_unban_msg\": \"" << main_app.get_admin_messages()["user_defined_country_unban_msg"] << "\",\n";
   config_file << "\"user_defined_enable_country_ban_feature_msg\": \"" << main_app.get_admin_messages()["user_defined_enable_country_ban_feature_msg"] << "\",\n";
@@ -823,6 +845,7 @@ bool write_tiny_rcon_json_settings_to_file(
   config_file << "\"automatic_remove_temp_ban_msg\": \"" << main_app.get_admin_messages()["automatic_remove_temp_ban_msg"] << "\",\n";
   config_file << "\"automatic_kick_temp_ban_msg\": \"" << main_app.get_admin_messages()["automatic_kick_temp_ban_msg"] << "\",\n";
   config_file << "\"automatic_kick_ip_ban_msg\": \"" << main_app.get_admin_messages()["automatic_kick_ip_ban_msg"] << "\",\n";
+  config_file << "\"automatic_kick_city_ban_msg\": \"" << main_app.get_admin_messages()["automatic_kick_city_ban_msg"] << "\",\n";
   config_file << "\"automatic_kick_country_ban_msg\": \"" << main_app.get_admin_messages()["automatic_kick_country_ban_msg"] << "\",\n";
   config_file << "\"current_match_info\": \"" << main_app.get_game_server().get_current_match_info() << "\",\n";
   config_file << "\"use_different_background_colors_for_even_and_odd_lines\": " << (main_app.get_game_server().get_is_use_different_background_colors_for_even_and_odd_lines() ? "true" : "false") << ",\n";
@@ -1232,6 +1255,60 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
     main_app.get_admin_messages()["user_defined_ip_ban_msg"] = "^7{PLAYERNAME} ^1you are being permanently banned by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}";
   }
 
+  if (json_resource["user_defined_city_ban_msg"].exists()) {
+    if (!main_app.get_is_use_original_admin_messages()) {
+      data_line = json_resource["user_defined_city_ban_msg"].as_str();
+      strip_leading_and_trailing_quotes(data_line);
+      main_app.get_admin_messages()["user_defined_city_ban_msg"] = std::move(data_line);
+    } else {
+      main_app.get_admin_messages()["user_defined_city_ban_msg"] = "^7Admin ^5{ADMINNAME} ^1has globally banned city: ^5{CITY_NAME}";
+    }
+  } else {
+    found_missing_config_setting = true;
+    main_app.get_admin_messages()["user_defined_city_ban_msg"] = "^7Admin ^5{ADMINNAME} ^1has globally banned city: ^5{CITY_NAME}";
+    ;
+  }
+
+  if (json_resource["user_defined_city_unban_msg"].exists()) {
+    if (!main_app.get_is_use_original_admin_messages()) {
+      data_line = json_resource["user_defined_city_unban_msg"].as_str();
+      strip_leading_and_trailing_quotes(data_line);
+      main_app.get_admin_messages()["user_defined_city_unban_msg"] = std::move(data_line);
+    } else {
+      main_app.get_admin_messages()["user_defined_city_unban_msg"] = "^7Admin ^5{ADMINNAME} ^1has removed previously banned city: ^5{CITY_NAME}";
+    }
+  } else {
+    found_missing_config_setting = true;
+    main_app.get_admin_messages()["user_defined_city_unban_msg"] = "^7Admin ^5{ADMINNAME} ^1has removed previously banned city: ^5{CITY_NAME}";
+  }
+
+
+  if (json_resource["user_defined_enable_city_ban_feature_msg"].exists()) {
+    if (!main_app.get_is_use_original_admin_messages()) {
+      data_line = json_resource["user_defined_enable_city_ban_feature_msg"].as_str();
+      strip_leading_and_trailing_quotes(data_line);
+      main_app.get_admin_messages()["user_defined_enable_city_ban_feature_msg"] = std::move(data_line);
+    } else {
+      main_app.get_admin_messages()["user_defined_enable_city_ban_feature_msg"] = "^7Admin ^5{ADMINNAME} ^7has enabled ^1automatic kick ^7for players with ^1IP addresses ^7from banned cities.";
+    }
+  } else {
+    found_missing_config_setting = true;
+    main_app.get_admin_messages()["user_defined_enable_city_ban_feature_msg"] = "^7Admin ^5{ADMINNAME} ^7has enabled ^1automatic kick ^7for players with ^1IP addresses ^7from banned cities.";
+  }
+
+  if (json_resource["user_defined_disable_city_ban_feature_msg"].exists()) {
+    if (!main_app.get_is_use_original_admin_messages()) {
+      data_line = json_resource["user_defined_disable_city_ban_feature_msg"].as_str();
+      strip_leading_and_trailing_quotes(data_line);
+      main_app.get_admin_messages()["user_defined_disable_city_ban_feature_msg"] = std::move(data_line);
+    } else {
+      main_app.get_admin_messages()["user_defined_disable_city_ban_feature_msg"] = "^7Admin ^5{ADMINNAME} ^7has disabled ^1automatic kick ^7for players with ^1IP addresses ^7from banned cities.";
+    }
+  } else {
+    found_missing_config_setting = true;
+    main_app.get_admin_messages()["user_defined_disable_city_ban_feature_msg"] = "^7Admin ^5{ADMINNAME} ^7has disabled ^1automatic kick ^7for players with ^1IP addresses ^7from banned cities.";
+  }
+
   if (json_resource["user_defined_country_ban_msg"].exists()) {
     if (!main_app.get_is_use_original_admin_messages()) {
       data_line = json_resource["user_defined_country_ban_msg"].as_str();
@@ -1323,6 +1400,19 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
   } else {
     found_missing_config_setting = true;
     main_app.get_admin_messages()["automatic_kick_ip_ban_msg"] = "^1{ADMINNAME}: ^7Player {PLAYERNAME} ^7with a previously ^1banned IP address ^7is being automatically ^1kicked.{{br}}^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{IP_BAN_DATE}";
+  }
+
+  if (json_resource["automatic_kick_city_ban_msg"].exists()) {
+    if (!main_app.get_is_use_original_admin_messages()) {
+      data_line = json_resource["automatic_kick_city_ban_msg"].as_str();
+      strip_leading_and_trailing_quotes(data_line);
+      main_app.get_admin_messages()["automatic_kick_city_ban_msg"] = std::move(data_line);
+    } else {
+      main_app.get_admin_messages()["automatic_kick_city_ban_msg"] = "^1{ADMINNAME}: ^7Player {PLAYERNAME} ^7with an IP address from a ^1banned city: ^5{CITY_NAME} ^7is being automatically ^1kicked.";
+    }
+  } else {
+    found_missing_config_setting = true;
+    main_app.get_admin_messages()["automatic_kick_city_ban_msg"] = "^1{ADMINNAME}: ^7Player {PLAYERNAME} ^7with an IP address from a ^1banned city: ^5{CITY_NAME} ^7is being automatically ^1kicked.";
   }
 
   if (json_resource["automatic_kick_country_ban_msg"].exists()) {
@@ -1619,17 +1709,29 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
 
   auto &banned_countries = main_app.get_list_of_countries_for_automatic_kick();
 
-  ifstream input_file(banned_countries_list_file_path, std::ios::in);
-  if (input_file) {
-    for (string banned_country; getline(input_file, banned_country);) {
+  ifstream input_file1(banned_countries_list_file_path, std::ios::in);
+  if (input_file1) {
+    for (string banned_country; getline(input_file1, banned_country);) {
       trim_in_place(banned_country);
       banned_countries.emplace(std::move(banned_country));
     }
   }
 
-  if (!banned_countries.contains("Iran")) {
-    banned_countries.emplace("Iran");
-    update_banned_countries_file(banned_countries_list_file_path, banned_countries);
+  if (json_resource["is_automatic_city_kick_enabled"].exists()) {
+    main_app.set_is_automatic_city_kick_enabled(json_resource["is_automatic_city_kick_enabled"].as<bool>());
+  } else {
+    found_missing_config_setting = true;
+    main_app.set_is_automatic_city_kick_enabled(false);
+  }
+
+  auto &banned_cities = main_app.get_list_of_cities_for_automatic_kick();
+
+  ifstream input_file2(banned_cities_list_file_path, std::ios::in);
+  if (input_file2) {
+    for (string banned_city; getline(input_file2, banned_city);) {
+      trim_in_place(banned_city);
+      banned_cities.emplace(std::move(banned_city));
+    }
   }
 
 
@@ -2125,10 +2227,16 @@ void print_help_information(const std::vector<std::string> &input_parts)
  ^1!config name Administrator ^5-> changes currently used ^1username ^5to ^1Administrator
  ^1!border on|off ^5-> Turns ^3on^5|^3off ^5border lines around displayed ^3GUI controls^5. 
  ^1!messages on|off ^5-> Turns ^3on^5|^3off ^5messages for temporarily and permanently banned players.
- ^1!bancountry country ^5-> ^3Adds player's ^1country ^3to list of banned countries!
- ^1!unbancountry country ^5-> ^2Removes player's ^1country ^2from list of banned countries!
- ^1!ecb ^5-> ^2Enables ^5Tiny^6Rcon's ^2country ban feature!
- ^1!dcb ^5-> ^3Enables ^5Tiny^6Rcon's ^3country ban feature!
+ ^1!egb ^5-> ^2Enables ^5Tiny^6Rcon's ^2city ban feature.
+ ^1!dgb ^5-> ^3Disables ^5Tiny^6Rcon's ^3city ban feature.
+ ^1!bancity city ^5-> ^3Adds player's ^1city ^3to list of banned cities.
+ ^1!unbancity city ^5-> ^2Removes player's ^1city ^2from list of banned cities.
+ ^1!banned cities ^5-> ^5Displays list of currently ^1banned cities^5.
+ ^1!ecb ^5-> ^2Enables ^5Tiny^6Rcon's ^2country ban feature.
+ ^1!dcb ^5-> ^3Disables ^5Tiny^6Rcon's ^3country ban feature.
+ ^1!bancountry country ^5-> ^3Adds player's ^1country ^3to list of banned countries.
+ ^1!unbancountry country ^5-> ^2Removes player's ^1country ^2from list of banned countries.
+ ^1!banned countries ^5-> ^5Displays list of currently ^1banned countries^5.
 )"
     };
     print_colored_text(app_handles.hwnd_re_messages_data, help_message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
@@ -2382,6 +2490,7 @@ void check_for_banned_ip_addresses()
   const auto &banned_ip_address =
     main_app.get_game_server().get_set_of_banned_ip_addresses();
   const auto &banned_countries = main_app.get_list_of_countries_for_automatic_kick();
+  const auto &banned_cities = main_app.get_list_of_cities_for_automatic_kick();
   const auto &ip_address_frequency = main_app.get_game_server().get_ip_address_frequency();
   auto &players_data = main_app.get_game_server().get_players_data();
   for (size_t i{}; i < main_app.get_game_server().get_number_of_players(); ++i) {
@@ -2435,6 +2544,22 @@ void check_for_banned_ip_addresses()
         }
         const string banned_player_information{ get_player_information(online_player.pid) };
         (void)snprintf(msg, std::size(msg), "^1Automatic kick ^5for player ^7%s ^5with a previously ^1banned country name: %s\n%s\n", online_player.player_name, online_player.country_name, banned_player_information.c_str());
+        print_colored_text(app_handles.hwnd_re_messages_data, msg, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        kick_player(online_player.pid, message);
+      }
+    } else if (main_app.get_is_automatic_city_kick_enabled() && !banned_cities.empty()) {
+      if (banned_cities.contains(online_player.city)) {
+        string message{ main_app.get_automatic_kick_city_ban_msg() };
+        if (main_app.get_is_disable_automatic_kick_messages()) {
+          message.clear();
+        } else {
+          main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
+          main_app.get_tinyrcon_dict()["{PLAYERNAME}"] = online_player.player_name;
+          main_app.get_tinyrcon_dict()["{CITY_NAME}"] = online_player.city;
+          build_tiny_rcon_message(message);
+        }
+        const string banned_player_information{ get_player_information(online_player.pid) };
+        (void)snprintf(msg, std::size(msg), "^1Automatic kick ^5for player ^7%s ^5with a previously ^1banned city name: %s\n%s\n", online_player.player_name, online_player.city, banned_player_information.c_str());
         print_colored_text(app_handles.hwnd_re_messages_data, msg, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
         kick_player(online_player.pid, message);
       }
@@ -2585,6 +2710,10 @@ void process_user_input(std::string &user_input)
         is_display_permanently_banned_players_data_event.store(true);
       } else if (command_parts[0] == "tempbans" || command_parts[0] == "!tempbans") {
         is_display_temporarily_banned_players_data_event.store(true);
+      } else if ((command_parts[0] == "!bannedcities") || ((command_parts.size() >= 2) && (command_parts[0] == "!banned") && (command_parts[1] == "cities"))) {
+        is_display_banned_cities_data_event.store(true);
+      } else if ((command_parts[0] == "!bannedcountries") || ((command_parts.size() >= 2) && (command_parts[0] == "!banned") && (command_parts[1] == "countries"))) {
+        is_display_banned_countries_data_event.store(true);
       } else if (user_commands_set.find(command_parts[0]) != cend(user_commands_set)) {
 
         main_app.add_command_to_queue(std::move(command_parts), command_type::user, false);
@@ -2866,6 +2995,82 @@ void process_user_command(const std::vector<string> &user_cmd)
         is_display_permanently_banned_players_data_event.store(true);
       }
 
+    } else if (user_cmd[0] == "!egb") {
+      if (!main_app.get_is_connection_settings_valid()) {
+        print_colored_text(app_handles.hwnd_re_messages_data, "^3You need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        return;
+      }
+      if (!main_app.get_is_automatic_city_kick_enabled()) {
+        main_app.set_is_automatic_city_kick_enabled(true);
+        write_tiny_rcon_json_settings_to_file("config\\tinyrcon.json");
+        const string message{
+          "^2You have successfully executed ^5"s + user_cmd[0] + "\n"s
+        };
+        print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
+        string rcon_message{ main_app.get_user_defined_enable_city_ban_feature_msg() };
+        build_tiny_rcon_message(rcon_message);
+        rcon_say(rcon_message, true);
+      }
+    } else if (user_cmd[0] == "!dgb") {
+      if (!main_app.get_is_connection_settings_valid()) {
+        print_colored_text(app_handles.hwnd_re_messages_data, "^3You need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        return;
+      }
+      if (main_app.get_is_automatic_city_kick_enabled()) {
+        main_app.set_is_automatic_city_kick_enabled(false);
+        write_tiny_rcon_json_settings_to_file("config\\tinyrcon.json");
+        const string message{
+          "^2You have successfully executed ^5"s + user_cmd[0] + "\n"s
+        };
+        print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
+        string rcon_message{ main_app.get_user_defined_disable_city_ban_feature_msg() };
+        build_tiny_rcon_message(rcon_message);
+        rcon_say(rcon_message, true);
+      }
+    } else if (user_cmd[0] == "!bancity") {
+      if (!main_app.get_is_connection_settings_valid()) {
+        print_colored_text(app_handles.hwnd_re_messages_data, "^3You need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        return;
+      }
+      if (user_cmd.size() > 1 && !user_cmd[1].empty()) {
+        const string banned_city{ trim(str_join(user_cmd.cbegin() + 1, user_cmd.cend(), " ")) };
+        main_app.get_list_of_cities_for_automatic_kick().insert(banned_city);
+        save_banned_entries_to_file(banned_cities_list_file_path, main_app.get_list_of_cities_for_automatic_kick());
+        const string message{
+          "^2You have successfully executed ^5"s + user_cmd[0] + "^2on city: ^1"s + banned_city + "\n"s
+        };
+        print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
+        main_app.get_tinyrcon_dict()["{CITY_NAME}"] = banned_city;
+        string rcon_message{ main_app.get_user_defined_city_ban_msg() };
+        build_tiny_rcon_message(rcon_message);
+        rcon_say(rcon_message, true);
+      }
+
+    } else if (user_cmd[0] == "!unbancity") {
+      if (!main_app.get_is_connection_settings_valid()) {
+        print_colored_text(app_handles.hwnd_re_messages_data, "^3You need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        return;
+      }
+      if (user_cmd.size() > 1 && !user_cmd[1].empty()) {
+        const string banned_city_to_unban{ trim(str_join(user_cmd.cbegin() + 1, user_cmd.cend(), " ")) };
+        if (main_app.get_list_of_cities_for_automatic_kick().contains(banned_city_to_unban)) {
+          main_app.get_list_of_cities_for_automatic_kick().erase(banned_city_to_unban);
+          save_banned_entries_to_file(banned_cities_list_file_path, main_app.get_list_of_cities_for_automatic_kick());
+          const string message{
+            "^2You have successfully executed ^5"s + user_cmd[0] + "^2on city: ^1"s + banned_city_to_unban + "\n"s
+          };
+          print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+          main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
+          main_app.get_tinyrcon_dict()["{CITY_NAME}"] = banned_city_to_unban;
+          string rcon_message{ main_app.get_user_defined_city_unban_msg() };
+          build_tiny_rcon_message(rcon_message);
+          rcon_say(rcon_message, true);
+        }
+      }
+
     } else if (user_cmd[0] == "!ecb") {
       if (!main_app.get_is_connection_settings_valid()) {
         print_colored_text(app_handles.hwnd_re_messages_data, "^3You need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
@@ -2908,7 +3113,7 @@ void process_user_command(const std::vector<string> &user_cmd)
       if (user_cmd.size() > 1 && !user_cmd[1].empty()) {
         const string banned_country{ trim(str_join(user_cmd.cbegin() + 1, user_cmd.cend(), " ")) };
         main_app.get_list_of_countries_for_automatic_kick().insert(banned_country);
-        update_banned_countries_file(banned_countries_list_file_path, main_app.get_list_of_countries_for_automatic_kick());
+        save_banned_entries_to_file(banned_countries_list_file_path, main_app.get_list_of_countries_for_automatic_kick());
         const string message{
           "^2You have successfully executed ^5"s + user_cmd[0] + "^2on country: ^1"s + banned_country + "\n"s
         };
@@ -2929,7 +3134,7 @@ void process_user_command(const std::vector<string> &user_cmd)
         const string banned_country_to_unban{ trim(str_join(user_cmd.cbegin() + 1, user_cmd.cend(), " ")) };
         if (main_app.get_list_of_countries_for_automatic_kick().contains(banned_country_to_unban)) {
           main_app.get_list_of_countries_for_automatic_kick().erase(banned_country_to_unban);
-          update_banned_countries_file(banned_countries_list_file_path, main_app.get_list_of_countries_for_automatic_kick());
+          save_banned_entries_to_file(banned_countries_list_file_path, main_app.get_list_of_countries_for_automatic_kick());
           const string message{
             "^2You have successfully executed ^5"s + user_cmd[0] + "^2on country: ^1"s + banned_country_to_unban + "\n"s
           };
@@ -7221,6 +7426,8 @@ void display_context_menu_over_grid(const int mouse_x, const int mouse_y, const 
   static char kick_player_command[128]{};
   static char tempban_player_command[128]{};
   static char ipban_player_command[128]{};
+  static char city_ban_player_command[128]{};
+  static char country_ban_player_command[128]{};
 
   HMENU hPopupMenu = CreatePopupMenu();
   if (main_app.get_is_connection_settings_valid() && check_if_selected_cell_indices_are_valid(row_index, 0)) {
@@ -7245,12 +7452,43 @@ void display_context_menu_over_grid(const int mouse_x, const int mouse_y, const 
         (void)snprintf(ipban_player_command, std::size(ipban_player_command), "Ban player's IP address (Name: %s | PID: %d)", player_data.player_name, pid);
         remove_all_color_codes(ipban_player_command);
         InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_IPBANBUTTON, ipban_player_command);
+        if (main_app.get_is_automatic_city_kick_enabled() && !main_app.get_list_of_cities_for_automatic_kick().contains(player_data.city)) {
+          (void)snprintf(city_ban_player_command, std::size(city_ban_player_command), "Ban player's city (Name: %s | City: %s)", player_data.player_name, player_data.city);
+          remove_all_color_codes(city_ban_player_command);
+          InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_CITYBANBUTTON, city_ban_player_command);
+        }
+        if (main_app.get_is_automatic_country_kick_enabled() && !main_app.get_list_of_countries_for_automatic_kick().contains(player_data.country_name)) {
+          (void)snprintf(country_ban_player_command, std::size(country_ban_player_command), "Ban player's country (Name: %s | Country: %s)", player_data.player_name, player_data.country_name);
+          remove_all_color_codes(country_ban_player_command);
+          InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_COUNTRYBANBUTTON, country_ban_player_command);
+        }
+
         InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_SEPARATOR, NULL, nullptr);
       }
     }
   }
+
+  if (main_app.get_is_connection_settings_valid()) {
+    if (!main_app.get_is_automatic_city_kick_enabled()) {
+      InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_ENABLECITYBANBUTTON, "Enable city ban feature");
+    } else {
+      InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_DISABLECITYBANBUTTON, "Disable city ban feature");
+    }
+
+    if (!main_app.get_is_automatic_country_kick_enabled()) {
+      InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_ENABLECOUNTRYBANBUTTON, "Enable country ban feature");
+    } else {
+      InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_DISABLECOUNTRYBANBUTTON, "Disable country ban feature");
+    }
+
+    InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_SEPARATOR, NULL, nullptr);
+  }
+
   InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_VIEWTEMPBANSBUTTON, "View temporarily banned IP addresses");
   InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_VIEWIPBANSBUTTON, "View permanently banned IP addresses");
+  InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_VIEWBANNEDCITIES, "View banned cities");
+  InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_VIEWBANNEDCOUNTRIES, "View banned countries");
+  InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_SEPARATOR, NULL, nullptr);
   InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_REFRESHDATABUTTON, "Refresh players' data");
   InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_SEPARATOR, NULL, nullptr);
   if (main_app.get_game_server().get_number_of_players() > 0) {
@@ -7984,14 +8222,47 @@ std::pair<bool, std::string> extract_7z_file_to_specified_path(const wchar_t *co
   }
 }
 
-void update_banned_countries_file(const char *file_path, const set<string> &banned_countries)
+void save_banned_entries_to_file(const char *file_path, const set<string> &banned_entries)
 {
   ofstream output_file(file_path, std::ios::out);
 
-  for (const auto &banned_country : banned_countries) {
-    output_file << banned_country << '\n';
+  for (const auto &banned_entry : banned_entries) {
+    output_file << banned_entry << '\n';
   }
 
   output_file << flush;
   output_file.close();
+}
+
+void display_banned_cities(const std::set<std::string> &banned_cities)
+{
+
+  ostringstream oss;
+  if (banned_cities.empty()) {
+    oss << "\n^3You haven't banned any ^1cities ^3yet.\n";
+  } else {
+    oss << "\n^5Banned cities are:\n";
+
+    for (const auto &banned_city : banned_cities) {
+      oss << "^1" << banned_city << '\n';
+    }
+  }
+  const string information{ oss.str() };
+  print_colored_text(app_handles.hwnd_re_messages_data, information.c_str());
+}
+
+void display_banned_countries(const std::set<std::string> &banned_countries)
+{
+  ostringstream oss;
+  if (banned_countries.empty()) {
+    oss << "\n^3You haven't banned any ^1countries ^3yet.\n";
+  } else {
+    oss << "\n^5Banned countries are:\n";
+
+    for (const auto &banned_country : banned_countries) {
+      oss << "^1" << banned_country << '\n';
+    }
+  }
+  const string information{ oss.str() };
+  print_colored_text(app_handles.hwnd_re_messages_data, information.c_str());
 }

@@ -17,7 +17,7 @@ using namespace std::string_literals;
 using namespace std::chrono;
 using namespace std::filesystem;
 
-extern const string program_version{ "2.4.2.2" };
+extern const string program_version{ "2.4.2.4" };
 
 extern char const *const tinyrcon_config_file_path = "config/tinyrcon.json";
 
@@ -29,6 +29,10 @@ extern char const *const banned_ip_addresses_file_path =
 
 extern char const *const banned_countries_list_file_path =
   "data/banned_countries.txt";
+
+
+extern char const *const banned_cities_list_file_path =
+  "data/banned_cities.txt";
 
 extern const std::regex ip_address_and_port_regex;
 
@@ -49,6 +53,8 @@ volatile std::atomic<bool> is_refresh_players_data_event{ false };
 volatile std::atomic<bool> is_refreshed_players_data_ready_event{ false };
 volatile std::atomic<bool> is_display_permanently_banned_players_data_event{ false };
 volatile std::atomic<bool> is_display_temporarily_banned_players_data_event{ false };
+volatile std::atomic<bool> is_display_banned_cities_data_event{ false };
+volatile std::atomic<bool> is_display_banned_countries_data_event{ false };
 
 extern const int screen_width{ GetSystemMetrics(SM_CXSCREEN) };
 extern const int screen_height{ GetSystemMetrics(SM_CYSCREEN) - 30 };
@@ -87,10 +93,16 @@ extern const char *user_help_message =
 ^3>> Press ^1Ctrl + S ^3to refresh players' data.
 ^5>> Press ^1Ctrl + J ^5to connect to game server.
 ^3>> Press ^1Ctrl + X ^3to exit TinyRcon.
-^5Type ^1!ecb ^5[Enter] to enable country ban (automatic kick for banned countries).
-^3Type ^1!dcb ^3[Enter] to disable country ban (automatic kick for banned countries).
-^5Type ^1!bancountry Iran ^5to enable automatic kick for IP addresses from country ^1Iran
-^3Type ^1!unbancountry Iran ^3to disable automatic kick for IP addresses from country ^1Iran
+^5Type ^1!egb ^5[Enter] to enable city ban (automatic kick for banned cities).
+^3Type ^1!dgb ^3[Enter] to disable city ban (automatic kick for banned cities).
+^5Type ^1!bancity city_name ^5to enable automatic kick for players from city ^1city_name
+^3Type ^1!unbancity city_name ^3to disable automatic kick for players from city ^1city_name
+^5Type ^1!banned cities ^5[Enter] to see all currently ^1banned cities^5.
+^3Type ^1!ecb ^3[Enter] to enable country ban (automatic kick for banned countries).
+^5Type ^1!dcb ^5[Enter] to disable country ban (automatic kick for banned countries).
+^3Type ^1!bancountry country_name ^3to enable automatic kick for players from country ^1country_name
+^5Type ^1!unbancountry country_name ^5to disable automatic kick for players from country ^1country_name
+^3Type ^1!banned countries ^3[Enter] to see all currently ^1banned countries^3.
 )";
 
 
@@ -178,7 +190,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   if (!initialize_main_app(hInstance, nCmdShow))
     return 0;
 
-  if (!create_necessary_folders_and_files({ tinyrcon_config_file_path, tempbans_file_path, banned_ip_addresses_file_path, banned_countries_list_file_path, "log", "plugins\\geoIP" })) {
+  if (!create_necessary_folders_and_files({ tinyrcon_config_file_path, tempbans_file_path, banned_ip_addresses_file_path, banned_countries_list_file_path, banned_cities_list_file_path, "log", "plugins\\geoIP" })) {
     show_error(app_handles.hwnd_main_window, "Error creating necessary program folders and files!", 0);
   }
 
@@ -805,7 +817,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
           selected_pid_str.erase(0, 2);
         if (int pid{ -1 }; is_valid_decimal_whole_number(selected_pid_str, pid)) {
           const string player_information{ get_player_information(pid, true) };
-          (void)snprintf(message_buffer, std::size(message_buffer), "^3Are you sure you want to permanently ban IP address of selected player?\n ^7%s", player_information.c_str());
+          (void)snprintf(message_buffer, std::size(message_buffer), "^3Are you sure you want to ban IP address of selected player?\n ^7%s", player_information.c_str());
           if (show_user_confirmation_dialog(message_buffer, "Confirm your action")) {
             (void)snprintf(msg_buffer, std::size(msg_buffer), "!gb %d %s", pid, admin_reason.c_str());
             Edit_SetText(app_handles.hwnd_e_user_input, msg_buffer);
@@ -816,6 +828,71 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       } else {
         print_colored_text(app_handles.hwnd_re_messages_data, "^3You have selected an empty line ^1(invalid pid index)\n ^3in the players' data table!\n^5Please, select a non-empty, valid player's row.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
       }
+
+    } break;
+
+    case ID_CITYBANBUTTON: {
+      if (check_if_selected_cell_indices_are_valid(selected_row, selected_col)) {
+        string selected_pid_str{ GetCellContents(app_handles.hwnd_players_grid, selected_row, 0) };
+        if (selected_pid_str.length() >= 2 && '^' == selected_pid_str[0] && is_decimal_digit(selected_pid_str[1]))
+          selected_pid_str.erase(0, 2);
+        if (int pid{ -1 }; is_valid_decimal_whole_number(selected_pid_str, pid)) {
+          const string player_information{ get_player_information(pid, true) };
+          auto &pd = get_player_data_for_pid(pid);
+          (void)snprintf(message_buffer, std::size(message_buffer), "^3Are you sure you want to ban city of selected player?\n ^7%s", player_information.c_str());
+          if (show_user_confirmation_dialog(message_buffer, "Confirm your action")) {
+            (void)snprintf(msg_buffer, std::size(msg_buffer), "!bancity %s", pd.city);
+            Edit_SetText(app_handles.hwnd_e_user_input, msg_buffer);
+            get_user_input();
+            admin_reason.assign("not specified");
+          }
+        }
+      } else {
+        print_colored_text(app_handles.hwnd_re_messages_data, "^3You have selected an empty line ^1(invalid pid index)\n ^3in the players' data table!\n^5Please, select a non-empty, valid player's row.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      }
+
+    } break;
+
+    case ID_COUNTRYBANBUTTON: {
+      if (check_if_selected_cell_indices_are_valid(selected_row, selected_col)) {
+        string selected_pid_str{ GetCellContents(app_handles.hwnd_players_grid, selected_row, 0) };
+        if (selected_pid_str.length() >= 2 && '^' == selected_pid_str[0] && is_decimal_digit(selected_pid_str[1]))
+          selected_pid_str.erase(0, 2);
+        if (int pid{ -1 }; is_valid_decimal_whole_number(selected_pid_str, pid)) {
+          const string player_information{ get_player_information(pid, true) };
+          auto &pd = get_player_data_for_pid(pid);
+          (void)snprintf(message_buffer, std::size(message_buffer), "^3Are you sure you want to ban country of selected player?\n ^7%s", player_information.c_str());
+          if (show_user_confirmation_dialog(message_buffer, "Confirm your action")) {
+            (void)snprintf(msg_buffer, std::size(msg_buffer), "!bancountry %s", pd.country_name);
+            Edit_SetText(app_handles.hwnd_e_user_input, msg_buffer);
+            get_user_input();
+            admin_reason.assign("not specified");
+          }
+        }
+      } else {
+        print_colored_text(app_handles.hwnd_re_messages_data, "^3You have selected an empty line ^1(invalid pid index)\n ^3in the players' data table!\n^5Please, select a non-empty, valid player's row.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      }
+
+    } break;
+
+    case ID_ENABLECITYBANBUTTON: {
+      Edit_SetText(app_handles.hwnd_e_user_input, "!egb");
+      get_user_input();
+    } break;
+
+    case ID_DISABLECITYBANBUTTON: {
+      Edit_SetText(app_handles.hwnd_e_user_input, "!dgb");
+      get_user_input();
+    } break;
+
+    case ID_ENABLECOUNTRYBANBUTTON: {
+      Edit_SetText(app_handles.hwnd_e_user_input, "!ecb");
+      get_user_input();
+    } break;
+
+    case ID_DISABLECOUNTRYBANBUTTON: {
+      Edit_SetText(app_handles.hwnd_e_user_input, "!dcb");
+      get_user_input();
 
     } break;
 
@@ -856,6 +933,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     case ID_VIEWIPBANSBUTTON:
       is_display_permanently_banned_players_data_event.store(true);
+      break;
+
+    case ID_VIEWBANNEDCITIES:
+      is_display_banned_cities_data_event.store(true);
+      break;
+
+    case ID_VIEWBANNEDCOUNTRIES:
+      is_display_banned_countries_data_event.store(true);
       break;
 
     case ID_SORT_PLAYERS_DATA_BY_PID:
@@ -983,6 +1068,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     } else if (is_display_permanently_banned_players_data_event.load()) {
       display_permanently_banned_ip_addresses();
       is_display_permanently_banned_players_data_event.store(false);
+    } else if (is_display_banned_cities_data_event.load()) {
+      display_banned_cities(main_app.get_list_of_cities_for_automatic_kick());
+      is_display_banned_cities_data_event.store(false);
+    } else if (is_display_banned_countries_data_event.load()) {
+      display_banned_countries(main_app.get_list_of_countries_for_automatic_kick());
+      is_display_banned_countries_data_event.store(false);
     }
   } break;
 
