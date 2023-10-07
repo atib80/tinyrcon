@@ -883,7 +883,7 @@ bool write_tiny_rcon_json_settings_to_file(
 }
 
 bool check_ip_address_validity(string_view ip_address,
-  unsigned long &guid_key)
+  unsigned long &ip_key)
 {
   const auto parts = stl::helper::str_split(ip_address, ".", nullptr, split_on_whole_needle_t::yes);
   if (parts.size() < 4U)
@@ -896,15 +896,15 @@ bool check_ip_address_validity(string_view ip_address,
     });
 
   if (is_valid_ip_address) {
-    guid_key = 0L;
+    ip_key = 0UL;
     // 123.123.123.123 // 123 * 256 + 123 =
     // 1. 4 = 4
     // 2. 4 * 256 + 18 = 1042
     // 3. 1042 * 256 + 100 = 266852
     // 4. 266852 * 256 + 32 = 68314144
     for (size_t i{}; i < 4; ++i) {
-      guid_key <<= 8;
-      guid_key += stoul(parts[i]);
+      ip_key <<= 8;
+      ip_key += stoul(parts[i]);
     }
   }
 
@@ -915,17 +915,16 @@ void convert_guid_key_to_country_name(const vector<geoip_data> &geo_data,
   string_view player_ip,
   player_data &player_data)
 {
-  unsigned long playerGuidKey{};
-  if (!check_ip_address_validity(player_ip, playerGuidKey)) {
+  unsigned long ip_key{};
+  if (!check_ip_address_validity(player_ip, ip_key)) {
+    player_data.ip_hash_key = 0UL;
     player_data.country_name = "Unknown";
     player_data.region = "Unknown";
     player_data.city = "Unknown";
     player_data.country_code = "xy";
 
   } else {
-    if (len(player_data.guid_key) == 0) {
-      (void)snprintf(player_data.guid_key, std::size(player_data.guid_key), "%lu", playerGuidKey);
-    }
+    player_data.ip_hash_key = ip_key;
     const size_t sizeOfElements{ geo_data.size() };
     size_t lower_bound{ 0 };
     size_t upper_bound{ sizeOfElements };
@@ -938,7 +937,7 @@ void convert_guid_key_to_country_name(const vector<geoip_data> &geo_data,
       if (currentIndex >= geo_data.size())
         break;
 
-      if (playerGuidKey >= geo_data.at(currentIndex).lower_ip_bound && playerGuidKey <= geo_data.at(currentIndex).upper_ip_bound) {
+      if (ip_key >= geo_data.at(currentIndex).lower_ip_bound && ip_key <= geo_data.at(currentIndex).upper_ip_bound) {
         player_data.country_name = geo_data.at(currentIndex).get_country_name();
         player_data.region = geo_data.at(currentIndex).get_region();
         player_data.city = geo_data.at(currentIndex).get_city();
@@ -947,7 +946,7 @@ void convert_guid_key_to_country_name(const vector<geoip_data> &geo_data,
         break;
       }
 
-      if (playerGuidKey > geo_data.at(currentIndex).upper_ip_bound) {
+      if (ip_key > geo_data.at(currentIndex).upper_ip_bound) {
         lower_bound = currentIndex + 1;
       } else {
         upper_bound = currentIndex - 1;
@@ -1853,8 +1852,8 @@ bool temp_ban_player_ip_address(player_data &pd)
 
   // pd.is_banned = true;
 
-  unsigned long guid{};
-  if (!check_ip_address_validity(pd.ip_address, guid)) {
+  unsigned long ip_key{};
+  if (!check_ip_address_validity(pd.ip_address, ip_key)) {
     return false;
   }
 
@@ -1942,8 +1941,8 @@ bool global_ban_player_ip_address(player_data &pd)
 
   // pd.is_banned = true;
 
-  unsigned long guid{};
-  if (!check_ip_address_validity(pd.ip_address, guid)) {
+  unsigned long ip_key{};
+  if (!check_ip_address_validity(pd.ip_address, ip_key)) {
     return false;
   }
 
@@ -2352,8 +2351,8 @@ bool check_if_user_provided_argument_is_valid_for_specified_command(
   }
 
   if ((str_compare_i(cmd, "!gb") == 0) || (str_compare_i(cmd, "!globalban") == 0) || (str_compare_i(cmd, "!banip") == 0) || (str_compare_i(cmd, "!addip") == 0)) {
-    unsigned long guid{};
-    return (is_valid_decimal_whole_number(arg, number) && check_if_user_provided_pid_is_valid(arg)) || check_ip_address_validity(arg, guid);
+    unsigned long ip_key{};
+    return (is_valid_decimal_whole_number(arg, number) && check_if_user_provided_pid_is_valid(arg)) || check_ip_address_validity(arg, ip_key);
   }
 
   return true;
@@ -2920,8 +2919,8 @@ void process_user_command(const std::vector<string> &user_cmd)
           if (int pid{ -1 }; is_valid_decimal_whole_number(user_cmd[1], pid)) {
             auto &player = main_app.get_game_server().get_player_data(pid);
             if (pid == player.pid) {
-              unsigned long guid{};
-              if (check_ip_address_validity(player.ip_address, guid) && banned_ip_addresses.find(player.ip_address) == cend(banned_ip_addresses)) {
+              unsigned long ip_key{};
+              if (check_ip_address_validity(player.ip_address, ip_key) && banned_ip_addresses.find(player.ip_address) == cend(banned_ip_addresses)) {
                 main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
                 main_app.get_tinyrcon_dict()["{PLAYERNAME}"] = get_player_name_for_pid(player.pid);
                 string reason{ user_cmd.size() > 2 ? str_join(cbegin(user_cmd) + 2, cend(user_cmd), " ") : "not specified" };
@@ -3244,8 +3243,8 @@ void process_user_command(const std::vector<string> &user_cmd)
         return;
       }
       if (user_cmd.size() >= 2 && !user_cmd[1].empty()) {
-        unsigned long guid{};
-        if (!check_ip_address_validity(user_cmd[1], guid)) {
+        unsigned long ip_key{};
+        if (!check_ip_address_validity(user_cmd[1], ip_key)) {
           const string re_msg{ "^3Provided IP address (^1"s + user_cmd[1] + "^3) is not a valid IP address!\n"s };
           print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
         } else {
@@ -3652,12 +3651,12 @@ void sort_players_data(std::vector<player_data> &players_data, const sort_type s
   case sort_type::ip_asc:
     if (main_app.get_is_connection_settings_valid()) {
       std::sort(std::begin(players_data), std::begin(players_data) + number_of_players, [](const player_data &pl1, const player_data &pl2) {
-        unsigned long pl1_guid{}, pl2_guid{};
-        if (!check_ip_address_validity(pl1.ip_address, pl1_guid))
+        unsigned long ip_key1{}, ip_key2{};
+        if (!check_ip_address_validity(pl1.ip_address, ip_key1))
           return true;
-        if (!check_ip_address_validity(pl2.ip_address, pl2_guid))
+        if (!check_ip_address_validity(pl2.ip_address, ip_key2))
           return false;
-        return pl1_guid < pl2_guid;
+        return ip_key1 < ip_key2;
       });
     }
     break;
@@ -3665,12 +3664,12 @@ void sort_players_data(std::vector<player_data> &players_data, const sort_type s
   case sort_type::ip_desc:
     if (main_app.get_is_connection_settings_valid()) {
       std::sort(std::begin(players_data), std::begin(players_data) + number_of_players, [](const player_data &pl1, const player_data &pl2) {
-        unsigned long pl1_guid{}, pl2_guid{};
-        if (!check_ip_address_validity(pl1.ip_address, pl1_guid))
+        unsigned long ip_key1{}, ip_key2{};
+        if (!check_ip_address_validity(pl1.ip_address, ip_key1))
           return false;
-        if (!check_ip_address_validity(pl2.ip_address, pl2_guid))
+        if (!check_ip_address_validity(pl2.ip_address, ip_key2))
           return true;
-        return pl1_guid > pl2_guid;
+        return ip_key1 > ip_key2;
       });
     }
     break;
@@ -4397,8 +4396,8 @@ bool change_server_setting(const std::vector<std::string> &command) noexcept
         return false;
       const string ip{ command[2].substr(0, colon_pos) };
       const uint_least16_t port{ static_cast<uint_least16_t>(stoul(command[2].substr(colon_pos + 1))) };
-      unsigned long guid{};
-      if (!check_ip_address_validity(ip, guid) || (ip == main_app.get_game_server().get_server_ip_address() && port == main_app.get_game_server().get_server_port()))
+      unsigned long ip_key{};
+      if (!check_ip_address_validity(ip, ip_key) || (ip == main_app.get_game_server().get_server_ip_address() && port == main_app.get_game_server().get_server_port()))
         return false;
       const string re_msg{ "^2You have successfully changed the ^1game server address ^2to ^5"s + command[2] + "^2\n"s };
       print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
@@ -4484,7 +4483,7 @@ std::string get_player_information(const int pid, const bool is_every_property_o
   for (size_t i{}; i < main_app.get_game_server().get_number_of_players(); ++i) {
     if (pid == players_data[i].pid) {
       const auto &p = players_data[i];
-      (void)snprintf(buffer, std::size(buffer), "^3Player name: ^7%s %s ^3PID: ^1%d %s ^3Score: ^5%d %s ^3Ping: ^5%s\n ^3IP: ^5%s %s ^3Country, region, city: ^5%s, %s, %s", p.player_name, (is_every_property_on_new_line ? "\n" : "^3|"), p.pid, (is_every_property_on_new_line ? "\n" : "^3|"), p.score, (is_every_property_on_new_line ? "\n" : "^3|"), p.ping, p.ip_address, (is_every_property_on_new_line ? "\n" : "^3|"), p.country_name, p.region, p.city);
+      (void)snprintf(buffer, std::size(buffer), "^3Player name: ^7%s %s ^3PID: ^1%d %s ^3GUID: ^1%s %s ^3Score: ^5%d %s ^3Ping: ^5%s\n ^3IP: ^5%s %s ^3Country, region, city: ^5%s, %s, %s", p.player_name, (is_every_property_on_new_line ? "\n" : "^3|"), p.pid, (is_every_property_on_new_line ? "\n" : "^3|"), p.guid_key, (is_every_property_on_new_line ? "\n" : "^3|"), p.score, (is_every_property_on_new_line ? "\n" : "^3|"), p.ping, p.ip_address, (is_every_property_on_new_line ? "\n" : "^3|"), p.country_name, p.region, p.city);
       return buffer;
     }
   }
@@ -7228,9 +7227,9 @@ void process_button_save_changes_click_event(HWND hwnd)
   if (!is_invalid_entry) {
     GetWindowText(app_handles.hwnd_server_ip_address, msg_buffer, std::size(msg_buffer));
     const auto ip_len{ stl::helper::len(msg_buffer) };
-    unsigned long guid{};
+    unsigned long ip_key{};
     const string server_ip{ msg_buffer };
-    if (ip_len > 0 && check_ip_address_validity(server_ip, guid)) {
+    if (ip_len > 0 && check_ip_address_validity(server_ip, ip_key)) {
       new_server_ip.assign(server_ip);
     } else {
       is_invalid_entry = true;
@@ -7366,9 +7365,9 @@ void process_button_test_connection_click_event(HWND)
 
   GetWindowText(app_handles.hwnd_server_ip_address, msg_buffer, std::size(msg_buffer));
   const auto ip_len{ stl::helper::len(msg_buffer) };
-  unsigned long guid{};
+  unsigned long ip_key{};
   const string server_ip{ msg_buffer };
-  if (ip_len > 0 && check_ip_address_validity(server_ip, guid)) {
+  if (ip_len > 0 && check_ip_address_validity(server_ip, ip_key)) {
     new_server_ip.assign(msg_buffer);
   } else {
     is_invalid_entry = true;
@@ -7425,6 +7424,7 @@ void display_context_menu_over_grid(const int mouse_x, const int mouse_y, const 
   static char warn_player_command[128]{};
   static char kick_player_command[128]{};
   static char tempban_player_command[128]{};
+  static char guidban_player_command[128]{};
   static char ipban_player_command[128]{};
   static char city_ban_player_command[128]{};
   static char country_ban_player_command[128]{};
@@ -7449,6 +7449,11 @@ void display_context_menu_over_grid(const int mouse_x, const int mouse_y, const 
         (void)snprintf(tempban_player_command, std::size(tempban_player_command), "Temporarily ban player's IP address (Name: %s | PID: %d)", player_data.player_name, pid);
         remove_all_color_codes(tempban_player_command);
         InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_TEMPBANBUTTON, tempban_player_command);
+        if (strcmp(player_data.guid_key, "0") != 0) {
+          (void)snprintf(guidban_player_command, std::size(guidban_player_command), "Ban player's GUID key (Name: %s | PID: %d | GUID: %s)", player_data.player_name, pid, player_data.guid_key);
+          remove_all_color_codes(guidban_player_command);
+          InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_GUIDBANBUTTON, guidban_player_command);
+        }
         (void)snprintf(ipban_player_command, std::size(ipban_player_command), "Ban player's IP address (Name: %s | PID: %d)", player_data.player_name, pid);
         remove_all_color_codes(ipban_player_command);
         InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_IPBANBUTTON, ipban_player_command);

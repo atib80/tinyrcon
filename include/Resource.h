@@ -321,6 +321,7 @@
 #define ID_DISABLECOUNTRYBANBUTTON 422
 #define ID_VIEWBANNEDCITIES 423
 #define ID_VIEWBANNEDCOUNTRIES 424
+#define ID_GUIDBANBUTTON 425
 #define IDC_STATIC                      -1
 
 // Next default values for new objects

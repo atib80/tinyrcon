@@ -91,6 +91,7 @@ size_t connection_manager::receive_data_from_server(
       set_admin_actions_buttons_active(FALSE);
       // main_app.add_command_to_queue({ "getstatus" }, command_type::rcon, true);
     } else {
+      const auto gn = main_app.get_game_name();
       const char *current{}, *last{};
 
       auto [rcon_status_response_needle1, rcon_status_response_needle2] = get_appropriate_rcon_status_response_header(main_app.get_game_name());
@@ -248,9 +249,16 @@ size_t connection_manager::receive_data_from_server(
               ++number_of_online_players;
             }
 
-            i = j + 8;
+            i = j + ((gn == game_name_t::cod1 || gn == game_name_t::cod2) ? 8 : 33);
             while (is_ws(player_line[j]) && j < i) ++j;
-            while (isdigit(player_line[j]) && j < i) ++j;
+            const auto guid_start{ j };
+            if (gn == game_name_t::cod1 || gn == game_name_t::cod2) {
+              while (isdigit(player_line[j]) && j < i) ++j;
+            } else {
+              while (isxdigit(player_line[j]) && j < i) ++j;
+            }
+
+            const string player_guid{ trim(player_line.substr(guid_start, j - guid_start)) };
 
             while (is_ws(player_line[j])) ++j;
             const int pn_start{ j };
@@ -341,7 +349,12 @@ size_t connection_manager::receive_data_from_server(
             }
 
             // const string ip_address{ player_line.substr(i + 1, j - (i + 1)) };
-            if (isdigit(player_line[i])) {
+
+            auto pn_end{ player_line.rfind("^7", i) };
+            if (string::npos == pn_end)
+              pn_end = player_line.find_last_of("^7", i);
+            
+          /*  if (isdigit(player_line[i])) {
               while (isdigit(player_line[i])) --i;
               while (is_ws(player_line[i])) --i;
             } else {
@@ -349,10 +362,9 @@ size_t connection_manager::receive_data_from_server(
               while (isdigit(player_line[i])) --i;
               while (is_ws(player_line[i])) --i;
             }
+            ++i;*/
 
-            ++i;
-
-            string player_name(player_line.substr(pn_start, i - pn_start));
+            string player_name(player_line.substr(pn_start, pn_end - pn_start));
             const size_t pn_len{ player_name.length() };
             if (player_name.ends_with("^7")) {
               player_name.pop_back();
@@ -364,6 +376,7 @@ size_t connection_manager::receive_data_from_server(
             players_data[pl_index].pid = player_pid;
             players_data[pl_index].score = player_score;
             strcpy_s(players_data[pl_index].ping, 5, player_ping.c_str());
+            strcpy_s(players_data[pl_index].guid_key, 33, player_guid.c_str());
             if (strcmp(player_name.c_str(), players_data[pl_index].player_name) != 0) {
               const size_t no_of_chars_to_copy{ std::min<size_t>(32, player_name.length()) };
               strncpy_s(players_data[pl_index].player_name, 33, player_name.c_str(), no_of_chars_to_copy);

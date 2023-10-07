@@ -230,7 +230,7 @@ bool parse_geodata_lite_csv_file(const char *);
 
 bool write_tiny_rcon_json_settings_to_file(const char *) noexcept;
 
-bool check_ip_address_validity(std::string_view, unsigned long &);
+bool check_ip_address_validity(std::string_view, unsigned long&);
 
 void convert_guid_key_to_country_name(const std::vector<geoip_data> &geo_data,
   std::string_view player_ip,

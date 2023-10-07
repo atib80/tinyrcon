@@ -19,6 +19,7 @@ struct player_data
   explicit player_data(const int pid = -1, const int score = 0, const char *country_code = "xy", const char *country_name = "Unknown", const char *region = "Unknown", const char *city = "Unknown") : pid{ pid }, score{ score }, country_code{ country_code }, country_name{ country_name }, region{ region }, city{ city } {}
   int pid;
   int score{};
+  unsigned long ip_hash_key{};
   char player_name[33]{};
   char guid_key[33]{};
   char banned_date_time[33]{};

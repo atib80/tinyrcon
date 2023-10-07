@@ -17,7 +17,7 @@ using namespace std::string_literals;
 using namespace std::chrono;
 using namespace std::filesystem;
 
-extern const string program_version{ "2.4.2.4" };
+extern const string program_version{ "2.4.2.7" };
 
 extern char const *const tinyrcon_config_file_path = "config/tinyrcon.json";
 
@@ -799,6 +799,27 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
           (void)snprintf(message_buffer, std::size(message_buffer), "^3Are you sure you want to temporarily ban IP address of selected player?\n ^7%s", player_information.c_str());
           if (show_user_confirmation_dialog(message_buffer, "Confirm your action")) {
             (void)snprintf(msg_buffer, std::size(msg_buffer), "!tb %d 24 %s", pid, admin_reason.c_str());
+            Edit_SetText(app_handles.hwnd_e_user_input, msg_buffer);
+            get_user_input();
+            admin_reason.assign("not specified");
+          }
+        }
+      } else {
+        print_colored_text(app_handles.hwnd_re_messages_data, "^3You have selected an empty line ^1(invalid pid index)\n ^3in the players' data table!\n^5Please, select a non-empty, valid player's row.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      }
+
+    } break;
+
+    case ID_GUIDBANBUTTON: {
+      if (check_if_selected_cell_indices_are_valid(selected_row, selected_col)) {
+        string selected_pid_str{ GetCellContents(app_handles.hwnd_players_grid, selected_row, 0) };
+        if (selected_pid_str.length() >= 2 && '^' == selected_pid_str[0] && is_decimal_digit(selected_pid_str[1]))
+          selected_pid_str.erase(0, 2);
+        if (int pid{ -1 }; is_valid_decimal_whole_number(selected_pid_str, pid)) {
+          const string player_information{ get_player_information(pid, true) };
+          (void)snprintf(message_buffer, std::size(message_buffer), "^3Are you sure you want to ban GUID key of selected player?\n ^7%s", player_information.c_str());
+          if (show_user_confirmation_dialog(message_buffer, "Confirm your action")) {
+            (void)snprintf(msg_buffer, std::size(msg_buffer), "!b %d %s", pid, admin_reason.c_str());
             Edit_SetText(app_handles.hwnd_e_user_input, msg_buffer);
             get_user_input();
             admin_reason.assign("not specified");
