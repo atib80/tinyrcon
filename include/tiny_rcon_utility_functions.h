@@ -157,29 +157,21 @@ struct geoip_data
   geoip_data(const unsigned long lib, const unsigned long uib, const char *code, const char *country, const char *reg, const char *ci) : lower_ip_bound{ lib }, upper_ip_bound{ uib }
   {
 
-    size_t no_of_chars_to_copy = stl::helper::len(code);
-    if (no_of_chars_to_copy > 3)
-      no_of_chars_to_copy = 3;
-    memcpy(country_code, code, no_of_chars_to_copy);
-    country_code[no_of_chars_to_copy] = 0;
+    const size_t no_of_chars_for_country_code = std::min<size_t>(3U, stl::helper::len(code));
+    memcpy(country_code, code, no_of_chars_for_country_code);
+    country_code[no_of_chars_for_country_code] = 0;
 
-    no_of_chars_to_copy = stl::helper::len(country);
-    if (no_of_chars_to_copy > 34)
-      no_of_chars_to_copy = 34;
-    memcpy(country_name, country, no_of_chars_to_copy);
-    country_name[no_of_chars_to_copy] = 0;
+    const size_t no_of_chars_for_country_name = std::min<size_t>(34U, stl::helper::len(country));
+    memcpy(country_name, country, no_of_chars_for_country_name);
+    country_name[no_of_chars_for_country_name] = 0;
 
-    no_of_chars_to_copy = stl::helper::len(reg);
-    if (no_of_chars_to_copy > 34)
-      no_of_chars_to_copy = 34;
-    memcpy(region, reg, no_of_chars_to_copy);
-    region[no_of_chars_to_copy] = 0;
+    const size_t no_of_chars_for_region = std::min<size_t>(34U, stl::helper::len(reg));
+    memcpy(region, reg, no_of_chars_for_region);
+    region[no_of_chars_for_region] = 0;
 
-    no_of_chars_to_copy = stl::helper::len(ci);
-    if (no_of_chars_to_copy > 34)
-      no_of_chars_to_copy = 34;
-    memcpy(city, ci, no_of_chars_to_copy);
-    city[no_of_chars_to_copy] = 0;
+    const size_t no_of_chars_for_city = std::min<size_t>(34U, stl::helper::len(ci));
+    memcpy(city, ci, no_of_chars_for_city);
+    city[no_of_chars_for_city] = 0;
   }
 
   constexpr const char *get_country_code() const noexcept
@@ -230,7 +222,7 @@ bool parse_geodata_lite_csv_file(const char *);
 
 bool write_tiny_rcon_json_settings_to_file(const char *) noexcept;
 
-bool check_ip_address_validity(std::string_view, unsigned long&);
+bool check_ip_address_validity(std::string_view, unsigned long &);
 
 void convert_guid_key_to_country_name(const std::vector<geoip_data> &geo_data,
   std::string_view player_ip,

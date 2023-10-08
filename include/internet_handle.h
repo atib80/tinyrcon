@@ -10,6 +10,24 @@ class internet_handle
 public:
   internet_handle() : handle{} {}
   explicit internet_handle(HINTERNET &&new_handle) : handle{ std::move(new_handle) } {}
+  internet_handle(const internet_handle &) = delete;
+  internet_handle &operator=(const internet_handle &) = delete;
+  internet_handle(internet_handle &&rhs) noexcept
+  {
+    handle = std::move(rhs.handle);
+    rhs.handle = NULL;
+  }
+
+  internet_handle &operator=(internet_handle &&rhs) noexcept
+  {
+    if (NULL != handle) {
+      InternetCloseHandle(handle);
+    }
+    handle = std::move(rhs.handle);
+    rhs.handle = NULL;
+    return *this;
+  }
+
   ~internet_handle() noexcept
   {
     if (NULL != handle) {
@@ -18,7 +36,7 @@ public:
     }
   }
 
-  HINTERNET &get() noexcept
+  const HINTERNET &get() const noexcept
   {
     return handle;
   }

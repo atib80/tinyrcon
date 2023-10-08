@@ -30,7 +30,6 @@ extern char const *const banned_ip_addresses_file_path =
 extern char const *const banned_countries_list_file_path =
   "data/banned_countries.txt";
 
-
 extern char const *const banned_cities_list_file_path =
   "data/banned_cities.txt";
 
