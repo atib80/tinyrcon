@@ -1405,11 +1405,11 @@ std::basic_string<get_char_type_t<T>> trim(
   if (first == std::cend(src))
     return {};
 
-  const auto last{ std::find_if(std::crbegin(src), std::crend(src), [&trimmed_chars](const auto ch) {
+  const auto last_iter{ std::find_if(std::crbegin(src), std::crend(src), [&trimmed_chars](const auto ch) {
     return trimmed_chars.find(ch) == std::cend(trimmed_chars);
   }).base() };
 
-  return std::basic_string<char_type>{ first, last };
+  return std::basic_string<char_type>{ first, last_iter };
 }
 
 template<typename T,

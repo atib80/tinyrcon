@@ -86,6 +86,8 @@ class tiny_cod2_rcon_client_application
     { "{REASON}", "not specified" }
   };
 
+  std::unordered_map<std::string, std::function<void(const std::vector<std::string> &)>> command_handlers;
+
   std::string program_title{ "Welcome to TinyRcon" };
   std::string current_working_directory;
   std::string ftp_download_site_ip_address{ "85.222.189.119" };
@@ -507,9 +509,35 @@ public:
   {
     std::lock_guard lg{ command_queue_mutex };
     if (cmd.type == command_type::rcon) {
-      process_rcon_command(cmd.command, cmd.is_wait_for_reply);
+      process_rcon_command(cmd.command);
     } else if (cmd.type == command_type::user) {
       process_user_command(cmd.command);
     }
+  }
+
+  const std::unordered_map<std::string, std::function<void(const std::vector<std::string> &)>> &get_command_handlers() const noexcept
+  {
+    return command_handlers;
+  }
+
+  void add_command_handler(std::vector<std::string> command_names, std::function<void(const std::vector<std::string> &)> command_handler)
+  {
+    if (command_names.size() > 1) {
+      for (size_t i{}; i < command_names.size() - 1; ++i) {
+        command_handlers.emplace(std::move(command_names[i]), command_handler);
+      }
+    }
+    command_handlers.emplace(std::move(command_names.back()), std::move(command_handler));
+  }
+
+  std::pair<bool, const std::function<void(const std::vector<std::string> &)> &> get_command_handler(const std::string &command_name) const noexcept
+  {
+    static std::function<void(const std::vector<std::string> &)> unknown_command_handler{
+      [](const std::vector<std::string> &) {}
+    };
+
+    if (command_handlers.contains(command_name))
+      return make_pair(true, command_handlers.at(command_name));
+    return make_pair(false, unknown_command_handler);
   }
 };

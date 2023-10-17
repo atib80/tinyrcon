@@ -18,6 +18,7 @@
 // C++ header files
 #include <condition_variable>
 #include <cstring>
+#include <format>
 #include <string>
 #include <unordered_map>
 #include <crtdbg.h>

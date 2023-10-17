@@ -214,7 +214,7 @@ void cursor_to_bottom(HWND hwnd) noexcept;
 void scroll_to_beginning(HWND hwnd) noexcept;
 void scroll_to(HWND hwnd, DWORD pos) noexcept;
 void scroll_to_bottom(HWND hwnd) noexcept;
-void append(HWND hwnd, const char *str) noexcept;
+void append(HWND hwnd, const char *str, const bool is_prevent_auto_vertical_scrolling = false) noexcept;
 
 void show_error(HWND parent_window, const char *, const size_t) noexcept;
 size_t get_number_of_lines_in_file(const char *file_path);
@@ -250,7 +250,7 @@ bool remove_temp_banned_ip_address(const std::string &ip_address, std::string &m
 
 bool remove_permanently_banned_ip_address(const std::string &ip_address, std::string &message);
 
-size_t print_colored_text(HWND re_control, const char *text, const is_append_message_to_richedit_control = is_append_message_to_richedit_control::yes, const is_log_message = is_log_message::yes, const is_log_datetime = is_log_datetime::yes);
+size_t print_colored_text(HWND re_control, const char *text, const is_append_message_to_richedit_control = is_append_message_to_richedit_control::yes, const is_log_message = is_log_message::yes, const is_log_datetime = is_log_datetime::yes, const bool is_prevent_auto_vertical_scrolling = false);
 
 size_t print_colored_text_to_grid_cell(HDC hdc, RECT &rect, const char *text, DWORD formatting_style);
 
@@ -290,7 +290,7 @@ void process_user_input(std::string &);
 
 void process_user_command(const std::vector<std::string> &);
 
-void process_rcon_command(const std::vector<std::string> &, const bool);
+void process_rcon_command(const std::vector<std::string> &);
 
 volatile bool should_program_terminate(const std::string & = "") noexcept;
 
@@ -338,8 +338,6 @@ void tell_message(const char *, const int);
 std::string word_wrap(const char *, const size_t);
 
 std::string get_time_interval_info_string_for_seconds(const time_t seconds);
-
-std::string get_date_and_time_for_time_t(const time_t);
 
 void change_game_type(const std::string &game_type, const bool = false) noexcept;
 void load_map(const std::string &, const std::string &, const bool = true) noexcept;
@@ -469,7 +467,8 @@ void prepare_players_data_for_display(const bool is_log_status_table = false);
 void prepare_players_data_for_display_of_getstatus_response(const bool is_log_status_table = false);
 
 size_t get_file_size_in_bytes(const char *) noexcept;
-std::string get_current_date_time_str(const char *date_time_format_str);
+std::string get_date_and_time_for_time_t(const char *date_time_format_str, time_t t_c = 0);
+const char *get_current_short_month_name(const size_t index) noexcept;
 
 void correct_truncated_player_names(const char *ip_address, const uint_least16_t port_number, const char *rcon_password);
 void print_message_about_corrected_player_name(HWND re_hwnd, const char *truncated_name, const char *corrected_name) noexcept;

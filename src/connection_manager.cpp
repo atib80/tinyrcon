@@ -348,21 +348,9 @@ size_t connection_manager::receive_data_from_server(
               }
             }
 
-            // const string ip_address{ player_line.substr(i + 1, j - (i + 1)) };
-
             auto pn_end{ player_line.rfind("^7", i) };
             if (string::npos == pn_end)
               pn_end = player_line.find_last_of("^7", i);
-            
-          /*  if (isdigit(player_line[i])) {
-              while (isdigit(player_line[i])) --i;
-              while (is_ws(player_line[i])) --i;
-            } else {
-              while (is_ws(player_line[i])) --i;
-              while (isdigit(player_line[i])) --i;
-              while (is_ws(player_line[i])) --i;
-            }
-            ++i;*/
 
             string player_name(player_line.substr(pn_start, pn_end - pn_start));
             const size_t pn_len{ player_name.length() };

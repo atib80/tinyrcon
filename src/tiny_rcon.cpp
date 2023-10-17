@@ -17,7 +17,7 @@ using namespace std::string_literals;
 using namespace std::chrono;
 using namespace std::filesystem;
 
-extern const string program_version{ "2.4.2.7" };
+extern const string program_version{ "2.4.3.0" };
 
 extern char const *const tinyrcon_config_file_path = "config/tinyrcon.json";
 
@@ -167,6 +167,8 @@ string admin_reason{ "not specified" };
 extern HIMAGELIST hImageList;
 HFONT font_for_players_grid_data{};
 
+extern const map<string, string> user_commands_help;
+
 ATOM register_window_classes(HINSTANCE hInstance);
 bool initialize_main_app(HINSTANCE, const int);
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
@@ -194,6 +196,940 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   }
 
   parse_tinyrcon_tool_config_file("config/tinyrcon.json");
+
+  main_app.add_command_handler({ "cls", "!cls" }, [](const vector<string> &) {
+    Edit_SetText(app_handles.hwnd_re_messages_data, "");
+    g_message_data_contents.clear();
+  });
+
+
+  main_app.add_command_handler({ "list", "!list", "help", "!help", "h", "!h" }, [](const vector<string> &user_cmd) {
+    print_help_information(user_cmd);
+  });
+
+  main_app.add_command_handler({ "!w", "!warn" }, [](const vector<string> &user_cmd) {
+    if (user_cmd.size() > 1 && !user_cmd[1].empty()) {
+
+      if (check_if_user_provided_argument_is_valid_for_specified_command(
+            user_cmd[0].c_str(), user_cmd[1])) {
+        const int pid{ stoi(user_cmd[1]) };
+        main_app.get_tinyrcon_dict()["{PLAYERNAME}"] = get_player_name_for_pid(pid);
+        main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
+        string reason{ user_cmd.size() > 2 ? str_join(cbegin(user_cmd) + 2, cend(user_cmd), " ") : "not specified" };
+        stl::helper::trim_in_place(reason);
+        specify_reason_for_player_pid(pid, reason);
+        main_app.get_tinyrcon_dict()["{REASON}"] = reason;
+        string command{ main_app.get_user_defined_warn_message() };
+        build_tiny_rcon_message(command);
+        rcon_say(command);
+        auto &warned_players = main_app.get_game_server().get_warned_players_data();
+        auto [player, is_online] = get_online_player_for_specified_pid(pid);
+        if (is_online) {
+          const auto iter = warned_players.find(pid);
+          if (iter == end(warned_players)) {
+            warned_players[pid] = move(player);
+            warned_players[pid].warned_times = 1;
+          } else {
+            ++warned_players[pid].warned_times;
+          }
+
+          const string message{ format("^3You have successfully executed ^5!warn ^3on player ({}^3)\n", get_player_information(pid)) };
+          print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+
+          const size_t number_of_warnings_for_automatic_kick = main_app.get_maximum_number_of_warnings_for_automatic_kick();
+          if (warned_players[player.pid].warned_times >= number_of_warnings_for_automatic_kick) {
+            main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
+            main_app.get_tinyrcon_dict()["{PLAYERNAME}"] = player.player_name;
+            string reason2{ format("^1Received {} warnings from admin: {}", main_app.get_maximum_number_of_warnings_for_automatic_kick(), main_app.get_username()) };
+            stl::helper::trim_in_place(reason2);
+            specify_reason_for_player_pid(player.pid, reason2);
+            main_app.get_tinyrcon_dict()["{REASON}"] = reason2;
+            string command2{ main_app.get_user_defined_kick_message() };
+            build_tiny_rcon_message(command2);
+            kick_player(player.pid, command2);
+            warned_players.erase(player.pid);
+          }
+        }
+      }
+    } else {
+      const string re_msg2{ format("^3Invalid command syntax for user command: ^2{}\n", user_cmd[0]) };
+      print_colored_text(app_handles.hwnd_re_messages_data, re_msg2.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      if (user_commands_help.contains(user_cmd[0])) {
+        print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(user_cmd[0]).c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        print_colored_text(app_handles.hwnd_re_messages_data, "\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::no);
+      }
+    }
+  });
+
+  main_app.add_command_handler({ "!k", "!kick" }, [](const std::vector<std::string> &user_cmd) {
+    if (!main_app.get_is_connection_settings_valid()) {
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3You need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      return;
+    }
+    if (user_cmd.size() > 1 && !user_cmd[1].empty()) {
+
+
+      if (check_if_user_provided_argument_is_valid_for_specified_command(
+            user_cmd[0].c_str(), user_cmd[1])) {
+        const int pid{ stoi(user_cmd[1]) };
+        main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
+        main_app.get_tinyrcon_dict()["{PLAYERNAME}"] = get_player_name_for_pid(pid);
+        string reason{ user_cmd.size() > 2 ? str_join(cbegin(user_cmd) + 2, cend(user_cmd), " ") : "not specified" };
+        stl::helper::trim_in_place(reason);
+        specify_reason_for_player_pid(pid, reason);
+        main_app.get_tinyrcon_dict()["{REASON}"] = reason;
+        const string message{ format("^3You have successfully executed ^5clientkick ^3on player ({}^3)\n", get_player_information(pid)) };
+        print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        string command{ main_app.get_user_defined_kick_message() };
+        build_tiny_rcon_message(command);
+        kick_player(pid, command);
+
+      } else {
+        const string re_msg{ format("^2{} ^3is not a valid pid number for the ^2!k ^3(^2!kick^3) command!\n", user_cmd[1]) };
+        print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      }
+    } else {
+      const string re_msg{ format(
+        "^3Invalid command syntax for user command: ^2{}\n", user_cmd[0]) };
+      print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      if (user_commands_help.contains(user_cmd[0])) {
+        print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(user_cmd[0]).c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        print_colored_text(app_handles.hwnd_re_messages_data, "\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::no);
+      }
+    }
+  });
+
+  main_app.add_command_handler({ "!tb", "!tempban" }, [](const std::vector<std::string> &user_cmd) {
+    if (!main_app.get_is_connection_settings_valid()) {
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3You need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      return;
+    }
+    if (user_cmd.size() > 1 && !user_cmd[1].empty()) {
+      if (check_if_user_provided_argument_is_valid_for_specified_command(
+            user_cmd[0].c_str(), user_cmd[1])) {
+        const int pid{ stoi(user_cmd[1]) };
+        main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
+        main_app.get_tinyrcon_dict()["{PLAYERNAME}"] = get_player_name_for_pid(pid);
+        int number{};
+        size_t temp_ban_duration{ 24 };
+        string reason{
+          "not specified"
+        };
+        if (user_cmd.size() > 2) {
+          if (is_valid_decimal_whole_number(user_cmd[2], number)) {
+            temp_ban_duration = number > 0 && number <= 9999 ? number : 24;
+            if (user_cmd.size() > 3) {
+              reason = str_join(cbegin(user_cmd) + 3, cend(user_cmd), " ");
+              stl::helper::trim_in_place(reason);
+            }
+          } else {
+            reason = str_join(cbegin(user_cmd) + 2, cend(user_cmd), " ");
+            stl::helper::trim_in_place(reason);
+          }
+        }
+
+        main_app.get_tinyrcon_dict()["{REASON}"] = reason;
+        main_app.get_tinyrcon_dict()["{TEMPBAN_DURATION}"] = to_string(temp_ban_duration);
+        const string message{ format("^3You have successfully executed ^5!tempban ^3on player ({}^3)\n", get_player_information(pid)) };
+        print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        string command{ main_app.get_user_defined_tempban_message() };
+        build_tiny_rcon_message(command);
+        player_data &pd = get_player_data_for_pid(pid);
+        pd.ban_duration_in_hours = temp_ban_duration;
+        pd.reason = reason;
+        tempban_player(pd, command);
+        // is_display_temporarily_banned_players_data_event.store(true);
+      } else {
+        const string re_msg{ format("^2{} ^3is not a valid pid number for the ^2!tb ^3(^2!tempban^3) command!\n", user_cmd[1]) };
+        print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      }
+
+    } else {
+      const string re_msg{ format("^3Invalid command syntax for user command: ^2{}\n", user_cmd[0]) };
+      print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      if (user_commands_help.contains(user_cmd[0])) {
+        print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(user_cmd[0]).c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        print_colored_text(app_handles.hwnd_re_messages_data, "\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::no);
+      }
+    }
+  });
+
+  main_app.add_command_handler({ "!b", "!ban" }, [](const std::vector<std::string> &user_cmd) {
+    if (!main_app.get_is_connection_settings_valid()) {
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3You need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      return;
+    }
+    if (user_cmd.size() > 1 && !user_cmd[1].empty()) {
+      if (check_if_user_provided_argument_is_valid_for_specified_command(
+            user_cmd[0].c_str(), user_cmd[1])) {
+        const int pid{ stoi(user_cmd[1]) };
+        main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
+        main_app.get_tinyrcon_dict()["{PLAYERNAME}"] = get_player_name_for_pid(pid);
+        string reason{ user_cmd.size() > 2 ? str_join(cbegin(user_cmd) + 2, cend(user_cmd), " ") : "not specified" };
+        stl::helper::trim_in_place(reason);
+        specify_reason_for_player_pid(pid, reason);
+        main_app.get_tinyrcon_dict()["{REASON}"] = reason;
+        const string message{ format("^3You have successfully executed ^5banclient ^3on player ({}^3)\n", get_player_information(pid)) };
+        print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        string command{ main_app.get_user_defined_ban_message() };
+        build_tiny_rcon_message(command);
+        ban_player(pid, command);
+
+      } else {
+        const string re_msg{ format("^2{} ^3is not a valid pid number for the ^2!b ^3(^2!ban^3) command!\n", user_cmd[1]) };
+        print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      }
+    } else {
+      const string re_msg{ format("^3Invalid command syntax for user command: ^2{}\n", user_cmd[0]) };
+      print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      if (user_commands_help.contains(user_cmd[0])) {
+        print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(user_cmd[0]).c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        print_colored_text(app_handles.hwnd_re_messages_data, "\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::no);
+      }
+    }
+  });
+
+  main_app.add_command_handler({ "!gb", "!globalban", "!banip", "!addip" }, [](const vector<string> &user_cmd) {
+    if (!main_app.get_is_connection_settings_valid()) {
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3You need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      return;
+    }
+    if (user_cmd.size() > 1 && !user_cmd[1].empty()) {
+      if (check_if_user_provided_argument_is_valid_for_specified_command(
+            "!gb", user_cmd[1])) {
+        const auto &banned_ip_addresses =
+          main_app.get_game_server().get_set_of_banned_ip_addresses();
+        if (int pid{ -1 }; is_valid_decimal_whole_number(user_cmd[1], pid)) {
+          auto &player = main_app.get_game_server().get_player_data(pid);
+          if (pid == player.pid) {
+            unsigned long ip_key{};
+            if (check_ip_address_validity(player.ip_address, ip_key) && banned_ip_addresses.find(player.ip_address) == cend(banned_ip_addresses)) {
+              main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
+              main_app.get_tinyrcon_dict()["{PLAYERNAME}"] = get_player_name_for_pid(player.pid);
+              string reason{ user_cmd.size() > 2 ? str_join(cbegin(user_cmd) + 2, cend(user_cmd), " ") : "not specified" };
+              stl::helper::trim_in_place(reason);
+              specify_reason_for_player_pid(player.pid, reason);
+              global_ban_player_ip_address(player);
+              const string re_msg{ format("^2You have successfully banned IP address: ^1{}\n", player.ip_address) };
+              print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+              main_app.get_tinyrcon_dict()["{REASON}"] = reason;
+              const string message{ format("^3You have successfully executed ^5{} ^3on player ({}^3)\n", user_cmd[0], get_player_information(pid)) };
+              print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+              string command{ main_app.get_user_defined_ipban_message() };
+              build_tiny_rcon_message(command);
+              kick_player(player.pid, command);
+            }
+          }
+        } else {
+          const auto &ip_address = user_cmd[1];
+          if (banned_ip_addresses.find(ip_address) == cend(banned_ip_addresses)) {
+            bool is_ip_address_already_banned{};
+            auto &players_data = main_app.get_game_server().get_players_data();
+            for (size_t i{}; i < main_app.get_game_server().get_number_of_players(); ++i) {
+              auto &player = players_data[i];
+              if (player.ip_address == ip_address) {
+                main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
+                main_app.get_tinyrcon_dict()["{PLAYERNAME}"] = get_player_name_for_pid(player.pid);
+                string reason{ user_cmd.size() > 2 ? str_join(cbegin(user_cmd) + 2, cend(user_cmd), " ") : "not specified" };
+                stl::helper::trim_in_place(reason);
+                specify_reason_for_player_pid(player.pid, reason);
+                global_ban_player_ip_address(player);
+                const string re_msg{ format("^2You have successfully banned IP address: ^1{}\n", user_cmd[1]) };
+                print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+                main_app.get_tinyrcon_dict()["{REASON}"] = reason;
+                const string message{ format("^3You have successfully executed ^5{} ^3on player ({}^3)\n", user_cmd[0], get_player_information(player.pid)) };
+                print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+                string command{ main_app.get_user_defined_ipban_message() };
+                build_tiny_rcon_message(command);
+                kick_player(player.pid, command);
+                is_ip_address_already_banned = true;
+              }
+            }
+
+            if (!is_ip_address_already_banned) {
+              player_data player_offline{};
+              player_offline.pid = -1;
+              strcpy_s(player_offline.player_name, std::size(player_offline.player_name), "John Doe");
+              strcpy_s(player_offline.ip_address, std::size(player_offline.ip_address), ip_address.c_str());
+              main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
+              main_app.get_tinyrcon_dict()["{PLAYERNAME}"] = player_offline.player_name;
+              string reason{ user_cmd.size() > 2 ? str_join(cbegin(user_cmd) + 2, cend(user_cmd), " ") : "not specified" };
+              player_offline.reason = std::move(reason);
+              global_ban_player_ip_address(player_offline);
+              main_app.get_tinyrcon_dict()["{REASON}"] = player_offline.reason;
+              string command{ main_app.get_user_defined_ipban_message() };
+              build_tiny_rcon_message(command);
+              rcon_say(command);
+              const string re_msg{ format("^2You have successfully banned IP address: ^1{}\n", ip_address) };
+              print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+              const string message{ format(
+                "^2You have successfully executed ^5{} ^2on player ({}^2)\n", user_cmd[0], get_player_information_for_player(player_offline)) };
+              print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+            }
+          }
+        }
+      }
+      // is_display_permanently_banned_players_data_event.store(true);
+    }
+  });
+
+
+  // ***
+  main_app.add_command_handler({ "!egb" }, [](const vector<string> &user_cmd) {
+    if (!main_app.get_is_connection_settings_valid()) {
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3You need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      return;
+    }
+    if (!main_app.get_is_automatic_city_kick_enabled()) {
+      main_app.set_is_automatic_city_kick_enabled(true);
+      write_tiny_rcon_json_settings_to_file("config\\tinyrcon.json");
+      const string message{ format("^2You have successfully executed ^5{}\n", user_cmd[0]) };
+      print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
+      string rcon_message{ main_app.get_user_defined_enable_city_ban_feature_msg() };
+      build_tiny_rcon_message(rcon_message);
+      rcon_say(rcon_message, true);
+    }
+  });
+
+  main_app.add_command_handler({ "!dgb" }, [](const vector<string> &user_cmd) {
+    if (!main_app.get_is_connection_settings_valid()) {
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3You need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      return;
+    }
+    if (main_app.get_is_automatic_city_kick_enabled()) {
+      main_app.set_is_automatic_city_kick_enabled(false);
+      write_tiny_rcon_json_settings_to_file("config\\tinyrcon.json");
+      const string message{ format("^2You have successfully executed ^5{}\n", user_cmd[0]) };
+      print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
+      string rcon_message{ main_app.get_user_defined_disable_city_ban_feature_msg() };
+      build_tiny_rcon_message(rcon_message);
+      rcon_say(rcon_message, true);
+    }
+  });
+
+  main_app.add_command_handler({ "!bancity" }, [](const vector<string> &user_cmd) {
+    if (!main_app.get_is_connection_settings_valid()) {
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3You need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      return;
+    }
+    if (user_cmd.size() > 1 && !user_cmd[1].empty()) {
+      const string banned_city{ trim(str_join(user_cmd.cbegin() + 1, user_cmd.cend(), " ")) };
+      main_app.get_list_of_cities_for_automatic_kick().insert(banned_city);
+      save_banned_entries_to_file(banned_cities_list_file_path, main_app.get_list_of_cities_for_automatic_kick());
+      const string message{ format("^2You have successfully executed ^5{} ^2on city: ^1{}\n", user_cmd[0], banned_city) };
+      print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
+      main_app.get_tinyrcon_dict()["{CITY_NAME}"] = banned_city;
+      string rcon_message{ main_app.get_user_defined_city_ban_msg() };
+      build_tiny_rcon_message(rcon_message);
+      rcon_say(rcon_message, true);
+    }
+  });
+  main_app.add_command_handler({ "!unbancity" }, [](const vector<string> &user_cmd) {
+    if (!main_app.get_is_connection_settings_valid()) {
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3You need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      return;
+    }
+    if (user_cmd.size() > 1 && !user_cmd[1].empty()) {
+      const string banned_city_to_unban{ trim(str_join(user_cmd.cbegin() + 1, user_cmd.cend(), " ")) };
+      if (main_app.get_list_of_cities_for_automatic_kick().contains(banned_city_to_unban)) {
+        main_app.get_list_of_cities_for_automatic_kick().erase(banned_city_to_unban);
+        save_banned_entries_to_file(banned_cities_list_file_path, main_app.get_list_of_cities_for_automatic_kick());
+        const string message{ format("^2You have successfully executed ^5{} ^2on city: ^1\n", user_cmd[0], banned_city_to_unban) };
+        print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
+        main_app.get_tinyrcon_dict()["{CITY_NAME}"] = banned_city_to_unban;
+        string rcon_message{ main_app.get_user_defined_city_unban_msg() };
+        build_tiny_rcon_message(rcon_message);
+        rcon_say(rcon_message, true);
+      }
+    }
+  });
+
+  main_app.add_command_handler({ "!ecb" }, [](const vector<string> &user_cmd) {
+    if (!main_app.get_is_connection_settings_valid()) {
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3You need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      return;
+    }
+    if (!main_app.get_is_automatic_country_kick_enabled()) {
+      main_app.set_is_automatic_country_kick_enabled(true);
+      write_tiny_rcon_json_settings_to_file("config\\tinyrcon.json");
+      const string message{ format("^2You have successfully executed ^5{}\n", user_cmd[0]) };
+      print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
+      string rcon_message{ main_app.get_user_defined_enable_country_ban_feature_msg() };
+      build_tiny_rcon_message(rcon_message);
+      rcon_say(rcon_message, true);
+    }
+  });
+
+  main_app.add_command_handler({ "!dcb" }, [](const vector<string> &user_cmd) {
+    if (!main_app.get_is_connection_settings_valid()) {
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3You need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      return;
+    }
+    if (main_app.get_is_automatic_country_kick_enabled()) {
+      main_app.set_is_automatic_country_kick_enabled(false);
+      write_tiny_rcon_json_settings_to_file("config\\tinyrcon.json");
+      const string message{ format("^2You have successfully executed ^5{}\n", user_cmd[0]) };
+      print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
+      string rcon_message{ main_app.get_user_defined_disable_country_ban_feature_msg() };
+      build_tiny_rcon_message(rcon_message);
+      rcon_say(rcon_message, true);
+    }
+  });
+
+  main_app.add_command_handler({ "!bancountry" }, [](const vector<string> &user_cmd) {
+    if (!main_app.get_is_connection_settings_valid()) {
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3You need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      return;
+    }
+    if (user_cmd.size() > 1 && !user_cmd[1].empty()) {
+      const string banned_country{ trim(str_join(user_cmd.cbegin() + 1, user_cmd.cend(), " ")) };
+      main_app.get_list_of_countries_for_automatic_kick().insert(banned_country);
+      save_banned_entries_to_file(banned_countries_list_file_path, main_app.get_list_of_countries_for_automatic_kick());
+      const string message{ format(
+        "^2You have successfully executed ^5{} ^2on country: ^1{}\n", user_cmd[0], banned_country) };
+      print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
+      main_app.get_tinyrcon_dict()["{COUNTRY_NAME}"] = banned_country;
+      string rcon_message{ main_app.get_user_defined_country_ban_msg() };
+      build_tiny_rcon_message(rcon_message);
+      rcon_say(rcon_message, true);
+    }
+  });
+
+  main_app.add_command_handler({ "!unbancountry" }, [](const vector<string> &user_cmd) {
+    if (!main_app.get_is_connection_settings_valid()) {
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3You need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      return;
+    }
+    if (user_cmd.size() > 1 && !user_cmd[1].empty()) {
+      const string banned_country_to_unban{ trim(str_join(user_cmd.cbegin() + 1, user_cmd.cend(), " ")) };
+      if (main_app.get_list_of_countries_for_automatic_kick().contains(banned_country_to_unban)) {
+        main_app.get_list_of_countries_for_automatic_kick().erase(banned_country_to_unban);
+        save_banned_entries_to_file(banned_countries_list_file_path, main_app.get_list_of_countries_for_automatic_kick());
+        const string message{ format(
+          "^2You have successfully executed ^5{} ^2on country: ^1{}\n", user_cmd[0], banned_country_to_unban) };
+        print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
+        main_app.get_tinyrcon_dict()["{COUNTRY_NAME}"] = banned_country_to_unban;
+        string rcon_message{ main_app.get_user_defined_country_unban_msg() };
+        build_tiny_rcon_message(rcon_message);
+        rcon_say(rcon_message, true);
+      }
+    }
+  });
+
+  main_app.add_command_handler({ "s", "!s", "status", "!status" }, [](const vector<string> &) {
+    initiate_sending_rcon_status_command_now();
+  });
+
+  main_app.add_command_handler({ "gs", "!gs", "getstatus", "!getstatus" }, [](const vector<string> &) {
+    main_app.add_command_to_queue({ "getstatus" }, command_type::rcon, true);
+  });
+
+  main_app.add_command_handler({ "!t", "!time" }, [](const vector<string> &)
+
+    {
+      const string time_str{ format("^2Current time: ^1{}\n", get_date_and_time_for_time_t("{MMM}. {D}, {Y} {hh}:{mm}")) };
+      print_colored_text(app_handles.hwnd_re_messages_data, time_str.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+    });
+
+  main_app.add_command_handler({ "sort", "!sort" }, [](const vector<string> &user_cmd) {
+    if (user_cmd.size() == 3) {
+      sort_type new_sort_type{ sort_type::pid_asc };
+      if (user_cmd[1] == "pid" && user_cmd[2] == "asc")
+        new_sort_type = sort_type::pid_asc;
+      else if (user_cmd[1] == "pid" && user_cmd[2] == "desc")
+        new_sort_type = sort_type::pid_desc;
+      else if (user_cmd[1] == "score" && user_cmd[2] == "asc")
+        new_sort_type = sort_type::score_asc;
+      else if (user_cmd[1] == "score" && user_cmd[2] == "desc")
+        new_sort_type = sort_type::score_desc;
+      else if (user_cmd[1] == "ping" && user_cmd[2] == "asc")
+        new_sort_type = sort_type::ping_asc;
+      else if (user_cmd[1] == "ping" && user_cmd[2] == "desc")
+        new_sort_type = sort_type::ping_desc;
+      else if (user_cmd[1] == "ip" && user_cmd[2] == "asc")
+        new_sort_type = sort_type::ip_asc;
+      else if (user_cmd[1] == "ip" && user_cmd[2] == "desc")
+        new_sort_type = sort_type::ip_desc;
+      else if (user_cmd[1] == "name" && user_cmd[2] == "asc")
+        new_sort_type = sort_type::name_asc;
+      else if (user_cmd[1] == "name" && user_cmd[2] == "desc")
+        new_sort_type = sort_type::name_desc;
+      else if (user_cmd[1] == "geo" && user_cmd[2] == "asc")
+        new_sort_type = sort_type::geo_asc;
+      else if (user_cmd[1] == "geo" && user_cmd[2] == "desc")
+        new_sort_type = sort_type::geo_desc;
+      else {
+        const string re_msg{ format("^3Invalid command syntax for user command: ^1{}\n", user_cmd[0]) };
+        print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        if (user_commands_help.contains(user_cmd[0])) {
+          print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(user_cmd[0]).c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+          print_colored_text(app_handles.hwnd_re_messages_data, "\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::no);
+        }
+      }
+
+      is_process_combobox_item_selection_event = false;
+      process_sort_type_change_request(new_sort_type);
+
+    } else {
+      const string re_msg{ format("^3Invalid command syntax for user command: ^1{}\n", user_cmd[0]) };
+      print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      if (user_commands_help.contains(user_cmd[0])) {
+        print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(user_cmd[0]).c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        print_colored_text(app_handles.hwnd_re_messages_data, "\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::no);
+      }
+    }
+  });
+  main_app.add_command_handler({ "bans", "!bans" }, [](const vector<string> &user_cmd) {
+    if (!main_app.get_is_connection_settings_valid()) {
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3You need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      return;
+    }
+    if (user_cmd.size() == 3U && user_cmd[1] == "clear" && user_cmd[2] == "all") {
+      for (const auto &ip : main_app.get_game_server().get_set_of_banned_ip_addresses()) {
+        string message;
+        remove_permanently_banned_ip_address(ip, message);
+      }
+    }
+    is_display_permanently_banned_players_data_event.store(true);
+  });
+
+  main_app.add_command_handler({ "tempbans", "!tempbans" }, [](const vector<string> &user_cmd) {
+    if (!main_app.get_is_connection_settings_valid()) {
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3You need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      return;
+    }
+    if (user_cmd.size() == 3U && user_cmd[1] == "clear" && user_cmd[2] == "all") {
+      for (const auto &ip : main_app.get_game_server().get_set_of_temp_banned_ip_addresses()) {
+        string message;
+        remove_temp_banned_ip_address(ip, message, false);
+      }
+    }
+
+    is_display_temporarily_banned_players_data_event.store(true);
+  });
+
+  main_app.add_command_handler({ "!bannedcities" }, [](const vector<string> &) {
+    if (!main_app.get_is_connection_settings_valid()) {
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3You need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      return;
+    }
+    is_display_banned_cities_data_event.store(true);
+  });
+
+  main_app.add_command_handler({ "!bannedcountries" }, [](const vector<string> &) {
+    if (!main_app.get_is_connection_settings_valid()) {
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3You need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      return;
+    }
+    is_display_banned_countries_data_event.store(true);
+  });
+
+  main_app.add_command_handler({ "!banned" }, [](const vector<string> &user_cmd) {
+    if (!main_app.get_is_connection_settings_valid()) {
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3You need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      return;
+    }
+    if (user_cmd.size() == 2) {
+      if (user_cmd[1] == "cities")
+        is_display_banned_cities_data_event.store(true);
+      else if (user_cmd[1] == "countries")
+        is_display_banned_countries_data_event.store(true);
+    }
+  });
+
+  main_app.add_command_handler({ "!ub", "!unban" }, [](const vector<string> &user_cmd) {
+    if (!main_app.get_is_connection_settings_valid()) {
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3You need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      return;
+    }
+    if (user_cmd.size() >= 2 && !user_cmd[1].empty()) {
+      unsigned long ip_key{};
+      if (!check_ip_address_validity(user_cmd[1], ip_key)) {
+        const string re_msg{ format("^3Provided IP address (^1{}^3) is not a valid IP address!\n", user_cmd[1]) };
+        print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      } else {
+        string message;
+        if (remove_temp_banned_ip_address(user_cmd[1], message, false)) {
+          const string re_msg{ format("^2You have successfully removed previously temporarily banned IP address: ^1{}\n", user_cmd[1]) };
+          print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        } else {
+          const string re_msg{ format("^3Provided IP address (^1{}^3) hasn't been temporarily banned yet!\n", user_cmd[1]) };
+          print_colored_text(app_handles.hwnd_re_messages_data,
+            re_msg.c_str(),
+            is_append_message_to_richedit_control::yes,
+            is_log_message::yes,
+            is_log_datetime::yes);
+        }
+
+        if (remove_permanently_banned_ip_address(user_cmd[1], message)) {
+          const string re_msg{ format(
+            "^2You have successfully removed previously permanently banned IP address: ^1{}\n", user_cmd[1]) };
+          print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        } else {
+          const string re_msg{ format("^3Provided IP address (^1{}^3) hasn't been permanently banned yet!\n", user_cmd[1]) };
+          print_colored_text(app_handles.hwnd_re_messages_data,
+            re_msg.c_str(),
+            is_append_message_to_richedit_control::yes,
+            is_log_message::yes,
+            is_log_datetime::yes);
+        }
+      }
+    } else {
+      const string re_msg{ format("^3Invalid command syntax for user command: ^1{}\n", user_cmd[0]) };
+      print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      if (user_commands_help.contains(user_cmd[0])) {
+        print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(user_cmd[0]).c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        print_colored_text(app_handles.hwnd_re_messages_data, "\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::no);
+      }
+    }
+  });
+
+  main_app.add_command_handler({ "!c", "!cp" }, [](const vector<string> &user_cmd) {
+    const bool use_private_slot{ user_cmd[0] == "!cp" && !main_app.get_game_server().get_private_slot_password().empty() };
+    const string user_input{ user_cmd[1] };
+    smatch ip_port_match{};
+    const string ip_port_server_address{
+      (user_cmd.size() > 1 && regex_search(user_input, ip_port_match, ip_address_and_port_regex)) ? (ip_port_match[1].str() + ":"s + ip_port_match[2].str()) : (main_app.get_game_server().get_server_ip_address() + ":"s + to_string(main_app.get_game_server().get_server_port()))
+    };
+    const size_t sep_pos{ ip_port_server_address.find(':') };
+    const string ip_address{ ip_port_server_address.substr(0, sep_pos) };
+    const uint16_t port_number{ static_cast<uint16_t>(stoul(ip_port_server_address.substr(sep_pos + 1))) };
+    const auto result = check_if_specified_server_ip_port_and_rcon_password_are_valid(ip_address.c_str(), port_number, main_app.get_game_server().get_rcon_password().c_str());
+
+    const game_name_t game_name{ result.second != game_name_t::unknown ? result.second : main_app.get_game_name() };
+
+    connect_to_the_game_server(ip_port_server_address, game_name, use_private_slot, true);
+  });
+
+  main_app.add_command_handler({ "!m", "!map" }, [](const vector<string> &user_cmd) {
+    if (user_cmd.size() >= 2 && !user_cmd[1].empty()) {
+      if (!main_app.get_is_connection_settings_valid()) {
+        print_colored_text(app_handles.hwnd_re_messages_data, "^3You need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        return;
+      }
+      const string map_name{ stl::helper::trim(user_cmd[1], " \t\n") };
+      const string game_type{ user_cmd.size() >= 3 ? stl::helper::trim(user_cmd[2], " \t\n") : "ctf" };
+      load_map(map_name, game_type, true);
+    }
+  });
+
+  main_app.add_command_handler({ "maps", "!maps" }, [](const vector<string> &) {
+    display_all_available_maps();
+  });
+  main_app.add_command_handler({ "colors", "!colors" }, [](const vector<string> &) {
+    change_colors();
+  });
+
+  main_app.add_command_handler({ "config", "!config" }, [](const vector<string> &user_cmd) {
+    change_server_setting(user_cmd);
+  });
+
+  main_app.add_command_handler({ "!rt", "!refreshtime" }, [](const vector<string> &user_cmd) {
+    if (int number{}; (user_cmd.size() == 2) && is_valid_decimal_whole_number(user_cmd[1], number)) {
+      main_app.get_game_server().set_check_for_banned_players_time_period(number);
+      KillTimer(app_handles.hwnd_main_window, ID_TIMER);
+      SendMessage(app_handles.hwnd_progress_bar, PBM_SETRANGE, 0, MAKELPARAM(0, main_app.get_game_server().get_check_for_banned_players_time_period()));
+      SendMessage(app_handles.hwnd_progress_bar, PBM_SETPOS, 0, 0);
+      SendMessage(app_handles.hwnd_progress_bar, PBM_SETSTEP, 1, 0);
+      SetTimer(app_handles.hwnd_main_window, ID_TIMER, 1000, nullptr);
+
+      const string re_msg{ format("^2You have successfully changed the ^1time period\n for automatic checking for banned IP addresses ^2to ^5{}\n", user_cmd[1]) };
+      print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      write_tiny_rcon_json_settings_to_file("config\\tinyrcon.json");
+    }
+  });
+
+  main_app.add_command_handler({ "border", "!border" }, [](const vector<string> &user_cmd) {
+    if ((user_cmd.size() == 2) && (user_cmd[1] == "on" || user_cmd[1] == "off")) {
+      const bool new_setting{ user_cmd[1] == "on" ? true : false };
+      const string re_msg{ format("^2You have successfully executed command: ^1{} {}\n", user_cmd[0], user_cmd[1]) };
+      print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      if (main_app.get_is_draw_border_lines() != new_setting) {
+        main_app.set_is_draw_border_lines(new_setting);
+
+        if (new_setting) {
+          print_colored_text(app_handles.hwnd_re_messages_data, "^2You have successfully turned on the border lines\n around displayed ^3GUI controls^2.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        } else {
+          print_colored_text(app_handles.hwnd_re_messages_data, "^2You have successfully turned off the border lines\n around displayed ^3GUI controls^2.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        }
+
+        construct_tinyrcon_gui(app_handles.hwnd_main_window);
+
+        write_tiny_rcon_json_settings_to_file("config\\tinyrcon.json");
+      }
+    }
+  });
+
+  main_app.add_command_handler({ "messages", "!messages" }, [](const vector<string> &user_cmd) {
+    if ((user_cmd.size() == 2) && (user_cmd[1] == "on" || user_cmd[1] == "off")) {
+      const bool new_setting{ user_cmd[1] == "on" ? false : true };
+      const string re_msg{ format("^2You have successfully executed command: ^1{} {}\n", user_cmd[0], user_cmd[1]) };
+      print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      if (main_app.get_is_disable_automatic_kick_messages() != new_setting) {
+        main_app.set_is_disable_automatic_kick_messages(new_setting);
+        if (!new_setting) {
+          print_colored_text(app_handles.hwnd_re_messages_data, "^2You have successfully turned on ^1automatic kick messages\n ^2for ^1temporarily ^2and ^1permanently banned players^2.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        } else {
+          print_colored_text(app_handles.hwnd_re_messages_data, "^2You have successfully turned off ^1automatic kick messages\n ^2for ^1temporarily ^2and ^1permanently banned players^2.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        }
+        write_tiny_rcon_json_settings_to_file("config\\tinyrcon.json");
+      }
+    }
+  });
+
+  main_app.add_command_handler({ "say", "!say" }, [](const vector<string> &rcon_cmd) {
+    if (!main_app.get_is_connection_settings_valid()) {
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3You need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      return;
+    }
+    if (rcon_cmd.size() >= 2) {
+      string command{ stl::helper::str_join(rcon_cmd, " ") };
+      if (!command.empty() && '!' == command[0])
+        command.erase(0, 1);
+      string reply;
+      main_app.get_connection_manager().send_and_receive_rcon_data(command.c_str(), reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str(), false);
+    }
+  });
+
+  main_app.add_command_handler({ "tell", "!tell" }, [](const vector<string> &rcon_cmd) {
+    if (!main_app.get_is_connection_settings_valid()) {
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3You need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      return;
+    }
+
+    if (rcon_cmd.size() >= 3 && check_if_user_provided_pid_is_valid(trim(rcon_cmd[1]))) {
+      const string player_pid{
+        trim(rcon_cmd[1])
+      };
+      string command{ "tell "s + player_pid };
+      for (size_t j{ 2 }; j < rcon_cmd.size(); ++j) {
+        command.append(" ").append(rcon_cmd[j]);
+      }
+
+      string reply;
+      main_app.get_connection_manager().send_and_receive_rcon_data(command.c_str(), reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str(), false);
+    }
+  });
+
+
+  main_app.add_command_handler({ "clientkick" }, [](const vector<string> &rcon_cmd) {
+    if (!main_app.get_is_connection_settings_valid()) {
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3You need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      return;
+    }
+    if (rcon_cmd.size() > 1 && !rcon_cmd[1].empty()) {
+
+      if (check_if_user_provided_argument_is_valid_for_specified_command(
+            rcon_cmd[0].c_str(), rcon_cmd[1])) {
+        const int pid{ stoi(rcon_cmd[1]) };
+        main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
+        main_app.get_tinyrcon_dict()["{PLAYERNAME}"] = get_player_name_for_pid(pid);
+        string reason{ rcon_cmd.size() > 2 ? str_join(cbegin(rcon_cmd) + 2, cend(rcon_cmd), " ") : "not specified" };
+        stl::helper::trim_in_place(reason);
+        specify_reason_for_player_pid(pid, reason);
+        main_app.get_tinyrcon_dict()["{REASON}"] = std::move(reason);
+        const string message{ format("^3You have successfully executed ^5clientkick ^3on player ({}^3)\n", get_player_information(pid)) };
+        print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        string command{ main_app.get_user_defined_kick_message() };
+        build_tiny_rcon_message(command);
+        kick_player(pid, command);
+
+      } else {
+        const string re_msg2{ format("^2{} ^3is not a valid pid number for the ^2!k ^3(^2!kick^3) command!\n", rcon_cmd[1]) };
+        print_colored_text(app_handles.hwnd_re_messages_data, re_msg2.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      }
+    } else {
+      const string re_msg{ format("^3Invalid command syntax for user command: ^2{}\n", rcon_cmd[0]) };
+      print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      if (user_commands_help.contains(rcon_cmd[0])) {
+        print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(rcon_cmd[0]).c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        print_colored_text(app_handles.hwnd_re_messages_data, "\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::no);
+      }
+    }
+  });
+
+  main_app.add_command_handler({ "tempbanclient" }, [](const vector<string> &rcon_cmd) {
+    if (!main_app.get_is_connection_settings_valid()) {
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3You need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      return;
+    }
+    if (rcon_cmd.size() > 1 && !rcon_cmd[1].empty()) {
+      if (check_if_user_provided_argument_is_valid_for_specified_command(
+            rcon_cmd[0].c_str(), rcon_cmd[1])) {
+        const int pid{ stoi(rcon_cmd[1]) };
+        main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
+        main_app.get_tinyrcon_dict()["{PLAYERNAME}"] = get_player_name_for_pid(pid);
+        int number{};
+        size_t temp_ban_duration{ 24 };
+        string reason{
+          "not specified"
+        };
+        if (rcon_cmd.size() > 2) {
+          if (is_valid_decimal_whole_number(rcon_cmd[2], number)) {
+            temp_ban_duration = number > 0 && number <= 9999 ? number : 24;
+            if (rcon_cmd.size() > 3) {
+              reason = str_join(cbegin(rcon_cmd) + 3, cend(rcon_cmd), " ");
+              stl::helper::trim_in_place(reason);
+            }
+          } else {
+            reason = str_join(cbegin(rcon_cmd) + 2, cend(rcon_cmd), " ");
+            stl::helper::trim_in_place(reason);
+          }
+        }
+        main_app.get_tinyrcon_dict()["{REASON}"] = std::move(reason);
+        main_app.get_tinyrcon_dict()["{TEMPBAN_DURATION}"] = to_string(temp_ban_duration);
+        const string message{ "^3You have successfully executed ^5!tempban ^3on player ("s + get_player_information(pid) + "^3)\n"s };
+        print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        string command{ main_app.get_user_defined_tempban_message() };
+        build_tiny_rcon_message(command);
+        player_data &pd = get_player_data_for_pid(pid);
+        pd.ban_duration_in_hours = temp_ban_duration;
+        pd.reason = std::move(reason);
+        tempban_player(pd, command);
+        // is_display_temporarily_banned_players_data_event.store(true);
+      } else {
+        const string re_msg{ format("^2{} ^3is not a valid pid number for the ^2!tb ^3(^2!tempban^3) command!\n", rcon_cmd[1]) };
+        print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      }
+    } else {
+      const string re_msg{ format("^3Invalid command syntax for user command: ^2{}\n", rcon_cmd[0]) };
+      print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      if (user_commands_help.contains(rcon_cmd[0])) {
+        print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(rcon_cmd[0]).c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        print_colored_text(app_handles.hwnd_re_messages_data, "\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::no);
+      }
+    }
+  });
+
+  main_app.add_command_handler({ "banclient" }, [](const vector<string> &rcon_cmd) {
+    if (!main_app.get_is_connection_settings_valid()) {
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3You need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      return;
+    }
+    if (rcon_cmd.size() > 1 && !rcon_cmd[1].empty()) {
+      if (check_if_user_provided_argument_is_valid_for_specified_command(
+            rcon_cmd[0].c_str(), rcon_cmd[1])) {
+        const int pid{ stoi(rcon_cmd[1]) };
+        main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
+        main_app.get_tinyrcon_dict()["{PLAYERNAME}"] = get_player_name_for_pid(pid);
+        string reason{ rcon_cmd.size() > 2 ? str_join(cbegin(rcon_cmd) + 2, cend(rcon_cmd), " ") : "not specified" };
+        trim_in_place(reason);
+        specify_reason_for_player_pid(pid, reason);
+        main_app.get_tinyrcon_dict()["{REASON}"] = std::move(reason);
+        const string message{ format("^3You have successfully executed ^5banclient ^3on player ({}^3)\n", get_player_information(pid)) };
+        print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        string command{ main_app.get_user_defined_ban_message() };
+        build_tiny_rcon_message(command);
+        ban_player(pid, command);
+      } else {
+        const string re_msg{ format("^2{} ^3is not a valid pid number for the ^2!b ^3(^2!ban^3) command!\n", rcon_cmd[1]) };
+        print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      }
+    } else {
+      const string re_msg{ format("^3Invalid command syntax for user command: ^2{}\n", rcon_cmd[0]) };
+      print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      if (user_commands_help.contains(rcon_cmd[0])) {
+        print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(rcon_cmd[0]).c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        print_colored_text(app_handles.hwnd_re_messages_data, "\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::no);
+      }
+    }
+  });
+
+  main_app.add_command_handler({ "kick", "onlykick", "tempbanuser", "banuser" }, [](const vector<string> &rcon_cmd) {
+    if (!main_app.get_is_connection_settings_valid()) {
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3You need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      return;
+    }
+    if (rcon_cmd.size() > 1 && !rcon_cmd[1].empty()) {
+      bool is_player_found{};
+      const bool remove_player_color_codes{ rcon_cmd[0] == "onlykick" };
+      const auto &players_data = main_app.get_game_server().get_players_data();
+      for (size_t i{}; i < main_app.get_game_server().get_number_of_players(); ++i) {
+        const player_data &player{ players_data[i] };
+        string player_name{ player.player_name };
+        if (remove_player_color_codes)
+          remove_all_color_codes(player_name);
+        if (rcon_cmd[1] == player_name) {
+          is_player_found = true;
+          main_app.get_tinyrcon_dict()["{PLAYERNAME}"] = get_player_name_for_pid(player.pid);
+          string reason{ rcon_cmd.size() > 2 ? str_join(cbegin(rcon_cmd) + 2, cend(rcon_cmd), " ") : "not specified" };
+          stl::helper::trim_in_place(reason);
+          specify_reason_for_player_pid(player.pid, reason);
+          main_app.get_tinyrcon_dict()["{REASON}"] = std::move(reason);
+          const string message{ format("^3You have successfully executed ^5{} ^3on player ({}^3)\n", rcon_cmd[0], get_player_information(player.pid)) };
+          print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+          string public_message{ (rcon_cmd[0] == "kick" || rcon_cmd[0] == "onlykick") ? main_app.get_user_defined_kick_message() : main_app.get_user_defined_tempban_message() };
+          build_tiny_rcon_message(public_message);
+          const string command{ rcon_cmd[0] + " "s + rcon_cmd[1] };
+          const string r_command{ command };
+          string reply;
+          main_app.get_connection_manager().send_and_receive_rcon_data(
+            r_command.c_str(), reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str(), false);
+          kick_player(player.pid, public_message);
+          break;
+        }
+      }
+
+      if (!is_player_found) {
+        if (string player_name{ rcon_cmd[1] }; remove_player_color_codes) {
+          remove_all_color_codes(player_name);
+          ostringstream oss;
+          oss << "^3Could not find player with specified name (^5" << player_name << "^3) to use with the ^2" << rcon_cmd[0] << " ^3command!\n";
+          print_colored_text(app_handles.hwnd_re_messages_data, oss.str().c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        } else {
+          ostringstream oss;
+          oss << "^3Could not find player with specified name (^5" << rcon_cmd[1] << "^3) to use with the ^2" << rcon_cmd[0] << " ^3command!\n";
+          print_colored_text(app_handles.hwnd_re_messages_data, oss.str().c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        }
+      }
+    } else {
+      const string re_msg{ "^3Invalid command syntax for user command: ^2"s + rcon_cmd[0] + "\n"s };
+      print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      if (user_commands_help.contains(rcon_cmd[0])) {
+        print_colored_text(app_handles.hwnd_re_messages_data, user_commands_help.at(rcon_cmd[0]).c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        print_colored_text(app_handles.hwnd_re_messages_data, "\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::no);
+      }
+    }
+  });
+
+  main_app.add_command_handler({ "unknown-rcon" }, [](const vector<string> &rcon_cmd) {
+    string reply;
+    if (rcon_cmd.size() > 1) {
+      const string command{ str_join(rcon_cmd, " ") };
+      const string re_msg{ "^5Sending rcon command '"s + command + "' to the server.\n"s };
+      print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      const string r_command{ command };
+      main_app.get_connection_manager().send_and_receive_rcon_data(
+        r_command.c_str(), reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str(), true);
+    } else {
+      const string re_msg{ "^5Sending rcon command '"s + rcon_cmd[0] + "' to the server.\n"s };
+      print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      const string r_command{ rcon_cmd[0] };
+      main_app.get_connection_manager().send_and_receive_rcon_data(
+        r_command.c_str(), reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str(), true);
+    }
+    if (!reply.empty() && rcon_cmd[0] != "getstatus") {
+      while (true) {
+        const size_t pos =
+          stl::helper::str_index_of(reply, "\377\377\377\377print\n");
+        if (string::npos == pos)
+          break;
+        reply.erase(pos, 10);
+      }
+      print_colored_text(app_handles.hwnd_re_messages_data, "\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::no);
+      print_colored_text(app_handles.hwnd_re_messages_data, reply.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      print_colored_text(app_handles.hwnd_re_messages_data, "\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::no);
+    }
+  });
+  // ***
 
   main_app.set_command_line_info(user_help_message);
 
