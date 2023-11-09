@@ -35,7 +35,7 @@ size_t connection_manager_for_messages::process_and_send_message(const std::stri
   }
 
   const string sender{ remove_disallowed_character_in_string(main_app.get_username()) };
-  const string outgoing_data{ format("{}\\{}\\{}\\{}\\{}\\{}", command_name, sender, main_app.get_game_server().get_rcon_password(), t_c, is_show_in_messages ? "true" : "false", data) };
+  const string outgoing_data{ format(R"({}\{}\{}\{}\{}\{})", command_name, sender, main_app.get_game_server().get_rcon_password(), t_c, is_show_in_messages ? "true" : "false", data) };
 
   const ip::udp::endpoint dst{ ip::address::from_string(remote_ip), remote_port };
   const size_t sent_bytes = udp_socket_for_messages.send_to(buffer(outgoing_data.c_str(), outgoing_data.length()), dst);

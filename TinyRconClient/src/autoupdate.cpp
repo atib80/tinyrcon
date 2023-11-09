@@ -226,10 +226,9 @@ auto_update_manager::auto_update_manager()
                 DeleteFileA(old_geo_dat_file_path.c_str());
               }
 
-              const wstring file_path_to_geo_7z(new_geo_dat_7zip_file_path.cbegin(), new_geo_dat_7zip_file_path.cend());
-              wstring dir_path_to_geo_7z(self_current_working_directory.cbegin(), self_current_working_directory.cend());
-              dir_path_to_geo_7z += L"plugins\\geoIP\\";
-              const auto [status, message] = extract_7z_file_to_specified_path(file_path_to_geo_7z.c_str(), dir_path_to_geo_7z.c_str());
+              // const wstring file_path_to_geo_7z(new_geo_dat_7zip_file_path.cbegin(), new_geo_dat_7zip_file_path.cend());
+              string dir_path_to_geo_7z{ format("{}plugins\\geoIP\\", main_app.get_current_working_directory()) };
+              auto [status, message] = extract_7z_file_to_specified_path(new_geo_dat_7zip_file_path.c_str(), dir_path_to_geo_7z.c_str());
               if (status) {
                 DeleteFile(new_geo_dat_7zip_file_path.c_str());
                 snprintf(message_buffer, std::size(message_buffer), "^2Finished extracting downloaded ^5%s ^2geoIP database file\n to ^5plugins/geoIP/geo.dat\n", new_geo_dat_file_name.c_str());
@@ -447,7 +446,8 @@ DWORD WINAPI worker_function2(void *param)
     InternetSetOptionA(pThreadParm->internet_open_handle.get(), INTERNET_OPTION_CONNECT_TIMEOUT, &internet_option_connect_timeout, sizeof(internet_option_connect_timeout));
     /*pThreadParm->internet_connect_handle.set(InternetConnectA(pThreadParm->internet_open_handle.get(), main_app.get_ftp_download_site_ip_address().c_str(), INTERNET_DEFAULT_FTP_PORT, nullptr, nullptr, INTERNET_SERVICE_FTP, INTERNET_FLAG_PASSIVE, 0));*/
     pThreadParm->internet_connect_handle.set(InternetOpenUrl(pThreadParm->internet_open_handle.get(),
-      "http://myexternalip.com/raw",
+     /* "http://myexternalip.com/raw",*/
+      "http://icanhazip.com",
       NULL,
       0,
       INTERNET_FLAG_RELOAD,
@@ -472,7 +472,7 @@ DWORD WINAPI worker_function3(void *param)
 
     if (!pThreadParm->internet_connect_handle.get())
       return 1;
-    if (TRUE == FtpPutFileA(pThreadParm->internet_connect_handle.get(), pThreadParm->upload_file_path, pThreadParm->ftp_file_path, FTP_TRANSFER_TYPE_ASCII, 0))
+    if (TRUE == FtpPutFileA(pThreadParm->internet_connect_handle.get(), pThreadParm->upload_file_path, pThreadParm->ftp_file_path, FTP_TRANSFER_TYPE_BINARY, 0))
       return 0;
     return 1;
   }
@@ -490,7 +490,7 @@ DWORD WINAPI worker_function4(void *param)
 
     if (!pThreadParm->internet_connect_handle.get())
       return 1;
-    if (TRUE == FtpGetFileA(pThreadParm->internet_connect_handle.get(), pThreadParm->ftp_file_path, pThreadParm->download_file_path, FALSE, FILE_ATTRIBUTE_NORMAL, FTP_TRANSFER_TYPE_ASCII, 0)) {
+    if (TRUE == FtpGetFileA(pThreadParm->internet_connect_handle.get(), pThreadParm->ftp_file_path, pThreadParm->download_file_path, FALSE, FILE_ATTRIBUTE_NORMAL, FTP_TRANSFER_TYPE_BINARY, 0)) {
       Sleep(100);
       FtpDeleteFileA(pThreadParm->internet_connect_handle.get(), pThreadParm->ftp_file_path);
       return 0;

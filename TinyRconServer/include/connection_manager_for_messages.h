@@ -82,7 +82,6 @@ public:
 
   inline std::vector<geoip_data> &get_geoip_data() noexcept { return geoip_db; }
 
-
 private:
   inline static std::size_t number_of_sent_messages{};
   inline static std::size_t number_of_receive_messages{};

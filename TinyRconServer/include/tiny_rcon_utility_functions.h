@@ -7,9 +7,9 @@
 #include <Richedit.h>
 #include <regex>
 #include <set>
-// #include "stl_helper_functions.hpp"
 #include <connection_manager_for_messages.h>
-// #include "tiny_rcon_client_user.h"
+
+#undef max
 
 class tiny_rcon_server_application;
 
@@ -153,6 +153,26 @@ void convert_guid_key_to_country_name(const std::vector<geoip_data> &geo_data,
   std::string_view player_ip,
   player_data &player_data);
 
+size_t get_number_of_characters_without_color_codes(const char *) noexcept;
+
+template<typename Iter>
+size_t find_longest_entry_length(
+  Iter first,
+  Iter last,
+  const bool count_color_codes)
+{
+  if (first == last)
+    return 0;
+  size_t max_player_name_length{ 32 };
+  while (first != last) {
+    max_player_name_length =
+      std::max<size_t>(count_color_codes ? first->length() : get_number_of_characters_without_color_codes(first->c_str()), max_player_name_length);
+    ++first;
+  }
+
+  return max_player_name_length;
+}
+
 size_t find_longest_player_name_length(
   const std::vector<player_data> &,
   const bool,
@@ -164,15 +184,15 @@ size_t find_longest_player_country_city_info_length(
 void parse_tinyrcon_tool_config_file(const char *);
 void parse_tinyrcon_server_users_data(const char *);
 
-void parse_tempbans_data_file(const char *file_path, std::vector<player_data> &temp_banned_players, std::unordered_map<std::string, player_data> &ip_to_temp_banned_player);
+void parse_tempbans_data_file(const char *file_path, std::vector<player_data> &temp_banned_players, std::unordered_map<std::string, player_data> &ip_to_temp_banned_player, const bool is_skip_removed_check = false);
 
-void parse_banned_ip_addresses_file(const char *file_path, std::vector<player_data> &banned_players, std::unordered_map<std::string, player_data> &ip_to_banned_player);
+void parse_banned_ip_addresses_file(const char *file_path, std::vector<player_data> &banned_players, std::unordered_map<std::string, player_data> &ip_to_banned_player, const bool is_skip_removed_check = false);
 
-void parse_banned_ip_address_ranges_file(const char *file_path, std::vector<player_data> &banned_ip_address_ranges, std::unordered_map<std::string, player_data> &ip_address_range_to_banned_player);
+void parse_banned_ip_address_ranges_file(const char *file_path, std::vector<player_data> &banned_ip_address_ranges, std::unordered_map<std::string, player_data> &ip_address_range_to_banned_player, const bool is_skip_removed_check = false);
 
-void parse_banned_cities_file(const char *file_path, std::set<std::string> &banned_cities);
+void parse_banned_cities_file(const char *file_path, std::set<std::string> &banned_cities, const bool is_skip_removed_check = false);
 
-void parse_banned_countries_file(const char *file_path, std::set<std::string> &banned_countries);
+void parse_banned_countries_file(const char *file_path, std::set<std::string> &banned_countries, const bool is_skip_removed_check = false);
 
 void save_banned_ip_entries_to_file(const char *file_path, const std::vector<player_data> &banned_ip_entries);
 void save_banned_ip_address_range_entries_to_file(const char *file_path, const std::vector<player_data> &banned_ip_address_ranges);
@@ -188,14 +208,12 @@ bool add_permanently_banned_city(const std::string &city, std::set<std::string> 
 bool add_permanently_banned_country(const std::string &country, std::set<std::string> &banned_countries);
 bool remove_permanently_banned_city(const std::string &city, std::set<std::string> &banned_cities);
 bool remove_permanently_banned_country(const std::string &country, std::set<std::string> &banned_countries);
-std::pair<bool, std::string> remove_temp_banned_ip_address(const std::string &ip_address, std::string &message, const bool is_automatic_temp_ban_remove = true, const bool is_report_public_message = true);
-std::pair<bool, std::string> remove_permanently_banned_ip_address(std::string &ip_address, std::string &message, const bool is_report_public_message = true);
+std::pair<bool, std::string> remove_temp_banned_ip_address(const std::string &ip_address);
+std::pair<bool, std::string> remove_permanently_banned_ip_address(std::string &ip_address);
 
 size_t print_colored_text(HWND re_control, const char *text, const is_append_message_to_richedit_control = is_append_message_to_richedit_control::yes, const is_log_message = is_log_message::yes, const is_log_datetime = is_log_datetime::yes, const bool is_prevent_auto_vertical_scrolling = false);
 
 size_t print_colored_text_to_grid_cell(HDC hdc, RECT &rect, const char *text, DWORD formatting_style);
-
-size_t get_number_of_characters_without_color_codes(const char *);
 
 bool get_user_input();
 
@@ -236,12 +254,6 @@ void replace_all_escaped_new_lines_with_new_lines(std::string &);
 bool change_server_setting(const std::vector<std::string> &);
 
 void log_message(const std::string &, const is_log_datetime = is_log_datetime::yes);
-
-std::string get_player_name_for_pid(const int);
-
-player_data &get_player_data_for_pid(const int);
-
-std::string get_player_information(const int, const bool is_every_property_on_new_line = false);
 
 std::string get_player_information_for_player(player_data &);
 
@@ -334,11 +346,13 @@ size_t get_file_size_in_bytes(const char *);
 std::string get_date_and_time_for_time_t(const char *date_time_format_str, time_t t_c = 0);
 const char *get_current_short_month_name(const size_t index);
 
-std::pair<bool, std::string> extract_7z_file_to_specified_path(const wchar_t *compressed_7z_file_path, const wchar_t *destination_path);
+std::pair<bool, std::string> create_7z_file_file_at_specified_path(const std::vector<std::string> &files_to_add, const std::string &local_file_path);
+std::pair<bool, std::string> extract_7z_file_to_specified_path(const char *compressed_7z_file_path, const char *destination_path);
 
 void display_banned_cities(const std::set<std::string> &banned_cities);
 void display_banned_countries(const std::set<std::string> &banned_countries);
 void save_banned_entries_to_file(const char *file_path, const std::set<std::string> &banned_entries);
+void save_tempbans_to_file(const char *file_path, const std::vector<player_data> &temp_banned_players);
 
 template<typename ContainerType, typename ElementValue>
 void initialize_elements_of_container_to_specified_value(ContainerType &data, const ElementValue &value, const size_t start_index = 0)
@@ -356,3 +370,10 @@ void removed_disallowed_character_in_string(std::string &input);
 std::string remove_disallowed_character_in_string(const std::string &);
 std::string get_cleaned_user_name(const std::string &name);
 void replace_br_with_new_line(std::string &message);
+void parse_protected_entries_file(const char *file_path, std::set<std::string> &protected_ip_addresses);
+void save_protected_entries_file(const char *file_path, const std::set<std::string> &protected_entries);
+void display_protected_entries(const char *table_title, const std::set<std::string> &protected_entries);
+void get_first_valid_ip_address_from_ip_address_range(std::string ip_range, player_data &pd);
+std::string get_narrow_ip_address_range_for_specified_ip_address(const std::string &ip_address);
+std::string get_wide_ip_address_range_for_specified_ip_address(const std::string &ip_address);
+bool check_if_player_is_protected(const player_data &online_player, const char *admin_command, std::string &message);

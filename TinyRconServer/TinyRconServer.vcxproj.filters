@@ -30,9 +30,6 @@
     <ClInclude Include="include\json_parser.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\md5.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\simple_grid.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -841,9 +838,6 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\md5.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\simple_grid.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

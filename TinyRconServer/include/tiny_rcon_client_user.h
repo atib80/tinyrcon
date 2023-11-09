@@ -5,7 +5,7 @@
 
 struct tiny_rcon_client_user
 {
-  bool is_admin{};
+  bool is_admin{true};
   bool is_logged_in{};
   bool is_online{};
   uint_least16_t user_port{};

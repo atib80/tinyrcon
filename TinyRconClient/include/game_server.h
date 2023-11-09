@@ -1,7 +1,8 @@
-#pragma once
+﻿#pragma once
 
 #include <atomic>
 #include <map>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -395,6 +396,25 @@ public:
 
     return false;
   }
+
+  bool get_banned_player_data_for_ip_address_range(const std::string &ip, player_data *banned_player)
+  {
+    if (nullptr == banned_player)
+      return false;
+
+    const string narrow_ip_address_range{ get_narrow_ip_address_range_for_specified_ip_address(ip) };
+    const string wide_ip_address_range{ get_wide_ip_address_range_for_specified_ip_address(ip) };
+
+    for (auto &bp : banned_ip_address_ranges_vector) {
+      if (narrow_ip_address_range == bp.ip_address || wide_ip_address_range == bp.ip_address) {
+        *banned_player = bp;
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   unordered_map<int, player_data> &get_warned_players_data() noexcept
   {
     return warned_players_data;
@@ -416,7 +436,6 @@ public:
   {
 
     // std::lock_guard lg{ protect_player_data };
-
     if (temp_banned_ip_addresses_map.contains(new_ip_address))
       return false;
     temp_banned_ip_addresses_map.emplace(new_ip_address, temp_banned_player_data);
@@ -784,12 +803,32 @@ public:
 
   std::set<std::string> &get_banned_cities_set() noexcept
   {
-    return banned_cities_set;
+    return banned_cities;
   }
 
   std::set<std::string> &get_banned_countries_set() noexcept
   {
-    return banned_countries_set;
+    return banned_countries;
+  }
+
+  std::set<string> &get_protected_ip_addresses() noexcept
+  {
+    return protected_ip_addresses_set;
+  }
+
+  std::set<string> &get_protected_ip_address_ranges() noexcept
+  {
+    return protected_ip_address_ranges_set;
+  }
+
+  std::set<string> &get_protected_cities() noexcept
+  {
+    return protected_cities_set;
+  }
+
+  std::set<string> &get_protected_countries() noexcept
+  {
+    return protected_countries_set;
   }
 
 private:
@@ -799,8 +838,12 @@ private:
   unordered_map<string, player_data> banned_ip_addresses_map;
   unordered_map<string, player_data> banned_ip_address_ranges_map;
   unordered_map<int, player_data> warned_players_data;
-  std::set<std::string> banned_cities_set;
-  std::set<std::string> banned_countries_set;
+  std::set<std::string> banned_cities;
+  std::set<std::string> banned_countries;
+  std::set<string> protected_ip_addresses_set;
+  std::set<string> protected_ip_address_ranges_set;
+  std::set<std::string> protected_cities_set;
+  std::set<std::string> protected_countries_set;
   vector<player_data> players_data;
   vector<player_data> temp_banned_ip_addresses_vector;
   vector<player_data> banned_ip_addresses_vector;

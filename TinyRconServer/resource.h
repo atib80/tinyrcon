@@ -15,6 +15,8 @@
 #define ID_BANNEDEDIT                   115
 #define ID_VIEWTEMPBANSBUTTON           121
 #define ID_VIEWIPBANSBUTTON             122
+#define ID_REFRESHDATABUTTON            123
+#define IDC_PASTE 125
 #define ID_QUITBUTTON                   126
 #define ID_YES_BUTTON                   127
 #define ID_NO_BUTTON                    128
@@ -297,6 +299,10 @@
 #define ID_GUIDBANBUTTON                425
 #define ID_ENABLE_CITY_BAN_CHECKBOX     426
 #define ID_ENABLE_COUNTRY_BAN_CHECKBOX  427
+#define ID_VIEWPROTECTEDIPADDRESSES     428
+#define ID_VIEWPROTECTEDIPADDRESSRANGES 429
+#define ID_VIEWPROTECTEDCITIES          430
+#define ID_VIEWPROTECTEDCOUNTRIES       431
 #define IDC_STATIC                      -1
 
 // Next default values for new objects

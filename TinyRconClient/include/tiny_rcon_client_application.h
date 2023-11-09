@@ -3,6 +3,7 @@
 #include <atomic>
 #include <filesystem>
 #include <fstream>
+#include <memory>
 #include <mutex>
 #include <queue>
 #include <random>
@@ -16,6 +17,7 @@
 #include "tiny_rcon_client_user.h"
 #include "internet_handle.h"
 #include "tiny_rcon_utility_functions.h"
+#include <format>
 
 #undef max
 
@@ -61,8 +63,8 @@ class tiny_rcon_client_application
     { "user_defined_country_unban_msg", "^7Admin ^5{ADMINNAME} ^1has removed previously banned country: ^5{COUNTRY_NAME}" },
     { "user_defined_enable_country_ban_feature_msg", "^7Admin ^5{ADMINNAME} ^7has enabled ^1automatic kick ^7for players with ^1IP addresses ^7from banned countries." },
     { "user_defined_disable_country_ban_feature_msg", "^7Admin ^5{ADMINNAME} ^7has disabled ^1automatic kick ^7for players with ^1IP addresses ^7from banned countries." },
-    { "automatic_remove_temp_ban_msg", "^1{ADMINNAME}: ^7{PLAYERNAME}'s ^1temporary ban ^7[start date: ^3{TEMP_BAN_START_DATE} ^7expired on ^3{TEMP_BAN_END_DATE}]{{br}}^7has automatically been removed. ^5Reason of ban: ^1{REASON}" },
-    { "automatic_kick_temp_ban_msg", "^1{ADMINNAME}: ^7Temporarily banned player {PLAYERNAME} ^7is being automatically ^1kicked.{{br}}^7Your temporary ban expires on ^1{TEMP_BAN_END_DATE}.{{br}}^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{TEMP_BAN_START_DATE}" },
+    { "automatic_remove_temp_ban_msg", "^1{BANNED_BY}: ^7{PLAYERNAME}'s ^1temporary ban ^7[start date: ^3{TEMP_BAN_START_DATE} ^7expired on ^3{TEMP_BAN_END_DATE}]{{br}}^7has automatically been removed. ^5Reason of ban: ^1{REASON}" },
+    { "automatic_kick_temp_ban_msg", "^1{BANNED_BY}: ^7Temporarily banned player {PLAYERNAME} ^7is being automatically ^1kicked.{{br}}^7Your temporary ban expires on ^1{TEMP_BAN_END_DATE}.{{br}}^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{TEMP_BAN_START_DATE}" },
     { "automatic_kick_ip_ban_msg",
       "^1{ADMINNAME}: ^7Player {PLAYERNAME} ^7with a previously ^1banned IP address ^7is being automatically ^1kicked.{{br}}^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{IP_BAN_DATE}" },
     { "automatic_kick_ip_address_range_ban_msg", "^1{ADMINNAME}: ^7Player {PLAYERNAME} ^7with an ^1IP address ^7from a previously ^1banned IP address range ^7is being automatically ^1kicked.{{br}}^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{IP_BAN_DATE}" },
@@ -71,7 +73,15 @@ class tiny_rcon_client_application
       "^1{ADMINNAME}: ^7Player {PLAYERNAME} ^7with an IP address from a ^1banned city: ^5{CITY_NAME} ^7is being automatically ^1kicked.",
     },
     { "automatic_kick_country_ban_msg",
-      "^1{ADMINNAME}: ^7Player {PLAYERNAME} ^7with an IP address from a ^1banned country:  ^5{COUNTRY_NAME} ^7is being automatically ^1kicked." }
+      "^1{ADMINNAME}: ^7Player {PLAYERNAME} ^7with an IP address from a ^1banned country:  ^5{COUNTRY_NAME} ^7is being automatically ^1kicked." },
+    { "user_defined_protect_ip_address_message", "^1{ADMINNAME} ^7has protected ^1IP address ^7of {PLAYERNAME}^7.{{br}}^5Reason: ^1{REASON}" },
+    { "user_defined_unprotect_ip_address_message", "^1{ADMINNAME} ^7has removed a previously protected ^1IP address^7.{{br}}^5Reason: ^1{REASON}" },
+    { "user_defined_protect_ip_address_range_message", "^1{ADMINNAME} ^7has protected ^1IP address range ^7of {PLAYERNAME}^7.{{br}}^5Reason: ^1{REASON}" },
+    { "user_defined_unprotect_ip_address_range_message", "^1{ADMINNAME} ^7has removed a previously ^1protected IP address range^7.{{br}}^5Reason: ^1{REASON}" },
+    { "user_defined_protect_city_message", "^1{ADMINNAME} ^7has protected ^1city ({CITY_NAME}) ^7of {PLAYERNAME}^7." },
+    { "user_defined_unprotect_city_message", "^1{ADMINNAME} ^7has removed a previously ^1protected city: {CITY_NAME}" },
+    { "user_defined_protect_country_message", "^1{ADMINNAME} ^7has protected ^1country ({COUNTRY_NAME}) ^7of {PLAYERNAME}^7." },
+    { "user_defined_unprotect_country_message", "^1{ADMINNAME} ^7has removed a previously ^1protected country: {COUNTRY_NAME}" }
   };
 
   const std::unordered_map<game_name_t, std::string> game_names{
@@ -103,7 +113,9 @@ class tiny_rcon_client_application
   std::shared_ptr<tiny_rcon_client_user> current_user{ nullptr };
 
   std::string program_title{ "Welcome to TinyRcon client" };
+  std::string user_ip_address;
   std::string current_working_directory;
+  std::wstring current_working_directory_wstring;
   std::string tinyrcon_config_file_path{ "config\\tinyrcon.json" };
   std::string user_data_file_path{ "data\\user.txt" };
   std::string tempbans_file_path{ "data\\tempbans.txt" };
@@ -111,7 +123,7 @@ class tiny_rcon_client_application
   std::string ip_range_bans_file_path{ "data\\ip_range_bans.txt" };
   std::string banned_countries_list_file_path{ "data\\banned_countries.txt" };
   std::string banned_cities_list_file_path{ "data\\banned_cities.txt" };
-  std::string ftp_download_site_ip_address{ "192.168.1.15" };
+  std::string ftp_download_site_ip_address{ "85.222.189.119" };
   std::string ftp_download_folder_path{ "tinyrcon" };
   std::string ftp_download_file_pattern{ R"(^_U_TinyRcon[\._-]?v?(\d{1,2}\.\d{1,2}\.\d{1,2}\.\d{1,2})\.exe$)" };
   std::string plugins_geoIP_geo_dat_md5;
@@ -119,9 +131,11 @@ class tiny_rcon_client_application
   // std::mutex user_data_mutex{};
   std::recursive_mutex command_queue_mutex{};
   std::recursive_mutex message_queue_mutex{};
-  std::string tiny_rcon_ftp_server_username{ "abc123" };
-  std::string tiny_rcon_ftp_server_password{ "abc123" };
-  std::string tiny_rcon_server_ip_address{"192.168.1.15"};
+  std::string tiny_rcon_ftp_server_username{ "tinyrcon" };
+  std::string tiny_rcon_ftp_server_password{ "08021980" };
+  std::string tiny_rcon_server_ip_address{
+    "85.222.189.119"
+  };
   uint_least16_t tiny_rcon_server_port{ 27015 };
 
 
@@ -264,6 +278,16 @@ public:
     program_title = std::move(new_program_title);
   }
 
+  inline const std::string &get_user_ip_address() const noexcept
+  {
+    return user_ip_address;
+  }
+
+  inline void set_user_ip_address(std::string new_user_ip_address) noexcept
+  {
+    user_ip_address = std::move(new_user_ip_address);
+  }
+
   std::unordered_map<std::string, std::shared_ptr<tiny_rcon_client_user>> &get_name_to_user()
   {
     return name_to_user;
@@ -274,12 +298,14 @@ public:
     return users;
   }
 
-  std::shared_ptr<tiny_rcon_client_user> &get_user_for_name(const std::string &name)
+  std::shared_ptr<tiny_rcon_client_user> &get_user_for_name(const std::string &name, const string &ip_address)
   {
-    const string cleaned_name{ get_cleaned_user_name(name) };
-
+    string cleaned_name{ get_cleaned_user_name(name) };
+    if (cleaned_name == "admin") {
+      cleaned_name += format("_{}", ip_address);
+    }
     if (!name_to_user.contains(cleaned_name)) {
-      users.emplace_back(std::make_shared<tiny_rcon_client_user>(app_handles.hwnd_re_messages_data));
+      users.emplace_back(std::make_shared<tiny_rcon_client_user>());
       users.back()->user_name = name;
       // users.back()->country_code = "xy";
       name_to_user.emplace(cleaned_name, users.back());
@@ -291,7 +317,7 @@ public:
   std::shared_ptr<tiny_rcon_client_user> &get_current_user() noexcept
   {
     if (!current_user)
-      current_user = get_user_for_name(get_username());
+      current_user = get_user_for_name(get_username(), get_user_ip_address());
 
     return current_user;
   }
@@ -401,6 +427,46 @@ public:
     return admin_messages["automatic_kick_country_ban_msg"];
   }
 
+  std::string get_user_defined_protect_ip_address_message()
+  {
+    return admin_messages["user_defined_protect_ip_address_message"];
+  }
+
+  std::string get_user_defined_unprotect_ip_address_message()
+  {
+    return admin_messages["user_defined_unprotect_ip_address_message"];
+  }
+
+  std::string get_user_defined_protect_ip_address_range_message()
+  {
+    return admin_messages["user_defined_protect_ip_address_range_message"];
+  }
+
+  std::string get_user_defined_unprotect_ip_address_range_message()
+  {
+    return admin_messages["user_defined_unprotect_ip_address_range_message"];
+  }
+
+  std::string get_user_defined_protect_city_message()
+  {
+    return admin_messages["user_defined_protect_city_message"];
+  }
+
+  std::string get_user_defined_unprotect_city_message()
+  {
+    return admin_messages["user_defined_unprotect_city_message"];
+  }
+
+  std::string get_user_defined_protect_country_message()
+  {
+    return admin_messages["user_defined_protect_country_message"];
+  }
+
+  std::string get_user_defined_unprotect_country_message()
+  {
+    return admin_messages["user_defined_unprotect_country_message"];
+  }
+
   inline const char *get_game_title() noexcept
   {
     if (game_names.contains(game_name))
@@ -418,19 +484,24 @@ public:
     is_draw_border_lines = new_value;
   }
 
-  const std::string &get_current_working_directory() const
+  const std::string &get_current_working_directory() const noexcept
   {
     return current_working_directory;
   }
 
+  const std::wstring& get_current_working_directory_wstring() const noexcept {
+    return current_working_directory_wstring;
+  }
+
   void set_current_working_directory()
   {
-    char exe_file_path[MAX_PATH];
-    if (GetModuleFileNameA(nullptr, exe_file_path, MAX_PATH)) {
-      std::string exe_file_path_str{ exe_file_path };
-      current_working_directory.assign({ exe_file_path_str.cbegin(), exe_file_path_str.cbegin() + exe_file_path_str.rfind('\\') + 1 });
+    constexpr size_t max_path_limit{ 32768 };
+    std::unique_ptr<char[]> exe_file_path{ std::make_unique<char[]>(max_path_limit) };
+    if (const auto path_len = GetModuleFileNameA(nullptr, exe_file_path.get(), max_path_limit); path_len != 0) {
+      std::string_view exe_file_path_sv(exe_file_path.get(),  path_len);
+      current_working_directory.assign(string(cbegin(exe_file_path_sv), cbegin(exe_file_path_sv) + exe_file_path_sv.rfind('\\') + 1));
     } else {
-      std::filesystem::path entry("TinyRconServer.exe");
+      std::filesystem::path entry("TinyRcon.exe");
       current_working_directory.assign(entry.parent_path().string());
     }
 
@@ -441,6 +512,19 @@ public:
     ip_range_bans_file_path.assign(format("{}{}", current_working_directory, ip_range_bans_file_path));
     banned_countries_list_file_path.assign(format("{}{}", current_working_directory, banned_countries_list_file_path));
     banned_cities_list_file_path.assign(format("{}{}", current_working_directory, banned_cities_list_file_path));
+  }
+
+  void set_current_working_directory_wstring()
+  {
+    constexpr size_t max_path_limit{ 32768 };
+    std::unique_ptr<wchar_t[]> exe_file_path{ std::make_unique<wchar_t[]>(max_path_limit) };
+    if (const auto path_len = GetModuleFileNameW(nullptr, exe_file_path.get(), max_path_limit); path_len != 0) {
+      std::basic_string_view<wchar_t> exe_file_path_sv(exe_file_path.get(), path_len);
+      current_working_directory_wstring.assign(std::wstring(cbegin(exe_file_path_sv), cbegin(exe_file_path_sv) + exe_file_path_sv.rfind(L'\\') + 1));
+    } else {
+      std::filesystem::path entry(L"TinyRcon.exe");
+      current_working_directory_wstring.assign(entry.parent_path().wstring());
+    }    
   }
 
   const char *get_tinyrcon_config_file_path() const noexcept
@@ -678,8 +762,8 @@ public:
 
   size_t get_random_number() const
   {
-    std::mt19937_64 rand_engine(get_current_time_stamp());
-    std::uniform_int_distribution<size_t> number_range(1ULL, std::numeric_limits<size_t>::max());
+    static std::mt19937_64 rand_engine(get_current_time_stamp());
+    static std::uniform_int_distribution<size_t> number_range(1000ULL, std::numeric_limits<size_t>::max());
     return number_range(rand_engine);
   }
 };

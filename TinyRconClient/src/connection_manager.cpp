@@ -15,7 +15,7 @@ extern const size_t max_players_grid_rows;
 extern string previous_map;
 extern int selected_row;
 
-static const std::regex ip_address_regex{ R"((\d+\.\d+\.\d+\.\d+:(-?\d+)?\s*(-?\d+)?\s*(\d+)?))" };
+static const std::regex ip_address_regex{ R"((\d+\.\d+\.\d+\.\d+:(-?\d+)\s*(-?\d+)\s*(\d+)))" };
 
 using namespace asio;
 

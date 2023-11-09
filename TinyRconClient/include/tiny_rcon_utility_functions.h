@@ -10,6 +10,8 @@
 #include "stl_helper_functions.hpp"
 #include "tiny_rcon_client_user.h"
 
+#undef max
+
 class tiny_rcon_client_application;
 
 struct tiny_rcon_handles
@@ -244,6 +246,26 @@ void convert_guid_key_to_country_name(const std::vector<geoip_data> &geo_data,
   std::string_view player_ip,
   player_data &player_data);
 
+size_t get_number_of_characters_without_color_codes(const char *) noexcept;
+
+template<typename Iter>
+size_t find_longest_entry_length(
+  Iter first,
+  Iter last,
+  const bool count_color_codes)
+{
+  if (first == last)
+    return 0;
+  size_t max_player_name_length{ 32 };
+  while (first != last) {
+    max_player_name_length =
+      std::max<size_t>(count_color_codes ? first->length() : get_number_of_characters_without_color_codes(first->c_str()), max_player_name_length);
+    ++first;
+  }
+
+  return max_player_name_length;
+}
+
 size_t find_longest_player_name_length(
   const std::vector<player_data> &,
   const bool,
@@ -299,15 +321,13 @@ size_t print_colored_text(HWND re_control, const char *text, const is_append_mes
 
 size_t print_colored_text_to_grid_cell(HDC hdc, RECT &rect, const char *text, DWORD formatting_style);
 
-size_t get_number_of_characters_without_color_codes(const char *) noexcept;
-
 bool get_user_input();
 
 void print_help_information(const std::vector<std::string> &);
 
 std::string prepare_current_match_information();
 void display_online_admins_information();
-bool is_valid_decimal_whole_number(const std::string &number_str, int &number) noexcept;
+bool is_valid_decimal_whole_number(std::string_view str, int &number) noexcept;
 
 bool check_if_user_provided_argument_is_valid_for_specified_command(
   const char *cmd,
@@ -342,11 +362,11 @@ volatile bool should_program_terminate(const std::string & = "") noexcept;
 
 void sort_players_data(std::vector<player_data> &, const sort_type sort_method);
 
-void display_banned_ip_address_ranges();
+void display_banned_ip_address_ranges(const bool is_save_data_to_log_file = false);
 
-void display_permanently_banned_ip_addresses();
+void display_permanently_banned_ip_addresses(const bool is_save_data_to_log_file = false);
 
-void display_temporarily_banned_ip_addresses();
+void display_temporarily_banned_ip_addresses(const bool is_save_data_to_log_file = false);
 
 void display_admins_data();
 
@@ -478,7 +498,7 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title);
 void process_button_save_changes_click_event(HWND);
 void process_button_test_connection_click_event(HWND);
 extern LRESULT CALLBACK ComboProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubClass, DWORD_PTR);
-void display_context_menu_over_grid(const int mouse_x, const int mouse_y, const int selected_row);
+// void display_context_menu_over_grid(const int mouse_x, const int mouse_y, const int selected_row);
 inline std::pair<const char *, const char *> get_appropriate_rcon_status_response_header(const game_name_t game_name) noexcept
 {
   static constexpr const char *cod1_rcon_status_response_header{ "num score ping name            lastmsg address               qport rate\n" };
@@ -525,7 +545,8 @@ void print_message_about_corrected_player_name(HWND re_hwnd, const char *truncat
 void set_admin_actions_buttons_active(const BOOL is_enable = TRUE, const bool is_reset_to_default_sort_mode = true) noexcept;
 
 void set_available_sort_methods(const bool is_admin = true, const bool is_reset_to_default_sort_mode = true);
-std::pair<bool, std::string> extract_7z_file_to_specified_path(const wchar_t *compressed_7z_file_path, const wchar_t *destination_path);
+std::pair<bool, std::string> extract_7z_file_to_specified_path(const char *compressed_7z_file_path, const char *destination_path);
+std::pair<bool, std::string> create_7z_file_file_at_specified_path(const std::vector<std::string> &file_to_add, const std::string &local_file_path);
 
 void display_banned_cities(const std::set<std::string> &banned_cities);
 void display_banned_countries(const std::set<std::string> &banned_countries);
@@ -543,8 +564,8 @@ time_t get_current_time_stamp();
 
 time_t get_number_of_seconds_from_date_and_time_string(const std::string &date_and_time);
 
-std::string get_narrow_ip_address_range_for_specified_ip_address(std::string_view ip_address);
-std::string get_wide_ip_address_range_for_specified_ip_address(std::string_view ip_address);
+std::string get_narrow_ip_address_range_for_specified_ip_address(const std::string &ip_address);
+std::string get_wide_ip_address_range_for_specified_ip_address(const std::string &ip_address);
 void check_if_admins_are_online_and_get_admins_player_names(const std::vector<player_data> &players, const size_t no_of_online_players);
 bool save_current_user_data_to_json_file(const char *json_file_path) noexcept;
 bool validate_admin_and_show_missing_admin_privileges_message(const bool is_show_message_box, const is_log_message log_message = is_log_message::no, const is_log_datetime log_date_time = is_log_datetime::no);
@@ -552,3 +573,8 @@ void removed_disallowed_character_in_string(std::string &);
 std::string remove_disallowed_character_in_string(const std::string &);
 std::string get_cleaned_user_name(const std::string &name);
 void replace_br_with_new_line(std::string &message);
+void parse_protected_entries_file(const char *file_path, std::set<std::string> &protected_entries);
+void save_protected_entries_file(const char *file_path, const std::set<std::string> &protected_entries);
+void display_protected_entries(const char *table_title, const std::set<std::string> &protected_entries, const bool is_save_data_to_log_file = false);
+bool check_if_player_is_protected(const player_data &online_player, const char *admin_command, std::string &message);
+void get_first_valid_ip_address_from_ip_address_range(std::string ip_range, player_data &pd);

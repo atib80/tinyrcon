@@ -81,11 +81,11 @@ class tiny_rcon_server_application
   };
 
   std::unordered_map<std::string, std::function<void(const std::vector<std::string> &)>> command_handlers;
-  std::unordered_map<std::string, std::function<void(const std::string &, time_t, const std::string &, const bool)>> message_handlers;
+  std::unordered_map<std::string, std::function<void(const std::string &, time_t, const std::string &, const bool, const string &)>> message_handlers;
 
   std::string program_title{ "Welcome to TinyRcon" };
   std::string current_working_directory;
-  std::string ftp_download_site_ip_address{ "192.168.1.15" };
+  std::string ftp_download_site_ip_address{ "85.222.189.119" };
   std::string ftp_download_folder_path{ "tinyrcon" };
   std::string ftp_bans_folder_path{ "C:\\tinyrcon\\bans" };
   std::string ftp_download_file_pattern{ R"(^_U_TinyRcon[\._-]?v?(\d{1,2}\.\d{1,2}\.\d{1,2}\.\d{1,2})\.exe$)" };
@@ -121,6 +121,7 @@ public:
 
   inline void set_username(string new_value)
   {
+    remove_disallowed_character_in_string(new_value);
     username = std::move(new_value);
   }
 
@@ -213,10 +214,12 @@ public:
     return users;
   }
 
-  std::shared_ptr<tiny_rcon_client_user> &get_user_for_name(const std::string &name)
+  std::shared_ptr<tiny_rcon_client_user> &get_user_for_name(const std::string &name, const string& ip_address)
   {
-    const string cleaned_name{ get_cleaned_user_name(name) };
-
+    string cleaned_name{ get_cleaned_user_name(name) };
+    if (cleaned_name == "admin") {
+      cleaned_name += format("_{}", ip_address);
+    }
     if (!name_to_user.contains(cleaned_name)) {
       users.emplace_back(std::make_shared<tiny_rcon_client_user>());
       users.back()->user_name = name;
@@ -519,20 +522,20 @@ public:
     return make_pair(false, unknown_command_handler);
   }
 
-  const std::unordered_map<std::string, std::function<void(const std::string &, time_t, const std::string &, const bool)>> &get_message_handlers() const
+  const std::unordered_map<std::string, std::function<void(const std::string &, time_t, const std::string &, const bool, const string &)>> &get_message_handlers() const
   {
     return message_handlers;
   }
 
-  void add_message_handler(std::string message_name, std::function<void(const std::string &, time_t, const std::string &, const bool)> message_handler)
+  void add_message_handler(std::string message_name, std::function<void(const std::string &, time_t, const std::string &, const bool, const string &)> message_handler)
   {
     message_handlers.emplace(std::move(message_name), std::move(message_handler));
   }
 
-  const std::function<void(const std::string &, time_t, const std::string &, const bool)> &get_message_handler(const std::string &message_name) const
+  const std::function<void(const std::string &, time_t, const std::string &, const bool, const string &)> &get_message_handler(const std::string &message_name) const
   {
-    static std::function<void(const std::string &, time_t, const std::string &, const bool)> unknown_message_handler{
-      [](const std::string &, time_t, const std::string &, const bool) {}
+    static std::function<void(const std::string &, time_t, const std::string &, const bool, const string &)> unknown_message_handler{
+      [](const std::string &, time_t, const std::string &, const bool, const string &) {}
     };
 
     if (message_handlers.contains(message_name))

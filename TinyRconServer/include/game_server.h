@@ -39,9 +39,8 @@ struct player_data
 class game_server
 {
 public:
-  game_server() : players_data(64, player_data{})
-  {
-  }
+  game_server() = default;// : players_data(64, player_data{}) {}
+
 
   [[nodiscard]] const std::string &get_server_ip_address() const noexcept
   {
@@ -261,31 +260,41 @@ public:
   //   return tempbanned_players_to_unban;
   // }
 
-  std::vector<player_data> &get_players_data() noexcept
-  {
-    return players_data;
-  }
+  // std::vector<player_data> &get_players_data() noexcept
+  //{
+  //   return players_data;
+  // }
 
-  player_data &get_player_data(const int pid) noexcept
-  {
-    static player_data default_player_data{};
+  // player_data &get_player_data(const int pid) noexcept
+  //{
+  //   static player_data default_player_data{};
 
-    for (auto &pd : this->players_data) {
-      if (pid == pd.pid)
-        return pd;
-    }
+  //  for (auto &pd : this->players_data) {
+  //    if (pid == pd.pid)
+  //      return pd;
+  //  }
 
-    return default_player_data;
-  }
+  //  return default_player_data;
+  //}
 
-  [[nodiscard]] map<string, string> &get_server_settings() noexcept
-  {
-    return server_settings;
-  }
+  //[[nodiscard]] map<string, string> &get_server_settings() noexcept
+  //{
+  //  return server_settings;
+  //}
 
   vector<player_data> &get_temp_banned_players_data() noexcept
   {
     return temp_banned_ip_addresses_vector;
+  }
+
+  vector<player_data> &get_removed_temp_banned_players_vector() noexcept
+  {
+    return removed_temp_banned_players_data;
+  }
+
+  std::unordered_map<std::string, player_data> &get_removed_temp_banned_players_map() noexcept
+  {
+    return removed_temp_banned_ip_addresses_map;
   }
 
   bool get_temp_banned_player_data_for_ip_address(const std::string &ip, player_data *tb_player)
@@ -301,35 +310,6 @@ public:
     }
 
     return false;
-  }
-
-  vector<player_data> &get_banned_ip_addresses_vector() noexcept
-  {
-    return banned_ip_addresses_vector;
-  }
-
-  bool get_banned_player_data_for_ip_address(const std::string &ip, player_data *banned_player)
-  {
-    if (nullptr == banned_player)
-      return false;
-
-    for (auto &bp : banned_ip_addresses_vector) {
-      if (ip == bp.ip_address) {
-        *banned_player = bp;
-        return true;
-      }
-    }
-
-    return false;
-  }
-  unordered_map<int, player_data> &get_warned_players_data() noexcept
-  {
-    return warned_players_data;
-  }
-
-  void set_warned_players_data(unordered_map<int, player_data> new_warned_players_data) noexcept
-  {
-    warned_players_data = std::move(new_warned_players_data);
   }
 
   unordered_map<string, player_data> &get_temp_banned_ip_addresses_map() noexcept
@@ -354,6 +334,67 @@ public:
       return false;
     temp_banned_ip_addresses_map.erase(new_ip_address);
     return true;
+  }
+
+  vector<player_data> &get_banned_ip_addresses_vector() noexcept
+  {
+    return banned_ip_addresses_vector;
+  }
+
+  vector<player_data> &get_removed_banned_ip_addresses_vector() noexcept
+  {
+    return removed_banned_ip_addresses_vector;
+  }
+
+  std::unordered_map<std::string, player_data> &get_removed_banned_ip_addresses_map() noexcept
+  {
+    return removed_banned_ip_addresses_map;
+  }
+
+  bool get_banned_player_data_for_ip_address(const std::string &ip, player_data *banned_player)
+  {
+    if (nullptr == banned_player)
+      return false;
+
+    for (auto &bp : banned_ip_addresses_vector) {
+      if (ip == bp.ip_address) {
+        *banned_player = bp;
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  unordered_map<int, player_data> &get_warned_players_data() noexcept
+  {
+    return warned_players_data;
+  }
+
+  void set_warned_players_data(unordered_map<int, player_data> new_warned_players_data) noexcept
+  {
+    warned_players_data = std::move(new_warned_players_data);
+  }
+
+
+  std::set<string> &get_protected_ip_addresses() noexcept
+  {
+    return protected_ip_addresses;
+  }
+
+  std::set<string> &get_protected_ip_address_ranges() noexcept
+  {
+    return protected_ip_address_ranges;
+  }
+
+  std::set<string> &get_protected_cities() noexcept
+  {
+    return protected_cities;
+  }
+
+  std::set<string> &get_protected_countries() noexcept
+  {
+    return protected_countries;
   }
 
   unordered_map<string, player_data> &get_banned_ip_addresses_map() noexcept
@@ -388,6 +429,16 @@ public:
   unordered_map<string, player_data> &get_banned_ip_address_ranges_map() noexcept
   {
     return banned_ip_address_ranges_map;
+  }
+
+  vector<player_data> &get_removed_banned_ip_address_ranges_vector() noexcept
+  {
+    return removed_banned_ip_address_ranges_vector;
+  }
+
+  unordered_map<string, player_data> &get_removed_banned_ip_address_ranges_map() noexcept
+  {
+    return removed_banned_ip_address_ranges_map;
   }
 
   bool add_ip_address_range_to_banned_ip_address_ranges(
@@ -727,12 +778,22 @@ public:
 
   std::set<std::string> &get_banned_cities_set() noexcept
   {
-    return banned_cities_set;
+    return banned_cities;
+  }
+
+  std::set<std::string> &get_removed_banned_cities_set() noexcept
+  {
+    return removed_banned_cities;
   }
 
   std::set<std::string> &get_banned_countries_set() noexcept
   {
-    return banned_countries_set;
+    return banned_countries;
+  }
+
+  std::set<std::string> &get_removed_banned_countries_set() noexcept
+  {
+    return removed_banned_countries;
   }
 
   bool get_is_enable_automatic_connection_flood_ip_ban() const noexcept
@@ -789,59 +850,73 @@ public:
   }
 
 private:
-  map<string, string> server_settings;
-  unordered_map<string, size_t> ip_address_frequency;
-  unordered_map<string, player_data> temp_banned_ip_addresses_map;
-  unordered_map<string, player_data> banned_ip_addresses_map;
-  unordered_map<string, player_data> banned_ip_address_ranges_map;
-  unordered_map<int, player_data> warned_players_data;
-  std::set<std::string> banned_cities_set;
-  std::set<std::string> banned_countries_set;
-  vector<player_data> players_data;
-  vector<player_data> temp_banned_ip_addresses_vector;
-  vector<player_data> banned_ip_addresses_vector;
-  vector<player_data> banned_ip_address_ranges_vector;
-  string short_version{ "1.0" };
-  string ip_address{ "185.158.113.146" };
-  string sv_hostname{ "CoD2 CTF" };
-  string game_name{ "unknown" };
-  string rcon_password{
+  // std::map<string, string> server_settings;
+  std::unordered_map<string, size_t> ip_address_frequency;
+  std::unordered_map<string, player_data> temp_banned_ip_addresses_map;
+  std::unordered_map<string, player_data> removed_temp_banned_ip_addresses_map;
+  std::unordered_map<string, player_data> banned_ip_addresses_map;
+  std::unordered_map<string, player_data> removed_banned_ip_addresses_map;
+  std::unordered_map<string, player_data> banned_ip_address_ranges_map;
+  std::unordered_map<string, player_data> removed_banned_ip_address_ranges_map;
+  std::unordered_map<int, player_data> warned_players_data;
+  std::set<std::string> banned_cities;
+  std::set<std::string> removed_banned_cities;
+  std::set<std::string> banned_countries;
+  std::set<std::string> removed_banned_countries;
+  std::set<string> protected_ip_addresses;
+  std::set<string> protected_ip_address_ranges;
+  std::set<std::string> protected_cities;
+  std::set<std::string> protected_countries;
+  // std::vector<player_data> players_data;
+  std::vector<player_data> temp_banned_ip_addresses_vector;
+  std::vector<player_data> removed_temp_banned_players_data;
+  std::vector<player_data> banned_ip_addresses_vector;
+  std::vector<player_data> removed_banned_ip_addresses_vector;
+  std::vector<player_data> banned_ip_address_ranges_vector;
+  std::vector<player_data> removed_banned_ip_address_ranges_vector;
+  // vector<player_data> protected_ip_addresses_vector;
+  // vector<player_data> protected_ip_address_ranges_vector;
+  std::string short_version{ "1.0" };
+  std::string ip_address{ "185.158.113.146" };
+  std::string sv_hostname{ "CoD2 CTF" };
+  std::string game_name{ "unknown" };
+  std::string rcon_password{
     "abc123"
   };
-  string private_slot_password{
+  std::string private_slot_password{
     "abc123"
   };
-  string map_rotation;
-  string map_rotation_current;
-  string next_map;
-  string current_map;
-  string current_game_type;
-  string game_mod_name;
-  string serverInfo;
-  string current_match_info{ "^3Map: {MAP_FULL_NAME} ^1({MAP_RCON_NAME}^1) ^3| Gametype: {GAMETYPE_FULL_NAME} ^3| Online/Offline players: {ONLINE_PLAYERS_COUNT}^3|{OFFLINE_PLAYERS_COUNT}" };
-  string odd_player_data_lines_fg_color{ "^5" };
-  string even_player_data_lines_fg_color{ "^5" };
-  string odd_player_data_lines_bg_color{ "^0" };
-  string even_player_data_lines_bg_color{ "^8" };
-  string full_map_name_color{ "^2" };
-  string rcon_map_name_color{ "^1" };
-  string full_game_type_color{ "^2" };
-  string rcon_game_type_color{ "^1" };
-  string online_players_count_color{ "^2" };
-  string offline_players_count_color{ "^1" };
-  string border_line_color{ "^5" };
-  string header_player_pid_color{ "^1" };
-  string data_player_pid_color{ "^1" };
-  string header_player_score_color{ "^4" };
-  string data_player_score_color{ "^4" };
-  string header_player_ping_color{ "^4" };
-  string data_player_ping_color{ "^4" };
-  string header_player_name_color{ "^4" };
-  string header_player_ip_color{ "^4" };
-  string data_player_ip_color{ "^4" };
-  string header_player_geoinfo_color{ "^4" };
-  string data_player_geoinfo_color{ "^4" };
-  string server_message{ "^5| ^3Server is empty!^5" };
+  std::string map_rotation;
+  std::string map_rotation_current;
+  std::string next_map;
+  std::string current_map;
+  std::string current_game_type;
+  std::string game_mod_name;
+  std::string serverInfo;
+  std::string current_match_info{ "^3Map: {MAP_FULL_NAME} ^1({MAP_RCON_NAME}^1) ^3| Gametype: {GAMETYPE_FULL_NAME} ^3| Online/Offline players: {ONLINE_PLAYERS_COUNT}^3|{OFFLINE_PLAYERS_COUNT}" };
+  std::string odd_player_data_lines_fg_color{ "^5" };
+  std::string even_player_data_lines_fg_color{ "^5" };
+  std::string odd_player_data_lines_bg_color{ "^0" };
+  std::string even_player_data_lines_bg_color{ "^8" };
+  std::string full_map_name_color{ "^2" };
+  std::string rcon_map_name_color{ "^1" };
+  std::string full_game_type_color{ "^2" };
+  std::string rcon_game_type_color{ "^1" };
+  std::string online_players_count_color{ "^2" };
+  std::string offline_players_count_color{ "^1" };
+  std::string border_line_color{ "^5" };
+  std::string header_player_pid_color{ "^1" };
+  std::string data_player_pid_color{ "^1" };
+  std::string header_player_score_color{ "^4" };
+  std::string data_player_score_color{ "^4" };
+  std::string header_player_ping_color{ "^4" };
+  std::string data_player_ping_color{ "^4" };
+  std::string header_player_name_color{ "^4" };
+  std::string header_player_ip_color{ "^4" };
+  std::string data_player_ip_color{ "^4" };
+  std::string header_player_geoinfo_color{ "^4" };
+  std::string data_player_geoinfo_color{ "^4" };
+  std::string server_message{ "^5| ^3Server is empty!^5" };
   std::atomic<size_t> check_for_banned_players_time_period{ 5 };
   int max_number_of_players{ 64 };
   int max_private_clients{};
