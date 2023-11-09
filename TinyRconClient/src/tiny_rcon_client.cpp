@@ -17,7 +17,7 @@ using namespace std::string_literals;
 using namespace std::chrono;
 using namespace std::filesystem;
 
-extern const string program_version{ "2.5.3.7" };
+extern const string program_version{ "2.5.3.9" };
 
 extern char const *const c_downloads_folder_path{ "C:\\Downloads" };
 extern char const *const c_temp_folder_path{ "C:\\Temp" };
@@ -54,8 +54,8 @@ sort_type type_of_sort{ sort_type::geo_asc };
 
 PROCESS_INFORMATION pr_info{};
 
-condition_variable exit_flag{};
-mutex mu{};
+//mutex mu{};
+//condition_variable exit_flag{};
 
 volatile atomic<size_t> atomic_counter{ 0 };
 volatile std::atomic<bool> is_refresh_players_data_event{ false };
@@ -2803,14 +2803,17 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       size_t rcon_status_sent_counter{ 0 };
 
       while (true) {
-        {
-          unique_lock ul{ mu };
-          exit_flag.wait_for(ul, 20ms, [&]() {
-            return is_terminate_program.load();
-          });
-        }
+         {
+           unique_lock ul{ main_app.get_command_queue_mutex() };
+           main_app.get_command_queue_cv().wait_for(ul, 20ms, [&]() {
+             return !main_app.is_command_queue_empty() || is_terminate_program.load();
+           });
+         }
 
         if (is_terminate_program.load()) break;
+
+        // this_thread::sleep_for(20ms);
+        // if (is_terminate_program.load()) break;
 
         while (!main_app.is_command_queue_empty()) {
           auto cmd = main_app.get_command_from_queue();
@@ -2844,18 +2847,20 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     }
   };
 
+  task_thread.detach();
+
   std::thread messaging_thread{
     [&]() {
       const auto &tiny_rcon_server_ip = main_app.get_tiny_rcon_server_ip_address();
       const uint_least16_t tiny_rcon_server_port = static_cast<uint_least16_t>(main_app.get_tiny_rcon_server_port());
 
       while (true) {
-        {
+        /*{
           unique_lock ul{ mu };
           exit_flag.wait_for(ul, 10ms, [&]() {
             return is_terminate_program.load();
           });
-        }
+        }*/
 
         if (is_terminate_program.load()) {
           break;
@@ -2971,13 +2976,10 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   save_protected_entries_file(protected_countries_list_file_path, main_app.get_game_server().get_protected_countries());
 
   is_terminate_program.store(true);
-  {
+  /*{
     lock_guard ul{ mu };
     exit_flag.notify_all();
-  }
-
-  task_thread.join();
-
+  }*/
 
   if (pr_info.hProcess != NULL)
     CloseHandle(pr_info.hProcess);
@@ -3500,10 +3502,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     case ID_QUITBUTTON:
       is_terminate_program.store(true);
-      {
+      /*{
         lock_guard ul{ mu };
         exit_flag.notify_all();
-      }
+      }*/
       PostQuitMessage(0);
       break;
 
@@ -3888,8 +3890,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         show_error(app_handles.hwnd_main_window, "Failed to construct and show TinyRcon configuration dialog!", 0);
       }
       if (is_terminate_program.load()) {
-        lock_guard ul{ mu };
-        exit_flag.notify_all();
+        /*lock_guard ul{ mu };
+        exit_flag.notify_all();*/
         PostQuitMessage(0);
       }
       break;
@@ -3956,10 +3958,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     break;
   case WM_CLOSE:
     is_terminate_program.store(true);
-    {
+    /*{
       lock_guard ul{ mu };
       exit_flag.notify_all();
-    }
+    }*/
     DestroyWindow(app_handles.hwnd_main_window);
     return 0;
 
@@ -4457,10 +4459,10 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
       SetFocus(app_handles.hwnd_e_user_input);
       DestroyWindow(app_handles.hwnd_configuration_dialog);
       is_terminate_program.store(true);
-      {
-        lock_guard ul{ mu };
-        exit_flag.notify_all();
-      }
+      /*{
+           lock_guard ul{ mu };
+           exit_flag.notify_all();
+         }*/
     } break;
 
     case ID_BUTTON_CONFIGURATION_COD1_PATH: {

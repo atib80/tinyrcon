@@ -33,6 +33,8 @@ class tiny_rcon_client_application
   bool is_use_original_admin_messages{ true };
   bool is_ftp_server_online{ true };
   game_name_t game_name{ game_name_t::unknown };
+  std::condition_variable command_queue_cv{};
+  std::mutex command_mutex{};
   string username{ "^1Admin" };
   string game_server_name{
     "185.158.113.146:28995 CoD2 CTF"
@@ -181,6 +183,15 @@ public:
   inline void set_game_name(const game_name_t new_game_name) noexcept
   {
     game_name = new_game_name;
+  }
+
+  inline std::condition_variable &get_command_queue_cv() noexcept
+  {
+    return command_queue_cv;
+  }
+
+  inline std::mutex& get_command_queue_mutex() noexcept {
+    return command_mutex;
   }
 
   inline const string &get_username() const noexcept
@@ -673,6 +684,8 @@ public:
   {
     std::lock_guard lg{ command_queue_mutex };
     command_queue.emplace(std::move(cmd), cmd_type, wait_for_reply);
+    std::unique_lock ul{ command_mutex };
+    command_queue_cv.notify_one();
   }
 
   inline command_t get_command_from_queue()

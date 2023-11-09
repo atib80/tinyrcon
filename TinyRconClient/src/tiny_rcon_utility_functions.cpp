@@ -82,8 +82,8 @@ extern std::atomic<int> admin_choice;
 extern std::string admin_reason;
 
 // recursive_mutex re_messages_mutex;
-extern mutex mu;
-extern condition_variable exit_flag;
+// extern mutex mu;
+// extern condition_variable exit_flag;
 
 // recursive_mutex print_data_mutex;
 recursive_mutex log_data_mutex;
@@ -3160,7 +3160,7 @@ void check_for_banned_ip_addresses()
 {
   const bool is_enable_automatic_connection_flood_ip_ban{ main_app.get_game_server().get_is_enable_automatic_connection_flood_ip_ban() };
   lock_guard lg{ protect_banned_players_data };
-  const auto &banned_ip_address =
+  const auto &banned_ip_addresses =
     main_app.get_game_server().get_banned_ip_addresses_map();
   const auto &protected_ip_address = main_app.get_game_server().get_protected_ip_addresses();
   const auto &banned_ip_address_ranges = main_app.get_game_server().get_banned_ip_address_ranges_map();
@@ -3202,7 +3202,7 @@ void check_for_banned_ip_addresses()
       main_app.add_message_to_queue(message_t("inform-message", inform_message, true));
     }
 
-    if (banned_ip_address.contains(online_player.ip_address) && !is_ip_protected && !is_ip_range_protected && !is_city_protected && !is_country_protected) {
+    if (banned_ip_addresses.contains(online_player.ip_address) && !is_ip_protected && !is_ip_range_protected && !is_city_protected && !is_country_protected) {
       string message{ main_app.get_automatic_kick_ip_ban_msg() };
       player_data pd{};
       if (main_app.get_is_disable_automatic_kick_messages()) {
@@ -3225,7 +3225,9 @@ void check_for_banned_ip_addresses()
       replace_br_with_new_line(msg);
       const string inform_message{ format("{}\\{}\\{}", main_app.get_username(), message, msg) };
       main_app.add_message_to_queue(message_t("inform-message", inform_message, true));
-    } else if (!banned_ip_address_ranges.empty()) {
+    }
+
+    if (!banned_ip_address_ranges.empty()) {
       const bool is_short_ip_address_range_ban{ banned_ip_address_ranges.contains(narrow_ip_address_range) && !is_ip_range_protected && !is_city_protected && !is_country_protected };
       const bool is_wider_ip_address_range_ban{ banned_ip_address_ranges.contains(wide_ip_address_range) && !is_ip_range_protected && !is_city_protected && !is_country_protected };
 
@@ -3253,7 +3255,9 @@ void check_for_banned_ip_addresses()
         const string inform_message{ format("{}\\{}\\{}", main_app.get_username(), public_message, private_message) };
         main_app.add_message_to_queue(message_t("inform-message", inform_message, true));
       }
-    } else if (main_app.get_game_server().get_is_automatic_city_kick_enabled() && !banned_cities.empty()) {
+    }
+
+    if (main_app.get_game_server().get_is_automatic_city_kick_enabled() && !banned_cities.empty()) {
       if (banned_cities.contains(online_player.city) && !is_city_protected && !is_country_protected) {
         string message{ main_app.get_automatic_kick_city_ban_msg() };
         if (main_app.get_is_disable_automatic_kick_messages()) {
@@ -3275,7 +3279,9 @@ void check_for_banned_ip_addresses()
         const string inform_message{ format("{}\\{}\\{}", main_app.get_username(), message, msg) };
         main_app.add_message_to_queue(message_t("inform-message", inform_message, true));
       }
-    } else if (main_app.get_game_server().get_is_automatic_country_kick_enabled() && !banned_countries.empty()) {
+    }
+
+    if (main_app.get_game_server().get_is_automatic_country_kick_enabled() && !banned_countries.empty()) {
       if (banned_countries.contains(online_player.country_name) && !is_country_protected) {
         string message{ main_app.get_automatic_kick_country_ban_msg() };
         if (main_app.get_is_disable_automatic_kick_messages()) {
@@ -6511,10 +6517,10 @@ void process_key_down_message(const MSG &msg)
   if (msg.wParam == VK_ESCAPE) {
     if (show_user_confirmation_dialog("^3Do you really want to quit?", "Exit program?", "Reason")) {
       is_terminate_program.store(true);
-      {
-        // lock_guard<mutex> l{ mu };
-        exit_flag.notify_all();
-      }
+      // {
+      // lock_guard<mutex> l{ mu };
+      // exit_flag.notify_all();
+      // }
       PostQuitMessage(0);
     }
   } else if (msg.wParam == VK_UP) {
@@ -6540,10 +6546,10 @@ void process_key_down_message(const MSG &msg)
   } else if (app_handles.hwnd_e_user_input == msg.hwnd && msg.wParam == VK_RETURN) {
     if (get_user_input()) {
       is_terminate_program.store(true);
-      {
+      /*{
         lock_guard<mutex> l{ mu };
         exit_flag.notify_all();
-      }
+      }*/
       PostQuitMessage(0);
     }
 
@@ -7517,10 +7523,10 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
         SetFocus(app_handles.hwnd_e_user_input);
         DestroyWindow(app_handles.hwnd_configuration_dialog);
         is_terminate_program.store(true);
-        {
+        /*{
           lock_guard<mutex> l{ mu };
           exit_flag.notify_all();
-        }
+        }*/
       }
 
     } else if (WM_KEYDOWN == wnd_msg.message && VK_TAB == wnd_msg.wParam) {
