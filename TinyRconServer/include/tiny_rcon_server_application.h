@@ -22,7 +22,6 @@ using std::string;
 class tiny_rcon_server_application
 {
   std::atomic<bool> is_connection_settings_valid{ true };
-  // bool is_enable_automatic_connection_flood_ip_ban{ true };
   bool is_log_file_open{};
   string username{ "^1Admin" };
   string game_server_name{
@@ -214,19 +213,22 @@ public:
     return users;
   }
 
-  std::shared_ptr<tiny_rcon_client_user> &get_user_for_name(const std::string &name, const string& ip_address)
+  std::shared_ptr<tiny_rcon_client_user> &get_user_for_name(const std::string &name, const string &ip_address)
   {
     string cleaned_name{ get_cleaned_user_name(name) };
+    player_data pd{};
+    convert_guid_key_to_country_name(cm_for_messages.get_geoip_data(), ip_address, pd);
+
     if (cleaned_name == "admin") {
-      cleaned_name += format("_{}", ip_address);
+      cleaned_name += std::format("_{}", pd.country_name);
     }
+
     if (!name_to_user.contains(cleaned_name)) {
       users.emplace_back(std::make_shared<tiny_rcon_client_user>());
       users.back()->user_name = name;
-      // users.back()->country_code = "xy";
       name_to_user.emplace(cleaned_name, users.back());
     }
-    
+
     return name_to_user.at(cleaned_name);
   }
 
@@ -541,13 +543,5 @@ public:
     if (message_handlers.contains(message_name))
       return message_handlers.at(message_name);
     return unknown_message_handler;
-  }
-
-  size_t get_random_number() const
-  {
-    std::random_device rd{};
-    std::mt19937_64 rand_engine{ rd() };
-    std::uniform_int_distribution<size_t> number_range(1ULL, std::numeric_limits<size_t>::max());
-    return number_range(rand_engine);
   }
 };

@@ -275,6 +275,7 @@ extern const map<string, string> user_commands_help{
   { "!dgb", "^3Disables ^5Tiny^6Rcon's ^3city ban feature!" },
   { "!bancity", "^5!bancity city name ^2-> ^5Adds player's ^3city ^5to list of banned cities!" },
   { "!unbancity", "^5!unbancity city name ^2-> ^5Removes player's ^3city ^5from list of banned cities!" },
+  { "!restart", "^5!restart ^2-> ^3Remotely ^1restarts ^3logged in ^5Tiny^6Rcon ^3clients." }
 
 };
 
@@ -345,7 +346,8 @@ extern const unordered_set<string> user_commands_set{
   "!unprotectip",
   "!unprotectiprange",
   "!unprotectcity",
-  "!unprotectcountry"
+  "!unprotectcountry",
+  "!restart"
 };
 
 extern unordered_map<size_t, string> users_table_column_header_titles;
@@ -1784,7 +1786,6 @@ void parse_tinyrcon_server_users_data(const char *file_path)
       for (auto &part : parts)
         stl::helper::trim_in_place(part);
 
-
       const auto &u = main_app.get_user_for_name(parts[0], parts[4]);
       u->user_name = std::move(parts[0]);
       u->is_admin = parts[1] == "true";
@@ -1805,15 +1806,15 @@ void parse_tinyrcon_server_users_data(const char *file_path)
 
       u->last_login_time_stamp = stoll(parts[6]);
       u->last_logout_time_stamp = stoll(parts[7]);
-      u->no_of_logins = stoul(parts[8]);
-      u->no_of_warnings = stoul(parts[9]);
-      u->no_of_kicks = stoul(parts[10]);
-      u->no_of_tempbans = stoul(parts[11]);
-      u->no_of_guidbans = stoul(parts[12]);
-      u->no_of_ipbans = stoul(parts[13]);
-      u->no_of_iprangebans = stoul(parts[14]);
-      u->no_of_citybans = stoul(parts[15]);
-      u->no_of_countrybans = stoul(parts[16]);
+      u->no_of_logins += stoul(parts[8]);
+      u->no_of_warnings += stoul(parts[9]);
+      u->no_of_kicks += stoul(parts[10]);
+      u->no_of_tempbans += stoul(parts[11]);
+      u->no_of_guidbans += stoul(parts[12]);
+      u->no_of_ipbans += stoul(parts[13]);
+      u->no_of_iprangebans += stoul(parts[14]);
+      u->no_of_citybans += stoul(parts[15]);
+      u->no_of_countrybans += stoul(parts[16]);
     }
   }
 }
@@ -1934,11 +1935,9 @@ void parse_banned_ip_addresses_file(const char *file_path, std::vector<player_da
         banned_players.push_back(std::move(bannedPlayerData));
       }
     }
-    if (banned_players.size() >= 2) {
-      sort(begin(banned_players), end(banned_players), [](const player_data &p1, const player_data &p2) {
-        return p1.banned_start_time < p2.banned_start_time;
-      });
-    }
+    sort(begin(banned_players), end(banned_players), [](const player_data &p1, const player_data &p2) {
+      return p1.banned_start_time < p2.banned_start_time;
+    });
   }
 }
 
@@ -1966,6 +1965,12 @@ void parse_protected_entries_file(const char *file_path, std::set<std::string> &
     string readData;
     while (getline(input_file, readData)) {
       stl::helper::trim_in_place(readData);
+      string entry;
+      for (const auto ch : readData) {
+        if (isprint(ch) || ' ' == ch)
+          entry.push_back(ch);
+      }
+      readData = std::move(entry);
       if (!protected_entries.contains(readData)) {
         protected_entries.emplace(readData);
       }
@@ -2070,6 +2075,12 @@ void parse_banned_cities_file(const char *file_path, std::set<std::string> &bann
     banned_cities.clear();
     for (string readData; getline(input_file, readData);) {
       stl::helper::trim_in_place(readData);
+      string entry;
+      for (const auto ch : readData) {
+        if (isprint(ch) || ' ' == ch)
+          entry.push_back(ch);
+      }
+      readData = std::move(entry);
       if (protected_cities.contains(readData)) {
         const string information_about_removed_entry{ format("^3Banned city ^1{} ^3has been protected by an ^1admin^3!\n^5If you want you can ^1unprotect ^5it using the ^1!unprotectcity {} ^5command.", readData, readData) };
         print_colored_text(app_handles.hwnd_re_messages_data, information_about_removed_entry.c_str());
@@ -2110,6 +2121,12 @@ void parse_banned_countries_file(const char *file_path, std::set<std::string> &b
     banned_countries.clear();
     for (string readData; getline(input_file, readData);) {
       stl::helper::trim_in_place(readData);
+      string entry;
+      for (const auto ch : readData) {
+        if (isprint(ch) || ' ' == ch)
+          entry.push_back(ch);
+      }
+      readData = std::move(entry);
       if (protected_countries.contains(readData)) {
         const string information_about_removed_entry{ format("^3Banned country ^1{} ^3has been protected by an ^1admin^3!\n^5If you want you can ^1unprotect ^5it using the ^1!unprotectcountry {} ^5command.", readData, readData) };
         print_colored_text(app_handles.hwnd_re_messages_data, information_about_removed_entry.c_str());
@@ -2567,7 +2584,7 @@ std::pair<bool, std::string> remove_permanently_banned_ip_address(std::string &i
 
   // lock_guard lg{ protect_banned_players_data };
 
-    auto &banned_players = main_app.get_game_server().get_banned_ip_addresses_vector();
+  auto &banned_players = main_app.get_game_server().get_banned_ip_addresses_vector();
 
   if (!main_app.get_game_server().get_banned_ip_addresses_map().contains(
         ip_address)
@@ -2733,6 +2750,7 @@ void print_help_information(const std::vector<std::string> &input_parts)
  ^1!bancountry country ^5-> ^3Adds player's ^1country ^3to list of banned countries.
  ^1!unbancountry country ^5-> ^2Removes player's ^1country ^2from list of banned countries.
  ^1!banned countries ^5-> ^5Displays list of currently ^1banned countries^5.
+ ^1!restart ^5-> ^3Remotely ^1restarts ^3logged in ^5Tiny^6Rcon ^3clients.
 )"
     };
     print_colored_text(app_handles.hwnd_re_messages_data, help_message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
@@ -4777,4 +4795,11 @@ void get_first_valid_ip_address_from_ip_address_range(std::string ip_range, play
     main_app.get_connection_manager_for_messages().get_geoip_data(),
     ip_range,
     pd);
+}
+
+size_t get_random_number()
+{
+  static std::mt19937_64 rand_engine(get_current_time_stamp());
+  static std::uniform_int_distribution<size_t> number_range(1000ULL, std::numeric_limits<size_t>::max());
+  return number_range(rand_engine);
 }

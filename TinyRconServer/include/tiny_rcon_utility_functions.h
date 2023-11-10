@@ -377,3 +377,4 @@ void get_first_valid_ip_address_from_ip_address_range(std::string ip_range, play
 std::string get_narrow_ip_address_range_for_specified_ip_address(const std::string &ip_address);
 std::string get_wide_ip_address_range_for_specified_ip_address(const std::string &ip_address);
 bool check_if_player_is_protected(const player_data &online_player, const char *admin_command, std::string &message);
+size_t get_random_number();

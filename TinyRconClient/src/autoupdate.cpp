@@ -34,21 +34,6 @@ void delete_me()
 }
 
 
-bool run_executable(const char *file_path_for_executable)
-{
-  PROCESS_INFORMATION ProcessInfo{};
-  STARTUPINFO StartupInfo{};
-  StartupInfo.cb = sizeof(StartupInfo);
-
-  if (CreateProcessA(file_path_for_executable, nullptr, nullptr, nullptr, FALSE, 0, nullptr, nullptr, &StartupInfo, &ProcessInfo)) {
-    CloseHandle(ProcessInfo.hThread);
-    CloseHandle(ProcessInfo.hProcess);
-    return true;
-  }
-
-  return false;
-}
-
 std::string get_file_name_from_path(const std::string &file_path)
 {
   const auto slash_pos{ file_path.rfind('\\') };
@@ -392,7 +377,6 @@ void auto_update_manager::replace_temporary_version()
     }
   }
 }
-
 
 void auto_update_manager::downloaded_latest_version_of_program() const
 {

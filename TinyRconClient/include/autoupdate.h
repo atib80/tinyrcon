@@ -72,6 +72,7 @@ public:
   bool get_file_version(const std::string &exe_file, version_data &ver, unsigned long &version_number) const noexcept;
   const std::string &get_self_full_path() const;
   void replace_temporary_version();
+  // void restart_tinyrcon_client();
   void downloaded_latest_version_of_program() const;
   void set_self_current_working_directory(std::string cwd) noexcept;
   const std::string &get_self_current_working_directory() const noexcept;

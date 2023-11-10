@@ -190,7 +190,8 @@ public:
     return command_queue_cv;
   }
 
-  inline std::mutex& get_command_queue_mutex() noexcept {
+  inline std::mutex &get_command_queue_mutex() noexcept
+  {
     return command_mutex;
   }
 
@@ -500,7 +501,8 @@ public:
     return current_working_directory;
   }
 
-  const std::wstring& get_current_working_directory_wstring() const noexcept {
+  const std::wstring &get_current_working_directory_wstring() const noexcept
+  {
     return current_working_directory_wstring;
   }
 
@@ -509,7 +511,7 @@ public:
     constexpr size_t max_path_limit{ 32768 };
     std::unique_ptr<char[]> exe_file_path{ std::make_unique<char[]>(max_path_limit) };
     if (const auto path_len = GetModuleFileNameA(nullptr, exe_file_path.get(), max_path_limit); path_len != 0) {
-      std::string_view exe_file_path_sv(exe_file_path.get(),  path_len);
+      std::string_view exe_file_path_sv(exe_file_path.get(), path_len);
       current_working_directory.assign(string(cbegin(exe_file_path_sv), cbegin(exe_file_path_sv) + exe_file_path_sv.rfind('\\') + 1));
     } else {
       std::filesystem::path entry("TinyRcon.exe");
@@ -535,7 +537,7 @@ public:
     } else {
       std::filesystem::path entry(L"TinyRcon.exe");
       current_working_directory_wstring.assign(entry.parent_path().wstring());
-    }    
+    }
   }
 
   const char *get_tinyrcon_config_file_path() const noexcept
@@ -771,12 +773,5 @@ public:
     if (message_handlers.contains(message_name))
       return message_handlers.at(message_name);
     return unknown_message_handler;
-  }
-
-  size_t get_random_number() const
-  {
-    static std::mt19937_64 rand_engine(get_current_time_stamp());
-    static std::uniform_int_distribution<size_t> number_range(1000ULL, std::numeric_limits<size_t>::max());
-    return number_range(rand_engine);
   }
 };

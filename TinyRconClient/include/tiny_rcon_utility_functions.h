@@ -578,3 +578,6 @@ void save_protected_entries_file(const char *file_path, const std::set<std::stri
 void display_protected_entries(const char *table_title, const std::set<std::string> &protected_entries, const bool is_save_data_to_log_file = false);
 bool check_if_player_is_protected(const player_data &online_player, const char *admin_command, std::string &message);
 void get_first_valid_ip_address_from_ip_address_range(std::string ip_range, player_data &pd);
+bool run_executable(const char *file_path_for_executable);
+void restart_tinyrcon_client();
+size_t get_random_number();
