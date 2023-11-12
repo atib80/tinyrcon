@@ -272,7 +272,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       auto &sent_by{ main_app.get_user_for_name(parts[0], sender_ip) };
       for (const auto &u : main_app.get_users()) {
         unsigned long ip_key{};
-        if (u.get() != sent_by.get() && check_ip_address_validity(u->ip_address, ip_key)) {
+        if (u.get() != sent_by.get() && u->is_logged_in && check_ip_address_validity(u->ip_address, ip_key)) {
           main_app.get_connection_manager_for_messages().process_and_send_message("inform-message", data, true, u);
         }
       }

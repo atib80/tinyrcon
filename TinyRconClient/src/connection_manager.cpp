@@ -106,6 +106,8 @@ size_t connection_manager::receive_data_from_server(
           set_admin_actions_buttons_active(TRUE);
         }
 
+        string rcon_status_response{ incoming_data_buffer };
+
         start = received_reply.c_str() + 15;
         last = start;
         while (*last != 0x0A)
@@ -130,18 +132,22 @@ size_t connection_manager::receive_data_from_server(
           received_reply.erase(begin(received_reply), begin(received_reply) + digit_pos);
         }
 
-        while (true) {
+        while (!is_server_empty_or_error_receiving_udp_datagrams) {
           asio::error_code err2{};
-          ZeroMemory(incoming_data_buffer, receive_buffer_size);
+          // ZeroMemory(incoming_data_buffer, receive_buffer_size);
           noOfReceivedBytes = udp_socket.receive_from(buffer(incoming_data_buffer, receive_buffer_size), destination, 0, err2);
           noOfAllReceivedBytes += noOfReceivedBytes;
           if (noOfReceivedBytes > 0U) {
             const size_t new_line_pos = stl::helper::str_index_of(incoming_data_buffer, "\xFF\xFF\xFF\xFFprint\n");
             if (new_line_pos != string::npos) {
-              received_reply.append(incoming_data_buffer + new_line_pos + 10);
+              received_reply.append(incoming_data_buffer + new_line_pos + 10, incoming_data_buffer + noOfReceivedBytes);
+              rcon_status_response.append(incoming_data_buffer + new_line_pos + 10, incoming_data_buffer + noOfReceivedBytes);
             } else {
-              received_reply.append(incoming_data_buffer);
+              received_reply.append(incoming_data_buffer, incoming_data_buffer + noOfReceivedBytes);
+              rcon_status_response.append(incoming_data_buffer, incoming_data_buffer + noOfReceivedBytes);
             }
+
+            if (received_reply.ends_with("\n\n")) break;
           }
 
           if (err2)
@@ -350,26 +356,32 @@ size_t connection_manager::receive_data_from_server(
               }
             }
 
-            auto pn_end{ player_line.rfind("^7", i) };
-            if (string::npos == pn_end)
-              pn_end = player_line.find_last_of("^7", i);
+            /*while (isspace(player_line[i])) --i;
+            while (isdigit(player_line[i])) --i;*/
+            // while (is_ws(player_line[i])) --i;
+            /*auto pn_end{ player_line.rfind("^7", i) };
+            if (string::npos == pn_end)*/
 
-            string player_name(player_line.substr(pn_start, pn_end - pn_start));
+            string_view player_name_sv{ player_line.c_str() + pn_start, player_line.c_str() + i };
+            auto pn_end = player_name_sv.find_last_of("^7");
+            if (string::npos == pn_end)
+              pn_end = player_name_sv.length();
+            string player_name(string(player_name_sv.cbegin(), player_name_sv.cbegin() + pn_end));
             const size_t pn_len{ player_name.length() };
-            if (player_name.ends_with("^7")) {
+            if (pn_len >= 1 && (player_name[pn_len - 1] == '^' || player_name[pn_len - 1] == '7')) {
               player_name.pop_back();
+            } else if (player_name.ends_with("^7")) {
               player_name.pop_back();
-            } else if (pn_len >= 1 && (player_name[pn_len - 1] == '^' || player_name[pn_len - 1] == '7')) {
               player_name.pop_back();
             }
 
             players_data[pl_index].pid = player_pid;
             players_data[pl_index].score = player_score;
-            strcpy_s(players_data[pl_index].ping, 5, player_ping.c_str());
-            strcpy_s(players_data[pl_index].guid_key, 33, player_guid.c_str());
+            strcpy_s(players_data[pl_index].ping, std::size(players_data[pl_index].ping), player_ping.c_str());
+            strcpy_s(players_data[pl_index].guid_key, std::size(players_data[pl_index].guid_key), player_guid.c_str());
             if (strcmp(player_name.c_str(), players_data[pl_index].player_name) != 0) {
               const size_t no_of_chars_to_copy{ std::min<size_t>(32, player_name.length()) };
-              strncpy_s(players_data[pl_index].player_name, 33, player_name.c_str(), no_of_chars_to_copy);
+              strncpy_s(players_data[pl_index].player_name, std::size(players_data[pl_index].player_name), player_name.c_str(), no_of_chars_to_copy);
               players_data[pl_index].player_name[no_of_chars_to_copy] = '\0';
             }
 
@@ -392,7 +404,6 @@ size_t connection_manager::receive_data_from_server(
         main_app.get_game_server().set_number_of_online_players(number_of_online_players);
         main_app.get_game_server().set_number_of_offline_players(number_of_offline_players);
         correct_truncated_player_names(main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
-        // invalidate_unnecessary_players_data(pl_index);
         check_for_temp_banned_ip_addresses();
         check_for_banned_ip_addresses();
         check_for_warned_players();

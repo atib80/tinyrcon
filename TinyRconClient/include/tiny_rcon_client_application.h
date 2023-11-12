@@ -101,6 +101,7 @@ class tiny_rcon_client_application
   std::queue<message_t> message_queue{};
 
   std::vector<std::shared_ptr<tiny_rcon_client_user>> users;
+  std::unordered_set<std::string> seen_inform_messages;
   std::unordered_map<std::string, std::shared_ptr<tiny_rcon_client_user>> name_to_user;
 
   std::unordered_map<std::string, std::string> tinyrcon_dict{
@@ -298,6 +299,11 @@ public:
   inline void set_user_ip_address(std::string new_user_ip_address) noexcept
   {
     user_ip_address = std::move(new_user_ip_address);
+  }
+
+  std::unordered_set<std::string> &get_already_seen_messages() noexcept
+  {
+    return seen_inform_messages;
   }
 
   std::unordered_map<std::string, std::shared_ptr<tiny_rcon_client_user>> &get_name_to_user()

@@ -1650,11 +1650,11 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
       strip_leading_and_trailing_quotes(data_line);
       main_app.get_admin_messages()["automatic_kick_temp_ban_msg"] = std::move(data_line);
     } else {
-      main_app.get_admin_messages()["automatic_kick_temp_ban_msg"] = "^1{BANNED_BY}: ^7Temporarily banned player {PLAYERNAME} ^7is being automatically ^1kicked.{{br}}^7Your temporary ban expires on ^1{TEMP_BAN_END_DATE}.{{br}}^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{TEMP_BAN_START_DATE}";
+      main_app.get_admin_messages()["automatic_kick_temp_ban_msg"] = "^1{BANNED_BY}: ^7Temporarily banned player {PLAYERNAME} ^7is being automatically ^1kicked.{{br}}^7Your temporary ban expires in ^1{TEMP_BAN_END_DATE}.{{br}}^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{TEMP_BAN_START_DATE}";
     }
   } else {
     found_missing_config_setting = true;
-    main_app.get_admin_messages()["automatic_kick_temp_ban_msg"] = "^1{BANNED_BY}: ^7Temporarily banned player {PLAYERNAME} ^7is being automatically ^1kicked.{{br}}^7Your temporary ban expires on ^1{TEMP_BAN_END_DATE}.{{br}}^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{TEMP_BAN_START_DATE}";
+    main_app.get_admin_messages()["automatic_kick_temp_ban_msg"] = "^1{BANNED_BY}: ^7Temporarily banned player {PLAYERNAME} ^7is being automatically ^1kicked.{{br}}^7Your temporary ban expires in ^1{TEMP_BAN_END_DATE}.{{br}}^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{TEMP_BAN_START_DATE}";
   }
 
   if (json_resource["automatic_kick_ip_ban_msg"].exists()) {
@@ -3128,50 +3128,62 @@ void check_for_warned_players()
 
 void check_for_temp_banned_ip_addresses()
 {
+
+  const time_t now_in_seconds = get_current_time_stamp();
+
+  auto &temp_banned_players = main_app.get_game_server().get_temp_banned_players_data();
+  for (auto &tb : temp_banned_players) {
+    const time_t ban_expires_time = tb.banned_start_time + (tb.ban_duration_in_hours * 3600);
+    if (ban_expires_time <= now_in_seconds) {
+      string message{ main_app.get_automatic_remove_temp_ban_msg() };
+      main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
+      main_app.get_tinyrcon_dict()["{PLAYERNAME}"] = tb.player_name;
+      main_app.get_tinyrcon_dict()["{TEMP_BAN_START_DATE}"] = get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", tb.banned_start_time);
+      main_app.get_tinyrcon_dict()["{TEMP_BAN_END_DATE}"] = get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", ban_expires_time);
+      main_app.get_tinyrcon_dict()["{REASON}"] = remove_disallowed_character_in_string(tb.reason);
+      main_app.get_tinyrcon_dict()["{BANNED_BY}"] = remove_disallowed_character_in_string(tb.banned_by_user_name);
+      build_tiny_rcon_message(message);
+      auto [status, player]{ remove_temp_banned_ip_address(tb.ip_address, message, true, true) };
+      replace_br_with_new_line(message);
+      if (status) {
+        main_app.get_connection_manager_for_messages().process_and_send_message("remove-tempban", format(R"({}\{}\{}\{}\{}\{}\{})", player.ip_address, player.player_name, player.banned_date_time, player.banned_start_time, player.ban_duration_in_hours, player.reason, player.banned_by_user_name), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+        const string inform_msg{ format("{}\\{}", main_app.get_username(), message) };
+        main_app.add_message_to_queue(message_t("inform-message", inform_msg, true));
+      }
+    }
+  }
+
   const auto &temp_banned_ip_address =
     main_app.get_game_server().get_temp_banned_ip_addresses_map();
-  if (temp_banned_ip_address.empty())
-    return;
-  const time_t now_in_seconds = std::time(nullptr);
-  auto &players_data = main_app.get_game_server().get_players_data();
-  for (size_t i{}; i < main_app.get_game_server().get_number_of_players(); ++i) {
-    auto &online_player = players_data[i];
 
-    if (temp_banned_ip_address.count(online_player.ip_address) != 0U) {
-      player_data pd{};
-      if (main_app.get_game_server().get_temp_banned_player_data_for_ip_address(online_player.ip_address, &pd)) {
-        const time_t ban_expires_time = pd.banned_start_time + (pd.ban_duration_in_hours * 3600);
-        if (ban_expires_time > now_in_seconds) {
-          string message{ main_app.get_automatic_kick_temp_ban_msg() };
-          if (main_app.get_is_disable_automatic_kick_messages()) {
-            message.clear();
-          } else {
-            main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
-            main_app.get_tinyrcon_dict()["{PLAYERNAME}"] = online_player.player_name;
-            main_app.get_tinyrcon_dict()["{TEMP_BAN_START_DATE}"] = get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", pd.banned_start_time);
-            main_app.get_tinyrcon_dict()["{TEMP_BAN_END_DATE}"] = get_time_interval_info_string_for_seconds(ban_expires_time - now_in_seconds);
-            main_app.get_tinyrcon_dict()["{REASON}"] = remove_disallowed_character_in_string(pd.reason);
-            main_app.get_tinyrcon_dict()["{BANNED_BY}"] = remove_disallowed_character_in_string(pd.banned_by_user_name);
-            build_tiny_rcon_message(message);
+  if (!temp_banned_ip_address.empty()) {
+
+    auto &players_data = main_app.get_game_server().get_players_data();
+    for (size_t i{}; i < main_app.get_game_server().get_number_of_players(); ++i) {
+      auto &online_player = players_data[i];
+
+      if (temp_banned_ip_address.contains(online_player.ip_address)) {
+        player_data pd{};
+        if (main_app.get_game_server().get_temp_banned_player_data_for_ip_address(online_player.ip_address, &pd)) {
+          const time_t ban_expires_time = pd.banned_start_time + (pd.ban_duration_in_hours * 3600);
+          if (ban_expires_time > now_in_seconds) {
+            string message{ main_app.get_automatic_kick_temp_ban_msg() };
+            if (main_app.get_is_disable_automatic_kick_messages()) {
+              message.clear();
+            } else {
+              main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
+              main_app.get_tinyrcon_dict()["{PLAYERNAME}"] = online_player.player_name;
+              main_app.get_tinyrcon_dict()["{TEMP_BAN_START_DATE}"] = get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", pd.banned_start_time);
+              main_app.get_tinyrcon_dict()["{TEMP_BAN_END_DATE}"] = get_time_interval_info_string_for_seconds(ban_expires_time - now_in_seconds);
+              main_app.get_tinyrcon_dict()["{REASON}"] = remove_disallowed_character_in_string(pd.reason);
+              main_app.get_tinyrcon_dict()["{BANNED_BY}"] = remove_disallowed_character_in_string(pd.banned_by_user_name);
+              build_tiny_rcon_message(message);
+            }
+            kick_player(online_player.pid, message);
+            replace_br_with_new_line(message);
+            const string inform_msg{ format("{}\\{}", main_app.get_username(), message) };
+            main_app.add_message_to_queue(message_t("inform-message", inform_msg, true));
           }
-          kick_player(online_player.pid, message);
-          replace_br_with_new_line(message);
-          const string inform_msg{ format("{}\\{}", main_app.get_username(), message) };
-          main_app.add_message_to_queue(message_t("inform-message", inform_msg, true));
-
-        } else {
-          string message{ main_app.get_automatic_remove_temp_ban_msg() };
-          main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
-          main_app.get_tinyrcon_dict()["{PLAYERNAME}"] = online_player.player_name;
-          main_app.get_tinyrcon_dict()["{TEMP_BAN_START_DATE}"] = get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", pd.banned_start_time);
-          main_app.get_tinyrcon_dict()["{TEMP_BAN_END_DATE}"] = get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", ban_expires_time);
-          main_app.get_tinyrcon_dict()["{REASON}"] = remove_disallowed_character_in_string(pd.reason);
-          main_app.get_tinyrcon_dict()["{BANNED_BY}"] = remove_disallowed_character_in_string(pd.banned_by_user_name);
-          build_tiny_rcon_message(message);
-          remove_temp_banned_ip_address(online_player.ip_address, message, true);
-          replace_br_with_new_line(message);
-          const string inform_msg{ format("{}\\{}", main_app.get_username(), message) };
-          main_app.add_message_to_queue(message_t("inform-message", inform_msg, true));
         }
       }
     }
@@ -3343,12 +3355,12 @@ bool check_if_player_is_protected(const player_data &online_player, const char *
     is_ip_range_protected = main_app.get_game_server().get_protected_ip_address_ranges().contains(narrow_ip_address_range) || main_app.get_game_server().get_protected_ip_address_ranges().contains(wide_ip_address_range);
 
     if (is_ip_protected) {
-      message.assign(format("^3Discarded ^1{} ^3player ^7{} ^3whose IP address ^1{} ^3is protected!\n^5Please, remove their ^1protected IP address ^5first.", admin_command, online_player.player_name, online_player.ip_address));
+      message.assign(format("^3Discarded ^1{} ^3on player ^7{} ^3whose IP address ^1{} ^3is protected!\n^5Please, remove their ^1protected IP address ^5first.", admin_command, online_player.player_name, online_player.ip_address));
       return true;
     }
 
     if (is_ip_range_protected) {
-      message.assign(format("^3Discarded ^1{} ^3player ^7{} ^3whose IP address range ^1{} ^3is protected!\n^5Please, remove their ^1protected IP address range ^5first.", admin_command, online_player.player_name, main_app.get_game_server().get_protected_ip_address_ranges().contains(narrow_ip_address_range) ? narrow_ip_address_range : wide_ip_address_range));
+      message.assign(format("^3Discarded ^1{} ^3on player ^7{} ^3whose IP address range ^1{} ^3is protected!\n^5Please, remove their ^1protected IP address range ^5first.", admin_command, online_player.player_name, main_app.get_game_server().get_protected_ip_address_ranges().contains(narrow_ip_address_range) ? narrow_ip_address_range : wide_ip_address_range));
       return true;
     }
   }
@@ -3357,13 +3369,13 @@ bool check_if_player_is_protected(const player_data &online_player, const char *
 
 
   if (is_city_protected) {
-    message.assign(format("^3Discarded ^1{} ^3player ^7{} ^3whose city ^1{} ^3is protected!\n^5Please, remove their ^1protected city ^5first.", admin_command, online_player.player_name, online_player.city));
+    message.assign(format("^3Discarded ^1{} ^3on player ^7{} ^3whose city ^1{} ^3is protected!\n^5Please, remove their ^1protected city ^5first.", admin_command, online_player.player_name, online_player.city));
     return true;
   }
 
   if (is_country_protected) {
 
-    message.assign(format("^3Discarded ^1{} ^3player ^7{} ^3whose country ^1{} ^3is protected!\n^5Please, remove their ^1protected country ^5first.", admin_command, online_player.player_name, online_player.country_name));
+    message.assign(format("^3Discarded ^1{} ^3on player ^7{} ^3whose country ^1{} ^3is protected!\n^5Please, remove their ^1protected country ^5first.", admin_command, online_player.player_name, online_player.country_name));
     return true;
   }
 
@@ -3372,20 +3384,24 @@ bool check_if_player_is_protected(const player_data &online_player, const char *
 
 void kick_player(const int pid, string &custom_message)
 {
-  static char buffer[128];
-  static string reply;
-
   const auto &pd = get_player_data_for_pid(pid);
   int ping{};
   const string ping_str{ stl::helper::trim(pd.ping) };
-  const bool is_send_public_message_to_server{ is_valid_decimal_whole_number(ping_str, ping) && ping != -1 && ping != 999 };
+  const bool is_send_public_message_to_server{ is_valid_decimal_whole_number(ping_str, ping) && ping != -1};
   if (!is_send_public_message_to_server) {
-    const string inform_msg{ format("^5Skipping sending indentical ^1public message ^5to the server because player ^7{}\n ^5has already been ^1kicked.\n", pd.player_name) };
+    const string inform_msg{ format("^5Not displaying ^1public message ^5on the server because player ^7{}\n ^5has already been ^1kicked.\n", pd.player_name) };
     print_colored_text(app_handles.hwnd_re_messages_data, inform_msg.c_str());
-  } else if (!custom_message.empty()) {
-    string message{ custom_message };
-    rcon_say(message);
+  } else {
+    auto &already_displayed_public_messages = main_app.get_already_seen_messages();
+    if (!custom_message.empty() && !already_displayed_public_messages.contains(custom_message)) {
+      already_displayed_public_messages.insert(custom_message);
+      string message{ custom_message };
+      rcon_say(message);
+    }
   }
+
+  static char buffer[128];
+  static string reply;
 
   (void)snprintf(buffer, std::size(buffer), "clientkick %d", pid);
   main_app.get_connection_manager().send_and_receive_rcon_data(buffer, reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str(), false);
@@ -3704,8 +3720,8 @@ void display_temporarily_banned_ip_addresses(const bool is_save_data_to_log_file
       << " | " << left << setw(longest_name_length)
       << "Player name"
       << " | " << left << setw(longest_country_length) << "Country, city"
-      << " | " << left << setw(20) << "Tempban issued on"
-      << " | " << left << setw(20) << "Tempban expires on"
+      << " | " << left << setw(20) << "Tempban issued at"
+      << " | " << left << setw(20) << "Tempban expires in"
       << " | " << left << setw(25) << "Reason"
       << " | " << left << setw(32) << "Banned by admin"
       << "|";
@@ -3714,8 +3730,8 @@ void display_temporarily_banned_ip_addresses(const bool is_save_data_to_log_file
         << " | " << left << setw(longest_name_length)
         << "Player name"
         << " | " << left << setw(longest_country_length) << "Country, city"
-        << " | " << left << setw(20) << "Tempban issued on"
-        << " | " << left << setw(20) << "Tempban expires on"
+        << " | " << left << setw(20) << "Tempban issued at"
+        << " | " << left << setw(20) << "Tempban expires in"
         << " | " << left << setw(25) << "Reason"
         << " | " << left << setw(32) << "Banned by admin"
         << "|";

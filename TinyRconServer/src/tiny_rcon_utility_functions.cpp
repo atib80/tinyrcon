@@ -1867,7 +1867,7 @@ void parse_tempbans_data_file(const char *file_path, std::vector<player_data> &t
           main_app.get_connection_manager_for_messages().get_geoip_data(),
           temp_banned_player_data.ip_address,
           temp_banned_player_data);
-        if (check_if_player_is_protected(temp_banned_player_data, "^7enable ^1tempban ^7for", information_about_protected_player)) {
+        if (check_if_player_is_protected(temp_banned_player_data, "!tb", information_about_protected_player)) {
           print_colored_text(app_handles.hwnd_re_messages_data, information_about_protected_player.c_str());
           continue;
         }
@@ -1927,7 +1927,7 @@ void parse_banned_ip_addresses_file(const char *file_path, std::vector<player_da
           main_app.get_connection_manager_for_messages().get_geoip_data(),
           bannedPlayerData.ip_address,
           bannedPlayerData);
-        if (check_if_player_is_protected(bannedPlayerData, "^7enable ^1IP ban ^7for", information_about_protected_player)) {
+        if (check_if_player_is_protected(bannedPlayerData, "!gb", information_about_protected_player)) {
           print_colored_text(app_handles.hwnd_re_messages_data, information_about_protected_player.c_str());
           continue;
         }
@@ -2034,7 +2034,7 @@ void parse_banned_ip_address_ranges_file(const char *file_path, std::vector<play
         bannedPlayerData.banned_by_user_name = (parts.size() >= 6) ? std::move(parts[5]) : main_app.get_username();
         get_first_valid_ip_address_from_ip_address_range(parts[0], bannedPlayerData);
 
-        if (check_if_player_is_protected(bannedPlayerData, "^7enable ^1IP address range ban ^7for", information_about_protected_player)) {
+        if (check_if_player_is_protected(bannedPlayerData, "!br", information_about_protected_player)) {
           print_colored_text(app_handles.hwnd_re_messages_data, information_about_protected_player.c_str());
           continue;
         }
@@ -2963,7 +2963,7 @@ void display_temporarily_banned_ip_addresses()
       << "Player name"
       << " | " << left << setw(longest_country_length) << "Country, city"
       << " | " << left << setw(20) << "Tempban issued on"
-      << " | " << left << setw(20) << "Tempban expires on"
+      << " | " << left << setw(20) << "Tempban expires in"
       << " | " << left << setw(25) << "Reason"
       << "|";
   log << left << setw(15) << "IP address"
@@ -2971,7 +2971,7 @@ void display_temporarily_banned_ip_addresses()
       << "Player name"
       << " | " << left << setw(longest_country_length) << "Country, city"
       << " | " << left << setw(20) << "Tempban issued on"
-      << " | " << left << setw(20) << "Tempban expires on"
+      << " | " << left << setw(20) << "Tempban expires in"
       << " | " << left << setw(25) << "Reason"
       << "|";
   oss << "^5\n"

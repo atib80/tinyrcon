@@ -17,7 +17,7 @@ using namespace std::string_literals;
 using namespace std::chrono;
 using namespace std::filesystem;
 
-extern const string program_version{ "2.5.4.3" };
+extern const string program_version{ "2.5.5.0" };
 
 extern char const *const c_downloads_folder_path{ "C:\\Downloads" };
 extern char const *const c_temp_folder_path{ "C:\\Temp" };
@@ -1298,7 +1298,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
           auto &player = main_app.get_game_server().get_player_data(pid);
           if (pid == player.pid) {
             string error_msg;
-            if (check_if_player_is_protected(player, format("^3command ^1{} ^3on", user_cmd[0]).c_str(), error_msg)) {
+            if (check_if_player_is_protected(player, user_cmd[0].c_str(), error_msg)) {
               print_colored_text(app_handles.hwnd_re_messages_data, error_msg.c_str());
               return;
             }
@@ -1403,7 +1403,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       player_data pd{};
       pd.city = banned_city.c_str();
       string error_msg;
-      if (check_if_player_is_protected(pd, "^3command ^1!bancity ^3on", error_msg)) {
+      if (check_if_player_is_protected(pd, "!bancity", error_msg)) {
         print_colored_text(app_handles.hwnd_re_messages_data, error_msg.c_str());
         return;
       }
@@ -1482,7 +1482,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       player_data pd{};
       pd.city = banned_country.c_str();
       string error_msg;
-      if (check_if_player_is_protected(pd, "^3command ^1!bancountry ^3on", error_msg)) {
+      if (check_if_player_is_protected(pd, "!bancountry", error_msg)) {
         print_colored_text(app_handles.hwnd_re_messages_data, error_msg.c_str());
         return;
       }
@@ -2344,11 +2344,15 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   main_app.add_message_handler("inform-message", [](const string &, const time_t, const string &data, bool) {
     auto parts = stl::helper::str_split(data, "\\", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::yes);
     if (parts.size() >= 2) {
-      const string received_from_message{ format("^2Received message from ^7{}:\n", parts[0]) };
-      print_colored_text(app_handles.hwnd_re_messages_data, received_from_message.c_str());
-      for (size_t i{ 1 }; i < parts.size(); ++i) {
-        if (!parts[i].empty()) {
-          print_colored_text(app_handles.hwnd_re_messages_data, parts[i].c_str());
+      auto &already_seen_inform_message = main_app.get_already_seen_messages();
+      if (!data.empty() && !already_seen_inform_message.contains(data)) {
+        already_seen_inform_message.insert(data);
+        const string received_from_message{ format("^2Received message from ^7{}:\n", parts[0]) };
+        print_colored_text(app_handles.hwnd_re_messages_data, received_from_message.c_str());
+        for (size_t i{ 1 }; i < parts.size(); ++i) {
+          if (!parts[i].empty()) {
+            print_colored_text(app_handles.hwnd_re_messages_data, parts[i].c_str());
+          }
         }
       }
     }
@@ -2834,47 +2838,56 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       is_main_window_constructed = true;
 
       size_t rcon_status_sent_counter{ 0 };
+      string rcon_reply;
 
       while (true) {
-        {
-          unique_lock ul{ main_app.get_command_queue_mutex() };
-          main_app.get_command_queue_cv().wait_for(ul, 20ms, [&]() {
-            return !main_app.is_command_queue_empty() || is_terminate_program.load();
-          });
-        }
-
-        if (is_terminate_program.load()) break;
-
-        // this_thread::sleep_for(20ms);
-        // if (is_terminate_program.load()) break;
-
-        while (!main_app.is_command_queue_empty()) {
-          auto cmd = main_app.get_command_from_queue();
-          main_app.process_queue_command(std::move(cmd));
-        }
-
-        string rcon_reply;
-
-        if (is_refresh_players_data_event.load()) {
-          if (main_app.get_game_server().get_is_connection_settings_valid()) {
-            main_app.get_connection_manager().send_and_receive_rcon_data("g_gametype", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
-            main_app.get_connection_manager().send_and_receive_rcon_data("status", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
-            ++rcon_status_sent_counter;
-            const bool log_players_data{ rcon_status_sent_counter % 30 == 0 };
-            if (30 == rcon_status_sent_counter)
-              rcon_status_sent_counter = 0;
-            prepare_players_data_for_display(log_players_data);
-          } else {
-            main_app.get_connection_manager().send_and_receive_rcon_data("getstatus", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
-            ++rcon_status_sent_counter;
-            const bool log_players_data{ rcon_status_sent_counter % 30 == 0 };
-            if (30 == rcon_status_sent_counter)
-              rcon_status_sent_counter = 0;
-            prepare_players_data_for_display_of_getstatus_response(log_players_data);
+        try {
+          {
+            unique_lock ul{ main_app.get_command_queue_mutex() };
+            main_app.get_command_queue_cv().wait_for(ul, 20ms, [&]() {
+              return !main_app.is_command_queue_empty() || is_terminate_program.load();
+            });
           }
 
-          is_refresh_players_data_event.store(false);
-          is_refreshed_players_data_ready_event.store(true);
+          if (is_terminate_program.load()) break;
+
+          while (!main_app.is_command_queue_empty()) {
+            auto cmd = main_app.get_command_from_queue();
+            main_app.process_queue_command(std::move(cmd));
+          }
+
+          if (is_refresh_players_data_event.load()) {
+
+            if (main_app.get_game_server().get_is_connection_settings_valid()) {
+              main_app.get_connection_manager().send_and_receive_rcon_data("g_gametype", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
+              main_app.get_connection_manager().send_and_receive_rcon_data("status", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
+              ++rcon_status_sent_counter;
+              const bool log_players_data{ rcon_status_sent_counter % 30 == 0 };
+              if (30 == rcon_status_sent_counter)
+                rcon_status_sent_counter = 0;
+              prepare_players_data_for_display(log_players_data);
+              if (!main_app.get_already_seen_messages().empty())
+                main_app.get_already_seen_messages().clear();
+            } else {
+              main_app.get_connection_manager().send_and_receive_rcon_data("getstatus", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
+              ++rcon_status_sent_counter;
+              const bool log_players_data{ rcon_status_sent_counter % 30 == 0 };
+              if (30 == rcon_status_sent_counter)
+                rcon_status_sent_counter = 0;
+              prepare_players_data_for_display_of_getstatus_response(log_players_data);
+              if (!main_app.get_already_seen_messages().empty())
+                main_app.get_already_seen_messages().clear();
+            }
+
+            is_refresh_players_data_event.store(false);
+            is_refreshed_players_data_ready_event.store(true);
+          }
+        } catch (std::exception &ex) {
+          const string error_message{ format("^3A specific exception was caught in command queue's thread!\n^1Exception: {}", ex.what()) };
+          print_colored_text(app_handles.hwnd_re_messages_data, error_message.c_str());
+        } catch (...) {
+          const string error_message{ format("^3A generic error was caught in command queue's thread!\n^1Exception: {}", strerror(GetLastError())) };
+          print_colored_text(app_handles.hwnd_re_messages_data, error_message.c_str());
         }
       }
     }
@@ -2887,24 +2900,37 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       const auto &tiny_rcon_server_ip = main_app.get_tiny_rcon_server_ip_address();
       const uint_least16_t tiny_rcon_server_port = static_cast<uint_least16_t>(main_app.get_tiny_rcon_server_port());
 
+
       while (true) {
-        /*{
-          unique_lock ul{ mu };
-          exit_flag.wait_for(ul, 10ms, [&]() {
-            return is_terminate_program.load();
-          });
-        }*/
 
-        if (is_terminate_program.load()) {
-          break;
+        try {
+
+          /*{
+            unique_lock ul{ mu };
+            exit_flag.wait_for(ul, 10ms, [&]() {
+              return is_terminate_program.load();
+            });
+          }*/
+
+          if (is_terminate_program.load()) {
+            break;
+          }
+
+          while (!main_app.is_message_queue_empty()) {
+            message_t message{ main_app.get_message_from_queue() };
+            const bool is_call_message_handler{ message.command != "inform-message" };
+            main_app.get_connection_manager_for_messages().process_and_send_message(message.command, message.data, message.is_show_in_messages, tiny_rcon_server_ip, tiny_rcon_server_port, is_call_message_handler);
+          }
+
+          main_app.get_connection_manager_for_messages().wait_for_and_process_response_message(tiny_rcon_server_ip, tiny_rcon_server_port);
+
+        } catch (std::exception &ex) {
+          const string error_message{ format("^3A specific exception was caught in command queue's thread!\n^1Exception: {}", ex.what()) };
+          print_colored_text(app_handles.hwnd_re_messages_data, error_message.c_str());
+        } catch (...) {
+          const string error_message{ format("^3A generic error was caught in command queue's thread!\n^1Exception: {}", strerror(GetLastError())) };
+          print_colored_text(app_handles.hwnd_re_messages_data, error_message.c_str());
         }
-
-        while (!main_app.is_message_queue_empty()) {
-          message_t message{ main_app.get_message_from_queue() };
-          main_app.get_connection_manager_for_messages().process_and_send_message(message.command, message.data, message.is_show_in_messages, tiny_rcon_server_ip, tiny_rcon_server_port, true);
-        }
-
-        main_app.get_connection_manager_for_messages().wait_for_and_process_response_message(tiny_rcon_server_ip, tiny_rcon_server_port);
       }
     }
   };
@@ -3014,9 +3040,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     exit_flag.notify_all();
   }*/
 
-  if (pr_info.hProcess != NULL)
+  if (pr_info.hProcess != nullptr)
     CloseHandle(pr_info.hProcess);
-  if (pr_info.hThread != NULL)
+  if (pr_info.hThread != nullptr)
     CloseHandle(pr_info.hThread);
 
   log_message("Exiting TinyRcon program.", is_log_datetime::yes);
