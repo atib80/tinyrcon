@@ -18,6 +18,7 @@
 #include <bitextractor.hpp>
 #include <bitexception.hpp>
 #include <bittypes.hpp>
+#include "stack_trace_element.h"
 
 // Call of duty steam appid: 2620
 // Call of duty 2 steam appid: 2630
@@ -872,23 +873,29 @@ bool save_tiny_rcon_users_data_to_json_file(const char *json_file_path)
 bool check_ip_address_validity(string_view ip_address,
   unsigned long &ip_key)
 {
-  const auto parts = stl::helper::str_split(ip_address, ".", nullptr, split_on_whole_needle_t::yes);
+  string ex_msg{ format(R"(^1Exception ^3thrown from ^1bool check_ip_address_validity("{}", "{}"))", ip_address, ip_key) };
+  stack_trace_element ste{
+    app_handles.hwnd_re_messages_data,
+    std::move(ex_msg)
+  };
+  auto parts = stl::helper::str_split(ip_address, ".", nullptr, split_on_whole_needle_t::yes);
   if (parts.size() < 4U)
     return false;
 
+  for (auto &part : parts)
+    stl::helper::trim_in_place(part);
+
   const bool is_valid_ip_address =
     all_of(cbegin(parts), cend(parts), [](const string &part) {
+      int number{};
+      if (!is_valid_decimal_whole_number(part, number))
+        return false;
       const int value{ stoi(part) };
       return value >= 0 && value <= 255;
     });
 
   if (is_valid_ip_address) {
     ip_key = 0UL;
-    // 123.123.123.123 // 123 * 256 + 123 =
-    // 1. 4 = 4
-    // 2. 4 * 256 + 18 = 1042
-    // 3. 1042 * 256 + 100 = 266852
-    // 4. 266852 * 256 + 32 = 68314144
     for (size_t i{}; i < 4; ++i) {
       ip_key <<= 8;
       ip_key += stoul(parts[i]);
@@ -900,7 +907,7 @@ bool check_ip_address_validity(string_view ip_address,
 
 void convert_guid_key_to_country_name(const vector<geoip_data> &geo_data,
   string_view player_ip,
-  player_data &player_data)
+  player &player_data)
 {
   unsigned long ip_key{};
   if (!check_ip_address_validity(player_ip, ip_key)) {
@@ -952,7 +959,7 @@ void convert_guid_key_to_country_name(const vector<geoip_data> &geo_data,
 }
 
 size_t find_longest_player_name_length(
-  const std::vector<player_data> &players,
+  const std::vector<player> &players,
   const bool count_color_codes,
   const size_t number_of_players_to_process)
 {
@@ -968,7 +975,7 @@ size_t find_longest_player_name_length(
 }
 
 size_t find_longest_player_country_city_info_length(
-  const std::vector<player_data> &players,
+  const std::vector<player> &players,
   const size_t number_of_players_to_process)
 {
   if (0 == number_of_players_to_process)
@@ -1793,7 +1800,7 @@ void parse_tinyrcon_server_users_data(const char *file_path)
       u->is_online = parts[3] == "true";
       unsigned long guid{};
       if (check_ip_address_validity(parts[4], guid)) {
-        player_data admin{};
+        player admin{};
         convert_guid_key_to_country_name(main_app.get_connection_manager_for_messages().get_geoip_data(), parts[4], admin);
         u->ip_address = std::move(parts[4]);
         u->country_code = admin.country_code;
@@ -1819,7 +1826,7 @@ void parse_tinyrcon_server_users_data(const char *file_path)
   }
 }
 
-void parse_tempbans_data_file(const char *file_path, std::vector<player_data> &temp_banned_players, std::unordered_map<std::string, player_data> &ip_to_temp_banned_player, const bool is_skip_removed_check)
+void parse_tempbans_data_file(const char *file_path, std::vector<player> &temp_banned_players, std::unordered_map<std::string, player> &ip_to_temp_banned_player, const bool is_skip_removed_check)
 {
   string property_key, property_value;
   // lock_guard lg{ protect_banned_players_data };
@@ -1853,7 +1860,7 @@ void parse_tempbans_data_file(const char *file_path, std::vector<player_data> &t
       if (parts.size() < 6)
         continue;
       if ((is_skip_removed_check || !removed_temp_bans_map.contains(parts[0])) && !ip_to_temp_banned_player.contains(parts[0])) {
-        player_data temp_banned_player_data{};
+        player temp_banned_player_data{};
         strcpy_s(temp_banned_player_data.ip_address, std::size(temp_banned_player_data.ip_address), parts[0].c_str());
         strcpy_s(temp_banned_player_data.player_name, std::size(temp_banned_player_data.player_name), parts[1].c_str());
         // strcpy_s(temp_banned_player_data.banned_date_time, std::size(temp_banned_player_data.banned_date_time), parts[2].c_str());
@@ -1878,7 +1885,7 @@ void parse_tempbans_data_file(const char *file_path, std::vector<player_data> &t
   }
 }
 
-void parse_banned_ip_addresses_file(const char *file_path, std::vector<player_data> &banned_players, std::unordered_map<std::string, player_data> &ip_to_banned_player, const bool is_skip_removed_check)
+void parse_banned_ip_addresses_file(const char *file_path, std::vector<player> &banned_players, std::unordered_map<std::string, player> &ip_to_banned_player, const bool is_skip_removed_check)
 {
   string property_key, property_value;
   // lock_guard lg{ protect_banned_players_data };
@@ -1913,7 +1920,7 @@ void parse_banned_ip_addresses_file(const char *file_path, std::vector<player_da
         continue;
 
       if ((is_skip_removed_check || !removed_ip_bans_map.contains(parts[0])) && !ip_to_banned_player.contains(parts[0])) {
-        player_data bannedPlayerData{};
+        player bannedPlayerData{};
         strcpy_s(bannedPlayerData.ip_address, std::size(bannedPlayerData.ip_address), parts[0].c_str());
         strcpy_s(bannedPlayerData.guid_key, std::size(bannedPlayerData.guid_key), parts[1].c_str());
         strcpy_s(bannedPlayerData.player_name, std::size(bannedPlayerData.player_name), parts[2].c_str());
@@ -1935,7 +1942,7 @@ void parse_banned_ip_addresses_file(const char *file_path, std::vector<player_da
         banned_players.push_back(std::move(bannedPlayerData));
       }
     }
-    sort(begin(banned_players), end(banned_players), [](const player_data &p1, const player_data &p2) {
+    sort(begin(banned_players), end(banned_players), [](const player &p1, const player &p2) {
       return p1.banned_start_time < p2.banned_start_time;
     });
   }
@@ -1991,7 +1998,7 @@ void save_protected_entries_file(const char *file_path, const std::set<std::stri
   }
 }
 
-void parse_banned_ip_address_ranges_file(const char *file_path, std::vector<player_data> &banned_ip_address_ranges, std::unordered_map<std::string, player_data> &ip_address_range_to_banned_player, const bool is_skip_removed_check)
+void parse_banned_ip_address_ranges_file(const char *file_path, std::vector<player> &banned_ip_address_ranges, std::unordered_map<std::string, player> &ip_address_range_to_banned_player, const bool is_skip_removed_check)
 {
   string property_key, property_value;
   ifstream input_file{ file_path };
@@ -2023,7 +2030,7 @@ void parse_banned_ip_address_ranges_file(const char *file_path, std::vector<play
       if (parts.size() < 5)
         continue;
       if ((is_skip_removed_check || !removed_ip_address_ranges_map.contains(parts[0])) && !ip_address_range_to_banned_player.contains(parts[0])) {
-        player_data bannedPlayerData{};
+        player bannedPlayerData{};
         strcpy_s(bannedPlayerData.guid_key, std::size(bannedPlayerData.guid_key), parts[1].c_str());
         strcpy_s(bannedPlayerData.player_name, std::size(bannedPlayerData.player_name), parts[2].c_str());
         bannedPlayerData.banned_start_time = get_number_of_seconds_from_date_and_time_string(parts[3]);
@@ -2043,7 +2050,7 @@ void parse_banned_ip_address_ranges_file(const char *file_path, std::vector<play
         banned_ip_address_ranges.push_back(std::move(bannedPlayerData));
       }
     }
-    sort(begin(banned_ip_address_ranges), end(banned_ip_address_ranges), [](const player_data &p1, const player_data &p2) {
+    sort(begin(banned_ip_address_ranges), end(banned_ip_address_ranges), [](const player &p1, const player &p2) {
       return p1.banned_start_time < p2.banned_start_time;
     });
   }
@@ -2140,7 +2147,7 @@ void parse_banned_countries_file(const char *file_path, std::set<std::string> &b
   }
 }
 
-void save_tempbans_to_file(const char *file_path, const std::vector<player_data> &temp_banned_players)
+void save_tempbans_to_file(const char *file_path, const std::vector<player> &temp_banned_players)
 {
   ofstream output{ file_path };
   if (output) {
@@ -2159,7 +2166,7 @@ void save_tempbans_to_file(const char *file_path, const std::vector<player_data>
   }
 }
 
-void save_banned_ip_entries_to_file(const char *file_path, const std::vector<player_data> &banned_ip_entries)
+void save_banned_ip_entries_to_file(const char *file_path, const std::vector<player> &banned_ip_entries)
 {
   ofstream output{ file_path };
   if (output) {
@@ -2177,7 +2184,7 @@ void save_banned_ip_entries_to_file(const char *file_path, const std::vector<pla
   }
 }
 
-void save_banned_ip_address_range_entries_to_file(const char *file_path, const std::vector<player_data> &banned_ip_address_ranges)
+void save_banned_ip_address_range_entries_to_file(const char *file_path, const std::vector<player> &banned_ip_address_ranges)
 {
   ofstream output{ file_path };
 
@@ -2228,7 +2235,7 @@ void save_banned_countries_to_file(const char *file_path, const std::set<std::st
   }
 }
 
-bool temp_ban_player_ip_address(player_data &pd)
+bool temp_ban_player_ip_address(player &pd)
 {
   using namespace std::literals;
 
@@ -2300,7 +2307,7 @@ bool temp_ban_player_ip_address(player_data &pd)
   return true;
 }
 
-bool global_ban_player_ip_address(player_data &pd)
+bool global_ban_player_ip_address(player &pd)
 {
   using namespace std::literals;
 
@@ -2362,7 +2369,7 @@ bool global_ban_player_ip_address(player_data &pd)
   return true;
 }
 
-bool add_temporarily_banned_ip_address(player_data &pd, vector<player_data> &temp_banned_players_data, unordered_map<string, player_data> &ip_to_temp_banned_player_data)
+bool add_temporarily_banned_ip_address(player &pd, vector<player> &temp_banned_players_data, unordered_map<string, player> &ip_to_temp_banned_player_data)
 {
   unsigned long guid_number{};
   if (!check_ip_address_validity(pd.ip_address, guid_number) || ip_to_temp_banned_player_data.contains(pd.ip_address))
@@ -2371,7 +2378,7 @@ bool add_temporarily_banned_ip_address(player_data &pd, vector<player_data> &tem
   if (main_app.get_game_server().get_removed_temp_banned_players_map().contains(pd.ip_address)) {
     main_app.get_game_server().get_removed_temp_banned_players_map().erase(pd.ip_address);
     auto &entries = main_app.get_game_server().get_removed_temp_banned_players_vector();
-    entries.erase(std::remove_if(begin(entries), end(entries), [&pd](const player_data &p) {
+    entries.erase(std::remove_if(begin(entries), end(entries), [&pd](const player &p) {
       return strcmp(p.ip_address, pd.ip_address) == 0;
     }),
       end(entries));
@@ -2396,7 +2403,7 @@ std::pair<bool, std::string> remove_temp_banned_ip_address(const std::string &ip
 
   auto &temp_banned_players = main_app.get_game_server().get_temp_banned_players_data();
 
-  const auto found_iter = find_if(std::begin(temp_banned_players), std::end(temp_banned_players), [&ip_address](const player_data &p) {
+  const auto found_iter = find_if(std::begin(temp_banned_players), std::end(temp_banned_players), [&ip_address](const player &p) {
     return ip_address == p.ip_address;
   });
 
@@ -2412,7 +2419,7 @@ std::pair<bool, std::string> remove_temp_banned_ip_address(const std::string &ip
 
     main_app.get_game_server().get_temp_banned_ip_addresses_map().erase(ip_address);
 
-    temp_banned_players.erase(remove_if(std::begin(temp_banned_players), std::end(temp_banned_players), [&ip_address](const player_data &p) {
+    temp_banned_players.erase(remove_if(std::begin(temp_banned_players), std::end(temp_banned_players), [&ip_address](const player &p) {
       return ip_address == p.ip_address;
     }),
       std::end(temp_banned_players));
@@ -2425,7 +2432,7 @@ std::pair<bool, std::string> remove_temp_banned_ip_address(const std::string &ip
   return { true, "Unknown Soldier" };
 }
 
-bool add_permanently_banned_ip_address(player_data &pd, vector<player_data> &banned_players_data, unordered_map<string, player_data> &ip_to_banned_player_data)
+bool add_permanently_banned_ip_address(player &pd, vector<player> &banned_players_data, unordered_map<string, player> &ip_to_banned_player_data)
 {
   // lock_guard lg{ protect_banned_players_data };
   unsigned long guid_number{};
@@ -2435,7 +2442,7 @@ bool add_permanently_banned_ip_address(player_data &pd, vector<player_data> &ban
   if (main_app.get_game_server().get_removed_banned_ip_addresses_map().contains(pd.ip_address)) {
     main_app.get_game_server().get_removed_banned_ip_addresses_map().erase(pd.ip_address);
     auto &entries = main_app.get_game_server().get_removed_banned_ip_addresses_vector();
-    entries.erase(std::remove_if(begin(entries), end(entries), [&pd](const player_data &p) {
+    entries.erase(std::remove_if(begin(entries), end(entries), [&pd](const player &p) {
       return strcmp(p.ip_address, pd.ip_address) == 0;
     }),
       end(entries));
@@ -2450,7 +2457,7 @@ bool add_permanently_banned_ip_address(player_data &pd, vector<player_data> &ban
   return true;
 }
 
-bool add_permanently_banned_ip_address_range(player_data &pd, std::vector<player_data> &banned_ip_address_ranges_vector, std::unordered_map<std::string, player_data> &banned_ip_address_ranges_map)
+bool add_permanently_banned_ip_address_range(player &pd, std::vector<player> &banned_ip_address_ranges_vector, std::unordered_map<std::string, player> &banned_ip_address_ranges_map)
 {
   // lock_guard lg{ protect_banned_players_data };
   const string banned_ip_range{ pd.ip_address };
@@ -2462,7 +2469,7 @@ bool add_permanently_banned_ip_address_range(player_data &pd, std::vector<player
   if (main_app.get_game_server().get_removed_banned_ip_address_ranges_map().contains(banned_ip_range)) {
     main_app.get_game_server().get_removed_banned_ip_address_ranges_map().erase(banned_ip_range);
     auto &entries = main_app.get_game_server().get_removed_banned_ip_address_ranges_vector();
-    entries.erase(std::remove_if(begin(entries), end(entries), [&banned_ip_range](const player_data &p) {
+    entries.erase(std::remove_if(begin(entries), end(entries), [&banned_ip_range](const player &p) {
       return banned_ip_range == p.ip_address;
     }),
       end(entries));
@@ -2477,7 +2484,7 @@ bool add_permanently_banned_ip_address_range(player_data &pd, std::vector<player
   return true;
 }
 
-bool remove_permanently_banned_ip_address_range(player_data &pd, std::vector<player_data> &banned_ip_address_ranges_vector, std::unordered_map<std::string, player_data> &banned_ip_address_ranges_map)
+bool remove_permanently_banned_ip_address_range(player &pd, std::vector<player> &banned_ip_address_ranges_vector, std::unordered_map<std::string, player> &banned_ip_address_ranges_map)
 {
   // lock_guard lg{ protect_banned_players_data };
   const string banned_ip_range{ pd.ip_address };
@@ -2492,7 +2499,7 @@ bool remove_permanently_banned_ip_address_range(player_data &pd, std::vector<pla
     save_banned_ip_address_range_entries_to_file(removed_ip_range_bans_file_path, main_app.get_game_server().get_removed_banned_ip_address_ranges_vector());
   }
 
-  banned_ip_address_ranges_vector.erase(remove_if(std::begin(banned_ip_address_ranges_vector), std::end(banned_ip_address_ranges_vector), [&pd](const player_data &p) {
+  banned_ip_address_ranges_vector.erase(remove_if(std::begin(banned_ip_address_ranges_vector), std::end(banned_ip_address_ranges_vector), [&pd](const player &p) {
     return strcmp(pd.ip_address, p.ip_address) == 0;
   }),
     std::end(banned_ip_address_ranges_vector));
@@ -2596,7 +2603,7 @@ std::pair<bool, std::string> remove_permanently_banned_ip_address(std::string &i
     ip_address = banned_players[no].ip_address;
   }
 
-  const auto found_iter = find_if(std::begin(banned_players), std::end(banned_players), [&ip_address](const player_data &p) {
+  const auto found_iter = find_if(std::begin(banned_players), std::end(banned_players), [&ip_address](const player &p) {
     return ip_address == p.ip_address;
   });
 
@@ -2609,7 +2616,7 @@ std::pair<bool, std::string> remove_permanently_banned_ip_address(std::string &i
       save_banned_ip_entries_to_file(removed_banned_ip_addresses_file_path, main_app.get_game_server().get_removed_banned_ip_addresses_vector());
     }
 
-    banned_players.erase(remove_if(std::begin(banned_players), std::end(banned_players), [&ip_address](const player_data &p) {
+    banned_players.erase(remove_if(std::begin(banned_players), std::end(banned_players), [&ip_address](const player &p) {
       return ip_address == p.ip_address;
     }),
       std::end(banned_players));
@@ -2624,24 +2631,10 @@ std::pair<bool, std::string> remove_permanently_banned_ip_address(std::string &i
   return { true, "Unknown Soldier" };
 }
 
-bool is_valid_decimal_whole_number(const std::string &str, int &number)
+bool is_valid_decimal_whole_number(const std::string &str, int &number) noexcept
 {
-  if (str.empty()) return false;
-  const bool is_negative{ '-' == str[0] };
-  size_t index{ is_negative || '+' == str[0] ? 1U : 0U };
-  number = 0;
-  for (; index < str.length(); ++index) {
-    if (!isdigit(str[index]))
-      return false;
-    number *= 10;
-    number += static_cast<int>(str[index] - '0');
-  }
-  if (is_negative)
-    number = -number;
-
-  return true;
-  /*try {
-    number = stoi(number_str);
+  try {
+    number = stoi(str);
   } catch (const std::invalid_argument &) {
     return false;
   } catch (const std::out_of_range &) {
@@ -2653,7 +2646,6 @@ bool is_valid_decimal_whole_number(const std::string &str, int &number)
   }
 
   return true;
-  */
 }
 
 size_t get_number_of_characters_without_color_codes(const char *text) noexcept
@@ -2845,7 +2837,7 @@ void remove_all_color_codes(std::string &msg)
     if (string::npos == start)
       break;
 
-    if (start + 4 <= msg.length() && msg[start + 1] == '^' && (msg[start + 2] >= '0' && msg[start + 2] <= '9') && (msg[start + 3] >= '0' && msg[start + 3] <= '9') /*&& msg[start + 2] == msg[start + 3]*/) {
+    if (start + 4 <= msg.length() && msg[start + 1] == '^' && (msg[start + 2] >= '0' && msg[start + 2] <= '9') && (msg[start + 3] >= '0' && msg[start + 3] <= '9') && msg[start + 2] == msg[start + 3]) {
       msg.erase(start, 4);
     } else if (start + 2 <= msg.length() && (msg[start + 1] >= '0' && msg[start + 1] <= '9')) {
       msg.erase(start, 2);
@@ -4581,8 +4573,14 @@ time_t get_number_of_seconds_from_date_and_time_string(const std::string &date_a
     { "Dec", 11 },
   };
   smatch matches1{}, matches2{}, matches3{};
-
   string day, month, hour, minute;
+
+  string ex_msg{ format(R"(^1Exception ^3thrown from ^1time_t get_number_of_seconds_from_date_and_time_string("{}"))", date_and_time) };
+  stack_trace_element ste{
+    app_handles.hwnd_re_messages_data,
+    std::move(ex_msg)
+  };
+
   if (regex_match(date_and_time, matches1, date_format1)) {
     day = matches1[1].str();
     if (!day.empty() && '0' == day[0]) day.erase(0, 1);
@@ -4701,6 +4699,8 @@ std::string get_cleaned_user_name(const std::string &name)
   remove_all_color_codes(admin_name);
   trim_in_place(admin_name);
   to_lower_case_in_place(admin_name);
+  // const string info_message{ format("^5Cleaned name for ^1admin '{}' ^5is ^1'{}'\n", name, admin_name) };
+  // print_colored_text(app_handles.hwnd_re_messages_data, info_message.c_str());
   return admin_name;
 }
 
@@ -4711,7 +4711,7 @@ void replace_br_with_new_line(std::string &message)
   }
 }
 
-bool check_if_player_is_protected(const player_data &online_player, const char *admin_command, string &message)
+bool check_if_player_is_protected(const player &online_player, const char *admin_command, string &message)
 {
   bool is_ip_protected{};
   bool is_ip_range_protected{};
@@ -4781,7 +4781,7 @@ std::string get_wide_ip_address_range_for_specified_ip_address(const std::string
   return { string(ip_address.cbegin(), ip_address.cbegin() + last) + ".*.*" };
 }
 
-void get_first_valid_ip_address_from_ip_address_range(std::string ip_range, player_data &pd)
+void get_first_valid_ip_address_from_ip_address_range(std::string ip_range, player &pd)
 {
 
   if (ip_range.ends_with("*.*")) {

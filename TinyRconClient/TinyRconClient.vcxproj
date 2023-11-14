@@ -211,7 +211,9 @@
     <ClInclude Include="include\internet_handle.h" />
     <ClInclude Include="include\json_parser.hpp" />
     <ClInclude Include="include\md5.h" />
+    <ClInclude Include="include\player.h" />
     <ClInclude Include="include\simple_grid.h" />
+    <ClInclude Include="include\stack_trace_element.h" />
     <ClInclude Include="include\stl_helper_functions.hpp" />
     <ClInclude Include="include\tiny_rcon_client_user.h" />
     <ClInclude Include="resource.h" />

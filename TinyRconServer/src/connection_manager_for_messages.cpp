@@ -102,7 +102,7 @@ bool connection_manager_for_messages::wait_for_and_process_response_message()
       user->remote_endpoint = std::move(remote_endpoint);
       unsigned long guid{};
       if (check_ip_address_validity(user->ip_address, guid)) {
-        player_data pd{};
+        player pd{};
         strcpy_s(pd.player_name, std::size(pd.player_name), sender.c_str());
         strcpy_s(pd.ip_address, std::size(pd.ip_address), user->ip_address.c_str());
         convert_guid_key_to_country_name(main_app.get_connection_manager_for_messages().get_geoip_data(), user->ip_address, pd);

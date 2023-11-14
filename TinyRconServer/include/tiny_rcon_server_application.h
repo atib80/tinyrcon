@@ -216,10 +216,10 @@ public:
   std::shared_ptr<tiny_rcon_client_user> &get_user_for_name(const std::string &name, const string &ip_address)
   {
     string cleaned_name{ get_cleaned_user_name(name) };
-    player_data pd{};
+    player pd{};
     convert_guid_key_to_country_name(cm_for_messages.get_geoip_data(), ip_address, pd);
 
-    if (cleaned_name == "admin") {
+    if (name.find("Admin") != string::npos) {
       cleaned_name += std::format("_{}", pd.country_name);
     }
 

@@ -5,6 +5,7 @@
 #include "stl_helper_functions.hpp"
 #include <utility>
 #include <regex>
+#include "stack_trace_element.h"
 
 using namespace std;
 using namespace stl::helper;
@@ -55,6 +56,12 @@ size_t connection_manager::send_rcon_command(
   const char *remote_ip,
   const uint_least16_t remote_port) const
 {
+  string ex_msg{ format(R"(^1Exception ^3thrown from ^1size_t connection_manager::send_rcon_command("{}", "{}", {}))", outgoing_data, remote_ip, remote_port) };
+  stack_trace_element ste{
+    app_handles.hwnd_re_messages_data,
+    std::move(ex_msg)
+  };
+
   const ip::udp::endpoint dst{ ip::address::from_string(remote_ip), remote_port };
   const size_t sent_bytes = udp_socket.send_to(buffer(outgoing_data.c_str(), outgoing_data.length()), dst);
   return sent_bytes;
@@ -68,6 +75,12 @@ size_t connection_manager::receive_data_from_server(
 {
   char incoming_data_buffer[receive_buffer_size]{};
   size_t noOfReceivedBytes{}, noOfAllReceivedBytes{};
+
+  string ex_msg{ format(R"(^1Exception ^3thrown from ^1size_t connection_manager::receive_data_from_server("{}", "{}", "{}", {}))", remote_ip, remote_ip, remote_port, received_reply, is_process_reply ? "true" : "false") };
+  stack_trace_element ste{
+    app_handles.hwnd_re_messages_data,
+    std::move(ex_msg)
+  };
 
   ip::udp::endpoint destination{ ip::address::from_string(remote_ip), remote_port };
   asio::error_code err1{};
@@ -116,7 +129,7 @@ size_t connection_manager::receive_data_from_server(
         if (previous_map.empty() || current_map != previous_map) {
           selected_row = 0;
           previous_map = current_map;
-          initialize_elements_of_container_to_specified_value(main_app.get_game_server().get_players_data(), player_data{}, 0);
+          initialize_elements_of_container_to_specified_value(main_app.get_game_server().get_players_data(), player{}, 0);
           clear_players_data_in_players_grid(app_handles.hwnd_players_grid, 0, max_players_grid_rows, 7);
         }
         main_app.get_game_server().set_current_map(std::move(current_map));
@@ -580,7 +593,7 @@ size_t connection_manager::receive_data_from_server(
             selected_row = 0;
             previous_map = current_map;
             initialize_elements_of_container_to_specified_value(
-              main_app.get_game_server().get_players_data(), player_data{}, 0);
+              main_app.get_game_server().get_players_data(), player{}, 0);
             clear_players_data_in_players_grid(app_handles.hwnd_players_grid, 0, max_players_grid_rows, 7);
           }
           main_app.get_game_server().set_current_map(std::move(current_map));
@@ -623,6 +636,12 @@ void connection_manager::send_and_receive_rcon_data(
 {
   constexpr size_t buffer_size{ 1536 };
   static char outgoing_data_buffer[buffer_size];
+
+  string ex_msg{ format(R"(^1Exception ^3thrown from ^1size_t connection_manager::send_and_receive_rcon_data("{}", "{}", "{}", {}, "{}", {}, {}))", command_to_send, received_reply, remote_ip, remote_port, rcon_password, is_wait_for_reply ? "true" : "false", is_process_reply ? "true" : "false") };
+  stack_trace_element ste{
+    app_handles.hwnd_re_messages_data,
+    std::move(ex_msg)
+  };
   std::lock_guard lg{ rcon_mutex };
   prepare_rcon_command(outgoing_data_buffer, buffer_size, command_to_send, rcon_password);
   (void)send_rcon_command(outgoing_data_buffer, remote_ip, remote_port);

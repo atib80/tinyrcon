@@ -103,6 +103,7 @@ class tiny_rcon_client_application
   std::vector<std::shared_ptr<tiny_rcon_client_user>> users;
   std::unordered_set<std::string> seen_inform_messages;
   std::unordered_map<std::string, std::shared_ptr<tiny_rcon_client_user>> name_to_user;
+  std::unordered_map<std::string, bool> is_user_data_received;
 
   std::unordered_map<std::string, std::string> tinyrcon_dict{
     { "{ADMINNAME}", username },
@@ -311,6 +312,45 @@ public:
     return name_to_user;
   }
 
+  std::unordered_map<std::string, bool> &get_is_user_data_received()
+  {
+    return is_user_data_received;
+  }
+
+  bool get_is_user_data_received_for_user(const std::string &name, const string &ip_address)
+  {
+    string cleaned_name{ get_cleaned_user_name(name) };
+    player pd{};
+    convert_guid_key_to_country_name(rcon_connection_manager.get_geoip_data(), ip_address, pd);
+
+    if (name.find("Admin") != string::npos) {
+      cleaned_name += std::format("_{}", pd.country_name);
+    }
+
+    if (!is_user_data_received.contains(cleaned_name)) {
+      is_user_data_received.emplace(cleaned_name, false);
+    }
+
+    return is_user_data_received[cleaned_name];
+  }
+
+  void set_is_user_data_received_for_user(const std::string &name, const string &ip_address)
+  {
+    string cleaned_name{ get_cleaned_user_name(name) };
+    player pd{};
+    convert_guid_key_to_country_name(rcon_connection_manager.get_geoip_data(), ip_address, pd);
+
+    if (name.find("Admin") != string::npos) {
+      cleaned_name += std::format("_{}", pd.country_name);
+    }
+
+    if (!is_user_data_received.contains(cleaned_name)) {
+      is_user_data_received.emplace(cleaned_name, true);
+    }
+
+    is_user_data_received[cleaned_name] = true;
+  }
+
   std::vector<std::shared_ptr<tiny_rcon_client_user>> &get_users()
   {
     return users;
@@ -319,13 +359,16 @@ public:
   std::shared_ptr<tiny_rcon_client_user> &get_user_for_name(const std::string &name, const string &ip_address)
   {
     string cleaned_name{ get_cleaned_user_name(name) };
-    if (cleaned_name == "admin") {
-      cleaned_name += format("_{}", ip_address);
+    player pd{};
+    convert_guid_key_to_country_name(rcon_connection_manager.get_geoip_data(), ip_address, pd);
+
+    if (name.find("Admin") != string::npos) {
+      cleaned_name += std::format("_{}", pd.country_name);
     }
+
     if (!name_to_user.contains(cleaned_name)) {
       users.emplace_back(std::make_shared<tiny_rcon_client_user>());
       users.back()->user_name = name;
-      // users.back()->country_code = "xy";
       name_to_user.emplace(cleaned_name, users.back());
     }
 

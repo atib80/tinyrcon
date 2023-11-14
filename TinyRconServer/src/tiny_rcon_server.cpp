@@ -1,5 +1,6 @@
 #include "framework.h"
 #include "resource.h"
+#include "stack_trace_element.h"
 
 #undef min
 
@@ -17,7 +18,7 @@ using namespace std::string_literals;
 using namespace std::chrono;
 using namespace std::filesystem;
 
-extern const string program_version{ "1.0.1.3" };
+extern const string program_version{ "1.0.1.4" };
 
 extern char const *const tinyrcon_config_file_path = "config\\tinyrcon.json";
 
@@ -230,7 +231,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     g_message_data_contents.clear();
   });
 
-  main_app.add_command_handler({ "bans", "!bans" }, [](const vector<string> &user_cmd) {    
+  main_app.add_command_handler({ "bans", "!bans" }, [](const vector<string> &user_cmd) {
     if (user_cmd.size() == 3U && user_cmd[1] == "clear" && user_cmd[2] == "all") {
       for (const auto &ip : main_app.get_game_server().get_banned_ip_addresses_map()) {
         string message;
@@ -241,7 +242,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     is_display_permanently_banned_players_data_event.store(true);
   });
 
-  main_app.add_command_handler({ "tempbans", "!tempbans" }, [](const vector<string> &user_cmd) {    
+  main_app.add_command_handler({ "tempbans", "!tempbans" }, [](const vector<string> &user_cmd) {
     if (user_cmd.size() == 3U && user_cmd[1] == "clear" && user_cmd[2] == "all") {
       for (const auto &ip : main_app.get_game_server().get_temp_banned_ip_addresses_map()) {
         string message;
@@ -252,7 +253,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     is_display_temporarily_banned_players_data_event.store(true);
   });
 
-  main_app.add_command_handler({ "!restart" }, [](const vector<string> &user_cmd) {    
+  main_app.add_command_handler({ "!restart" }, [](const vector<string> &user_cmd) {
     for (const auto &u : main_app.get_users()) {
       unsigned long ip_key{};
       if (u->is_logged_in && check_ip_address_validity(u->ip_address, ip_key)) {
@@ -319,7 +320,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     if (parts.size() >= 3) {
       auto &current_user = main_app.get_user_for_name(parts[0], sender_ip);
       // current_user->ip_address = std::move(parts[1]);
-      player_data pd{};
+      player pd{};
       convert_guid_key_to_country_name(main_app.get_connection_manager_for_messages().get_geoip_data(), current_user->ip_address, pd);
       current_user->geo_information = format("{}, {}", pd.country_name, pd.city);
       current_user->country_code = pd.country_code;
@@ -349,7 +350,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       if (parts.size() >= 3) {
         const auto &current_user = main_app.get_user_for_name(parts[0], sender_ip);
         // current_user->ip_address = std::move(parts[1]);
-        player_data pd{};
+        player pd{};
         convert_guid_key_to_country_name(main_app.get_connection_manager_for_messages().get_geoip_data(), current_user->ip_address, pd);
         current_user->geo_information = format("{}, {}", pd.country_name, pd.city);
         current_user->country_code = pd.country_code;
@@ -404,8 +405,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
       if (file_name_key == "tempbans") {
         const string admins_tempbans_file_path{ format("{}\\{}", main_app.get_ftp_bans_folder_path(), data) };
-        vector<player_data> admins_tempbanned_ip_addresses_data;
-        unordered_map<string, player_data> admins_tempbanned_ip_to_player_data;
+        vector<player> admins_tempbanned_ip_addresses_data;
+        unordered_map<string, player> admins_tempbanned_ip_to_player_data;
         parse_tempbans_data_file(admins_tempbans_file_path.c_str(), admins_tempbanned_ip_addresses_data, admins_tempbanned_ip_to_player_data);
         auto &tiny_rcon_server_tempbanned_players_vector = main_app.get_game_server().get_temp_banned_players_data();
         auto &tiny_rcon_server_tempbanned_players_map = main_app.get_game_server().get_temp_banned_ip_addresses_map();
@@ -416,7 +417,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
           }
         }
 
-        std::sort(std::begin(tiny_rcon_server_tempbanned_players_vector), std::end(tiny_rcon_server_tempbanned_players_vector), [](const player_data &pd1, const player_data &pd2) {
+        std::sort(std::begin(tiny_rcon_server_tempbanned_players_vector), std::end(tiny_rcon_server_tempbanned_players_vector), [](const player &pd1, const player &pd2) {
           return pd1.banned_start_time < pd2.banned_start_time;
         });
 
@@ -426,8 +427,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
       } else if (file_name_key == "bans") {
         const string admins_ip_bans_file_path{ format("{}\\{}", main_app.get_ftp_bans_folder_path(), data) };
-        vector<player_data> admins_banned_ip_addresses_data;
-        unordered_map<string, player_data> admins_banned_ip_to_player_data;
+        vector<player> admins_banned_ip_addresses_data;
+        unordered_map<string, player> admins_banned_ip_to_player_data;
         parse_banned_ip_addresses_file(admins_ip_bans_file_path.c_str(), admins_banned_ip_addresses_data, admins_banned_ip_to_player_data);
         auto &tiny_rcon_server_banned_ip_addresses_vector = main_app.get_game_server().get_banned_ip_addresses_vector();
         auto &tiny_rcon_server_banned_ip_addresses_map = main_app.get_game_server().get_banned_ip_addresses_map();
@@ -438,7 +439,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
           }
         }
 
-        std::sort(std::begin(tiny_rcon_server_banned_ip_addresses_vector), std::end(tiny_rcon_server_banned_ip_addresses_vector), [](const player_data &pd1, const player_data &pd2) {
+        std::sort(std::begin(tiny_rcon_server_banned_ip_addresses_vector), std::end(tiny_rcon_server_banned_ip_addresses_vector), [](const player &pd1, const player &pd2) {
           return pd1.banned_start_time < pd2.banned_start_time;
         });
 
@@ -447,8 +448,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         save_banned_ip_entries_to_file(servers_ip_bans_file_path.c_str(), tiny_rcon_server_banned_ip_addresses_vector);
       } else if (file_name_key == "ip_range_bans") {
         const string admins_ip_range_bans_file_path{ format("{}\\{}", main_app.get_ftp_bans_folder_path(), data) };
-        vector<player_data> admins_banned_ip_address_ranges_data;
-        unordered_map<string, player_data> admins_banned_ip_range_to_player_data;
+        vector<player> admins_banned_ip_address_ranges_data;
+        unordered_map<string, player> admins_banned_ip_range_to_player_data;
         parse_banned_ip_address_ranges_file(admins_ip_range_bans_file_path.c_str(), admins_banned_ip_address_ranges_data, admins_banned_ip_range_to_player_data);
         auto &tiny_rcon_server_banned_ip_address_ranges_vector = main_app.get_game_server().get_banned_ip_address_ranges_vector();
         auto &tiny_rcon_server_banned_ip_address_ranges_map = main_app.get_game_server().get_banned_ip_address_ranges_map();
@@ -459,7 +460,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
           }
         }
 
-        std::sort(std::begin(tiny_rcon_server_banned_ip_address_ranges_vector), std::end(tiny_rcon_server_banned_ip_address_ranges_vector), [](const player_data &pd1, const player_data &pd2) {
+        std::sort(std::begin(tiny_rcon_server_banned_ip_address_ranges_vector), std::end(tiny_rcon_server_banned_ip_address_ranges_vector), [](const player &pd1, const player &pd2) {
           return pd1.banned_start_time < pd2.banned_start_time;
         });
 
@@ -503,16 +504,16 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     }
   });
 
-  //main_app.add_message_handler("restart-tinyrcon", [](const string &user, const time_t, const string &, bool, const string &sender_ip) {
-  //  for (const auto &u : main_app.get_users()) {
-  //    unsigned long ip_key{};
-  //    if (u->is_logged_in && check_ip_address_validity(u->ip_address, ip_key)) {
-  //      const string info_message{ format("^5Sent a request to ^1admin ^7{} ^5with IP address ^1{} ^5from ^1{} ^5to restart their ^5Tiny^6Rcon ^5program.\n", u->user_name, u->ip_address, u->geo_information) };
-  //      print_colored_text(app_handles.hwnd_re_messages_data, info_message.c_str());
-  //      main_app.get_connection_manager_for_messages().process_and_send_message("restart-tinyrcon", "^3Restarting your ^5Tiny^6Rcon ^3client program.", true, u);
-  //    }
-  //  }
-  //});
+  // main_app.add_message_handler("restart-tinyrcon", [](const string &user, const time_t, const string &, bool, const string &sender_ip) {
+  //   for (const auto &u : main_app.get_users()) {
+  //     unsigned long ip_key{};
+  //     if (u->is_logged_in && check_ip_address_validity(u->ip_address, ip_key)) {
+  //       const string info_message{ format("^5Sent a request to ^1admin ^7{} ^5with IP address ^1{} ^5from ^1{} ^5to restart their ^5Tiny^6Rcon ^5program.\n", u->user_name, u->ip_address, u->geo_information) };
+  //       print_colored_text(app_handles.hwnd_re_messages_data, info_message.c_str());
+  //       main_app.get_connection_manager_for_messages().process_and_send_message("restart-tinyrcon", "^3Restarting your ^5Tiny^6Rcon ^3client program.", true, u);
+  //     }
+  //   }
+  // });
 
   main_app.add_message_handler("request-protectedipaddresses", [](const string &user, const time_t, const string &, bool, const string &sender_ip) {
     // const string message1{ format("^3Received a request for ^1protected IP addresses ^3from ^7{}.", user) };
@@ -786,11 +787,12 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     }
 
     if (parts.size() >= 5) {
-      player_data warned_player{};
+      player warned_player{};
       strcpy_s(warned_player.ip_address, std::size(warned_player.ip_address), parts[0].c_str());
       strcpy_s(warned_player.guid_key, std::size(warned_player.guid_key), parts[1].c_str());
       strcpy_s(warned_player.player_name, std::size(warned_player.player_name), parts[2].c_str());
       strcpy_s(warned_player.banned_date_time, std::size(warned_player.banned_date_time), parts[3].c_str());
+      warned_player.banned_start_time = get_number_of_seconds_from_date_and_time_string(warned_player.banned_date_time);
       warned_player.reason = std::move(parts[4]);
       warned_player.banned_by_user_name = parts.size() >= 6 ? std::move(parts[5]) : "^1Admin";
       convert_guid_key_to_country_name(
@@ -819,11 +821,12 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     }
 
     if (parts.size() >= 5) {
-      player_data kicked_player{};
+      player kicked_player{};
       strcpy_s(kicked_player.ip_address, std::size(kicked_player.ip_address), parts[0].c_str());
       strcpy_s(kicked_player.guid_key, std::size(kicked_player.guid_key), parts[1].c_str());
       strcpy_s(kicked_player.player_name, std::size(kicked_player.player_name), parts[2].c_str());
       strcpy_s(kicked_player.banned_date_time, std::size(kicked_player.banned_date_time), parts[3].c_str());
+      kicked_player.banned_start_time = get_number_of_seconds_from_date_and_time_string(kicked_player.banned_date_time);
       kicked_player.reason = std::move(parts[4]);
       kicked_player.banned_by_user_name = parts.size() >= 6 ? std::move(parts[5]) : "^1Admin";
       convert_guid_key_to_country_name(
@@ -852,7 +855,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     }
 
     if (parts.size() >= 6 && !main_app.get_game_server().get_temp_banned_ip_addresses_map().contains(parts[0])) {
-      player_data temp_banned_player_data{};
+      player temp_banned_player_data{};
       strcpy_s(temp_banned_player_data.ip_address, std::size(temp_banned_player_data.ip_address), parts[0].c_str());
       strcpy_s(temp_banned_player_data.player_name, std::size(temp_banned_player_data.player_name), parts[1].c_str());
       strcpy_s(temp_banned_player_data.banned_date_time, std::size(temp_banned_player_data.banned_date_time), parts[2].c_str());
@@ -887,7 +890,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     }
 
     if (parts.size() >= 6 && main_app.get_game_server().get_temp_banned_ip_addresses_map().contains(parts[0])) {
-      player_data temp_banned_player_data{};
+      player temp_banned_player_data{};
       strcpy_s(temp_banned_player_data.ip_address, std::size(temp_banned_player_data.ip_address), parts[0].c_str());
       strcpy_s(temp_banned_player_data.player_name, std::size(temp_banned_player_data.player_name), parts[1].c_str());
       strcpy_s(temp_banned_player_data.banned_date_time, std::size(temp_banned_player_data.banned_date_time), parts[2].c_str());
@@ -920,11 +923,12 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     }
 
     if (parts.size() >= 5 && !main_app.get_game_server().get_banned_ip_addresses_map().contains(parts[0])) {
-      player_data pd{};
+      player pd{};
       strcpy_s(pd.ip_address, std::size(pd.ip_address), parts[0].c_str());
       strcpy_s(pd.guid_key, std::size(pd.guid_key), parts[1].c_str());
       strcpy_s(pd.player_name, std::size(pd.player_name), parts[2].c_str());
       strcpy_s(pd.banned_date_time, std::size(pd.banned_date_time), parts[3].c_str());
+      pd.banned_start_time = get_number_of_seconds_from_date_and_time_string(pd.banned_date_time);
       pd.reason = std::move(parts[4]);
       pd.banned_by_user_name = (parts.size() >= 6) ? std::move(parts[5]) : "^1Admin";
       convert_guid_key_to_country_name(
@@ -953,11 +957,12 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     }
 
     if (parts.size() >= 5 && !main_app.get_game_server().get_banned_ip_addresses_map().contains(parts[0])) {
-      player_data pd{};
+      player pd{};
       strcpy_s(pd.ip_address, std::size(pd.ip_address), parts[0].c_str());
       strcpy_s(pd.guid_key, std::size(pd.guid_key), parts[1].c_str());
       strcpy_s(pd.player_name, std::size(pd.player_name), parts[2].c_str());
       strcpy_s(pd.banned_date_time, std::size(pd.banned_date_time), parts[3].c_str());
+      pd.banned_start_time = get_number_of_seconds_from_date_and_time_string(pd.banned_date_time);
       pd.reason = std::move(parts[4]);
       pd.banned_by_user_name = (parts.size() >= 6) ? std::move(parts[5]) : "^1Admin";
       convert_guid_key_to_country_name(
@@ -988,11 +993,12 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     }
 
     if (parts.size() >= 5 && main_app.get_game_server().get_banned_ip_addresses_map().contains(parts[0])) {
-      player_data pd{};
+      player pd{};
       strcpy_s(pd.ip_address, std::size(pd.ip_address), parts[0].c_str());
       strcpy_s(pd.guid_key, std::size(pd.guid_key), parts[1].c_str());
       strcpy_s(pd.player_name, std::size(pd.player_name), parts[2].c_str());
       strcpy_s(pd.banned_date_time, std::size(pd.banned_date_time), parts[3].c_str());
+      pd.banned_start_time = get_number_of_seconds_from_date_and_time_string(pd.banned_date_time);
       pd.reason = std::move(parts[4]);
       pd.banned_by_user_name = (parts.size() >= 6) ? std::move(parts[5]) : "^1Admin";
       convert_guid_key_to_country_name(
@@ -1021,11 +1027,12 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     }
 
     if (parts.size() >= 5 && !main_app.get_game_server().get_banned_ip_address_ranges_map().contains(parts[0])) {
-      player_data pd{};
+      player pd{};
       strcpy_s(pd.ip_address, std::size(pd.ip_address), parts[0].c_str());
       strcpy_s(pd.guid_key, std::size(pd.guid_key), parts[1].c_str());
       strcpy_s(pd.player_name, std::size(pd.player_name), parts[2].c_str());
       strcpy_s(pd.banned_date_time, std::size(pd.banned_date_time), parts[3].c_str());
+      pd.banned_start_time = get_number_of_seconds_from_date_and_time_string(pd.banned_date_time);
       pd.reason = std::move(parts[4]);
       pd.banned_by_user_name = (parts.size() >= 6) ? std::move(parts[5]) : "^1Admin";
       convert_guid_key_to_country_name(
@@ -1054,11 +1061,12 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     }
 
     if (main_app.get_game_server().get_banned_ip_address_ranges_map().contains(parts[0])) {
-      player_data pd{};
+      player pd{};
       strcpy_s(pd.ip_address, std::size(pd.ip_address), parts[0].c_str());
       strcpy_s(pd.guid_key, std::size(pd.guid_key), parts[1].c_str());
       strcpy_s(pd.player_name, std::size(pd.player_name), parts[2].c_str());
       strcpy_s(pd.banned_date_time, std::size(pd.banned_date_time), parts[3].c_str());
+      pd.banned_start_time = get_number_of_seconds_from_date_and_time_string(pd.banned_date_time);
       pd.reason = std::move(parts[4]);
       pd.banned_by_user_name = parts.size() >= 6 ? std::move(parts[5]) : "^1Admin";
       convert_guid_key_to_country_name(
@@ -1218,88 +1226,88 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
   std::thread task_thread{
     [&]() {
-    IsGUIThread(TRUE);
-    print_colored_text(app_handles.hwnd_re_messages_data, "^3Started parsing ^1tinyrcon.json ^3file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-    print_colored_text(app_handles.hwnd_re_messages_data, "^2Finished parsing ^1tinyrcon.json ^3file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-    /*{
-      auto_update_manager au{};
-      main_app.set_current_working_directory(au.get_self_current_working_directory());
-    }*/
-    print_colored_text(app_handles.hwnd_re_messages_data, "^3Started importing serialized binary geological data from\n ^1'plugins/geoIP/geo.dat' ^3file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-    // const string geo_dat_file_path{ main_app.get_current_working_directory() + "plugins\\geoIP\\IP2LOCATION-LITE-DB3.csv" };
-    // parse_geodata_lite_csv_file(geo_dat_file_path.c_str());
-    const string geo_dat_file_path{ main_app.get_current_working_directory() + "plugins\\geoIP\\geo.dat" };
-    import_geoip_data(main_app.get_connection_manager_for_messages().get_geoip_data(), geo_dat_file_path.c_str());
+      IsGUIThread(TRUE);
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3Started parsing ^1tinyrcon.json ^3file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      print_colored_text(app_handles.hwnd_re_messages_data, "^2Finished parsing ^1tinyrcon.json ^3file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      /*{
+        auto_update_manager au{};
+        main_app.set_current_working_directory(au.get_self_current_working_directory());
+      }*/
+      print_colored_text(app_handles.hwnd_re_messages_data, "^3Started importing serialized binary geological data from\n ^1'plugins/geoIP/geo.dat' ^3file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      // const string geo_dat_file_path{ main_app.get_current_working_directory() + "plugins\\geoIP\\IP2LOCATION-LITE-DB3.csv" };
+      // parse_geodata_lite_csv_file(geo_dat_file_path.c_str());
+      const string geo_dat_file_path{ main_app.get_current_working_directory() + "plugins\\geoIP\\geo.dat" };
+      import_geoip_data(main_app.get_connection_manager_for_messages().get_geoip_data(), geo_dat_file_path.c_str());
 
-    print_colored_text(app_handles.hwnd_re_messages_data, "^2Finished importing serialized binary geological data from\n ^1'plugins/geoIP/geo.dat' ^2file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      print_colored_text(app_handles.hwnd_re_messages_data, "^2Finished importing serialized binary geological data from\n ^1'plugins/geoIP/geo.dat' ^2file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
 
-    parse_tinyrcon_server_users_data(users_data_file_path);
+      parse_tinyrcon_server_users_data(users_data_file_path);
 
-    parse_protected_entries_file(format("{}{}", main_app.get_current_working_directory(), protected_ip_addresses_file_path).c_str(), main_app.get_game_server().get_protected_ip_addresses());
-    parse_protected_entries_file(format("{}{}", main_app.get_current_working_directory(), protected_ip_address_ranges_file_path).c_str(), main_app.get_game_server().get_protected_ip_address_ranges());
-    parse_protected_entries_file(format("{}{}", main_app.get_current_working_directory(), protected_cities_list_file_path).c_str(), main_app.get_game_server().get_protected_cities());
-    parse_protected_entries_file(format("{}{}", main_app.get_current_working_directory(), protected_countries_list_file_path).c_str(), main_app.get_game_server().get_protected_countries());
+      parse_protected_entries_file(format("{}{}", main_app.get_current_working_directory(), protected_ip_addresses_file_path).c_str(), main_app.get_game_server().get_protected_ip_addresses());
+      parse_protected_entries_file(format("{}{}", main_app.get_current_working_directory(), protected_ip_address_ranges_file_path).c_str(), main_app.get_game_server().get_protected_ip_address_ranges());
+      parse_protected_entries_file(format("{}{}", main_app.get_current_working_directory(), protected_cities_list_file_path).c_str(), main_app.get_game_server().get_protected_cities());
+      parse_protected_entries_file(format("{}{}", main_app.get_current_working_directory(), protected_countries_list_file_path).c_str(), main_app.get_game_server().get_protected_countries());
 
-    parse_tempbans_data_file(format("{}{}", main_app.get_current_working_directory(), tempbans_file_path).c_str(), main_app.get_game_server().get_temp_banned_players_data(), main_app.get_game_server().get_temp_banned_ip_addresses_map());
-    parse_tempbans_data_file(format("{}{}", main_app.get_current_working_directory(), removed_tempbans_file_path).c_str(), main_app.get_game_server().get_removed_temp_banned_players_vector(), main_app.get_game_server().get_removed_temp_banned_players_map(), true);
-    print_colored_text(app_handles.hwnd_re_messages_data, "^2Processed ^1temporarily banned IP addresses ^2from ^5data\\tempbans.txt ^2file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      parse_tempbans_data_file(format("{}{}", main_app.get_current_working_directory(), tempbans_file_path).c_str(), main_app.get_game_server().get_temp_banned_players_data(), main_app.get_game_server().get_temp_banned_ip_addresses_map());
+      parse_tempbans_data_file(format("{}{}", main_app.get_current_working_directory(), removed_tempbans_file_path).c_str(), main_app.get_game_server().get_removed_temp_banned_players_vector(), main_app.get_game_server().get_removed_temp_banned_players_map(), true);
+      print_colored_text(app_handles.hwnd_re_messages_data, "^2Processed ^1temporarily banned IP addresses ^2from ^5data\\tempbans.txt ^2file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
 
-    parse_banned_ip_addresses_file(format("{}{}", main_app.get_current_working_directory(), banned_ip_addresses_file_path).c_str(), main_app.get_game_server().get_banned_ip_addresses_vector(), main_app.get_game_server().get_banned_ip_addresses_map());
-    parse_banned_ip_addresses_file(format("{}{}", main_app.get_current_working_directory(), removed_banned_ip_addresses_file_path).c_str(), main_app.get_game_server().get_removed_banned_ip_addresses_vector(), main_app.get_game_server().get_removed_banned_ip_addresses_map(), true);
-    print_colored_text(app_handles.hwnd_re_messages_data, "^2Processed ^1permanently banned IP addresses ^2from ^5data\\bans.txt ^2file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      parse_banned_ip_addresses_file(format("{}{}", main_app.get_current_working_directory(), banned_ip_addresses_file_path).c_str(), main_app.get_game_server().get_banned_ip_addresses_vector(), main_app.get_game_server().get_banned_ip_addresses_map());
+      parse_banned_ip_addresses_file(format("{}{}", main_app.get_current_working_directory(), removed_banned_ip_addresses_file_path).c_str(), main_app.get_game_server().get_removed_banned_ip_addresses_vector(), main_app.get_game_server().get_removed_banned_ip_addresses_map(), true);
+      print_colored_text(app_handles.hwnd_re_messages_data, "^2Processed ^1permanently banned IP addresses ^2from ^5data\\bans.txt ^2file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
 
-    parse_banned_ip_address_ranges_file(format("{}{}", main_app.get_current_working_directory(), ip_range_bans_file_path).c_str(), main_app.get_game_server().get_banned_ip_address_ranges_vector(), main_app.get_game_server().get_banned_ip_address_ranges_map());
-    parse_banned_ip_address_ranges_file(format("{}{}", main_app.get_current_working_directory(), removed_ip_range_bans_file_path).c_str(), main_app.get_game_server().get_removed_banned_ip_address_ranges_vector(), main_app.get_game_server().get_removed_banned_ip_address_ranges_map(), true);
-    print_colored_text(app_handles.hwnd_re_messages_data, "^2Processed ^1banned IP address ranges ^2from ^5data\\ip_range_bans.txt ^2file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      parse_banned_ip_address_ranges_file(format("{}{}", main_app.get_current_working_directory(), ip_range_bans_file_path).c_str(), main_app.get_game_server().get_banned_ip_address_ranges_vector(), main_app.get_game_server().get_banned_ip_address_ranges_map());
+      parse_banned_ip_address_ranges_file(format("{}{}", main_app.get_current_working_directory(), removed_ip_range_bans_file_path).c_str(), main_app.get_game_server().get_removed_banned_ip_address_ranges_vector(), main_app.get_game_server().get_removed_banned_ip_address_ranges_map(), true);
+      print_colored_text(app_handles.hwnd_re_messages_data, "^2Processed ^1banned IP address ranges ^2from ^5data\\ip_range_bans.txt ^2file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
 
-    parse_banned_cities_file(format("{}{}", main_app.get_current_working_directory(), banned_cities_list_file_path).c_str(), main_app.get_game_server().get_banned_cities_set());
-    parse_banned_cities_file(format("{}{}", main_app.get_current_working_directory(), removed_banned_cities_list_file_path).c_str(), main_app.get_game_server().get_removed_banned_cities_set(), true);
-    print_colored_text(app_handles.hwnd_re_messages_data, "^2Processed ^1banned cities ^2from ^5data\\banned_cities.txt ^2file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      parse_banned_cities_file(format("{}{}", main_app.get_current_working_directory(), banned_cities_list_file_path).c_str(), main_app.get_game_server().get_banned_cities_set());
+      parse_banned_cities_file(format("{}{}", main_app.get_current_working_directory(), removed_banned_cities_list_file_path).c_str(), main_app.get_game_server().get_removed_banned_cities_set(), true);
+      print_colored_text(app_handles.hwnd_re_messages_data, "^2Processed ^1banned cities ^2from ^5data\\banned_cities.txt ^2file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
 
-    parse_banned_countries_file(format("{}{}", main_app.get_current_working_directory(), banned_countries_list_file_path).c_str(), main_app.get_game_server().get_banned_countries_set());
-    parse_banned_countries_file(format("{}{}", main_app.get_current_working_directory(), removed_banned_countries_list_file_path).c_str(), main_app.get_game_server().get_removed_banned_countries_set(), true);
-    print_colored_text(app_handles.hwnd_re_messages_data, "^2Processed ^1banned countries ^2from ^5data\\banned_countries.txt ^2file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      parse_banned_countries_file(format("{}{}", main_app.get_current_working_directory(), banned_countries_list_file_path).c_str(), main_app.get_game_server().get_banned_countries_set());
+      parse_banned_countries_file(format("{}{}", main_app.get_current_working_directory(), removed_banned_countries_list_file_path).c_str(), main_app.get_game_server().get_removed_banned_countries_set(), true);
+      print_colored_text(app_handles.hwnd_re_messages_data, "^2Processed ^1banned countries ^2from ^5data\\banned_countries.txt ^2file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
 
-    is_main_window_constructed = true;
+      is_main_window_constructed = true;
 
-    while (true) {
-      {
-        unique_lock ul{ mu };
-        exit_flag.wait_for(ul, 20ms, [&]() {
-          return is_terminate_program.load();
-        });
+      while (true) {
+        {
+          unique_lock ul{ mu };
+          exit_flag.wait_for(ul, 20ms, [&]() {
+            return is_terminate_program.load();
+          });
+        }
+
+        if (is_terminate_program.load()) break;
+
+        while (!main_app.is_command_queue_empty()) {
+          auto cmd = main_app.get_command_from_queue();
+          main_app.process_queue_command(std::move(cmd));
+        }
       }
-
-      if (is_terminate_program.load()) break;
-
-      while (!main_app.is_command_queue_empty()) {
-        auto cmd = main_app.get_command_from_queue();
-        main_app.process_queue_command(std::move(cmd));
-      }
-    }
     }
   };
 
   std::thread messaging_thread{
     [&]() {
-    while (true) {
-      /*{
-        unique_lock ul{ mu };
-        exit_flag.wait_for(ul, 10ms, [&]() {
-          return is_terminate_program.load();
-        });
-      }
+      while (true) {
+        /*{
+          unique_lock ul{ mu };
+          exit_flag.wait_for(ul, 10ms, [&]() {
+            return is_terminate_program.load();
+          });
+        }
 
-      if (is_terminate_program.load()) {
-        break;
-      }*/
-      main_app.get_connection_manager_for_messages().wait_for_and_process_response_message();
+        if (is_terminate_program.load()) {
+          break;
+        }*/
+        main_app.get_connection_manager_for_messages().wait_for_and_process_response_message();
 
-      while (!main_app.is_message_queue_empty()) {
-        message_t message{ main_app.get_message_from_queue() };
-        main_app.get_connection_manager_for_messages().process_and_send_message(message.command, message.data, message.is_show_in_messages, message.sender);
+        while (!main_app.is_message_queue_empty()) {
+          message_t message{ main_app.get_message_from_queue() };
+          main_app.get_connection_manager_for_messages().process_and_send_message(message.command, message.data, message.is_show_in_messages, message.sender);
+        }
       }
-    }
     }
   };
 
