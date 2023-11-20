@@ -38,8 +38,8 @@ size_t connection_manager_for_messages::process_and_send_message(const std::stri
   const string outgoing_data{ format(R"({}\{}\{}\{}\{}\{})", command_name, sender, main_app.get_game_server().get_rcon_password(), t_c, is_show_in_messages ? "true" : "false", data) };
 
   const ip::udp::endpoint dst{ ip::address::from_string(remote_ip), remote_port };
-  const size_t sent_bytes = udp_socket_for_messages.send_to(buffer(outgoing_data.c_str(), outgoing_data.length()), dst);
-  return sent_bytes;
+   const size_t sent_bytes = udp_socket_for_messages.send_to(buffer(outgoing_data.c_str(), outgoing_data.length()), dst);
+  return sent_bytes;  
 }
 
 
@@ -55,9 +55,9 @@ bool connection_manager_for_messages::wait_for_and_process_response_message(cons
   if (erc)
     return false;
 
-  const string sender_ip{ destination.address().to_v4().to_string() };  
-  if (sender_ip != remote_ip) 
-      return false;
+  const string sender_ip{ destination.address().to_v4().to_string() };
+  if (sender_ip != remote_ip)
+    return false;
 
   string message(incoming_data_buffer, incoming_data_buffer + noOfReceivedBytes);
   trim_in_place(message);

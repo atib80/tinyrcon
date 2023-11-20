@@ -211,7 +211,7 @@ bool remove_permanently_banned_country(const std::string &country, std::set<std:
 std::pair<bool, std::string> remove_temp_banned_ip_address(const std::string &ip_address);
 std::pair<bool, std::string> remove_permanently_banned_ip_address(std::string &ip_address);
 
-size_t print_colored_text(HWND re_control, const char *text, const is_append_message_to_richedit_control = is_append_message_to_richedit_control::yes, const is_log_message = is_log_message::yes, const is_log_datetime = is_log_datetime::yes, const bool is_prevent_auto_vertical_scrolling = false);
+size_t print_colored_text(HWND re_control, const char *text, const is_append_message_to_richedit_control = is_append_message_to_richedit_control::yes, const is_log_message = is_log_message::yes, const is_log_datetime = is_log_datetime::yes, const bool is_prevent_auto_vertical_scrolling = false, const bool is_remove_color_codes_for_log_message = true);
 
 size_t print_colored_text_to_grid_cell(HDC hdc, RECT &rect, const char *text, DWORD formatting_style);
 
@@ -220,7 +220,7 @@ bool get_user_input();
 void print_help_information(const std::vector<std::string> &);
 
 std::string prepare_current_match_information();
-bool is_valid_decimal_whole_number(const std::string &str, int &number) noexcept;
+bool is_valid_decimal_whole_number(const std::string &str, int &number);
 
 bool check_if_user_provided_argument_is_valid_for_specified_command(
   const char *cmd,
@@ -237,9 +237,9 @@ void process_user_command(const std::vector<std::string> &);
 
 volatile bool should_program_terminate(const std::string & = "");
 
-void display_permanently_banned_ip_addresses();
+void display_permanently_banned_ip_addresses(const bool is_save_data_to_log_file = false);
 
-void display_temporarily_banned_ip_addresses();
+void display_temporarily_banned_ip_addresses(const bool is_save_data_to_log_file = false);
 
 void import_geoip_data(std::vector<geoip_data> &, const char *);
 
@@ -378,3 +378,13 @@ std::string get_narrow_ip_address_range_for_specified_ip_address(const std::stri
 std::string get_wide_ip_address_range_for_specified_ip_address(const std::string &ip_address);
 bool check_if_player_is_protected(const player &online_player, const char *admin_command, std::string &message);
 size_t get_random_number();
+size_t find_longest_user_name_length(
+  const std::vector<std::shared_ptr<tiny_rcon_client_user>> &users,
+  const bool count_color_codes,
+  const size_t number_of_users_to_process) noexcept;
+
+size_t find_longest_user_country_city_info_length(
+  const std::vector<std::shared_ptr<tiny_rcon_client_user>> &users,
+  const size_t number_of_users_to_process) noexcept;
+void display_admins_data();
+void display_banned_ip_address_ranges(const bool is_save_data_to_log_file = false);

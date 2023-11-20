@@ -430,7 +430,7 @@ DWORD WINAPI worker_function2(void *param)
     InternetSetOptionA(pThreadParm->internet_open_handle.get(), INTERNET_OPTION_CONNECT_TIMEOUT, &internet_option_connect_timeout, sizeof(internet_option_connect_timeout));
     /*pThreadParm->internet_connect_handle.set(InternetConnectA(pThreadParm->internet_open_handle.get(), main_app.get_ftp_download_site_ip_address().c_str(), INTERNET_DEFAULT_FTP_PORT, nullptr, nullptr, INTERNET_SERVICE_FTP, INTERNET_FLAG_PASSIVE, 0));*/
     pThreadParm->internet_connect_handle.set(InternetOpenUrl(pThreadParm->internet_open_handle.get(),
-     /* "http://myexternalip.com/raw",*/
+      /* "http://myexternalip.com/raw",*/
       "http://icanhazip.com",
       NULL,
       0,

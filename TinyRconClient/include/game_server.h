@@ -827,7 +827,6 @@ private:
   vector<player> temp_banned_ip_addresses_vector;
   vector<player> banned_ip_addresses_vector;
   vector<player> banned_ip_address_ranges_vector;
-  // std::recursive_mutex protect_player_data;
   string short_version{ "1.0" };
   string ip_address{ "185.158.113.146" };
   string sv_hostname{ "CoD2 CTF" };

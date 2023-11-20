@@ -22,19 +22,191 @@ using namespace asio;
 
 using stl::helper::strstr;
 
-connection_manager::connection_manager() : udp_socket{ udp_service }
+connection_manager::connection_manager() : udp_socket_for_rcon_commands{ udp_service_for_rcon_commands }, udp_socket_for_non_rcon_commands{ udp_service_for_non_rcon_commands }
 {
   try {
-    if (udp_socket.is_open()) {
-      udp_socket.close();
+    if (udp_socket_for_rcon_commands.is_open()) {
+      udp_socket_for_rcon_commands.close();
     }
 
-    udp_socket.open(ip::udp::v4());
-    udp_socket.set_option(rcv_timeout_option{ 700 });
+    udp_socket_for_rcon_commands.open(ip::udp::v4());
+    udp_socket_for_rcon_commands.set_option(rcv_timeout_option{ 700 });
+
+    if (udp_socket_for_non_rcon_commands.is_open()) {
+      udp_socket_for_non_rcon_commands.close();
+    }
+
+    udp_socket_for_non_rcon_commands.open(ip::udp::v4());
+    udp_socket_for_non_rcon_commands.set_option(rcv_timeout_option{ 700 });
 
   } catch (std::exception &ex) {
     show_error(app_handles.hwnd_main_window, ex.what(), 0);
   }
+}
+
+void connection_manager::prepare_non_rcon_command(char *buffer, const std::size_t buffer_size, const char *command_to_send) const noexcept
+{
+  (void)snprintf(buffer, buffer_size, "\xFF\xFF\xFF\xFF%s", command_to_send);
+
+  ++number_of_sent_non_rcon_commands;
+}
+
+size_t
+  connection_manager::send_non_rcon_command(
+    const string &outgoing_data,
+    const char *remote_ip,
+    const uint_least16_t remote_port) const
+{
+  string ex_msg{ format(R"(^1Exception ^3thrown from ^1size_t connection_manager::send_non_rcon_command("{}", "{}", {}))", outgoing_data, remote_ip, remote_port) };
+  stack_trace_element ste{
+    app_handles.hwnd_re_messages_data,
+    std::move(ex_msg)
+  };
+
+  const ip::udp::endpoint dst{ ip::address::from_string(remote_ip), remote_port };
+  const size_t sent_bytes = udp_socket_for_non_rcon_commands.send_to(buffer(outgoing_data.c_str(), outgoing_data.length()), dst);
+  return sent_bytes;
+}
+
+size_t connection_manager::receive_non_rcon_reply_from_server(const char *remote_ip, const uint_least16_t remote_port, std::string &received_reply, const bool is_process_reply) const
+{
+  string ex_msg{ format(R"(^1Exception ^3thrown from ^1size_t connection_manager::receive_non_rcon_reply_from_server("{}", {}, "{}", {}))", remote_ip, remote_port, received_reply, is_process_reply ? "true" : "false") };
+  stack_trace_element ste1{
+    app_handles.hwnd_re_messages_data,
+    std::move(ex_msg)
+  };
+
+  char incoming_data_buffer[receive_buffer_size];
+  size_t noOfReceivedBytes{}, noOfAllReceivedBytes{};
+
+  received_reply.clear();
+
+  while (true) {
+    ZeroMemory(incoming_data_buffer, receive_buffer_size);
+    ip::udp::endpoint destination{ ip::address::from_string(remote_ip), remote_port };
+    asio::error_code err1{};
+
+    noOfReceivedBytes = udp_socket_for_non_rcon_commands.receive_from(
+      buffer(incoming_data_buffer, receive_buffer_size), destination, 0, err1);
+
+    if (err1)
+      break;
+
+    if (destination.address().to_v4().to_string() != remote_ip) continue;
+
+    if (noOfReceivedBytes > 0U) {
+      ltrim_in_place(incoming_data_buffer, " \t\n\xFF");
+      received_reply.append(incoming_data_buffer);
+      noOfAllReceivedBytes += noOfReceivedBytes;
+    }
+  }
+
+  if (noOfAllReceivedBytes > 0) {
+
+    const char *start{ received_reply.c_str() }, *current{}, *last{};
+    if (received_reply.starts_with("infoResponse")) {
+      current = received_reply.c_str() + 13;
+      auto parsedData = str_split(current, "\\", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::no);
+      for (size_t i{}; i + 1 < parsedData.size(); i += 2) {
+        update_game_server_setting(std::move(parsedData[i]),
+          std::move(parsedData[i + 1]));
+      }
+    } else if (received_reply.starts_with("statusResponse")) {
+
+      if (!is_process_reply)
+        return noOfAllReceivedBytes;
+
+      current = received_reply.c_str() + 15;
+
+      const char *lastIndex = strchr(current, '\n');
+      string_view server_info(current, lastIndex);
+      vector<string> parsedData{ str_split(server_info, "\\", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::no) };
+      for (size_t i{}; i + 1 < parsedData.size(); i += 2) {
+        update_game_server_setting(std::move(parsedData[i]),
+          std::move(parsedData[i + 1]));
+      }
+
+      int player_num{};
+      int number_of_online_players{};
+      int number_of_offline_players{};
+      start = last = lastIndex + 1;
+      auto &players_data = main_app.get_game_server().get_players_data();
+      current = start;
+
+      while (*current && current < received_reply.c_str() + received_reply.length()) {
+        while (*last != '\n')
+          ++last;
+        current = last + 1;
+        const string playerDataLine{ start, last };
+
+        start = last = playerDataLine.c_str();
+
+        // Extracting player's score value from received UDP data packet for
+        // getstatus command
+        while (' ' == *start)
+          ++start;
+        last = start;
+        while (*last != ' ')
+          ++last;
+        string temp_score{ start, last };
+        stl::helper::trim_in_place(temp_score);
+        int player_score;
+        if (!is_valid_decimal_whole_number(temp_score, player_score))
+          player_score = 0;
+
+        // Extracting player's ping value from received UDP data packet for
+        // getstatus command
+        start = last;
+        while (' ' == *start)
+          ++start;
+        last = start;
+        while (*last != ' ')
+          ++last;
+
+        string player_ping{ start, last };
+        stl::helper::trim_in_place(player_ping);
+        if ("999" == player_ping || "-1" == player_ping || "CNCT" == player_ping || "ZMBI" == player_ping) {
+          ++number_of_offline_players;
+        } else {
+          ++number_of_online_players;
+        }
+
+        // Extracting player_name information from received UDP data packet
+        // for getstatus command
+        start = last;
+        while (*start != '"')
+          ++start;
+        last = ++start;
+        while (*last != '"')
+          ++last;
+
+        players_data[player_num].pid = player_num + 1;
+        players_data[player_num].score = player_score;
+        strcpy_s(players_data[player_num].ping, std::size(players_data[player_num].ping), player_ping.c_str());
+        const size_t no_of_chars_to_copy = static_cast<size_t>(last - start);
+        strncpy_s(players_data[player_num].player_name, std::size(players_data[player_num].player_name), start, no_of_chars_to_copy);
+        players_data[player_num].player_name[no_of_chars_to_copy] = '\0';
+        stl::helper::trim_in_place(players_data[player_num].player_name);
+        players_data[player_num].country_name = "Unknown";
+        players_data[player_num].region = "Unknown";
+        players_data[player_num].city = "Unknown";
+        players_data[player_num].country_code = "xy";
+        ++player_num;
+        start = last = current;
+      }
+
+      main_app.get_game_server().set_number_of_players(player_num);
+      main_app.get_game_server().set_number_of_online_players(number_of_online_players);
+      main_app.get_game_server().set_number_of_offline_players(number_of_offline_players);
+      ++rcon_status_sent_counter;
+      const bool log_players_data{ rcon_status_sent_counter % 60 == 0 };
+      if (60 == rcon_status_sent_counter)
+        rcon_status_sent_counter = 0;
+      prepare_players_data_for_display_of_getstatus_response(log_players_data);
+    }
+  }
+
+  return noOfAllReceivedBytes;
 }
 
 void connection_manager::prepare_rcon_command(
@@ -43,12 +215,8 @@ void connection_manager::prepare_rcon_command(
   const char *rconCommandToSend,
   const char *rcon_password) const noexcept
 {
-  if (_strcmpi(rconCommandToSend, "getstatus") == 0 || _strcmpi(rconCommandToSend, "getinfo") == 0) {
-    (void)snprintf(buffer, buffer_size, "\xFF\xFF\xFF\xFF%s", rconCommandToSend);
-  } else {
-    (void)snprintf(buffer, buffer_size, "\xFF\xFF\xFF\xFFrcon %s %s", rcon_password, rconCommandToSend);
-    ++number_of_sent_rcon_commands;
-  }
+  (void)snprintf(buffer, buffer_size, "\xFF\xFF\xFF\xFFrcon %s %s", rcon_password, rconCommandToSend);
+  ++number_of_sent_rcon_commands;
 }
 
 size_t connection_manager::send_rcon_command(
@@ -63,11 +231,11 @@ size_t connection_manager::send_rcon_command(
   };
 
   const ip::udp::endpoint dst{ ip::address::from_string(remote_ip), remote_port };
-  const size_t sent_bytes = udp_socket.send_to(buffer(outgoing_data.c_str(), outgoing_data.length()), dst);
+  const size_t sent_bytes = udp_socket_for_rcon_commands.send_to(buffer(outgoing_data.c_str(), outgoing_data.length()), dst);
   return sent_bytes;
 }
 
-size_t connection_manager::receive_data_from_server(
+size_t connection_manager::receive_rcon_reply_from_server(
   const char *remote_ip,
   const uint_least16_t remote_port,
   std::string &received_reply,
@@ -76,56 +244,64 @@ size_t connection_manager::receive_data_from_server(
   char incoming_data_buffer[receive_buffer_size]{};
   size_t noOfReceivedBytes{}, noOfAllReceivedBytes{};
 
-  string ex_msg{ format(R"(^1Exception ^3thrown from ^1size_t connection_manager::receive_data_from_server("{}", "{}", "{}", {}))", remote_ip, remote_ip, remote_port, received_reply, is_process_reply ? "true" : "false") };
-  stack_trace_element ste{
+  string ex_msg{ format(R"(^1Exception ^3thrown from ^1size_t connection_manager::receive_rcon_reply_from_server("{}", {}, "{}", {}))", remote_ip, remote_port, received_reply, is_process_reply ? "true" : "false") };
+  stack_trace_element ste1{
     app_handles.hwnd_re_messages_data,
     std::move(ex_msg)
   };
 
-  ip::udp::endpoint destination{ ip::address::from_string(remote_ip), remote_port };
-  asio::error_code err1{};
-  noOfReceivedBytes = udp_socket.receive_from(
-    buffer(incoming_data_buffer, receive_buffer_size), destination, 0, err1);
-  if (err1) {
-    main_app.get_game_server().set_server_message("^5| ^1Server is down.^5");
-    return noOfReceivedBytes;
-  }
-
-  if (main_app.get_game_server().get_server_message().find("down.") != string::npos) {
-    main_app.get_game_server().set_server_message("^5| ^3Server is empty.^5");
-  }
   received_reply.clear();
-  if (noOfReceivedBytes > 0) {
-    noOfAllReceivedBytes += noOfReceivedBytes;
-    received_reply.assign(incoming_data_buffer);
 
-    const char *start =
-      stl::helper::strstr(incoming_data_buffer, "\xFF\xFF\xFF\xFFprint\nInvalid password.");
-    if (start != nullptr) {
+  while (true) {
+    ZeroMemory(incoming_data_buffer, receive_buffer_size);
+    ip::udp::endpoint destination{ ip::address::from_string(remote_ip), remote_port };
+    asio::error_code erc{};
+
+    noOfReceivedBytes = udp_socket_for_rcon_commands.receive_from(
+      buffer(incoming_data_buffer, receive_buffer_size), destination, 0, erc);
+
+    if (erc) break;
+
+    if (noOfReceivedBytes > 0U) {
+      const char *start_needle_to_search_for{ "print\n" };
+      const size_t new_line_pos = stl::helper::str_index_of(incoming_data_buffer, start_needle_to_search_for);
+      if (new_line_pos != string::npos) {
+        received_reply.append(incoming_data_buffer + new_line_pos + len(start_needle_to_search_for), incoming_data_buffer + noOfReceivedBytes);
+      } else {
+        received_reply.append(incoming_data_buffer, incoming_data_buffer + noOfReceivedBytes);
+      }
+      noOfAllReceivedBytes += noOfReceivedBytes;
+    }
+
+    /*if (received_reply.ends_with("\n\n"))
+        break;*/
+  }
+
+  if (noOfAllReceivedBytes > 0) {
+
+    const char *start{};
+    if (received_reply.starts_with("\xFF\xFF\xFF\xFFprint\nInvalid password.")) {
       main_app.get_game_server().set_is_connection_settings_valid(false);
       set_admin_actions_buttons_active(FALSE);
-      // main_app.add_command_to_queue({ "getstatus" }, command_type::rcon, true);
     } else {
       const auto gn = main_app.get_game_name();
       const char *current{}, *last{};
 
       auto [rcon_status_response_needle1, rcon_status_response_needle2] = get_appropriate_rcon_status_response_header(main_app.get_game_name());
 
-      if ((strstr(incoming_data_buffer, rcon_status_response_needle1)
-            != nullptr)
-          || (rcon_status_response_needle2 != nullptr && strstr(incoming_data_buffer, rcon_status_response_needle2) != nullptr)) {
+      if (received_reply.find(rcon_status_response_needle1) != string::npos
+          || (rcon_status_response_needle2 != nullptr && received_reply.find(rcon_status_response_needle2) != string::npos)) {
         if (!main_app.get_game_server().get_is_connection_settings_valid()) {
           main_app.get_game_server().set_is_connection_settings_valid(true);
           set_admin_actions_buttons_active(TRUE);
         }
 
-        string rcon_status_response{ incoming_data_buffer };
-
-        start = received_reply.c_str() + 15;
+        start = received_reply.c_str() + 5;
         last = start;
-        while (*last != 0x0A)
+        while (*last != 0x0A && *last != '=')
           ++last;
         string current_map(start, last);
+        trim_in_place(current_map);
         if (previous_map.empty() || current_map != previous_map) {
           selected_row = 0;
           previous_map = current_map;
@@ -145,28 +321,6 @@ size_t connection_manager::receive_data_from_server(
           received_reply.erase(begin(received_reply), begin(received_reply) + digit_pos);
         }
 
-        while (!is_server_empty_or_error_receiving_udp_datagrams) {
-          asio::error_code err2{};
-          // ZeroMemory(incoming_data_buffer, receive_buffer_size);
-          noOfReceivedBytes = udp_socket.receive_from(buffer(incoming_data_buffer, receive_buffer_size), destination, 0, err2);
-          noOfAllReceivedBytes += noOfReceivedBytes;
-          if (noOfReceivedBytes > 0U) {
-            const size_t new_line_pos = stl::helper::str_index_of(incoming_data_buffer, "\xFF\xFF\xFF\xFFprint\n");
-            if (new_line_pos != string::npos) {
-              received_reply.append(incoming_data_buffer + new_line_pos + 10, incoming_data_buffer + noOfReceivedBytes);
-              rcon_status_response.append(incoming_data_buffer + new_line_pos + 10, incoming_data_buffer + noOfReceivedBytes);
-            } else {
-              received_reply.append(incoming_data_buffer, incoming_data_buffer + noOfReceivedBytes);
-              rcon_status_response.append(incoming_data_buffer, incoming_data_buffer + noOfReceivedBytes);
-            }
-
-            if (received_reply.ends_with("\n\n")) break;
-          }
-
-          if (err2)
-            break;
-        }
-
         auto &ip_address_frequency = main_app.get_game_server().get_ip_address_frequency();
         ip_address_frequency.clear();
 
@@ -175,9 +329,13 @@ size_t connection_manager::receive_data_from_server(
         size_t pl_index{};
 
         if (!is_server_empty_or_error_receiving_udp_datagrams) {
+          string ex_msg2{ R"(^1Exception ^3thrown from 'if (!is_server_empty_or_error_receiving_UDP_datagrams){...}')" };
+          stack_trace_element ste2{
+            app_handles.hwnd_re_messages_data,
+            std::move(ex_msg2)
+          };
 
           vector<string> lines{ stl::helper::str_split(received_reply, "\n", nullptr) };
-
           for (size_t i{}; i < lines.size(); ++i) {
             auto first = lines[i].cbegin();
             auto last2 = lines[i].cend();
@@ -369,22 +527,15 @@ size_t connection_manager::receive_data_from_server(
               }
             }
 
-            /*while (isspace(player_line[i])) --i;
-            while (isdigit(player_line[i])) --i;*/
-            // while (is_ws(player_line[i])) --i;
-            /*auto pn_end{ player_line.rfind("^7", i) };
-            if (string::npos == pn_end)*/
+            while (is_ws(player_line[i])) --i;
+            while (is_decimal_digit(player_line[i])) --i;
+            while (is_ws(player_line[i])) --i;
 
-            string_view player_name_sv{ player_line.c_str() + pn_start, player_line.c_str() + i };
-            auto pn_end = player_name_sv.find_last_of("^7");
-            if (string::npos == pn_end)
-              pn_end = player_name_sv.length();
-            string player_name(string(player_name_sv.cbegin(), player_name_sv.cbegin() + pn_end));
-            const size_t pn_len{ player_name.length() };
-            if (pn_len >= 1 && (player_name[pn_len - 1] == '^' || player_name[pn_len - 1] == '7')) {
-              player_name.pop_back();
-            } else if (player_name.ends_with("^7")) {
-              player_name.pop_back();
+            string player_name(player_line.c_str() + pn_start, player_line.c_str() + i);
+            auto pn_end = player_name.find_last_of("^7");
+            if (string::npos != pn_end)
+              player_name.erase(cbegin(player_name) + pn_end, cend(player_name));
+            if (const size_t pn_len{ player_name.length() }; (pn_len >= 1) && (player_name[pn_len - 1] == '^' || player_name[pn_len - 1] == '7')) {
               player_name.pop_back();
             }
 
@@ -416,110 +567,16 @@ size_t connection_manager::receive_data_from_server(
         main_app.get_game_server().set_number_of_players(pl_index);
         main_app.get_game_server().set_number_of_online_players(number_of_online_players);
         main_app.get_game_server().set_number_of_offline_players(number_of_offline_players);
-        correct_truncated_player_names(main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
-        check_for_temp_banned_ip_addresses();
-        check_for_banned_ip_addresses();
-        check_for_warned_players();
+        ++rcon_status_sent_counter;
+        const bool log_players_data{ rcon_status_sent_counter % 60 == 0 };
+        if (60 == rcon_status_sent_counter)
+          rcon_status_sent_counter = 0;
+        prepare_players_data_for_display(log_players_data);
 
-      } else if (strstr(incoming_data_buffer, "infoResponse") != nullptr && incoming_data_buffer[4] == 'i') {
-        current = incoming_data_buffer + 18;
-        auto parsedData = str_split(current, "\\", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::no);
-        for (size_t i{}; i + 1 < parsedData.size(); i += 2) {
-          update_game_server_setting(std::move(parsedData[i]),
-            std::move(parsedData[i + 1]));
-        }
-      } else if (strstr(incoming_data_buffer, "statusResponse") != nullptr && incoming_data_buffer[4] == 's') {
-
-        if (!is_process_reply)
-          return noOfAllReceivedBytes;
-
-        current = incoming_data_buffer + 20;
-
-        const char *lastIndex = strchr(current, '\n');
-        const string &server_info{ current, lastIndex };
-        auto parsedData = str_split(server_info, "\\", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::no);
-        for (size_t i{}; i + 1 < parsedData.size(); i += 2) {
-          update_game_server_setting(std::move(parsedData[i]),
-            std::move(parsedData[i + 1]));
-        }
-
-        int player_num{};
-        int number_of_online_players{};
-        int number_of_offline_players{};
-        start = last = lastIndex + 1;
-        auto &players_data = main_app.get_game_server().get_players_data();
-        current = start;
-
-        while (*current && current < incoming_data_buffer + noOfAllReceivedBytes) {
-          while (*last != '\n')
-            ++last;
-          current = last + 1;
-          const string playerDataLine{ start, last };
-
-          start = last = playerDataLine.c_str();
-
-          // Extracting player's score value from received UDP data packet for
-          // getstatus command
-          while (' ' == *start)
-            ++start;
-          last = start;
-          while (*last != ' ')
-            ++last;
-          string temp_score{ start, last };
-          stl::helper::trim_in_place(temp_score);
-          int player_score;
-          if (!is_valid_decimal_whole_number(temp_score, player_score))
-            player_score = 0;
-
-          // Extracting player's ping value from received UDP data packet for
-          // getstatus command
-          start = last;
-          while (' ' == *start)
-            ++start;
-          last = start;
-          while (*last != ' ')
-            ++last;
-
-          string player_ping{ start, last };
-          stl::helper::trim_in_place(player_ping);
-          if ("999" == player_ping || "-1" == player_ping || "CNCT" == player_ping || "ZMBI" == player_ping) {
-            ++number_of_offline_players;
-          } else {
-            ++number_of_online_players;
-          }
-
-          // Extracting player_name information from received UDP data packet
-          // for getstatus command
-          start = last;
-          while (*start != '"')
-            ++start;
-          last = ++start;
-          while (*last != '"')
-            ++last;
-
-          players_data[player_num].pid = player_num + 1;
-          players_data[player_num].score = player_score;
-          strcpy_s(players_data[player_num].ping, std::size(players_data[player_num].ping), player_ping.c_str());
-          const size_t no_of_chars_to_copy = static_cast<size_t>(last - start);
-          strncpy_s(players_data[player_num].player_name, std::size(players_data[player_num].player_name), start, no_of_chars_to_copy);
-          players_data[player_num].player_name[no_of_chars_to_copy] = '\0';
-          stl::helper::trim_in_place(players_data[player_num].player_name);
-          players_data[player_num].country_name = "Unknown";
-          players_data[player_num].region = "Unknown";
-          players_data[player_num].city = "Unknown";
-          players_data[player_num].country_code = "xy";
-          ++player_num;
-          start = last = current;
-        }
-
-        main_app.get_game_server().set_number_of_players(player_num);
-        main_app.get_game_server().set_number_of_online_players(number_of_online_players);
-        main_app.get_game_server().set_number_of_offline_players(number_of_offline_players);
-
-      } else if (strstr(incoming_data_buffer, "Server info") != nullptr) {
+      } else if (received_reply.find("Server info") != string::npos) {
         main_app.get_game_server().get_server_settings().clear();
-        current = incoming_data_buffer + 32;
-        while (*current && current < incoming_data_buffer + noOfAllReceivedBytes) {
+        current = received_reply.c_str() + 32;
+        while (*current && current < received_reply.c_str() + noOfAllReceivedBytes) {
           start = last = current;
           while (*last != ' ')
             ++last;
@@ -534,61 +591,49 @@ size_t connection_manager::receive_data_from_server(
           current = ++last;
           update_game_server_setting(std::move(property), std::move(value));
         }
-      } else if (strstr(incoming_data_buffer, "map_rotate...\n\n") != nullptr) {
+      } else if (received_reply.find("map_rotate...\n\n") != string::npos) {
         main_app.get_game_server().set_is_connection_settings_valid(true);
-        received_reply.assign(incoming_data_buffer);
-        while (true) {
-          asio::error_code err3{};
-          ZeroMemory(incoming_data_buffer, receive_buffer_size);
-          noOfReceivedBytes = udp_socket.receive_from(
-            buffer(incoming_data_buffer, receive_buffer_size), destination, 0, err3);
-          if (err3) break;
-          received_reply.append(incoming_data_buffer);
-          noOfAllReceivedBytes += noOfReceivedBytes;
-        }
-
-      } else if (strstr(incoming_data_buffer, "sv_mapRotationCurrent") != nullptr) {
+        print_colored_text(app_handles.hwnd_re_messages_data, received_reply.c_str());
+      } else if (size_t start_pos{}; (start_pos = received_reply.find(R"("sv_mapRotationCurrent" is: ")")) != string::npos && received_reply.find(R"(default: ")") != string::npos) {
         main_app.get_game_server().set_is_connection_settings_valid(true);
-        current = &incoming_data_buffer[0] + 39;
-        start = current;
-        last = stl::helper::strstr(current, "^7\"");
-        if (start == last)
-          main_app.get_game_server().set_map_rotation_current(" ");
-        else {
-          main_app.get_game_server().set_map_rotation_current(string(start, last));
+        start_pos += strlen(R"("sv_mapRotationCurrent" is: ")");
+        const size_t last_pos{ received_reply.find_first_of("^7\" ", start_pos) };
+        if (last_pos != string::npos) {
+          main_app.get_game_server().set_map_rotation_current(received_reply.substr(start_pos, last_pos - start_pos));
+          current = received_reply.c_str() + start_pos;
           if (strstr(current, "gametype") != nullptr) {
             current = strstr(current, "map");
-
             if (current != nullptr) {
               current += 4;
               while (*current == ' ')
                 ++current;
               start = last = current;
-              while (*last != ' ')
+              while (*last != ' ' && *last != '^' && *last != '7' && *last != '"')
                 ++last;
               main_app.get_game_server().set_next_map(string(start, last));
             }
           }
         }
-      } else if (strstr(incoming_data_buffer, "sv_mapRotation") != nullptr) {
+      } else if (size_t first_pos1{}; (first_pos1 = received_reply.find(R"("sv_mapRotation" is: ")")) != string::npos && received_reply.find(R"(default: ")") != string::npos) {
         main_app.get_game_server().set_is_connection_settings_valid(true);
-        current = &incoming_data_buffer[0] + 32;
-        start = current;
-        last = stl::helper::strstr(current, "^7\"");
-        main_app.get_game_server().set_map_rotation(string(start, last));
-      } else if (strstr(incoming_data_buffer, "sv_hostname") != nullptr) {
+        first_pos1 += strlen(R"("sv_mapRotation" is: ")");
+        const size_t last_pos{ received_reply.find_first_of("^7\" ", first_pos1) };
+        if (last_pos != string::npos) {
+          main_app.get_game_server().set_map_rotation(received_reply.substr(first_pos1, last_pos - first_pos1));
+        }
+      } else if (received_reply.find("sv_hostname") != string::npos) {
         main_app.get_game_server().set_is_connection_settings_valid(true);
-        current = &incoming_data_buffer[0] + 29;
+        current = received_reply.c_str() + 29;
         start = last = current;
         while (*last != '^' && *(last + 1) != '7' && *(last + 2) != '"')
           ++last;
         main_app.get_game_server().set_server_name(string(start, last));
-      } else if (strstr(incoming_data_buffer, "mapname") != nullptr) {
+      } else if (size_t first_pos2{}; (first_pos2 = received_reply.find(R"("mapname" is: ")")) != string::npos && received_reply.find(R"(default: ")") != string::npos) {
         main_app.get_game_server().set_is_connection_settings_valid(true);
-        start = current = &incoming_data_buffer[0] + 25;
-        last = stl::helper::strstr(current, "^7");
-        if (last != nullptr) {
-          string current_map(start, last);
+        first_pos2 += strlen(R"("mapname" is: ")");
+        const size_t last_pos{ received_reply.find_first_of("^7\" ", first_pos2) };
+        if (last_pos != string::npos) {
+          string current_map(received_reply.substr(first_pos2, last_pos - first_pos2));
           if (previous_map.empty() || current_map != previous_map) {
             selected_row = 0;
             previous_map = current_map;
@@ -598,32 +643,13 @@ size_t connection_manager::receive_data_from_server(
           }
           main_app.get_game_server().set_current_map(std::move(current_map));
         }
-      } else if (strstr(incoming_data_buffer, "\"g_gametype\" is: \"") != nullptr && strstr(incoming_data_buffer, "default: \"") != nullptr) {
-        main_app.get_game_server().set_is_connection_settings_valid(true);
-        start =
-          stl::helper::strstr(incoming_data_buffer, "\"g_gametype\" is: \"") + 18;
-        last = stl::helper::strstr(start, "^7");
-        if (last != nullptr) {
-          main_app.get_game_server().set_current_game_type(string(start, last));
-        }
-
       } else {
-        while (true) {
-          asio::error_code err3{};
-          ZeroMemory(incoming_data_buffer, receive_buffer_size);
-          noOfReceivedBytes = udp_socket.receive_from(
-            buffer(incoming_data_buffer, receive_buffer_size), destination, 0, err3);
-          if (err3) break;
-          received_reply.append(incoming_data_buffer);
-          noOfAllReceivedBytes += noOfReceivedBytes;
-        }
+        parse_game_type_information_from_rcon_reply(received_reply);
       }
     }
   }
-
   return noOfAllReceivedBytes;
 }
-
 
 void connection_manager::send_and_receive_rcon_data(
   const char *command_to_send,
@@ -646,6 +672,24 @@ void connection_manager::send_and_receive_rcon_data(
   prepare_rcon_command(outgoing_data_buffer, buffer_size, command_to_send, rcon_password);
   (void)send_rcon_command(outgoing_data_buffer, remote_ip, remote_port);
   if (is_wait_for_reply) {
-    receive_data_from_server(remote_ip, remote_port, received_reply, is_process_reply);
+    receive_rcon_reply_from_server(remote_ip, remote_port, received_reply, is_process_reply);
+  }
+}
+
+void connection_manager::send_and_receive_non_rcon_data(const char *command_to_send, std::string &reply_buffer, const char *remote_ip, const uint_least16_t remote_port, const bool is_wait_for_reply, const bool is_process_reply) const
+{
+  constexpr size_t buffer_size{ 1536 };
+  static char outgoing_data_buffer[buffer_size];
+
+  string ex_msg{ format(R"(^1Exception ^3thrown from ^1size_t connection_manager::send_and_receive_non_rcon_data("{}", "{}", "{}", {}, {}, {}))", command_to_send, reply_buffer, remote_ip, remote_port, is_wait_for_reply ? "true" : "false", is_process_reply ? "true" : "false") };
+  stack_trace_element ste{
+    app_handles.hwnd_re_messages_data,
+    std::move(ex_msg)
+  };
+  std::lock_guard lg{ non_rcon_mutex };
+  prepare_non_rcon_command(outgoing_data_buffer, buffer_size, command_to_send);
+  (void)send_non_rcon_command(outgoing_data_buffer, remote_ip, remote_port);
+  if (is_wait_for_reply) {
+    receive_non_rcon_reply_from_server(remote_ip, remote_port, reply_buffer, is_process_reply);
   }
 }

@@ -1,6 +1,5 @@
 #include "framework.h"
 #include "resource.h"
-#include "stack_trace_element.h"
 
 #undef min
 
@@ -18,7 +17,7 @@ using namespace std::string_literals;
 using namespace std::chrono;
 using namespace std::filesystem;
 
-extern const string program_version{ "2.5.5.2" };
+extern const string program_version{ "2.5.6.3" };
 
 extern char const *const tinyrcon_config_file_path = "config\\tinyrcon.json";
 
@@ -196,6 +195,7 @@ extern bool sort_by_geo_asc;
 bool is_main_window_constructed{};
 bool is_tinyrcon_initialized{};
 bool is_process_combobox_item_selection_event{ true };
+bool is_first_left_mouse_button_click_in_prompt_edit_control{ true };
 bool is_first_left_mouse_button_click_in_reason_edit_control{ true };
 const HBRUSH RED_BRUSH{ CreateSolidBrush(color::red) };
 atomic<int> admin_choice{ 0 };
@@ -262,6 +262,12 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
   main_app.set_user_ip_address(trim(get_tiny_rcon_client_external_ip_address()));
 
+  SetFocus(app_handles.hwnd_e_user_input);
+  string username{ main_app.get_username() };
+  remove_all_color_codes(username);
+  const string welcome_message{ format("Welcome back, {} {}", main_app.get_game_server().get_is_connection_settings_valid() ? "admin" : "player", username) };
+  Edit_SetText(app_handles.hwnd_e_user_input, welcome_message.c_str());
+
   auto &me = main_app.get_current_user();
   me->user_name = main_app.get_username();
   me->ip_address = main_app.get_user_ip_address();
@@ -289,6 +295,17 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       if (check_if_user_provided_argument_is_valid_for_specified_command(
             user_cmd[0].c_str(), user_cmd[1])) {
         const int pid{ stoi(user_cmd[1]) };
+
+        player &pd{ main_app.get_game_server().get_player_data(pid) };
+        string protected_player_msg;
+        if (check_if_player_is_protected(pd, user_cmd[0].c_str(), protected_player_msg)) {
+          print_colored_text(app_handles.hwnd_re_messages_data, protected_player_msg.c_str());
+          replace_br_with_new_line(protected_player_msg);
+          const string inform_msg{ format("{}\\{}", main_app.get_username(), protected_player_msg) };
+          main_app.add_message_to_queue(message_t("inform-message", inform_msg, true));
+          return;
+        }
+
         main_app.get_tinyrcon_dict()["{PLAYERNAME}"] = get_player_name_for_pid(pid);
         main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
         string reason{ remove_disallowed_character_in_string(user_cmd.size() > 2 ? str_join(cbegin(user_cmd) + 2, cend(user_cmd), " ") : "not specified") };
@@ -1465,30 +1482,30 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
   main_app.add_command_handler({ "!ecb" }, [](const vector<string> &user_cmd) {
     if (!validate_admin_and_show_missing_admin_privileges_message(false)) return;
-    if (!main_app.get_game_server().get_is_automatic_country_kick_enabled()) {
-      main_app.get_game_server().set_is_automatic_country_kick_enabled(true);
-      write_tiny_rcon_json_settings_to_file(main_app.get_tinyrcon_config_file_path());
-      const string message{ format("^2You have successfully executed ^5{}\n", user_cmd[0]) };
-      print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-      main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
-      string rcon_message{ main_app.get_user_defined_enable_country_ban_feature_msg() };
-      build_tiny_rcon_message(rcon_message);
-      rcon_say(rcon_message, true);
-    }
+    // if (!main_app.get_game_server().get_is_automatic_country_kick_enabled()) {
+    main_app.get_game_server().set_is_automatic_country_kick_enabled(true);
+    write_tiny_rcon_json_settings_to_file(main_app.get_tinyrcon_config_file_path());
+    const string message{ format("^2You have successfully executed ^5{}\n", user_cmd[0]) };
+    print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+    main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
+    string rcon_message{ main_app.get_user_defined_enable_country_ban_feature_msg() };
+    build_tiny_rcon_message(rcon_message);
+    rcon_say(rcon_message, true);
+    // }
   });
 
   main_app.add_command_handler({ "!dcb" }, [](const vector<string> &user_cmd) {
     if (!validate_admin_and_show_missing_admin_privileges_message(false)) return;
-    if (main_app.get_game_server().get_is_automatic_country_kick_enabled()) {
-      main_app.get_game_server().set_is_automatic_country_kick_enabled(false);
-      write_tiny_rcon_json_settings_to_file(main_app.get_tinyrcon_config_file_path());
-      const string message{ format("^2You have successfully executed ^5{}\n", user_cmd[0]) };
-      print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-      main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
-      string rcon_message{ main_app.get_user_defined_disable_country_ban_feature_msg() };
-      build_tiny_rcon_message(rcon_message);
-      rcon_say(rcon_message, true);
-    }
+    // if (main_app.get_game_server().get_is_automatic_country_kick_enabled()) {
+    main_app.get_game_server().set_is_automatic_country_kick_enabled(false);
+    write_tiny_rcon_json_settings_to_file(main_app.get_tinyrcon_config_file_path());
+    const string message{ format("^2You have successfully executed ^5{}\n", user_cmd[0]) };
+    print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+    main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
+    string rcon_message{ main_app.get_user_defined_disable_country_ban_feature_msg() };
+    build_tiny_rcon_message(rcon_message);
+    rcon_say(rcon_message, true);
+    // }
   });
 
   main_app.add_command_handler({ "!bancountry" }, [](const vector<string> &user_cmd) {
@@ -1551,7 +1568,13 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   });
 
   main_app.add_command_handler({ "gs", "!gs", "getstatus", "!getstatus" }, [](const vector<string> &) {
-    main_app.add_command_to_queue({ "getstatus" }, command_type::rcon, true);
+    string rcon_reply;
+    main_app.get_connection_manager().send_and_receive_non_rcon_data("getstatus", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), true, true);
+  });
+
+  main_app.add_command_handler({ "getinfo" }, [](const vector<string> &) {
+    string rcon_reply;
+    main_app.get_connection_manager().send_and_receive_non_rcon_data("getinfo", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), true, true);
   });
 
   main_app.add_command_handler({ "sort", "!sort" }, [](const vector<string> &user_cmd) {
@@ -1665,12 +1688,14 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
             print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
             main_app.get_connection_manager_for_messages().process_and_send_message("remove-tempban", format("{}\\{}\\{}\\{}\\{}\\{}\\{}", player.ip_address, player.player_name, player.banned_date_time, player.banned_start_time, player.ban_duration_in_hours, player.reason, player.banned_by_user_name), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
           } else {
-            const string re_msg{ format("^3Provided IP address (^1{}^3) hasn't been ^1temporarily banned ^3yet!\n", user_cmd[1]) };
+            const string re_msg{ format("^3Provided IP address (^1{}^3) hasn't been ^1temporarily banned ^3yet.\n", user_cmd[1]) };
             print_colored_text(app_handles.hwnd_re_messages_data,
               re_msg.c_str(),
               is_append_message_to_richedit_control::yes,
               is_log_message::yes,
               is_log_datetime::yes);
+            const string inform_msg{ format("{}\\{}", main_app.get_username(), re_msg) };
+            main_app.add_message_to_queue(message_t("inform-message", inform_msg, true));
           }
         }
 
@@ -1682,12 +1707,14 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
           print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
           main_app.get_connection_manager_for_messages().process_and_send_message("remove-ipban", format("{}\\{}\\{}\\{}\\{}\\{}", player.ip_address, player.guid_key, player.player_name, player.banned_date_time, player.reason, player.banned_by_user_name), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
         } else {
-          const string re_msg{ format("^3Provided IP address (^1{}^3) hasn't been ^1permanently banned ^3yet!\n", user_cmd[1]) };
+          const string re_msg{ format("^3Provided IP address (^1{}^3) hasn't been ^1permanently banned ^3yet.\n", user_cmd[1]) };
           print_colored_text(app_handles.hwnd_re_messages_data,
             re_msg.c_str(),
             is_append_message_to_richedit_control::yes,
             is_log_message::yes,
             is_log_datetime::yes);
+          const string inform_msg{ format("{}\\{}", main_app.get_username(), re_msg) };
+          main_app.add_message_to_queue(message_t("inform-message", inform_msg, true));
         }
       }
     } else {
@@ -1836,7 +1863,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       if (!command.empty() && '!' == command[0])
         command.erase(0, 1);
       string reply;
-      main_app.get_connection_manager().send_and_receive_rcon_data(command.c_str(), reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str(), false);
+      main_app.get_connection_manager().send_and_receive_rcon_data(command.c_str(), reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str(), false, false);
     }
   });
 
@@ -1853,7 +1880,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       }
 
       string reply;
-      main_app.get_connection_manager().send_and_receive_rcon_data(command.c_str(), reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str(), false);
+      main_app.get_connection_manager().send_and_receive_rcon_data(command.c_str(), reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str(), false, false);
     }
   });
 
@@ -2078,11 +2105,12 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
           print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
           string public_message{ (rcon_cmd[0] == "kick" || rcon_cmd[0] == "onlykick") ? main_app.get_user_defined_kick_message() : main_app.get_user_defined_tempban_message() };
           build_tiny_rcon_message(public_message);
+          replace_br_with_new_line(public_message);
+          const string inform_msg{ format("{}\\{}", main_app.get_username(), public_message) };
+          main_app.add_message_to_queue(message_t("inform-message", inform_msg, true));
           const string command{ rcon_cmd[0] + " "s + rcon_cmd[1] };
-          const string r_command{ command };
           string reply;
-          main_app.get_connection_manager().send_and_receive_rcon_data(
-            r_command.c_str(), reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str(), false);
+          main_app.get_connection_manager().send_and_receive_rcon_data(command.c_str(), reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str(), true);
           kick_player(player.pid, public_message);
           break;
         }
@@ -2111,33 +2139,11 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   });
 
   main_app.add_command_handler({ "unknown-rcon" }, [](const vector<string> &rcon_cmd) {
+    const string command{ rcon_cmd.size() > 1 ? trim(str_join(rcon_cmd, " ")) : rcon_cmd[0] };
+    const string re_msg{ "^5Sending rcon command '"s + command + "' to the server.\n"s };
+    print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
     string reply;
-    if (rcon_cmd.size() > 1) {
-      const string command{ str_join(rcon_cmd, " ") };
-      const string re_msg{ "^5Sending rcon command '"s + command + "' to the server.\n"s };
-      print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-      const string r_command{ command };
-      main_app.get_connection_manager().send_and_receive_rcon_data(
-        r_command.c_str(), reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str(), true);
-    } else {
-      const string re_msg{ "^5Sending rcon command '"s + rcon_cmd[0] + "' to the server.\n"s };
-      print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-      const string r_command{ rcon_cmd[0] };
-      main_app.get_connection_manager().send_and_receive_rcon_data(
-        r_command.c_str(), reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str(), true);
-    }
-    if (!reply.empty() && rcon_cmd[0] != "getstatus") {
-      while (true) {
-        const size_t pos =
-          stl::helper::str_index_of(reply, "\377\377\377\377print\n");
-        if (string::npos == pos)
-          break;
-        reply.erase(pos, 10);
-      }
-      print_colored_text(app_handles.hwnd_re_messages_data, "\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::no);
-      print_colored_text(app_handles.hwnd_re_messages_data, reply.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-      print_colored_text(app_handles.hwnd_re_messages_data, "\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::no);
-    }
+    main_app.get_connection_manager().send_and_receive_rcon_data(command.c_str(), reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str(), true);
   });
 
   main_app.add_message_handler("request-login", [](const string &, const time_t, const string &, bool is_print_in_messages) {
@@ -2205,7 +2211,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     for (auto &part : parts) stl::helper::trim_in_place(part);
     if (parts.size() >= 17) {
       auto &u = main_app.get_user_for_name(parts[0], parts[4]);
-      main_app.set_is_user_data_received_for_user(parts[0], parts[4]);      
+      main_app.set_is_user_data_received_for_user(parts[0], parts[4]);
       u->user_name = std::move(parts[0]);
       u->is_admin = parts[1] == "true";
       u->is_logged_in = parts[2] == "true";
@@ -2368,24 +2374,29 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         main_app.get_connection_manager().get_geoip_data(),
         warned_player.ip_address,
         warned_player);
-
-      const string msg{ format("^7{} ^3has ^1warned ^3player ^7{} ^3[^5IP address ^1{} ^3| ^5GUID: ^1{}\n^5Date/time of warning: ^1{} ^3| ^5Reason of warning: ^1{} ^3| ^5Warned by: ^7{}\n", user, warned_player.player_name, warned_player.ip_address, warned_player.guid_key, warned_player.banned_date_time, warned_player.reason, user) };
+      convert_guid_key_to_country_name(main_app.get_connection_manager().get_geoip_data(), warned_player.ip_address, warned_player);
+      const string msg{ format("^7{} ^3has ^1warned ^3player ^7{} ^3[^5IP address ^1{} ^3| ^5geoinfo: ^1{}, {}\n^5Date/time of warning: ^1{} ^3| ^5Reason of warning: ^1{} ^3| ^5Warned by: ^7{}\n", user, warned_player.player_name, warned_player.ip_address, warned_player.country_name, warned_player.city, warned_player.banned_date_time, warned_player.reason, user) };
       print_colored_text(app_handles.hwnd_re_messages_data, msg.c_str());
     }
   });
 
   main_app.add_message_handler("inform-message", [](const string &, const time_t, const string &data, bool) {
-    auto parts = stl::helper::str_split(data, "\\", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::yes);
-    if (parts.size() >= 2) {
-      auto &already_seen_inform_message = main_app.get_already_seen_messages();
-      if (!data.empty() && !already_seen_inform_message.contains(data)) {
-        already_seen_inform_message.insert(data);
-        const string received_from_message{ format("^2Received message from ^7{}:\n", parts[0]) };
-        print_colored_text(app_handles.hwnd_re_messages_data, received_from_message.c_str());
-        for (size_t i{ 1 }; i < parts.size(); ++i) {
-          if (!parts[i].empty()) {
+    auto parts = stl::helper::str_split(data, "\\", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::no);
+    if (parts.size() >= 3) {
+      const string received_from_message{ format("^2Received message from ^7{}:\n", parts[1]) };
+      print_colored_text(app_handles.hwnd_re_messages_data, received_from_message.c_str());
+      if (!parts[2].empty()) {
+        if (parts[0] == "accept") {
+          rcon_say(parts[2], true);
+        } else {
+          print_colored_text(app_handles.hwnd_re_messages_data, parts[2].c_str());
+        }
+      }
+
+      if (parts.size() >= 4) {
+        for (size_t i{ 3 }; i < parts.size(); ++i) {
+          if (!parts[i].empty())
             print_colored_text(app_handles.hwnd_re_messages_data, parts[i].c_str());
-          }
         }
       }
     }
@@ -2399,7 +2410,10 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       }
       if (!main_app.get_game_server().get_protected_ip_addresses().contains(parts[1])) {
         main_app.get_game_server().get_protected_ip_addresses().emplace(parts[1]);
-        const string message{ format("^7{} ^2added IP address ^1{} ^2to the list of protected ^1IP addresses^2.\n^5Reason: ^1{}", parts[0], parts[1], parts[2]) };
+        player protected_player{};
+        strcpy_s(protected_player.ip_address, std::size(protected_player.ip_address), parts[1].c_str());
+        convert_guid_key_to_country_name(main_app.get_connection_manager().get_geoip_data(), parts[1], protected_player);
+        const string message{ format("^7{} ^2added IP address ^1{} ^5[{}, {}] ^2to the list of protected ^1IP addresses^2.\n^5Reason: ^1{}", parts[0], parts[1], protected_player.country_name, protected_player.city, parts[2]) };
         print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
 
       } else {
@@ -2471,7 +2485,10 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       }
       if (main_app.get_game_server().get_protected_ip_addresses().contains(parts[1])) {
         main_app.get_game_server().get_protected_ip_addresses().erase(parts[1]);
-        const string message{ format("^7{} ^3has removed protected IP address ^1{} ^3from the list of protected ^1IP addresses^3.\n^5Reason: ^1{}", parts[0], parts[1], parts[2]) };
+        player protected_player{};
+        strcpy_s(protected_player.ip_address, std::size(protected_player.ip_address), parts[1].c_str());
+        convert_guid_key_to_country_name(main_app.get_connection_manager().get_geoip_data(), parts[1], protected_player);
+        const string message{ format("^7{} ^3has removed protected IP address ^1{} ^5[{}, {}] ^3from the list of protected ^1IP addresses^3.\n^5Reason: ^1{}", parts[0], parts[1], protected_player.country_name, protected_player.city, parts[2]) };
         print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
 
       } else {
@@ -2535,7 +2552,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     }
   });
 
-  main_app.add_message_handler("add-kick", [](const string &user, const time_t, const string &data, bool) {
+  main_app.add_message_handler("add-kick", [](const string &, const time_t, const string &data, bool) {
     auto parts = stl::helper::str_split(data, "\\", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::no);
     for (auto &part : parts) {
       stl::helper::trim_in_place(part);
@@ -2554,8 +2571,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         main_app.get_connection_manager().get_geoip_data(),
         kicked_player.ip_address,
         kicked_player);
-
-      const string msg{ format("^7{} ^3has ^1kicked ^3player ^7{} ^3[^5IP address ^1{} ^3| ^5GUID: ^1{}\n^5Date/time of kick: ^1{} ^3| ^5Reason of kick: ^1{} ^3| ^5Kicked by: ^7{}\n", kicked_player.banned_by_user_name, kicked_player.player_name, kicked_player.ip_address, kicked_player.guid_key, kicked_player.banned_date_time, kicked_player.reason, user) };
+      const string msg{ format("^7{} ^3has ^1kicked ^3player ^7{} ^3[^5IP address ^1{} ^3| ^5geoinfo: ^1{}, {}\n^5Date/time of kick: ^1{} ^3| ^5Reason of kick: ^1{} ^3| ^5Kicked by: ^7{}\n", kicked_player.banned_by_user_name, kicked_player.player_name, kicked_player.ip_address, kicked_player.country_name, kicked_player.city, kicked_player.banned_date_time, kicked_player.reason, kicked_player.banned_by_user_name) };
       print_colored_text(app_handles.hwnd_re_messages_data, msg.c_str());
     }
   });
@@ -2580,7 +2596,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         temp_banned_player_data.ip_address,
         temp_banned_player_data);
 
-      const string msg{ format("^7{} ^5has temporarily banned ^1IP address {}\n ^5for ^3player name: ^7{} ^5| ^3GUID: ^1{} ^5| ^3Date/time of ban: ^1{}\n^3Ban duration: ^1{} hours ^5| ^3Reason of ban: ^1{} ^5| ^3Banned by: ^7{}\n", temp_banned_player_data.banned_by_user_name, temp_banned_player_data.ip_address, temp_banned_player_data.player_name, temp_banned_player_data.guid_key, temp_banned_player_data.banned_date_time, temp_banned_player_data.ban_duration_in_hours, temp_banned_player_data.reason, temp_banned_player_data.banned_by_user_name) };
+      const string msg{ format("^7{} ^5has temporarily banned ^1IP address {}\n ^5for ^3player name: ^7{} ^5| ^3geoinfo: ^1{}, {} ^5| ^3Date/time of ban: ^1{}\n^3Ban duration: ^1{} hours ^5| ^3Reason of ban: ^1{} ^5| ^3Banned by: ^7{}\n", temp_banned_player_data.banned_by_user_name, temp_banned_player_data.ip_address, temp_banned_player_data.player_name, temp_banned_player_data.country_name, temp_banned_player_data.city, temp_banned_player_data.banned_date_time, temp_banned_player_data.ban_duration_in_hours, temp_banned_player_data.reason, temp_banned_player_data.banned_by_user_name) };
       print_colored_text(app_handles.hwnd_re_messages_data, msg.c_str());
       add_temporarily_banned_ip_address(temp_banned_player_data, main_app.get_game_server().get_temp_banned_players_data(), main_app.get_game_server().get_temp_banned_ip_addresses_map());
     }
@@ -2606,7 +2622,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         temp_banned_player_data.ip_address,
         temp_banned_player_data);
 
-      const string msg{ format("^7{} ^5has removed temporarily banned ^1IP address {}\n ^5for ^3player name: ^7{} ^5| ^3GUID: ^1{} ^5| ^3Date/time of ban: ^1{}\n^3Ban duration: ^1{} hours ^5| ^3Reason of ban: ^1{} ^5| ^3Banned by: ^7{}\n", user, temp_banned_player_data.ip_address, temp_banned_player_data.player_name, temp_banned_player_data.guid_key, temp_banned_player_data.banned_date_time, temp_banned_player_data.ban_duration_in_hours, temp_banned_player_data.reason, temp_banned_player_data.banned_by_user_name) };
+      const string msg{ format("^7{} ^5has removed temporarily banned ^1IP address {}\n ^5for ^3player name: ^7{} ^5| ^3geoinfo: ^1{}, {} ^5| ^3Date/time of ban: ^1{}\n^3Ban duration: ^1{} hours ^5| ^3Reason of ban: ^1{} ^5| ^3Banned by: ^7{}\n", user, temp_banned_player_data.ip_address, temp_banned_player_data.player_name, temp_banned_player_data.country_name, temp_banned_player_data.city, temp_banned_player_data.banned_date_time, temp_banned_player_data.ban_duration_in_hours, temp_banned_player_data.reason, temp_banned_player_data.banned_by_user_name) };
       print_colored_text(app_handles.hwnd_re_messages_data, msg.c_str());
       string message_about_removal;
       remove_temp_banned_ip_address(temp_banned_player_data.ip_address, message_about_removal, false, false);
@@ -2633,7 +2649,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         pd.ip_address,
         pd);
 
-      const string msg{ format("^7{} ^5has banned the ^1GUID key ^5of player:\n^3Name: ^7{} ^5| ^3IP address: ^1{} ^5| ^3GUID: ^1{} ^5| ^3Date/time of ban: ^1{}\n^3Reason of ban: ^1{} ^5| ^3Banned by: ^7{}\n", pd.banned_by_user_name, pd.player_name, pd.ip_address, pd.guid_key, pd.banned_date_time, pd.reason, pd.banned_by_user_name) };
+      const string msg{ format("^7{} ^5has banned the ^1GUID key ^5of player:\n^3Name: ^7{} ^5| ^3IP address: ^1{} ^5| ^3GUID: ^1{} ^5| ^3geoinfo: ^1{}, {} ^5| ^3Date/time of ban: ^1{}\n^3Reason of ban: ^1{} ^5| ^3Banned by: ^7{}\n", pd.banned_by_user_name, pd.player_name, pd.ip_address, pd.guid_key, pd.country_name, pd.city, pd.banned_date_time, pd.reason, pd.banned_by_user_name) };
       print_colored_text(app_handles.hwnd_re_messages_data, msg.c_str());
     }
   });
@@ -2659,7 +2675,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         pd.ip_address,
         pd);
 
-      const string msg{ format("^7{} ^5has banned the ^1IP address ^5of player:\n^3Name: ^7{} ^5| ^3IP address: ^1{} ^5| ^3GUID: ^1{} ^5| ^3Date/time of ban: ^1{}\n^3Reason of ban: ^1{} ^5| ^3Banned by: ^7{}\n", pd.banned_by_user_name, pd.player_name, pd.ip_address, pd.guid_key, pd.banned_date_time, pd.reason, pd.banned_by_user_name) };
+      const string msg{ format("^7{} ^5has banned the ^1IP address ^5of player:\n^3Name: ^7{} ^5| ^3IP address: ^1{} ^5| ^3geoinfo: ^1{}, {} ^5| ^3Date/time of ban: ^1{}\n^3Reason of ban: ^1{} ^5| ^3Banned by: ^7{}\n", pd.banned_by_user_name, pd.player_name, pd.ip_address, pd.country_name, pd.city, pd.banned_date_time, pd.reason, pd.banned_by_user_name) };
       print_colored_text(app_handles.hwnd_re_messages_data, msg.c_str());
       add_permanently_banned_ip_address(pd, main_app.get_game_server().get_banned_ip_addresses_vector(), main_app.get_game_server().get_banned_ip_addresses_map());
     }
@@ -2685,7 +2701,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         pd.ip_address,
         pd);
 
-      const string msg{ format("^7{} ^5has removed ^1banned IP address {}\n ^5for ^3player name: ^7{} ^5| ^3GUID: ^1{} ^5| ^3Date/time of ban: ^1{}\n^3Reason of ban: ^1{} ^5| ^3Banned by: ^7{}\n", user, pd.ip_address, pd.player_name, pd.guid_key, pd.banned_date_time, pd.reason, pd.banned_by_user_name) };
+      const string msg{ format("^7{} ^5has removed ^1banned IP address {}\n ^5for ^3player name: ^7{} ^5| ^3geoinfo: ^1{}, {} ^5| ^3Date/time of ban: ^1{}\n^3Reason of ban: ^1{} ^5| ^3Banned by: ^7{}\n", user, pd.ip_address, pd.player_name, pd.country_name, pd.city, pd.banned_date_time, pd.reason, pd.banned_by_user_name) };
       print_colored_text(app_handles.hwnd_re_messages_data, msg.c_str());
       string ip_address{ pd.ip_address };
       string message_about_removal;
@@ -2713,13 +2729,13 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         pd.ip_address,
         pd);
 
-      const string msg{ format("^7{} ^5has banned ^1IP address range:\n^5[^3Player name: ^7{} ^5| ^3IP address range: ^1{} ^5| ^3GUID: ^1{} ^5| ^3Date/time of ban: ^1{}\n^3Reason of ban: ^1{} ^5| ^3Banned by: ^7{}^5]\n", pd.banned_by_user_name, pd.player_name, pd.ip_address, pd.guid_key, pd.banned_date_time, pd.reason, pd.banned_by_user_name) };
+      const string msg{ format("^7{} ^5has banned ^1IP address range:\n^5[^3Player name: ^7{} ^5| ^3IP address range: ^1{} ^5| ^3geoinfo: ^1{}, {} ^5| ^3Date/time of ban: ^1{}\n^3Reason of ban: ^1{} ^5| ^3Banned by: ^7{}^5]\n", pd.banned_by_user_name, pd.player_name, pd.ip_address, pd.country_name, pd.city, pd.banned_date_time, pd.reason, pd.banned_by_user_name) };
       print_colored_text(app_handles.hwnd_re_messages_data, msg.c_str());
       add_permanently_banned_ip_address_range(pd, main_app.get_game_server().get_banned_ip_address_ranges_vector(), main_app.get_game_server().get_banned_ip_address_ranges_map());
 
   } });
 
-  main_app.add_message_handler("remove-iprangeban", [](const string &user, const time_t, const string &data, bool) {
+  main_app.add_message_handler("remove-iprangeban", [](const string &, const time_t, const string &data, bool) {
     auto parts = stl::helper::str_split(data, "\\", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::no);
     for (auto &part : parts) {
       stl::helper::trim_in_place(part);
@@ -2739,7 +2755,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         pd.ip_address,
         pd);
 
-      const string msg{ format("^7{} ^5has removed previously ^1banned IP address range:\n^5[^3Player name: ^7{} ^5| ^3IP range: ^1{} ^5| ^3GUID: ^1{} ^5| ^3Date/time of ban: ^1{}\n^3Reason of ban: ^1{} ^5| ^3Banned by: ^7{}^5]\n", user, pd.player_name, pd.ip_address, pd.guid_key, pd.banned_date_time, pd.reason, pd.banned_by_user_name) };
+      const string msg{ format("^7{} ^5has removed previously ^1banned IP address range:\n^5[^3Player name: ^7{} ^5| ^3IP range: ^1{} ^5| ^3geoinfo: ^1{}, {} ^5| ^3Date/time of ban: ^1{}\n^3Reason of ban: ^1{} ^5| ^3Banned by: ^7{}^5]\n", pd.banned_by_user_name, pd.player_name, pd.ip_address, pd.country_name, pd.city, pd.banned_date_time, pd.reason, pd.banned_by_user_name) };
       print_colored_text(app_handles.hwnd_re_messages_data, msg.c_str());
       string ip_address{ pd.ip_address };
       string message_about_removal;
@@ -2873,53 +2889,33 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       main_app.get_current_user()->is_admin = main_app.get_game_server().get_is_connection_settings_valid();
 
       display_tempbanned_players_remaining_time_period();
-
       is_main_window_constructed = true;
-
-      size_t rcon_status_sent_counter{ 0 };
       string rcon_reply;
 
       while (true) {
         try {
-          {
-            unique_lock ul{ main_app.get_command_queue_mutex() };
-            main_app.get_command_queue_cv().wait_for(ul, 20ms, [&]() {
-              return !main_app.is_command_queue_empty() || is_terminate_program.load();
-            });
-          }
 
-          if (is_terminate_program.load()) break;
-
-          while (!main_app.is_command_queue_empty()) {
+          while (!is_terminate_program.load() && !main_app.is_command_queue_empty()) {
             auto cmd = main_app.get_command_from_queue();
             main_app.process_queue_command(std::move(cmd));
           }
 
-          if (is_refresh_players_data_event.load()) {
+          if (!is_terminate_program.load() && is_refresh_players_data_event.load()) {
 
             if (main_app.get_game_server().get_is_connection_settings_valid()) {
-              main_app.get_connection_manager().send_and_receive_rcon_data("g_gametype", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
-              main_app.get_connection_manager().send_and_receive_rcon_data("status", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
-              ++rcon_status_sent_counter;
-              const bool log_players_data{ rcon_status_sent_counter % 30 == 0 };
-              if (30 == rcon_status_sent_counter)
-                rcon_status_sent_counter = 0;
-              prepare_players_data_for_display(log_players_data);
-              if (!main_app.get_already_seen_messages().empty())
+              main_app.get_connection_manager().send_and_receive_rcon_data("status", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str(), true, true);
+              if (!main_app.get_already_seen_messages().empty()) {
                 main_app.get_already_seen_messages().clear();
+              }
+
             } else {
-              main_app.get_connection_manager().send_and_receive_rcon_data("getstatus", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
-              ++rcon_status_sent_counter;
-              const bool log_players_data{ rcon_status_sent_counter % 30 == 0 };
-              if (30 == rcon_status_sent_counter)
-                rcon_status_sent_counter = 0;
-              prepare_players_data_for_display_of_getstatus_response(log_players_data);
-              if (!main_app.get_already_seen_messages().empty())
+              main_app.get_connection_manager().send_and_receive_non_rcon_data("getstatus", rcon_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), true, true);
+              if (!main_app.get_already_seen_messages().empty()) {
                 main_app.get_already_seen_messages().clear();
+              }
             }
 
             is_refresh_players_data_event.store(false);
-            is_refreshed_players_data_ready_event.store(true);
           }
         } catch (std::exception &ex) {
           const string error_message{ format("^3A specific exception was caught in command queue's thread!\n^1Exception: {}", ex.what()) };
@@ -2944,30 +2940,21 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
         try {
 
-          /*{
-            unique_lock ul{ mu };
-            exit_flag.wait_for(ul, 10ms, [&]() {
-              return is_terminate_program.load();
-            });
-          }*/
-
-          if (is_terminate_program.load()) {
-            break;
-          }
-
-          while (!main_app.is_message_queue_empty()) {
+          while (!is_terminate_program.load() && !main_app.is_message_queue_empty()) {
             message_t message{ main_app.get_message_from_queue() };
-            const bool is_call_message_handler{ message.command != "inform-message" };
+            const bool is_call_message_handler{ message.command != "inform-message" && message.command != "public-message" };
             main_app.get_connection_manager_for_messages().process_and_send_message(message.command, message.data, message.is_show_in_messages, tiny_rcon_server_ip, tiny_rcon_server_port, is_call_message_handler);
           }
 
-          main_app.get_connection_manager_for_messages().wait_for_and_process_response_message(tiny_rcon_server_ip, tiny_rcon_server_port);
+          if (!is_terminate_program.load()) {
+            main_app.get_connection_manager_for_messages().wait_for_and_process_response_message(tiny_rcon_server_ip, tiny_rcon_server_port);
+          }
 
         } catch (std::exception &ex) {
-          const string error_message{ format("^3A specific exception was caught in command queue's thread!\n^1Exception: {}", ex.what()) };
+          const string error_message{ format("^3A specific exception was caught in message queue's thread!\n^1Exception: {}", ex.what()) };
           print_colored_text(app_handles.hwnd_re_messages_data, error_message.c_str());
         } catch (...) {
-          const string error_message{ format("^3A generic error was caught in command queue's thread!\n^1Exception: {}", strerror(GetLastError())) };
+          const string error_message{ format("^3A generic error was caught in message queue's thread!\n^1Exception: {}", strerror(GetLastError())) };
           print_colored_text(app_handles.hwnd_re_messages_data, error_message.c_str());
         }
       }
@@ -2985,10 +2972,29 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       TranslateMessage(&win32_msg);
       if (win32_msg.message == WM_KEYDOWN) {
         process_key_down_message(win32_msg);
+      } else if (WM_LBUTTONDOWN == win32_msg.message && is_first_left_mouse_button_click_in_prompt_edit_control) {
+        const int x{ GET_X_LPARAM(win32_msg.lParam) };
+        const int y{ GET_Y_LPARAM(win32_msg.lParam) };
+        RECT rect{};
+        GetClientRect(app_handles.hwnd_e_user_input, &rect);
+        if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+          Edit_SetText(app_handles.hwnd_e_user_input, "");
+          is_first_left_mouse_button_click_in_prompt_edit_control = false;
+        }
       }
+
       DispatchMessage(&win32_msg);
     } else if (win32_msg.message == WM_KEYDOWN) {
       process_key_down_message(win32_msg);
+    } else if (WM_LBUTTONDOWN == win32_msg.message && is_first_left_mouse_button_click_in_prompt_edit_control) {
+      const int x{ GET_X_LPARAM(win32_msg.lParam) };
+      const int y{ GET_Y_LPARAM(win32_msg.lParam) };
+      RECT rect{};
+      GetClientRect(app_handles.hwnd_e_user_input, &rect);
+      if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+        Edit_SetText(app_handles.hwnd_e_user_input, "");
+        is_first_left_mouse_button_click_in_prompt_edit_control = false;
+      }
     }
 
     if (is_main_window_constructed && !is_tinyrcon_initialized) {
@@ -3004,19 +3010,15 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       string rcon_task_reply;
       is_tinyrcon_initialized = true;
       if (main_app.get_game_server().get_is_connection_settings_valid()) {
-        print_colored_text(app_handles.hwnd_re_messages_data, "^2Sending rcon command ^1'g_gametype' ^2to the game server.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-        main_app.get_connection_manager().send_and_receive_rcon_data("g_gametype", rcon_task_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
         print_colored_text(app_handles.hwnd_re_messages_data, "^2Sending rcon command ^1'status' ^2to the game server.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-        main_app.get_connection_manager().send_and_receive_rcon_data("status", rcon_task_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
-        prepare_players_data_for_display(true);
+        main_app.get_connection_manager().send_and_receive_rcon_data("status", rcon_task_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str(), true, true);
+        // prepare_players_data_for_display(true);
 
       } else {
-        print_colored_text(app_handles.hwnd_re_messages_data, "^2Sending rcon command ^1'getstatus' ^2to the game server.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-        main_app.get_connection_manager().send_and_receive_rcon_data("getstatus", rcon_task_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str());
-        prepare_players_data_for_display_of_getstatus_response(true);
+        print_colored_text(app_handles.hwnd_re_messages_data, "^2Sending non-rcon command ^1'getstatus' ^2to the game server.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        main_app.get_connection_manager().send_and_receive_non_rcon_data("getstatus", rcon_task_reply, main_app.get_game_server().get_server_ip_address().c_str(), main_app.get_game_server().get_server_port(), true, true);
       }
 
-      display_players_data_in_players_grid(app_handles.hwnd_players_grid);
 
       if (main_app.get_game_server().get_is_connection_settings_valid()) {
 
@@ -3062,6 +3064,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       SetTimer(app_handles.hwnd_main_window, ID_TIMER, 1000, nullptr);
     }
   }
+
+  is_terminate_program.store(true);
+
   const auto current_ts{ get_current_time_stamp() };
   main_app.get_connection_manager_for_messages().process_and_send_message("request-logout", format("{}\\{}\\{}", me->user_name, me->ip_address, current_ts), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
   me->is_logged_in = false;
@@ -3074,10 +3079,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   save_protected_entries_file(protected_countries_list_file_path, main_app.get_game_server().get_protected_countries());
 
   is_terminate_program.store(true);
-  /*{
-    lock_guard ul{ mu };
-    exit_flag.notify_all();
-  }*/
 
   if (pr_info.hProcess != nullptr)
     CloseHandle(pr_info.hProcess);
@@ -3092,9 +3093,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
   if (wcex.hbrBackground != nullptr)
     DeleteObject((HGDIOBJ)wcex.hbrBackground);
-  if (RED_BRUSH != NULL)
+  if (RED_BRUSH != nullptr)
     DeleteObject((HGDIOBJ)RED_BRUSH);
-  if (font_for_players_grid_data != NULL)
+  if (font_for_players_grid_data != nullptr)
     DeleteFont(font_for_players_grid_data);
   if (hImageList)
     ImageList_Destroy(hImageList);
@@ -3178,7 +3179,7 @@ bool initialize_main_app(HINSTANCE hInstance, const int nCmdShow)
 
   // AdjustWindowRectEx(&client_rect, WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME, FALSE, 0);
 
-  app_handles.hwnd_main_window = CreateWindowEx(0, wcex.lpszClassName, "Welcome to TinyRcon | version: 2.4", WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME /*WS_OVERLAPPEDWINDOW | WS_HSCROLL | WS_VSCROLL*/, 0, 0, client_rect.right - client_rect.left, client_rect.bottom - client_rect.top, nullptr, nullptr, hInstance, nullptr);
+  app_handles.hwnd_main_window = CreateWindowEx(0, wcex.lpszClassName, "TinyRcon client", WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME /*WS_OVERLAPPEDWINDOW | WS_HSCROLL | WS_VSCROLL*/, 0, 0, client_rect.right - client_rect.left, client_rect.bottom - client_rect.top, nullptr, nullptr, hInstance, nullptr);
 
   if (!app_handles.hwnd_main_window)
     return false;
@@ -3227,6 +3228,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
   case WM_CONTEXTMENU: {
     if (reinterpret_cast<HWND>(wParam) == app_handles.hwnd_re_messages_data) {
+      SetFocus(app_handles.hwnd_re_messages_data);
       hPopupMenu = CreatePopupMenu();
       InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_VIEWTEMPBANSBUTTON, "View temporarily banned IP addresses");
       InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_VIEWIPBANSBUTTON, "View permanently banned IP addresses");
@@ -3239,12 +3241,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_VIEWPROTECTEDCOUNTRIES, "View protected countries");
       InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_VIEWADMINSDATA, "View &admins' data");
       InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_SEPARATOR, NULL, nullptr);
-      InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING | MF_ENABLED, IDC_COPY, "&Copy");
+      InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING | MF_ENABLED, IDC_COPY, "&Copy (Ctrl + C)");
       InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_CLEARMESSAGESCREENBUTTON, "Clear messages");
       InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_SEPARATOR, NULL, nullptr);
       InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_QUITBUTTON, "E&xit");
       TrackPopupMenu(hPopupMenu, TPM_TOPALIGN | TPM_LEFTALIGN, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam), 0, hWnd, nullptr);
     } else if (reinterpret_cast<HWND>(wParam) == app_handles.hwnd_players_grid) {
+      SetFocus(app_handles.hwnd_players_grid);
       hPopupMenu = CreatePopupMenu();
       if (main_app.get_game_server().get_is_connection_settings_valid() && check_if_selected_cell_indices_are_valid(selected_row, 0)) {
         string selected_pid_str{ GetCellContents(app_handles.hwnd_players_grid, selected_row, 0) };
@@ -3344,8 +3347,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_QUITBUTTON, "E&xit");
       TrackPopupMenu(hPopupMenu, TPM_TOPALIGN | TPM_LEFTALIGN, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam), 0, hWnd, nullptr);
     } else if (reinterpret_cast<HWND>(wParam) == app_handles.hwnd_e_user_input) {
+      SetFocus(app_handles.hwnd_e_user_input);
       hPopupMenu = CreatePopupMenu();
-      InsertMenu(hPopupMenu, 0, MF_BYCOMMAND | MF_STRING | MF_ENABLED, IDC_PASTE, "&Paste");
+      InsertMenu(hPopupMenu, 0, MF_BYCOMMAND | MF_STRING | MF_ENABLED, IDC_PASTE, "Paste (Ctrl + V)");
       TrackPopupMenu(hPopupMenu, TPM_TOPALIGN | TPM_LEFTALIGN, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam), 0, hWnd, nullptr);
     }
   } break;
@@ -3368,6 +3372,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     }
 
     if (time_period == atomic_counter.load()) {
+      if (is_first_left_mouse_button_click_in_prompt_edit_control) {
+        Edit_SetText(app_handles.hwnd_e_user_input, "");
+        is_first_left_mouse_button_click_in_prompt_edit_control = false;
+        SetFocus(app_handles.hwnd_players_grid);
+      }
       is_refresh_players_data_event.store(true);
     }
 
@@ -3382,16 +3391,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     SetBkColor(hdc, color::black);
     SetTextColor(hdc, color::red);
 
-    RECT bounding_rectangle = {
+    /*RECT bounding_rectangle{
       screen_width - 270,
       screen_height - 105,
       screen_width - 5,
       screen_height - 85,
     };
 
-    InvalidateRect(hWnd, &bounding_rectangle, TRUE);
+    InvalidateRect(hWnd, &bounding_rectangle, TRUE);*/
 
-    bounding_rectangle = {
+    RECT bounding_rectangle{
       10,
       screen_height - 75,
       130,
@@ -3426,19 +3435,84 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       display_large_data_set.detach();
       is_display_admins_data_event.store(false);
     } else if (is_display_protected_ip_addresses_data_event.load()) {
-      std::thread display_large_data_set{ []() { display_protected_entries("Protected IP addresses:", main_app.get_game_server().get_protected_ip_addresses()); } };
+      std::thread display_large_data_set{ []() {
+        unordered_map<string, string> protected_ip_to_player_name;
+        const auto &players_data = main_app.get_game_server().get_players_data();
+        for (const auto &protected_ip_address : main_app.get_game_server().get_protected_ip_addresses()) {
+          ostringstream oss;
+          for (size_t i{}; i < main_app.get_game_server().get_number_of_players(); ++i) {
+            if (protected_ip_address == players_data[i].ip_address) {
+              oss << "^7" << players_data[i].player_name << " ^7| ";
+            }
+          }
+          string online_players_names{ oss.str() };
+          if (online_players_names.length() >= 5)
+            online_players_names.erase(online_players_names.length() - 5, 5);
+          protected_ip_to_player_name.emplace(protected_ip_address, std::move(online_players_names));
+        }
+        display_protected_entries("Protected IP addresses:", main_app.get_game_server().get_protected_ip_addresses(), protected_ip_to_player_name);
+      } };
       display_large_data_set.detach();
       is_display_protected_ip_addresses_data_event.store(false);
     } else if (is_display_protected_ip_address_ranges_data_event.load()) {
-      std::thread display_large_data_set{ []() { display_protected_entries("Protected IP address ranges:", main_app.get_game_server().get_protected_ip_address_ranges()); } };
+      std::thread display_large_data_set{ []() {
+          unordered_map<string, string> protected_ip_address_range_to_player_name;
+        const auto &players_data = main_app.get_game_server().get_players_data();
+        for (const auto &protected_ip_address_range : main_app.get_game_server().get_protected_ip_address_ranges()) {
+          ostringstream oss;
+          for (size_t i{}; i < main_app.get_game_server().get_number_of_players(); ++i) {
+            const string player_narrow_ip_address_range { get_narrow_ip_address_range_for_specified_ip_address(players_data[i].ip_address) };
+            const string player_wide_ip_address_range { get_wide_ip_address_range_for_specified_ip_address(players_data[i].ip_address) };
+            if (protected_ip_address_range == player_narrow_ip_address_range || protected_ip_address_range == player_wide_ip_address_range) {
+              oss << "^7" << players_data[i].player_name << " ^7| ";
+            }
+          }         
+          string online_players_names{ oss.str() };
+          if (online_players_names.length() >= 5)
+            online_players_names.erase(online_players_names.length() - 5, 5);          
+          protected_ip_address_range_to_player_name.emplace(protected_ip_address_range, std::move(online_players_names));          
+        }
+          display_protected_entries("Protected IP address ranges:", main_app.get_game_server().get_protected_ip_address_ranges(), protected_ip_address_range_to_player_name); } };
       display_large_data_set.detach();
       is_display_protected_ip_address_ranges_data_event.store(false);
     } else if (is_display_protected_cities_data_event.load()) {
-      std::thread display_large_data_set{ []() { display_protected_entries("Protected cities:", main_app.get_game_server().get_protected_cities()); } };
+      std::thread display_large_data_set{ []() {
+        unordered_map<string, string> protected_ip_to_player_city;
+        const auto &players_data = main_app.get_game_server().get_players_data();
+        for (const auto &protected_city : main_app.get_game_server().get_protected_cities()) {
+          ostringstream oss;
+          for (size_t i{}; i < main_app.get_game_server().get_number_of_players(); ++i) {
+            if (protected_city == players_data[i].city) {
+              oss << "^7" << players_data[i].player_name << " ^7| ";
+            }
+          }
+          string online_players_names{ oss.str() };
+          if (online_players_names.length() >= 5)
+            online_players_names.erase(online_players_names.length() - 5, 5);
+          protected_ip_to_player_city.emplace(protected_city, std::move(online_players_names));
+        }
+        display_protected_entries("Protected cities:", main_app.get_game_server().get_protected_cities(), protected_ip_to_player_city);
+      } };
       display_large_data_set.detach();
       is_display_protected_cities_data_event.store(false);
     } else if (is_display_protected_countries_data_event.load()) {
-      std::thread display_large_data_set{ []() { display_protected_entries("Protected countries:", main_app.get_game_server().get_protected_countries()); } };
+      std::thread display_large_data_set{ []() {
+        unordered_map<string, string> protected_ip_to_player_country;
+        const auto &players_data = main_app.get_game_server().get_players_data();
+        for (const auto &protected_country : main_app.get_game_server().get_protected_cities()) {
+          ostringstream oss;
+          for (size_t i{}; i < main_app.get_game_server().get_number_of_players(); ++i) {
+            if (protected_country == players_data[i].country_name) {
+              oss << "^7" << players_data[i].player_name << " ^7| ";
+            }
+          }
+          string online_players_names{ oss.str() };
+          if (online_players_names.length() >= 5)
+            online_players_names.erase(online_players_names.length() - 5, 5);
+          protected_ip_to_player_country.emplace(protected_country, std::move(online_players_names));
+        }
+        display_protected_entries("Protected countries:", main_app.get_game_server().get_protected_countries(), protected_ip_to_player_country);
+      } };
       display_large_data_set.detach();
       is_display_protected_countries_data_event.store(false);
     }
@@ -3450,10 +3524,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
   case WM_NOTIFY: {
     if (wParam == 501) {
       auto nmhdr = (NMGRID *)lParam;
-      const int row_index = nmhdr->row;
+      int row_index = nmhdr->row;
       const int col_index = nmhdr->col;
+      if (row_index < 0)
+        row_index = 0;
 
-      if (row_index < (int)max_players_grid_rows) {
+      if (row_index < static_cast<int>(max_players_grid_rows)) {
         selected_row = row_index;
       }
 
@@ -3466,9 +3542,32 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     if ((some_item->idFrom == ID_WARNBUTTON || some_item->idFrom == ID_KICKBUTTON || some_item->idFrom == ID_TEMPBANBUTTON || some_item->idFrom == ID_IPBANBUTTON || some_item->idFrom == ID_VIEWTEMPBANSBUTTON || some_item->idFrom == ID_VIEWIPBANSBUTTON || some_item->idFrom == ID_VIEWADMINSDATA || some_item->idFrom == ID_CONNECTBUTTON || some_item->idFrom == ID_CONNECTPRIVATESLOTBUTTON || some_item->idFrom == ID_SAY_BUTTON || some_item->idFrom == ID_TELL_BUTTON || some_item->idFrom == ID_QUITBUTTON || some_item->idFrom == ID_LOADBUTTON || some_item->idFrom == ID_BUTTON_CONFIGURE_SERVER_SETTINGS || some_item->idFrom == ID_CLEARMESSAGESCREENBUTTON || some_item->idFrom == ID_REFRESHDATABUTTON)
         && (some_item->code == NM_CUSTOMDRAW)) {
+
       LPNMCUSTOMDRAW item = (LPNMCUSTOMDRAW)some_item;
 
-      if ((item->uItemState & CDIS_FOCUS) || (item->uItemState & CDIS_SELECTED)) {
+      // if (item->uItemState & ~CDIS_FOCUS) {
+      //   if (!defaultbrush)
+      //     defaultbrush = CreateSolidBrush(color::light_blue);
+
+      //  if (!light_blue_pen)
+      //    light_blue_pen = CreatePen(PS_SOLID, 2, color::light_blue);
+
+      //  HGDIOBJ old_pen = SelectObject(item->hdc, light_blue_pen);
+      //  HGDIOBJ old_brush = SelectObject(item->hdc, defaultbrush);
+
+      //  Rectangle(item->hdc, item->rc.left, item->rc.top, item->rc.right, item->rc.bottom);
+
+      //  SelectObject(item->hdc, old_pen);
+      //  SelectObject(item->hdc, old_brush);
+
+      //  SetTextColor(item->hdc, color::red);
+      //  SetBkMode(item->hdc, TRANSPARENT);
+      //  DrawTextEx(item->hdc, (char *)button_id_to_label_text.at(some_item->idFrom), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER, nullptr);
+      //  return CDRF_SKIPDEFAULT;
+      //}
+
+      if (item->uItemState & CDIS_FOCUS /*|| (item->uItemState & CDIS_SELECTED)*/) {
+
         if (!selectbrush)
           selectbrush = CreateSolidBrush(color::yellow);
 
@@ -3487,36 +3586,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         SetBkMode(item->hdc, TRANSPARENT);
         DrawTextEx(item->hdc, (char *)button_id_to_label_text.at(some_item->idFrom), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER, nullptr);
         return CDRF_SKIPDEFAULT;
-      } else {
-        if (item->uItemState & CDIS_HOT) {
-          if (!hotbrush)
-            hotbrush = CreateSolidBrush(color::yellow);
+      }
+      if (item->uItemState & CDIS_HOT) {
+        if (!hotbrush)
+          hotbrush = CreateSolidBrush(color::yellow);
 
-          if (!red_pen)
-            red_pen = CreatePen(PS_SOLID, 2, color::red);
+        if (!red_pen)
+          red_pen = CreatePen(PS_SOLID, 2, color::red);
 
-          HGDIOBJ old_pen = SelectObject(item->hdc, red_pen);
-          HGDIOBJ old_brush = SelectObject(item->hdc, hotbrush);
-
-          Rectangle(item->hdc, item->rc.left, item->rc.top, item->rc.right, item->rc.bottom);
-
-          SelectObject(item->hdc, old_pen);
-          SelectObject(item->hdc, old_brush);
-
-          SetTextColor(item->hdc, color::red);
-          SetBkMode(item->hdc, TRANSPARENT);
-          DrawTextEx(item->hdc, (char *)button_id_to_label_text.at(some_item->idFrom), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER, nullptr);
-          return CDRF_SKIPDEFAULT;
-        }
-
-        if (defaultbrush == NULL)
-          defaultbrush = CreateSolidBrush(color::light_blue);
-
-        if (!light_blue_pen)
-          light_blue_pen = CreatePen(PS_SOLID, 2, color::light_blue);
-
-        HGDIOBJ old_pen = SelectObject(item->hdc, light_blue_pen);
-        HGDIOBJ old_brush = SelectObject(item->hdc, defaultbrush);
+        HGDIOBJ old_pen = SelectObject(item->hdc, red_pen);
+        HGDIOBJ old_brush = SelectObject(item->hdc, hotbrush);
 
         Rectangle(item->hdc, item->rc.left, item->rc.top, item->rc.right, item->rc.bottom);
 
@@ -3528,7 +3607,28 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         DrawTextEx(item->hdc, (char *)button_id_to_label_text.at(some_item->idFrom), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER, nullptr);
         return CDRF_SKIPDEFAULT;
       }
+
+      if (!defaultbrush)
+        defaultbrush = CreateSolidBrush(color::light_blue);
+
+      if (!light_blue_pen)
+        light_blue_pen = CreatePen(PS_SOLID, 2, color::light_blue);
+
+      HGDIOBJ old_pen = SelectObject(item->hdc, light_blue_pen);
+      HGDIOBJ old_brush = SelectObject(item->hdc, defaultbrush);
+
+      Rectangle(item->hdc, item->rc.left, item->rc.top, item->rc.right, item->rc.bottom);
+
+      SelectObject(item->hdc, old_pen);
+      SelectObject(item->hdc, old_brush);
+
+      SetTextColor(item->hdc, color::red);
+      SetBkMode(item->hdc, TRANSPARENT);
+      DrawTextEx(item->hdc, (char *)button_id_to_label_text.at(some_item->idFrom), -1, &item->rc, DT_SINGLELINE | DT_CENTER | DT_VCENTER, nullptr);
+      return CDRF_SKIPDEFAULT;
+      // return CDRF_DODEFAULT;
     }
+
     return CDRF_DODEFAULT;
 
   } break;
@@ -3539,10 +3639,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     const int wmId = LOWORD(wParam);
     const int wparam_high_word = HIWORD(wParam);
 
+    if (wparam_high_word == BN_CLICKED) {
+      SetFocus(app_handles.hwnd_players_grid);
+    }
+
     switch (wmId) {
 
     case IDC_COPY: {
       SetForegroundWindow(app_handles.hwnd_re_messages_data);
+      SetFocus(app_handles.hwnd_re_messages_data);
       INPUT ip;
       ip.type = INPUT_KEYBOARD;
       ip.ki.wScan = 0;
@@ -3571,6 +3676,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     case IDC_PASTE: {
       SetForegroundWindow(app_handles.hwnd_e_user_input);
+      SetFocus(app_handles.hwnd_e_user_input);
       INPUT ip;
       ip.type = INPUT_KEYBOARD;
       ip.ki.wScan = 0;
@@ -3600,10 +3706,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     case ID_QUITBUTTON:
       is_terminate_program.store(true);
-      /*{
-        lock_guard ul{ mu };
-        exit_flag.notify_all();
-      }*/
       PostQuitMessage(0);
       break;
 
@@ -3988,8 +4090,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         show_error(app_handles.hwnd_main_window, "Failed to construct and show TinyRcon configuration dialog!", 0);
       }
       if (is_terminate_program.load()) {
-        /*lock_guard ul{ mu };
-        exit_flag.notify_all();*/
         PostQuitMessage(0);
       }
       break;
@@ -4056,10 +4156,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     break;
   case WM_CLOSE:
     is_terminate_program.store(true);
-    /*{
-      lock_guard ul{ mu };
-      exit_flag.notify_all();
-    }*/
     DestroyWindow(app_handles.hwnd_main_window);
     return 0;
 
@@ -4338,7 +4434,7 @@ LRESULT CALLBACK WndProcForConfirmationDialog(HWND hWnd, UINT message, WPARAM wP
         admin_reason.assign("not specified");
       }
       EnableWindow(app_handles.hwnd_main_window, TRUE);
-      SetFocus(app_handles.hwnd_e_user_input);
+      SetFocus(app_handles.hwnd_players_grid);
       DestroyWindow(hWnd);
       break;
 
@@ -4346,7 +4442,7 @@ LRESULT CALLBACK WndProcForConfirmationDialog(HWND hWnd, UINT message, WPARAM wP
       admin_choice.store(0);
       admin_reason.assign("not specified");
       EnableWindow(app_handles.hwnd_main_window, TRUE);
-      SetFocus(app_handles.hwnd_e_user_input);
+      SetFocus(app_handles.hwnd_players_grid);
       DestroyWindow(hWnd);
       break;
 
@@ -4372,7 +4468,7 @@ LRESULT CALLBACK WndProcForConfirmationDialog(HWND hWnd, UINT message, WPARAM wP
     admin_choice.store(0);
     admin_reason = "not specified";
     EnableWindow(app_handles.hwnd_main_window, TRUE);
-    SetFocus(app_handles.hwnd_e_user_input);
+    SetFocus(app_handles.hwnd_players_grid);
     DestroyWindow(hWnd);
     break;
 
@@ -4548,19 +4644,15 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
     case ID_BUTTON_CANCEL: {
       is_terminate_tinyrcon_settings_configuration_dialog_window.store(true);
       EnableWindow(app_handles.hwnd_main_window, TRUE);
-      SetFocus(app_handles.hwnd_e_user_input);
+      SetFocus(app_handles.hwnd_players_grid);
       DestroyWindow(app_handles.hwnd_configuration_dialog);
     } break;
 
     case ID_BUTTON_CONFIGURATION_EXIT_TINYRCON: {
       EnableWindow(app_handles.hwnd_main_window, TRUE);
-      SetFocus(app_handles.hwnd_e_user_input);
+      SetFocus(app_handles.hwnd_players_grid);
       DestroyWindow(app_handles.hwnd_configuration_dialog);
       is_terminate_program.store(true);
-      /*{
-           lock_guard ul{ mu };
-           exit_flag.notify_all();
-         }*/
     } break;
 
     case ID_BUTTON_CONFIGURATION_COD1_PATH: {
@@ -4652,7 +4744,7 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
 
   case WM_CLOSE:
     EnableWindow(app_handles.hwnd_main_window, TRUE);
-    SetFocus(app_handles.hwnd_e_user_input);
+    SetFocus(app_handles.hwnd_players_grid);
     DestroyWindow(hWnd);
     break;
 

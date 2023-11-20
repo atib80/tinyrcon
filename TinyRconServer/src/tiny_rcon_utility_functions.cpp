@@ -82,10 +82,6 @@ extern const size_t max_users_grid_rows{ 100 };
 extern bool is_tinyrcon_initialized;
 std::atomic<bool> is_terminate_program{ false };
 volatile std::atomic<bool> is_terminate_tinyrcon_settings_configuration_dialog_window{ false };
-// extern std::atomic<bool> is_display_permanently_banned_players_data_event;
-// extern std::atomic<bool> is_display_temporarily_banned_players_data_event;
-// extern std::atomic<bool> is_display_banned_cities_data_event;
-// extern std::atomic<bool> is_display_banned_countries_data_event;
 extern std::atomic<int> admin_choice;
 extern std::string admin_reason;
 
@@ -95,7 +91,6 @@ extern condition_variable exit_flag;
 recursive_mutex print_data_mutex;
 recursive_mutex log_data_mutex;
 recursive_mutex protect_get_user_input;
-// recursive_mutex protect_banned_players_data;
 
 extern volatile atomic<size_t> atomic_counter;
 
@@ -348,7 +343,9 @@ extern const unordered_set<string> user_commands_set{
   "!unprotectiprange",
   "!unprotectcity",
   "!unprotectcountry",
-  "!restart"
+  "!restart",
+  "!ranges",
+  "!admins"
 };
 
 extern unordered_map<size_t, string> users_table_column_header_titles;
@@ -2631,21 +2628,43 @@ std::pair<bool, std::string> remove_permanently_banned_ip_address(std::string &i
   return { true, "Unknown Soldier" };
 }
 
-bool is_valid_decimal_whole_number(const std::string &str, int &number) noexcept
+bool is_valid_decimal_whole_number(const std::string &str, int &number)
 {
-  try {
-    number = stoi(str);
-  } catch (const std::invalid_argument &) {
-    return false;
-  } catch (const std::out_of_range &) {
-    return false;
-  } catch (const std::exception &) {
-    return false;
-  } catch (...) {
-    return false;
+  if (str.empty()) return false;
+
+  string ex_msg{ format(R"(^1Exception ^3thrown from ^1bool is_valid_decimal_whole_number("{}", "{}"))", str, number) };
+  stack_trace_element ste{
+    app_handles.hwnd_re_messages_data,
+    std::move(ex_msg)
+  };
+
+  const bool is_negative{ '-' == str[0] };
+  size_t index{ is_negative || '+' == str[0] ? 1U : 0U };
+  number = 0;
+  for (; index < str.length(); ++index) {
+    if (!isdigit(str[index]))
+      return false;
+    number *= 10;
+    number += static_cast<int>(str[index] - '0');
   }
+  if (is_negative)
+    number = -number;
 
   return true;
+
+  // try {
+  //   number = stoi(str);
+  // } catch (const std::invalid_argument &) {
+  //   return false;
+  // } catch (const std::out_of_range &) {
+  //   return false;
+  // } catch (const std::exception &) {
+  //   return false;
+  // } catch (...) {
+  //   return false;
+  // }
+
+  // return true;
 }
 
 size_t get_number_of_characters_without_color_codes(const char *text) noexcept
@@ -2928,7 +2947,7 @@ volatile bool should_program_terminate(const string &user_input)
   return is_terminate_program.load();
 }
 
-void display_temporarily_banned_ip_addresses()
+void display_temporarily_banned_ip_addresses(const bool is_save_data_to_log_file)
 {
   size_t longest_name_length{ 12 };
   size_t longest_country_length{ 20 };
@@ -2943,68 +2962,87 @@ void display_temporarily_banned_ip_addresses()
 
   ostringstream oss;
   ostringstream log;
-  const string decoration_line(98 + longest_name_length + longest_country_length, '=');
+  const string decoration_line(133 + longest_name_length + longest_country_length, '=');
   oss << "^5\n"
       << decoration_line << "\n"
       << "^5| ";
-  log << "\n"
-      << decoration_line << "\n"
-      << "| ";
+  if (is_save_data_to_log_file) {
+    log << "\n"
+        << decoration_line << "\n"
+        << "| ";
+  }
   oss << left << setw(15) << "IP address"
       << " | " << left << setw(longest_name_length)
       << "Player name"
       << " | " << left << setw(longest_country_length) << "Country, city"
-      << " | " << left << setw(20) << "Tempban issued on"
+      << " | " << left << setw(20) << "Tempban issued at"
       << " | " << left << setw(20) << "Tempban expires in"
       << " | " << left << setw(25) << "Reason"
+      << " | " << left << setw(32) << "Banned by admin"
       << "|";
-  log << left << setw(15) << "IP address"
-      << " | " << left << setw(longest_name_length)
-      << "Player name"
-      << " | " << left << setw(longest_country_length) << "Country, city"
-      << " | " << left << setw(20) << "Tempban issued on"
-      << " | " << left << setw(20) << "Tempban expires in"
-      << " | " << left << setw(25) << "Reason"
-      << "|";
+  if (is_save_data_to_log_file) {
+    log << left << setw(15) << "IP address"
+        << " | " << left << setw(longest_name_length)
+        << "Player name"
+        << " | " << left << setw(longest_country_length) << "Country, city"
+        << " | " << left << setw(20) << "Tempban issued at"
+        << " | " << left << setw(20) << "Tempban expires in"
+        << " | " << left << setw(25) << "Reason"
+        << " | " << left << setw(32) << "Banned by admin"
+        << "|";
+  }
   oss << "^5\n"
       << decoration_line << "\n";
-  log << "\n"
-      << decoration_line << "\n";
+  if (is_save_data_to_log_file) {
+    log << "\n"
+        << decoration_line << "\n";
+  }
   if (temp_banned_players.empty()) {
     const size_t message_len = stl::helper::len("| There are no players temporarily banned by their IP addresses yet.");
     oss << "^5| ^3There are no players temporarily banned by their IP addresses yet.";
-    log << "| There are no players temporarily banned by their IP addresses yet.";
+    if (is_save_data_to_log_file) {
+      log << "| There are no players temporarily banned by their IP addresses yet.";
+    }
 
     if (message_len + 2 < decoration_line.length()) {
       oss << string(decoration_line.length() - 2 - message_len, ' ');
-      log << string(decoration_line.length() - 2 - message_len, ' ');
+      if (is_save_data_to_log_file) {
+        log << string(decoration_line.length() - 2 - message_len, ' ');
+      }
     }
     oss << " ^5|\n";
-    log << " |\n";
+    if (is_save_data_to_log_file) {
+      log << " |\n";
+    }
   } else {
     bool is_first_color{ true };
     for (auto &bp : temp_banned_players) {
-      const char *next_color{ is_first_color ? "^5" : "^3" };
+      const char *next_color{ is_first_color ? "^3" : "^5" };
       oss << "^5| " << next_color << left << setw(15) << bp.ip_address << " ^5| ^7";
-      log << "| " << left << setw(15) << bp.ip_address << " | ";
+      if (is_save_data_to_log_file) {
+        log << "| " << left << setw(15) << bp.ip_address << " | ";
+      }
       stl::helper::trim_in_place(bp.player_name);
       string name{ bp.player_name };
       remove_all_color_codes(name);
       const size_t printed_name_char_count1{ get_number_of_characters_without_color_codes(bp.player_name) };
-      // const size_t printed_name_char_count2{ get_number_of_characters_without_color_codes(name.c_str()) };
       const size_t printed_name_char_count2{ name.length() };
       if (printed_name_char_count1 < longest_name_length) {
         oss << left << setw(longest_name_length) << bp.player_name + string(longest_name_length - printed_name_char_count1, ' ');
       } else {
         oss << left << setw(longest_name_length) << bp.player_name;
       }
-      if (printed_name_char_count2 < longest_name_length) {
-        log << left << setw(longest_name_length) << name + string(longest_name_length - printed_name_char_count2, ' ');
-      } else {
-        log << left << setw(longest_name_length) << name;
+      if (is_save_data_to_log_file) {
+        if (printed_name_char_count2 < longest_name_length) {
+          log << left << setw(longest_name_length) << name + string(longest_name_length - printed_name_char_count2, ' ');
+        } else {
+          log << left << setw(longest_name_length) << name;
+        }
       }
       oss << " ^5| ";
-      log << " | ";
+      if (is_save_data_to_log_file) {
+        log << " | ";
+      }
       char buffer2[256];
       (void)snprintf(buffer2, std::size(buffer2), "%s, %s", (len(bp.country_name) != 0 ? bp.country_name : bp.region), bp.city);
       stl::helper::trim_in_place(bp.reason);
@@ -3019,29 +3057,319 @@ void display_temporarily_banned_ip_addresses()
       } else {
         oss << next_color << left << bp.reason;
       }
-      oss << "^5|\n";
-
-      string reason{ bp.reason };
-      remove_all_color_codes(reason);
-      // stl::helper::trim_in_place(reason);
-      log << left << setw(longest_country_length) << buffer2 << " | " << left << setw(20) << ban_start_date_str
-          << " | " << left << setw(20) << ban_expires_date_str << " | ";
-      const size_t printed_reason_char_count2{ reason.length() };
-      if (printed_reason_char_count2 < 25) {
-        log << left << setw(25) << (reason + string(25 - printed_reason_char_count2, ' '));
+      oss << " ^5| ";
+      stl::helper::trim_in_place(bp.banned_by_user_name);
+      string banned_by_admin{ bp.banned_by_user_name };
+      remove_all_color_codes(banned_by_admin);
+      const size_t printed_reason_char_count3{ get_number_of_characters_without_color_codes(bp.banned_by_user_name.c_str()) };
+      if (printed_reason_char_count3 < 32) {
+        oss << next_color << left << setw(32) << (bp.banned_by_user_name + string(32 - printed_reason_char_count3, ' '));
       } else {
-        log << reason;
+        oss << next_color << left << bp.banned_by_user_name;
       }
-      log << "|\n";
+      oss << "^5|\n";
+      if (is_save_data_to_log_file) {
+        string reason{ bp.reason };
+        remove_all_color_codes(reason);
+        log << left << setw(longest_country_length) << buffer2 << " | " << left << setw(20) << ban_start_date_str
+            << " | " << left << setw(20) << ban_expires_date_str << " | ";
+        const size_t printed_reason_char_count2{ reason.length() };
+        if (printed_reason_char_count2 < 25) {
+          log << left << setw(25) << (reason + string(25 - printed_reason_char_count2, ' '));
+        } else {
+          log << reason;
+        }
+        log << " | ";
+        const size_t printed_reason_char_count4{ banned_by_admin.length() };
+        if (printed_reason_char_count4 < 32) {
+          log << next_color << left << setw(32) << (banned_by_admin + string(32 - printed_reason_char_count4, ' '));
+        } else {
+          log << next_color << left << banned_by_admin;
+        }
+        log << "|\n";
+      }
       is_first_color = !is_first_color;
     }
   }
   oss << string{ "^5"s + decoration_line + "\n\n"s };
-  log << string{ decoration_line + "\n\n"s };
+  if (is_save_data_to_log_file) {
+    log << string{ decoration_line + "\n\n"s };
+  }
   const string message{ oss.str() };
   print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true);
-  log_message(log.str(), is_log_datetime::yes);
+  if (is_save_data_to_log_file) {
+    log_message(log.str(), is_log_datetime::yes);
+  }
 }
+
+void display_banned_ip_address_ranges(const bool is_save_data_to_log_file)
+{
+  size_t longest_name_length{ 12 };
+  size_t longest_country_length{ 20 };
+  auto &banned_players =
+    main_app.get_game_server().get_banned_ip_address_ranges_vector();
+  if (!banned_players.empty()) {
+    longest_name_length = std::max(longest_name_length, find_longest_player_name_length(banned_players, false, banned_players.size()));
+    longest_country_length =
+      std::max(longest_country_length,
+        find_longest_player_country_city_info_length(banned_players, banned_players.size()));
+  }
+
+  ostringstream oss;
+  ostringstream log;
+  const string decoration_line(119 + longest_name_length + longest_country_length, '=');
+  oss << "^5\n"
+      << decoration_line << "\n";
+  oss << "^5| ";
+  if (is_save_data_to_log_file) {
+    log << "\n"
+        << decoration_line << "\n"
+        << "| ";
+  }
+  oss << left << setw(20) << "IP address range"
+      << " | " << left << setw(longest_name_length)
+      << "Player name"
+      << " | " << left << setw(longest_country_length) << "Country, city"
+      << " | " << left << setw(20) << "Date/time of ban"
+      << " | " << left << setw(29) << "Reason"
+      << " | " << left << setw(32) << "Banned by admin"
+      << "|";
+  if (is_save_data_to_log_file) {
+    log << left << setw(20) << "IP address range"
+        << " | " << left << setw(longest_name_length)
+        << "Player name"
+        << " | " << left << setw(longest_country_length) << "Country, city"
+        << " | " << left << setw(20) << "Date/time of IP ban"
+        << " | " << left << setw(29) << "Reason"
+        << " | " << left << setw(32) << "Banned by admin"
+        << "|";
+  }
+  oss << "^5\n"
+      << decoration_line << "\n";
+  if (is_save_data_to_log_file) {
+    log << "\n"
+        << decoration_line << "\n";
+  }
+  if (banned_players.empty()) {
+    const size_t message_len = stl::helper::len("| You haven't banned any IP address ranges yet.");
+    oss << "^5| ^3You haven't banned any IP address ranges yet.";
+    if (is_save_data_to_log_file) {
+      log << "| You haven't banned any IP address ranges yet.";
+    }
+
+    if (message_len + 2 < decoration_line.length()) {
+      oss << string(decoration_line.length() - 2 - message_len, ' ');
+      if (is_save_data_to_log_file) {
+        log << string(decoration_line.length() - 2 - message_len, ' ');
+      }
+    }
+    oss << " ^5|\n";
+    if (is_save_data_to_log_file) {
+      log << " |\n";
+    }
+  } else {
+    bool is_first_color{ true };
+    size_t no{};
+    for (auto &bp : banned_players) {
+      ++no;
+      const char *next_color{ is_first_color ? "^3" : "^5" };
+      oss << "^5| " << next_color << left << setw(20) << bp.ip_address << " ^5| ^7";
+      if (is_save_data_to_log_file) {
+        log << "| " << left << setw(20) << bp.ip_address << " | ";
+      }
+      stl::helper::trim_in_place(bp.player_name);
+      string name{ bp.player_name };
+      remove_all_color_codes(name);
+      const size_t printed_name_char_count1{ get_number_of_characters_without_color_codes(bp.player_name) };
+      const size_t printed_name_char_count2{ name.length() };
+      if (printed_name_char_count1 < longest_name_length) {
+        oss << left << setw(longest_name_length) << bp.player_name + string(longest_name_length - printed_name_char_count1, ' ');
+      } else {
+        oss << left << setw(longest_name_length) << bp.player_name;
+      }
+      if (is_save_data_to_log_file) {
+        if (printed_name_char_count2 < longest_name_length) {
+          log << left << setw(longest_name_length) << name + string(longest_name_length - printed_name_char_count2, ' ');
+        } else {
+          log << left << setw(longest_name_length) << name;
+        }
+      }
+
+      oss << " ^5| ";
+
+      if (is_save_data_to_log_file) {
+        log << " | ";
+      }
+      char buffer2[256];
+      snprintf(buffer2, std::size(buffer2), "%s, %s", (len(bp.country_name) != 0 ? bp.country_name : bp.region), bp.city);
+      stl::helper::trim_in_place(bp.reason);
+      string reason{ bp.reason };
+      oss << next_color << left << setw(longest_country_length) << buffer2 << " ^5| " << next_color << left << setw(20) << bp.banned_date_time
+          << " ^5| ";
+      const size_t printed_reason_char_count1{ get_number_of_characters_without_color_codes(reason.c_str()) };
+      if (printed_reason_char_count1 < 29) {
+        oss << next_color << left << setw(29) << (reason + string(29 - printed_reason_char_count1, ' '));
+      } else {
+        oss << next_color << left << reason;
+      }
+      oss << " ^5| ";
+      stl::helper::trim_in_place(bp.banned_by_user_name);
+      string banned_by_user{ bp.banned_by_user_name };
+      const size_t printed_reason_char_count3{ get_number_of_characters_without_color_codes(banned_by_user.c_str()) };
+      if (printed_reason_char_count3 < 32) {
+        oss << next_color << left << setw(32) << (banned_by_user + string(32 - printed_reason_char_count3, ' '));
+      } else {
+        oss << next_color << left << banned_by_user;
+      }
+      oss << "^5|\n";
+      if (is_save_data_to_log_file) {
+        remove_all_color_codes(reason);
+        remove_all_color_codes(banned_by_user);
+        log << left << setw(longest_country_length) << buffer2 << " | " << left << setw(20) << bp.banned_date_time
+            << " | ";
+        const size_t printed_reason_char_count2{ reason.length() };
+        if (printed_reason_char_count2 < 29) {
+          log << left << setw(29) << (reason + string(29 - printed_reason_char_count2, ' '));
+        } else {
+          log << reason;
+        }
+        log << " | ";
+        const size_t printed_reason_char_count4{ banned_by_user.length() };
+        if (printed_reason_char_count4 < 32) {
+          log << left << setw(32) << (banned_by_user + string(32 - printed_reason_char_count4, ' '));
+        } else {
+          log << banned_by_user;
+        }
+        log << "|\n";
+      }
+      is_first_color = !is_first_color;
+    }
+  }
+  oss << string{ "^5"s + decoration_line + "\n\n"s };
+  if (is_save_data_to_log_file) {
+    log << string{ decoration_line + "\n\n"s };
+  }
+  const string message{ oss.str() };
+  print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true);
+  if (is_save_data_to_log_file) {
+    log_message(log.str(), is_log_datetime::yes);
+  }
+}
+
+//void display_temporarily_banned_ip_addresses()
+//{
+//  size_t longest_name_length{ 12 };
+//  size_t longest_country_length{ 20 };
+//  auto &temp_banned_players =
+//    main_app.get_game_server().get_temp_banned_players_data();
+//  if (!temp_banned_players.empty()) {
+//    longest_name_length = std::max(longest_name_length, find_longest_player_name_length(temp_banned_players, false, temp_banned_players.size()));
+//    longest_country_length =
+//      std::max(longest_country_length,
+//        find_longest_player_country_city_info_length(temp_banned_players, temp_banned_players.size()));
+//  }
+//
+//  ostringstream oss;
+//  ostringstream log;
+//  const string decoration_line(98 + longest_name_length + longest_country_length, '=');
+//  oss << "^5\n"
+//      << decoration_line << "\n"
+//      << "^5| ";
+//  log << "\n"
+//      << decoration_line << "\n"
+//      << "| ";
+//  oss << left << setw(15) << "IP address"
+//      << " | " << left << setw(longest_name_length)
+//      << "Player name"
+//      << " | " << left << setw(longest_country_length) << "Country, city"
+//      << " | " << left << setw(20) << "Tempban issued on"
+//      << " | " << left << setw(20) << "Tempban expires in"
+//      << " | " << left << setw(25) << "Reason"
+//      << "|";
+//  log << left << setw(15) << "IP address"
+//      << " | " << left << setw(longest_name_length)
+//      << "Player name"
+//      << " | " << left << setw(longest_country_length) << "Country, city"
+//      << " | " << left << setw(20) << "Tempban issued on"
+//      << " | " << left << setw(20) << "Tempban expires in"
+//      << " | " << left << setw(25) << "Reason"
+//      << "|";
+//  oss << "^5\n"
+//      << decoration_line << "\n";
+//  log << "\n"
+//      << decoration_line << "\n";
+//  if (temp_banned_players.empty()) {
+//    const size_t message_len = stl::helper::len("| There are no players temporarily banned by their IP addresses yet.");
+//    oss << "^5| ^3There are no players temporarily banned by their IP addresses yet.";
+//    log << "| There are no players temporarily banned by their IP addresses yet.";
+//
+//    if (message_len + 2 < decoration_line.length()) {
+//      oss << string(decoration_line.length() - 2 - message_len, ' ');
+//      log << string(decoration_line.length() - 2 - message_len, ' ');
+//    }
+//    oss << " ^5|\n";
+//    log << " |\n";
+//  } else {
+//    bool is_first_color{ true };
+//    for (auto &bp : temp_banned_players) {
+//      const char *next_color{ is_first_color ? "^5" : "^3" };
+//      oss << "^5| " << next_color << left << setw(15) << bp.ip_address << " ^5| ^7";
+//      log << "| " << left << setw(15) << bp.ip_address << " | ";
+//      stl::helper::trim_in_place(bp.player_name);
+//      string name{ bp.player_name };
+//      remove_all_color_codes(name);
+//      const size_t printed_name_char_count1{ get_number_of_characters_without_color_codes(bp.player_name) };
+//      // const size_t printed_name_char_count2{ get_number_of_characters_without_color_codes(name.c_str()) };
+//      const size_t printed_name_char_count2{ name.length() };
+//      if (printed_name_char_count1 < longest_name_length) {
+//        oss << left << setw(longest_name_length) << bp.player_name + string(longest_name_length - printed_name_char_count1, ' ');
+//      } else {
+//        oss << left << setw(longest_name_length) << bp.player_name;
+//      }
+//      if (printed_name_char_count2 < longest_name_length) {
+//        log << left << setw(longest_name_length) << name + string(longest_name_length - printed_name_char_count2, ' ');
+//      } else {
+//        log << left << setw(longest_name_length) << name;
+//      }
+//      oss << " ^5| ";
+//      log << " | ";
+//      char buffer2[256];
+//      (void)snprintf(buffer2, std::size(buffer2), "%s, %s", (len(bp.country_name) != 0 ? bp.country_name : bp.region), bp.city);
+//      stl::helper::trim_in_place(bp.reason);
+//      const time_t ban_expires_time = bp.banned_start_time + (bp.ban_duration_in_hours * 3600);
+//      const string ban_start_date_str = get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", bp.banned_start_time);
+//      const string ban_expires_date_str = get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", ban_expires_time);
+//      oss << next_color << left << setw(longest_country_length) << buffer2 << " ^5| " << next_color << left << setw(20) << ban_start_date_str
+//          << " ^5| " << next_color << left << setw(20) << ban_expires_date_str << " ^5| ";
+//      const size_t printed_reason_char_count1{ get_number_of_characters_without_color_codes(bp.reason.c_str()) };
+//      if (printed_reason_char_count1 < 25) {
+//        oss << next_color << left << setw(25) << (bp.reason + string(25 - printed_reason_char_count1, ' '));
+//      } else {
+//        oss << next_color << left << bp.reason;
+//      }
+//      oss << "^5|\n";
+//
+//      string reason{ bp.reason };
+//      remove_all_color_codes(reason);
+//      // stl::helper::trim_in_place(reason);
+//      log << left << setw(longest_country_length) << buffer2 << " | " << left << setw(20) << ban_start_date_str
+//          << " | " << left << setw(20) << ban_expires_date_str << " | ";
+//      const size_t printed_reason_char_count2{ reason.length() };
+//      if (printed_reason_char_count2 < 25) {
+//        log << left << setw(25) << (reason + string(25 - printed_reason_char_count2, ' '));
+//      } else {
+//        log << reason;
+//      }
+//      log << "|\n";
+//      is_first_color = !is_first_color;
+//    }
+//  }
+//  oss << string{ "^5"s + decoration_line + "\n\n"s };
+//  log << string{ decoration_line + "\n\n"s };
+//  const string message{ oss.str() };
+//  print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true);
+//  log_message(log.str(), is_log_datetime::yes);
+//}
 
 void display_protected_entries(const char *table_title, const std::set<std::string> &protected_entries)
 {
@@ -3115,7 +3443,112 @@ void display_protected_entries(const char *table_title, const std::set<std::stri
   log_message(log.str(), is_log_datetime::yes);
 }
 
-void display_permanently_banned_ip_addresses()
+void display_admins_data()
+{
+  size_t longest_name_length{ 12 };
+  size_t longest_geoinfo_length{ 20 };
+  const auto &users =
+    main_app.get_users();
+  if (!users.empty()) {
+    longest_name_length = std::max(longest_name_length, find_longest_user_name_length(users, false, users.size()));
+    longest_geoinfo_length =
+      std::max(longest_geoinfo_length,
+        find_longest_user_country_city_info_length(users, users.size()));
+  }
+
+  ostringstream oss;
+  const string decoration_line(224 + longest_name_length + longest_geoinfo_length, '=');
+  oss << "^5\n"
+      << decoration_line << "\n";
+  oss << "^5| ";
+  oss << left << setw(longest_name_length) << "User name"
+      << " | " << left << setw(13) << "Is logged in?"
+      << " | " << left << setw(11) << "Is online?"
+      << " | " << left << setw(16) << "IP address"
+      << " | " << left << setw(longest_geoinfo_length) << "Country, city"
+      << " | " << left << setw(20) << "Last login"
+      << " | " << left << setw(20) << "Last logout"
+      << " | " << left << setw(10) << "Logins"
+      << " | " << left << setw(10) << "Warnings"
+      << " | " << left << setw(10) << "Kicks"
+      << " | " << left << setw(10) << "Tempbans"
+      << " | " << left << setw(10) << "GUID bans"
+      << " | " << left << setw(10) << "IP bans"
+      << " | " << left << setw(13) << "IP range bans"
+      << " | " << left << setw(10) << "City bans"
+      << " | " << left << setw(13) << "Country bans"
+      << "|";
+  oss << "^5\n"
+      << decoration_line << "\n";
+  if (users.empty()) {
+    const size_t message_len = stl::helper::len("| There is no received administrator (user) data.");
+    oss << "^5| ^3There is no received administrator (user) data.";
+
+    if (message_len + 2 < decoration_line.length()) {
+      oss << string(decoration_line.length() - 2 - message_len, ' ');
+    }
+    oss << " ^5|\n";
+
+  } else {
+    bool is_first_color{ true };
+    for (auto &user : users) {
+      /*if (!main_app.get_is_user_data_received_for_user(user->user_name, user->ip_address))
+        continue;*/
+      const char *next_color{ is_first_color ? "^3" : "^5" };
+      oss << "^5| ";
+
+      stl::helper::trim_in_place(user->user_name);
+      string name{ user->user_name };
+      remove_all_color_codes(name);
+      const size_t printed_name_char_count1{ get_number_of_characters_without_color_codes(user->user_name.c_str()) };
+      if (printed_name_char_count1 < longest_name_length) {
+        oss << left << setw(longest_name_length) << user->user_name + string(longest_name_length - printed_name_char_count1, ' ');
+      } else {
+        oss << left << setw(longest_name_length) << user->user_name;
+      }
+
+      oss << " ^5| ";
+
+      string is_logged_in{ user->is_logged_in ? "^2yes" : "^1no" };
+      string is_logged_in_without_color_codes{ is_logged_in };
+      remove_all_color_codes(is_logged_in_without_color_codes);
+      size_t printed_field_char_count{ get_number_of_characters_without_color_codes(is_logged_in.c_str()) };
+      size_t printed_field_char_count2{ is_logged_in_without_color_codes.length() };
+      if (printed_field_char_count < 13) {
+        oss << left << setw(13) << is_logged_in + string(13 - printed_field_char_count, ' ');
+      } else {
+        oss << left << setw(13) << is_logged_in;
+      }
+
+      oss << " ^5| ";
+
+      const string is_online_in{ user->is_online ? "^2yes" : "^1no" };
+      const string &is_online_in_without_color_codes{ is_online_in };
+      remove_all_color_codes(is_logged_in_without_color_codes);
+      printed_field_char_count = get_number_of_characters_without_color_codes(is_online_in.c_str());
+      printed_field_char_count2 = is_online_in_without_color_codes.length();
+      if (printed_field_char_count < 11) {
+        oss << left << setw(11) << is_online_in + string(11 - printed_field_char_count, ' ');
+      } else {
+        oss << left << setw(11) << is_online_in;
+      }
+
+      oss << " ^5| ";
+
+      oss << next_color << left << setw(16) << user->ip_address << " ^5| " << next_color << left << setw(longest_geoinfo_length) << user->geo_information << " ^5| " << next_color << left << setw(20) << get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", user->last_login_time_stamp) << " ^5| " << next_color << left << setw(20) << get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", user->last_logout_time_stamp) << " ^5| " << next_color << left << setw(10) << user->no_of_logins << " ^5| " << next_color << left << setw(10) << user->no_of_warnings << " ^5| " << next_color << left << setw(10) << user->no_of_kicks << " ^5| " << next_color << left << setw(10) << user->no_of_tempbans << " ^5| " << next_color << left << setw(10) << user->no_of_guidbans << " ^5| " << next_color << left << setw(10) << user->no_of_ipbans
+          << " ^5| " << next_color << left << setw(13) << user->no_of_iprangebans
+          << " ^5| " << next_color << left << setw(10) << user->no_of_citybans << " ^5| " << next_color << left << setw(13) << user->no_of_countrybans << "^5|\n";
+
+      is_first_color = !is_first_color;
+    }
+  }
+  oss << string{ "^5"s + decoration_line + "\n\n"s };
+
+  const string message{ oss.str() };
+  print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true);
+}
+
+void display_permanently_banned_ip_addresses(const bool is_save_data_to_log_file)
 {
   size_t longest_name_length{ 12 };
   size_t longest_country_length{ 20 };
@@ -3130,13 +3563,15 @@ void display_permanently_banned_ip_addresses()
 
   ostringstream oss;
   ostringstream log;
-  const string decoration_line(87 + longest_name_length + longest_country_length, '=');
+  const string decoration_line(122 + longest_name_length + longest_country_length, '=');
   oss << "^5\n"
       << decoration_line << "\n";
   oss << "^5| ";
-  log << "\n"
-      << decoration_line << "\n"
-      << "| ";
+  if (is_save_data_to_log_file) {
+    log << "\n"
+        << decoration_line << "\n"
+        << "| ";
+  }
   oss << left << setw(5) << "No."
       << " | " << left << setw(15) << "IP address"
       << " | " << left << setw(longest_name_length)
@@ -3144,55 +3579,72 @@ void display_permanently_banned_ip_addresses()
       << " | " << left << setw(longest_country_length) << "Country, city"
       << " | " << left << setw(20) << "Date/time of IP ban"
       << " | " << left << setw(29) << "Reason"
+      << " | " << left << setw(32) << "Banned by admin"
       << "|";
-  log << left << setw(5) << "No." << left << setw(15) << "IP address"
-      << " | " << left << setw(longest_name_length)
-      << "Player name"
-      << " | " << left << setw(longest_country_length) << "Country, city"
-      << " | " << left << setw(20) << "Date/time of IP ban"
-      << " | " << left << setw(29) << "Reason"
-      << "|";
+  if (is_save_data_to_log_file) {
+    log << left << setw(5) << "No." << left << setw(15) << "IP address"
+        << " | " << left << setw(longest_name_length)
+        << "Player name"
+        << " | " << left << setw(longest_country_length) << "Country, city"
+        << " | " << left << setw(20) << "Date/time of IP ban"
+        << " | " << left << setw(29) << "Reason"
+        << " | " << left << setw(32) << "Banned by admin"
+        << "|";
+  }
   oss << "^5\n"
       << decoration_line << "\n";
-  log << "\n"
-      << decoration_line << "\n";
+  if (is_save_data_to_log_file) {
+    log << "\n"
+        << decoration_line << "\n";
+  }
   if (banned_players.empty()) {
     const size_t message_len = stl::helper::len("| There are no players permanently banned by their IP addresses yet.");
     oss << "^5| ^3There are no players permanently banned by their IP addresses yet.";
-    log << "| There are no players permanently banned by their IP addresses yet.";
+    if (is_save_data_to_log_file) {
+      log << "| There are no players permanently banned by their IP addresses yet.";
+    }
 
     if (message_len + 2 < decoration_line.length()) {
       oss << string(decoration_line.length() - 2 - message_len, ' ');
-      log << string(decoration_line.length() - 2 - message_len, ' ');
+      if (is_save_data_to_log_file) {
+        log << string(decoration_line.length() - 2 - message_len, ' ');
+      }
     }
     oss << " ^5|\n";
-    log << " |\n";
+    if (is_save_data_to_log_file) {
+      log << " |\n";
+    }
   } else {
     bool is_first_color{ true };
     size_t no{};
     for (auto &bp : banned_players) {
       ++no;
-      const char *next_color{ is_first_color ? "^5" : "^3" };
+      const char *next_color{ is_first_color ? "^3" : "^5" };
       oss << "^5| " << next_color << left << setw(5) << no << " ^5| " << left << setw(15) << bp.ip_address << " ^5| ^7";
-      log << "| " << left << setw(5) << no << " | " << left << setw(15) << bp.ip_address << " | ";
+      if (is_save_data_to_log_file) {
+        log << "| " << left << setw(5) << no << " | " << left << setw(15) << bp.ip_address << " | ";
+      }
       stl::helper::trim_in_place(bp.player_name);
       string name{ bp.player_name };
       remove_all_color_codes(name);
       const size_t printed_name_char_count1{ get_number_of_characters_without_color_codes(bp.player_name) };
-      // const size_t printed_name_char_count2{ get_number_of_characters_without_color_codes(name) };
       const size_t printed_name_char_count2{ name.length() };
       if (printed_name_char_count1 < longest_name_length) {
         oss << left << setw(longest_name_length) << bp.player_name + string(longest_name_length - printed_name_char_count1, ' ');
       } else {
         oss << left << setw(longest_name_length) << bp.player_name;
       }
-      if (printed_name_char_count2 < longest_name_length) {
-        log << left << setw(longest_name_length) << name + string(longest_name_length - printed_name_char_count2, ' ');
-      } else {
-        log << left << setw(longest_name_length) << name;
+      if (is_save_data_to_log_file) {
+        if (printed_name_char_count2 < longest_name_length) {
+          log << left << setw(longest_name_length) << name + string(longest_name_length - printed_name_char_count2, ' ');
+        } else {
+          log << left << setw(longest_name_length) << name;
+        }
       }
       oss << " ^5| ";
-      log << " | ";
+      if (is_save_data_to_log_file) {
+        log << " | ";
+      }
       char buffer2[256];
       snprintf(buffer2, std::size(buffer2), "%s, %s", (len(bp.country_name) != 0 ? bp.country_name : bp.region), bp.city);
       stl::helper::trim_in_place(bp.reason);
@@ -3205,27 +3657,266 @@ void display_permanently_banned_ip_addresses()
       } else {
         oss << next_color << left << reason;
       }
-      oss << "^5|\n";
-      remove_all_color_codes(reason);
-      // stl::helper::trim_in_place(reason);
-      log << left << setw(longest_country_length) << buffer2 << " | " << left << setw(20) << bp.banned_date_time
-          << " | ";
-      const size_t printed_reason_char_count2{ reason.length() };
-      if (printed_reason_char_count2 < 29) {
-        log << left << setw(29) << (reason + string(29 - printed_reason_char_count2, ' '));
+      oss << " ^5| ";
+      stl::helper::trim_in_place(bp.banned_by_user_name);
+      string banned_by_user{ bp.banned_by_user_name };
+      const size_t printed_reason_char_count3{ get_number_of_characters_without_color_codes(banned_by_user.c_str()) };
+      if (printed_reason_char_count3 < 32) {
+        oss << next_color << left << setw(32) << (banned_by_user + string(32 - printed_reason_char_count3, ' '));
       } else {
-        log << reason;
+        oss << next_color << left << banned_by_user;
       }
-      log << "|\n";
+      oss << "^5|\n";
+      if (is_save_data_to_log_file) {
+        remove_all_color_codes(reason);
+        remove_all_color_codes(banned_by_user);
+        log << left << setw(longest_country_length) << buffer2 << " | " << left << setw(20) << bp.banned_date_time
+            << " | ";
+        const size_t printed_reason_char_count2{ reason.length() };
+        if (printed_reason_char_count2 < 29) {
+          log << left << setw(29) << (reason + string(29 - printed_reason_char_count2, ' '));
+        } else {
+          log << reason;
+        }
+        log << " | ";
+        const size_t printed_reason_char_count4{ banned_by_user.length() };
+        if (printed_reason_char_count4 < 32) {
+          log << left << setw(32) << (banned_by_user + string(32 - printed_reason_char_count4, ' '));
+        } else {
+          log << banned_by_user;
+        }
+        log << "|\n";
+      }
       is_first_color = !is_first_color;
     }
   }
   oss << string{ "^5"s + decoration_line + "\n\n"s };
-  log << string{ decoration_line + "\n\n"s };
+  if (is_save_data_to_log_file) {
+    log << string{ decoration_line + "\n\n"s };
+  }
   const string message{ oss.str() };
   print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true);
-  log_message(log.str(), is_log_datetime::yes);
+  if (is_save_data_to_log_file) {
+    log_message(log.str(), is_log_datetime::yes);
+  }
 }
+
+//void display_admins_data()
+//{
+//  size_t longest_name_length{ 12 };
+//  size_t longest_geoinfo_length{ 20 };
+//  const auto &users =
+//    main_app.get_users();
+//  if (!users.empty()) {
+//    longest_name_length = std::max(longest_name_length, find_longest_user_name_length(users, false, users.size()));
+//    longest_geoinfo_length =
+//      std::max(longest_geoinfo_length,
+//        find_longest_user_country_city_info_length(users, users.size()));
+//  }
+//
+//  ostringstream oss;
+//  const string decoration_line(224 + longest_name_length + longest_geoinfo_length, '=');
+//  oss << "^5\n"
+//      << decoration_line << "\n";
+//  oss << "^5| ";
+//  oss << left << setw(longest_name_length) << "User name"
+//      << " | " << left << setw(13) << "Is logged in?"
+//      << " | " << left << setw(11) << "Is online?"
+//      << " | " << left << setw(16) << "IP address"
+//      << " | " << left << setw(longest_geoinfo_length) << "Country, city"
+//      << " | " << left << setw(20) << "Last login"
+//      << " | " << left << setw(20) << "Last logout"
+//      << " | " << left << setw(10) << "Logins"
+//      << " | " << left << setw(10) << "Warnings"
+//      << " | " << left << setw(10) << "Kicks"
+//      << " | " << left << setw(10) << "Tempbans"
+//      << " | " << left << setw(10) << "GUID bans"
+//      << " | " << left << setw(10) << "IP bans"
+//      << " | " << left << setw(13) << "IP range bans"
+//      << " | " << left << setw(10) << "City bans"
+//      << " | " << left << setw(13) << "Country bans"
+//      << "|";
+//  oss << "^5\n"
+//      << decoration_line << "\n";
+//  if (users.empty()) {
+//    const size_t message_len = stl::helper::len("| There is no received administrator (user) data.");
+//    oss << "^5| ^3There is no received administrator (user) data.";
+//
+//    if (message_len + 2 < decoration_line.length()) {
+//      oss << string(decoration_line.length() - 2 - message_len, ' ');
+//    }
+//    oss << " ^5|\n";
+//
+//  } else {
+//    bool is_first_color{ true };
+//    for (auto &user : users) {
+//      if (!main_app.get_is_user_data_received_for_user(user->user_name, user->ip_address))
+//        continue;
+//      const char *next_color{ is_first_color ? "^3" : "^5" };
+//      oss << "^5| ";
+//
+//      stl::helper::trim_in_place(user->user_name);
+//      string name{ user->user_name };
+//      remove_all_color_codes(name);
+//      const size_t printed_name_char_count1{ get_number_of_characters_without_color_codes(user->user_name.c_str()) };
+//      if (printed_name_char_count1 < longest_name_length) {
+//        oss << left << setw(longest_name_length) << user->user_name + string(longest_name_length - printed_name_char_count1, ' ');
+//      } else {
+//        oss << left << setw(longest_name_length) << user->user_name;
+//      }
+//
+//      oss << " ^5| ";
+//
+//      string is_logged_in{ user->is_logged_in ? "^2yes" : "^1no" };
+//      string is_logged_in_without_color_codes{ is_logged_in };
+//      remove_all_color_codes(is_logged_in_without_color_codes);
+//      size_t printed_field_char_count{ get_number_of_characters_without_color_codes(is_logged_in.c_str()) };
+//      size_t printed_field_char_count2{ is_logged_in_without_color_codes.length() };
+//      if (printed_field_char_count < 13) {
+//        oss << left << setw(13) << is_logged_in + string(13 - printed_field_char_count, ' ');
+//      } else {
+//        oss << left << setw(13) << is_logged_in;
+//      }
+//
+//      oss << " ^5| ";
+//
+//      const string is_online_in{ user->is_online ? "^2yes" : "^1no" };
+//      const string &is_online_in_without_color_codes{ is_online_in };
+//      remove_all_color_codes(is_logged_in_without_color_codes);
+//      printed_field_char_count = get_number_of_characters_without_color_codes(is_online_in.c_str());
+//      printed_field_char_count2 = is_online_in_without_color_codes.length();
+//      if (printed_field_char_count < 11) {
+//        oss << left << setw(11) << is_online_in + string(11 - printed_field_char_count, ' ');
+//      } else {
+//        oss << left << setw(11) << is_online_in;
+//      }
+//
+//      oss << " ^5| ";
+//
+//      oss << next_color << left << setw(16) << user->ip_address << " ^5| " << next_color << left << setw(longest_geoinfo_length) << user->geo_information << " ^5| " << next_color << left << setw(20) << get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", user->last_login_time_stamp) << " ^5| " << next_color << left << setw(20) << get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", user->last_logout_time_stamp) << " ^5| " << next_color << left << setw(10) << user->no_of_logins << " ^5| " << next_color << left << setw(10) << user->no_of_warnings << " ^5| " << next_color << left << setw(10) << user->no_of_kicks << " ^5| " << next_color << left << setw(10) << user->no_of_tempbans << " ^5| " << next_color << left << setw(10) << user->no_of_guidbans << " ^5| " << next_color << left << setw(10) << user->no_of_ipbans
+//          << " ^5| " << next_color << left << setw(13) << user->no_of_iprangebans
+//          << " ^5| " << next_color << left << setw(10) << user->no_of_citybans << " ^5| " << next_color << left << setw(13) << user->no_of_countrybans << "^5|\n";
+//
+//      is_first_color = !is_first_color;
+//    }
+//  }
+//  oss << string{ "^5"s + decoration_line + "\n\n"s };
+//
+//  const string message{ oss.str() };
+//  print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true);
+//}
+
+//void display_permanently_banned_ip_addresses()
+//{
+//  size_t longest_name_length{ 12 };
+//  size_t longest_country_length{ 20 };
+//  auto &banned_players =
+//    main_app.get_game_server().get_banned_ip_addresses_vector();
+//  if (!banned_players.empty()) {
+//    longest_name_length = std::max(longest_name_length, find_longest_player_name_length(banned_players, false, banned_players.size()));
+//    longest_country_length =
+//      std::max(longest_country_length,
+//        find_longest_player_country_city_info_length(banned_players, banned_players.size()));
+//  }
+//
+//  ostringstream oss;
+//  ostringstream log;
+//  const string decoration_line(87 + longest_name_length + longest_country_length, '=');
+//  oss << "^5\n"
+//      << decoration_line << "\n";
+//  oss << "^5| ";
+//  log << "\n"
+//      << decoration_line << "\n"
+//      << "| ";
+//  oss << left << setw(5) << "No."
+//      << " | " << left << setw(15) << "IP address"
+//      << " | " << left << setw(longest_name_length)
+//      << "Player name"
+//      << " | " << left << setw(longest_country_length) << "Country, city"
+//      << " | " << left << setw(20) << "Date/time of IP ban"
+//      << " | " << left << setw(29) << "Reason"
+//      << "|";
+//  log << left << setw(5) << "No." << left << setw(15) << "IP address"
+//      << " | " << left << setw(longest_name_length)
+//      << "Player name"
+//      << " | " << left << setw(longest_country_length) << "Country, city"
+//      << " | " << left << setw(20) << "Date/time of IP ban"
+//      << " | " << left << setw(29) << "Reason"
+//      << "|";
+//  oss << "^5\n"
+//      << decoration_line << "\n";
+//  log << "\n"
+//      << decoration_line << "\n";
+//  if (banned_players.empty()) {
+//    const size_t message_len = stl::helper::len("| There are no players permanently banned by their IP addresses yet.");
+//    oss << "^5| ^3There are no players permanently banned by their IP addresses yet.";
+//    log << "| There are no players permanently banned by their IP addresses yet.";
+//
+//    if (message_len + 2 < decoration_line.length()) {
+//      oss << string(decoration_line.length() - 2 - message_len, ' ');
+//      log << string(decoration_line.length() - 2 - message_len, ' ');
+//    }
+//    oss << " ^5|\n";
+//    log << " |\n";
+//  } else {
+//    bool is_first_color{ true };
+//    size_t no{};
+//    for (auto &bp : banned_players) {
+//      ++no;
+//      const char *next_color{ is_first_color ? "^5" : "^3" };
+//      oss << "^5| " << next_color << left << setw(5) << no << " ^5| " << left << setw(15) << bp.ip_address << " ^5| ^7";
+//      log << "| " << left << setw(5) << no << " | " << left << setw(15) << bp.ip_address << " | ";
+//      stl::helper::trim_in_place(bp.player_name);
+//      string name{ bp.player_name };
+//      remove_all_color_codes(name);
+//      const size_t printed_name_char_count1{ get_number_of_characters_without_color_codes(bp.player_name) };
+//      // const size_t printed_name_char_count2{ get_number_of_characters_without_color_codes(name) };
+//      const size_t printed_name_char_count2{ name.length() };
+//      if (printed_name_char_count1 < longest_name_length) {
+//        oss << left << setw(longest_name_length) << bp.player_name + string(longest_name_length - printed_name_char_count1, ' ');
+//      } else {
+//        oss << left << setw(longest_name_length) << bp.player_name;
+//      }
+//      if (printed_name_char_count2 < longest_name_length) {
+//        log << left << setw(longest_name_length) << name + string(longest_name_length - printed_name_char_count2, ' ');
+//      } else {
+//        log << left << setw(longest_name_length) << name;
+//      }
+//      oss << " ^5| ";
+//      log << " | ";
+//      char buffer2[256];
+//      snprintf(buffer2, std::size(buffer2), "%s, %s", (len(bp.country_name) != 0 ? bp.country_name : bp.region), bp.city);
+//      stl::helper::trim_in_place(bp.reason);
+//      string reason{ bp.reason };
+//      oss << next_color << left << setw(longest_country_length) << buffer2 << " ^5| " << next_color << left << setw(20) << bp.banned_date_time
+//          << " ^5| ";
+//      const size_t printed_reason_char_count1{ get_number_of_characters_without_color_codes(reason.c_str()) };
+//      if (printed_reason_char_count1 < 29) {
+//        oss << next_color << left << setw(29) << (reason + string(29 - printed_reason_char_count1, ' '));
+//      } else {
+//        oss << next_color << left << reason;
+//      }
+//      oss << "^5|\n";
+//      remove_all_color_codes(reason);
+//      // stl::helper::trim_in_place(reason);
+//      log << left << setw(longest_country_length) << buffer2 << " | " << left << setw(20) << bp.banned_date_time
+//          << " | ";
+//      const size_t printed_reason_char_count2{ reason.length() };
+//      if (printed_reason_char_count2 < 29) {
+//        log << left << setw(29) << (reason + string(29 - printed_reason_char_count2, ' '));
+//      } else {
+//        log << reason;
+//      }
+//      log << "|\n";
+//      is_first_color = !is_first_color;
+//    }
+//  }
+//  oss << string{ "^5"s + decoration_line + "\n\n"s };
+//  log << string{ decoration_line + "\n\n"s };
+//  const string message{ oss.str() };
+//  print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true);
+//  log_message(log.str(), is_log_datetime::yes);
+//}
 
 void import_geoip_data(vector<geoip_data> &geo_data, const char *file_path)
 {
@@ -3682,7 +4373,7 @@ bool check_if_file_path_exists(const char *file_path)
   return dir_entry.exists();
 }
 
-size_t print_colored_text(HWND re_control, const char *text, const is_append_message_to_richedit_control print_to_richedit_control, const is_log_message log_to_file, const is_log_datetime is_log_current_date_time, const bool is_prevent_auto_vertical_scrolling)
+size_t print_colored_text(HWND re_control, const char *text, const is_append_message_to_richedit_control print_to_richedit_control, const is_log_message log_to_file, const is_log_datetime is_log_current_date_time, const bool is_prevent_auto_vertical_scrolling, const bool is_remove_color_codes_for_log_message)
 {
   const char *message{ text };
   size_t text_len{ stl::helper::len(text) };
@@ -4802,4 +5493,39 @@ size_t get_random_number()
   static std::mt19937_64 rand_engine(get_current_time_stamp());
   static std::uniform_int_distribution<size_t> number_range(1000ULL, std::numeric_limits<size_t>::max());
   return number_range(rand_engine);
+}
+
+size_t find_longest_user_name_length(
+  const std::vector<std::shared_ptr<tiny_rcon_client_user>> &users,
+  const bool count_color_codes,
+  const size_t number_of_users_to_process) noexcept
+{
+  size_t max_player_name_length{ 8 };
+
+  if (0 == number_of_users_to_process)
+    return max_player_name_length;
+
+  for (size_t i{}; i < number_of_users_to_process; ++i) {
+    max_player_name_length =
+      max(count_color_codes ? users[i]->user_name.length() : get_number_of_characters_without_color_codes(users[i]->user_name.c_str()), max_player_name_length);
+  }
+
+  return max_player_name_length;
+}
+
+size_t find_longest_user_country_city_info_length(
+  const std::vector<std::shared_ptr<tiny_rcon_client_user>> &users,
+  const size_t number_of_users_to_process) noexcept
+{
+  size_t max_geodata_info_length{ 20 };
+
+  if (0 == number_of_users_to_process)
+    return max_geodata_info_length;
+
+  for (size_t i{}; i < number_of_users_to_process; ++i) {
+    const size_t current_player_geodata_info_length{ users[i]->geo_information.length() };
+    max_geodata_info_length = std::max(current_player_geodata_info_length, max_geodata_info_length);
+  }
+
+  return max_geodata_info_length;
 }

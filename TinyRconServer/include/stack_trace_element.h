@@ -12,7 +12,7 @@ struct stack_trace_element
   ~stack_trace_element()
   {
     if (number_of_unhandled_exceptions != std::uncaught_exceptions() && !message.empty())
-      print_colored_text(hwnd_re_control, message.c_str());
+      print_colored_text(hwnd_re_control, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes, false, false);
   }
 
   const int number_of_unhandled_exceptions{};

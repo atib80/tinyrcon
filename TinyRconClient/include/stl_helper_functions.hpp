@@ -1224,28 +1224,29 @@ bool ltrim_in_place(
   if (0U == src_len)
     return false;
 
-  const T last_char_pos{ src + src_len };
+  char_type *first{ src };
+  char_type *last{ src + src_len };
 
   const std::unordered_set<char_type> trimmed_chars(
     chars_to_trim, chars_to_trim + len(chars_to_trim));
 
-  const T first_char_pos{
-    std::find_if(src, last_char_pos, [&trimmed_chars](const auto ch) {
+  char_type *first_char_pos{
+    std::find_if(first, last, [&trimmed_chars](const auto ch) {
       return trimmed_chars.find(ch) == std::cend(trimmed_chars);
     })
   };
 
-  if (first_char_pos == src)
+  if (first_char_pos == first)
     return false;
 
-  if (first_char_pos == last_char_pos) {
-    *src = static_cast<char_type>('\0');
+  if (first_char_pos == last) {
+    *first = static_cast<char_type>('\0');
     return true;
   }
 
-  std::copy(first_char_pos, last_char_pos, src);
+  std::copy(first_char_pos, last, first);
   src[static_cast<typename std::iterator_traits<T>::difference_type>(
-    last_char_pos - first_char_pos)] = static_cast<char_type>('\0');
+    last - first_char_pos)] = static_cast<char_type>('\0');
 
   return true;
 }
