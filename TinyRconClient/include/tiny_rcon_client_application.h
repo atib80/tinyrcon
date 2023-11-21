@@ -34,7 +34,6 @@ class tiny_rcon_client_application
   bool is_ftp_server_online{ true };
   game_name_t game_name{ game_name_t::unknown };
   std::condition_variable command_queue_cv{};
-  std::mutex command_mutex{};
   string username{ "^1Admin" };
   string game_server_name{
     "185.158.113.146:28995 CoD2 CTF"
@@ -133,6 +132,7 @@ class tiny_rcon_client_application
   std::string plugins_geoIP_geo_dat_md5;
   std::ofstream log_file;
   // std::mutex user_data_mutex{};
+  std::mutex command_mutex{};
   std::recursive_mutex command_queue_mutex{};
   std::recursive_mutex message_queue_mutex{};
   std::string tiny_rcon_ftp_server_username{ "tinyrcon" };

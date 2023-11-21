@@ -47,8 +47,6 @@ connection_manager::connection_manager() : udp_socket_for_rcon_commands{ udp_ser
 void connection_manager::prepare_non_rcon_command(char *buffer, const std::size_t buffer_size, const char *command_to_send) const noexcept
 {
   (void)snprintf(buffer, buffer_size, "\xFF\xFF\xFF\xFF%s", command_to_send);
-
-  ++number_of_sent_non_rcon_commands;
 }
 
 size_t
@@ -65,6 +63,8 @@ size_t
 
   const ip::udp::endpoint dst{ ip::address::from_string(remote_ip), remote_port };
   const size_t sent_bytes = udp_socket_for_non_rcon_commands.send_to(buffer(outgoing_data.c_str(), outgoing_data.length()), dst);
+  if (sent_bytes > 0)
+    ++number_of_sent_non_rcon_commands;
   return sent_bytes;
 }
 
@@ -84,15 +84,15 @@ size_t connection_manager::receive_non_rcon_reply_from_server(const char *remote
   while (true) {
     ZeroMemory(incoming_data_buffer, receive_buffer_size);
     ip::udp::endpoint destination{ ip::address::from_string(remote_ip), remote_port };
-    asio::error_code err1{};
+    asio::error_code erc{}, erc2{};
 
     noOfReceivedBytes = udp_socket_for_non_rcon_commands.receive_from(
-      buffer(incoming_data_buffer, receive_buffer_size), destination, 0, err1);
+      buffer(incoming_data_buffer, receive_buffer_size), destination, 0, erc);
 
-    if (err1)
-      break;
+    if (erc) break;
 
-    if (destination.address().to_v4().to_string() != remote_ip) continue;
+    const string remote_ip_address{ destination.address().to_v4().to_string(erc2) };
+    if (!erc2 && remote_ip_address != remote_ip) continue;
 
     if (noOfReceivedBytes > 0U) {
       ltrim_in_place(incoming_data_buffer, " \t\n\xFF");
@@ -216,7 +216,6 @@ void connection_manager::prepare_rcon_command(
   const char *rcon_password) const noexcept
 {
   (void)snprintf(buffer, buffer_size, "\xFF\xFF\xFF\xFFrcon %s %s", rcon_password, rconCommandToSend);
-  ++number_of_sent_rcon_commands;
 }
 
 size_t connection_manager::send_rcon_command(
@@ -232,6 +231,8 @@ size_t connection_manager::send_rcon_command(
 
   const ip::udp::endpoint dst{ ip::address::from_string(remote_ip), remote_port };
   const size_t sent_bytes = udp_socket_for_rcon_commands.send_to(buffer(outgoing_data.c_str(), outgoing_data.length()), dst);
+  if (sent_bytes > 0)
+    ++number_of_sent_rcon_commands;
   return sent_bytes;
 }
 
@@ -241,7 +242,7 @@ size_t connection_manager::receive_rcon_reply_from_server(
   std::string &received_reply,
   const bool is_process_reply) const
 {
-  char incoming_data_buffer[receive_buffer_size]{};
+  char incoming_data_buffer[receive_buffer_size];
   size_t noOfReceivedBytes{}, noOfAllReceivedBytes{};
 
   string ex_msg{ format(R"(^1Exception ^3thrown from ^1size_t connection_manager::receive_rcon_reply_from_server("{}", {}, "{}", {}))", remote_ip, remote_port, received_reply, is_process_reply ? "true" : "false") };
@@ -255,26 +256,30 @@ size_t connection_manager::receive_rcon_reply_from_server(
   while (true) {
     ZeroMemory(incoming_data_buffer, receive_buffer_size);
     ip::udp::endpoint destination{ ip::address::from_string(remote_ip), remote_port };
-    asio::error_code erc{};
+    asio::error_code erc{}, erc2{};
 
     noOfReceivedBytes = udp_socket_for_rcon_commands.receive_from(
       buffer(incoming_data_buffer, receive_buffer_size), destination, 0, erc);
 
     if (erc) break;
 
+    const string remote_ip_address{ destination.address().to_v4().to_string(erc2) };
+    if (!erc2 && remote_ip_address != remote_ip) continue;
+
     if (noOfReceivedBytes > 0U) {
       const char *start_needle_to_search_for{ "print\n" };
       const size_t new_line_pos = stl::helper::str_index_of(incoming_data_buffer, start_needle_to_search_for);
       if (new_line_pos != string::npos) {
-        received_reply.append(incoming_data_buffer + new_line_pos + len(start_needle_to_search_for), incoming_data_buffer + noOfReceivedBytes);
+        received_reply.append(incoming_data_buffer + new_line_pos + strlen(start_needle_to_search_for), incoming_data_buffer + noOfReceivedBytes);
       } else {
         received_reply.append(incoming_data_buffer, incoming_data_buffer + noOfReceivedBytes);
       }
-      noOfAllReceivedBytes += noOfReceivedBytes;
-    }
+      const bool is_check_for_two_new_line_characters{ received_reply.find("map_rotate...\n\n") == string::npos && received_reply.find("==== ShutdownGame ====") == string::npos };
 
-    /*if (received_reply.ends_with("\n\n"))
-        break;*/
+      noOfAllReceivedBytes += noOfReceivedBytes;
+
+      if ((is_check_for_two_new_line_characters && received_reply.ends_with("\n\n")) || received_reply.ends_with("-----------------------------------\n-----------------------------------\n")) break;
+    }
   }
 
   if (noOfAllReceivedBytes > 0) {
@@ -651,6 +656,7 @@ size_t connection_manager::receive_rcon_reply_from_server(
   return noOfAllReceivedBytes;
 }
 
+
 void connection_manager::send_and_receive_rcon_data(
   const char *command_to_send,
   std::string &received_reply,
@@ -660,16 +666,17 @@ void connection_manager::send_and_receive_rcon_data(
   const bool is_wait_for_reply,
   const bool is_process_reply) const
 {
-  constexpr size_t buffer_size{ 1536 };
-  static char outgoing_data_buffer[buffer_size];
+  constexpr size_t buffer_size{ 1024 };
+  char outgoing_data_buffer[buffer_size]{};
 
   string ex_msg{ format(R"(^1Exception ^3thrown from ^1size_t connection_manager::send_and_receive_rcon_data("{}", "{}", "{}", {}, "{}", {}, {}))", command_to_send, received_reply, remote_ip, remote_port, rcon_password, is_wait_for_reply ? "true" : "false", is_process_reply ? "true" : "false") };
   stack_trace_element ste{
     app_handles.hwnd_re_messages_data,
     std::move(ex_msg)
   };
-  std::lock_guard lg{ rcon_mutex };
+
   prepare_rcon_command(outgoing_data_buffer, buffer_size, command_to_send, rcon_password);
+  lock_guard lg{ rcon_mutex };
   (void)send_rcon_command(outgoing_data_buffer, remote_ip, remote_port);
   if (is_wait_for_reply) {
     receive_rcon_reply_from_server(remote_ip, remote_port, received_reply, is_process_reply);
@@ -678,16 +685,16 @@ void connection_manager::send_and_receive_rcon_data(
 
 void connection_manager::send_and_receive_non_rcon_data(const char *command_to_send, std::string &reply_buffer, const char *remote_ip, const uint_least16_t remote_port, const bool is_wait_for_reply, const bool is_process_reply) const
 {
-  constexpr size_t buffer_size{ 1536 };
-  static char outgoing_data_buffer[buffer_size];
+  constexpr size_t buffer_size{ 1024 };
+  char outgoing_data_buffer[buffer_size]{};
 
   string ex_msg{ format(R"(^1Exception ^3thrown from ^1size_t connection_manager::send_and_receive_non_rcon_data("{}", "{}", "{}", {}, {}, {}))", command_to_send, reply_buffer, remote_ip, remote_port, is_wait_for_reply ? "true" : "false", is_process_reply ? "true" : "false") };
   stack_trace_element ste{
     app_handles.hwnd_re_messages_data,
     std::move(ex_msg)
   };
-  std::lock_guard lg{ non_rcon_mutex };
   prepare_non_rcon_command(outgoing_data_buffer, buffer_size, command_to_send);
+  lock_guard lg{ non_rcon_mutex };
   (void)send_non_rcon_command(outgoing_data_buffer, remote_ip, remote_port);
   if (is_wait_for_reply) {
     receive_non_rcon_reply_from_server(remote_ip, remote_port, reply_buffer, is_process_reply);

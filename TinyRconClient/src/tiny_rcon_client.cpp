@@ -17,7 +17,7 @@ using namespace std::string_literals;
 using namespace std::chrono;
 using namespace std::filesystem;
 
-extern const string program_version{ "2.5.6.3" };
+extern const string program_version{ "2.5.6.4" };
 
 extern char const *const tinyrcon_config_file_path = "config\\tinyrcon.json";
 
@@ -335,7 +335,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
           auto &current_user = main_app.get_user_for_name(main_app.get_username(), main_app.get_user_ip_address());
           current_user->no_of_warnings++;
           save_current_user_data_to_json_file(main_app.get_user_data_file_path());
-          main_app.get_connection_manager_for_messages().process_and_send_message("add-warning", format("{}\\{}\\{}\\{}\\{}\\{}", warned_players[pid].ip_address, warned_players[pid].guid_key, warned_players[pid].player_name, warned_players[pid].banned_date_time, reason, main_app.get_username()), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+          main_app.get_connection_manager_for_messages().process_and_send_message("add-warning", format(R"({}\{}\{}\{}\{}\{})", warned_players[pid].ip_address, warned_players[pid].guid_key, warned_players[pid].player_name, warned_players[pid].banned_date_time, reason, main_app.get_username()), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
 
           const size_t number_of_warnings_for_automatic_kick = main_app.get_game_server().get_maximum_number_of_warnings_for_automatic_kick();
           if (warned_players[pid].warned_times >= number_of_warnings_for_automatic_kick) {
@@ -406,7 +406,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         strcpy_s(player.banned_date_time, std::size(player.banned_date_time), date_time_info.c_str());
         player.reason = reason;
         player.banned_by_user_name = main_app.get_username();
-        main_app.get_connection_manager_for_messages().process_and_send_message("add-kick", format("{}\\{}\\{}\\{}\\{}\\{}", player.ip_address, player.guid_key, player.player_name, player.banned_date_time, reason, player.banned_by_user_name), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+        main_app.get_connection_manager_for_messages().process_and_send_message("add-kick", format(R"({}\{}\{}\{}\{}\{})", player.ip_address, player.guid_key, player.player_name, player.banned_date_time, reason, player.banned_by_user_name), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
         kick_player(pid, command);
 
       } else {
@@ -479,7 +479,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         auto &current_user = main_app.get_user_for_name(main_app.get_username(), main_app.get_user_ip_address());
         current_user->no_of_tempbans++;
         save_current_user_data_to_json_file(main_app.get_user_data_file_path());
-        main_app.get_connection_manager_for_messages().process_and_send_message("add-tempban", format("{}\\{}\\{}\\{}\\{}\\{}\\{}", pd.ip_address, pd.player_name, pd.banned_date_time, pd.banned_start_time, pd.ban_duration_in_hours, pd.reason, pd.banned_by_user_name), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+        main_app.get_connection_manager_for_messages().process_and_send_message("add-tempban", format(R"({}\{}\{}\{}\{}\{}\{})", pd.ip_address, pd.player_name, pd.banned_date_time, pd.banned_start_time, pd.ban_duration_in_hours, pd.reason, pd.banned_by_user_name), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
 
       } else {
         const string re_msg{ format("^2{} ^3is not a valid pid number for the ^2!tb ^3(^2!tempban^3) command!\n", user_cmd[1]) };
@@ -536,7 +536,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         save_current_user_data_to_json_file(main_app.get_user_data_file_path());
         player &player{ get_player_data_for_pid(pid) };
         player.banned_by_user_name = main_app.get_username();
-        main_app.get_connection_manager_for_messages().process_and_send_message("add-guidban", format("{}\\{}\\{}\\{}\\{}\\{}", player.ip_address, player.guid_key, player.player_name, player.banned_date_time, reason, player.banned_by_user_name), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+        main_app.get_connection_manager_for_messages().process_and_send_message("add-guidban", format(R"({}\{}\{}\{}\{}\{})", player.ip_address, player.guid_key, player.player_name, player.banned_date_time, reason, player.banned_by_user_name), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
         ban_player(pid, command);
 
       } else {
@@ -589,7 +589,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
               auto &current_user = main_app.get_user_for_name(main_app.get_username(), main_app.get_user_ip_address());
               current_user->no_of_ipbans++;
               save_current_user_data_to_json_file(main_app.get_user_data_file_path());
-              main_app.get_connection_manager_for_messages().process_and_send_message("add-ipban", format("{}\\{}\\{}\\{}\\{}\\{}", player.ip_address, player.guid_key, player.player_name, player.banned_date_time, reason, main_app.get_username()), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+              main_app.get_connection_manager_for_messages().process_and_send_message("add-ipban", format(R"({}\{}\{}\{}\{}\{})", player.ip_address, player.guid_key, player.player_name, player.banned_date_time, reason, main_app.get_username()), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
               kick_player(player.pid, command);
             }
           }
@@ -626,7 +626,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
                 auto &current_user = main_app.get_user_for_name(main_app.get_username(), main_app.get_user_ip_address());
                 current_user->no_of_ipbans++;
                 save_current_user_data_to_json_file(main_app.get_user_data_file_path());
-                main_app.get_connection_manager_for_messages().process_and_send_message("add-ipban", format("{}\\{}\\{}\\{}\\{}\\{}", player.ip_address, player.guid_key, player.player_name, player.banned_date_time, reason, main_app.get_username()), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+                main_app.get_connection_manager_for_messages().process_and_send_message("add-ipban", format(R"({}\{}\{}\{}\{}\{})", player.ip_address, player.guid_key, player.player_name, player.banned_date_time, reason, main_app.get_username()), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
                 kick_player(player.pid, command);
                 break;
               }
@@ -663,7 +663,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
               auto &current_user = main_app.get_user_for_name(main_app.get_username(), main_app.get_user_ip_address());
               current_user->no_of_ipbans++;
               save_current_user_data_to_json_file(main_app.get_user_data_file_path());
-              main_app.get_connection_manager_for_messages().process_and_send_message("add-ipban", format("{}\\0\\{}\\{}\\{}\\{}", player_offline.ip_address, player_offline.player_name, player_offline.banned_date_time, player_offline.reason, main_app.get_username()), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+              main_app.get_connection_manager_for_messages().process_and_send_message("add-ipban", format(R"({}\0\{}\{}\{}\{})", player_offline.ip_address, player_offline.player_name, player_offline.banned_date_time, player_offline.reason, main_app.get_username()), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
             }
           }
         }
@@ -1362,7 +1362,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
               auto &current_user = main_app.get_user_for_name(main_app.get_username(), main_app.get_user_ip_address());
               current_user->no_of_iprangebans++;
               save_current_user_data_to_json_file(main_app.get_user_data_file_path());
-              main_app.get_connection_manager_for_messages().process_and_send_message("add-iprangeban", format("{}\\{}\\{}\\{}\\{}\\{}", ip_address_range, player.guid_key, player.player_name, player.banned_date_time, player.reason, player.banned_by_user_name), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+              main_app.get_connection_manager_for_messages().process_and_send_message("add-iprangeban", format(R"({}\{}\{}\{}\{}\{})", ip_address_range, player.guid_key, player.player_name, player.banned_date_time, player.reason, player.banned_by_user_name), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
               kick_player(pid, command);
             }
           }
@@ -1941,7 +1941,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         strcpy_s(player.banned_date_time, std::size(player.banned_date_time), date_time_info.c_str());
         player.reason = reason;
         player.banned_by_user_name = main_app.get_username();
-        main_app.get_connection_manager_for_messages().process_and_send_message("add-kick", format("{}\\{}\\{}\\{}\\{}\\{}", player.ip_address, player.guid_key, player.player_name, player.banned_date_time, reason, player.banned_by_user_name), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+        main_app.get_connection_manager_for_messages().process_and_send_message("add-kick", format(R"({}\{}\{}\{}\{}\{})", player.ip_address, player.guid_key, player.player_name, player.banned_date_time, reason, player.banned_by_user_name), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
         kick_player(pid, command);
 
       } else {
@@ -2011,7 +2011,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         auto &current_user = main_app.get_user_for_name(main_app.get_username(), main_app.get_user_ip_address());
         current_user->no_of_tempbans++;
         save_current_user_data_to_json_file(main_app.get_user_data_file_path());
-        main_app.get_connection_manager_for_messages().process_and_send_message("add-tempban", format("{}\\{}\\{}\\{}\\{}\\{}\\{}", pd.ip_address, pd.player_name, pd.banned_date_time, pd.banned_start_time, pd.ban_duration_in_hours, pd.reason, pd.banned_by_user_name), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+        main_app.get_connection_manager_for_messages().process_and_send_message("add-tempban", format(R"({}\{}\{}\{}\{}\{}\{})", pd.ip_address, pd.player_name, pd.banned_date_time, pd.banned_start_time, pd.ban_duration_in_hours, pd.reason, pd.banned_by_user_name), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
       } else {
         const string re_msg{ format("^2{} ^3is not a valid pid number for the ^2!tb ^3(^2!tempban^3) command!\n", rcon_cmd[1]) };
         print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
@@ -2153,14 +2153,22 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     }
   });
 
-  main_app.add_message_handler("confirm-login", [](const string &, const time_t, const string &, bool) {
-    auto &current_user = main_app.get_user_for_name(main_app.get_username(), main_app.get_user_ip_address());
-    current_user->no_of_logins++;
-    current_user->last_login_time_stamp = get_current_time_stamp();
-    current_user->is_logged_in = true;
-    save_current_user_data_to_json_file(main_app.get_user_data_file_path());
-    const string message{ format("^7{} ^2has ^1logged in ^2to ^5Tiny^6Rcon ^2server.\n^2Number of logins: ^1{}", current_user->user_name, current_user->no_of_logins) };
-    print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
+  main_app.add_message_handler("confirm-login", [](const string &, const time_t, const string &data, bool) {
+    auto parts = stl::helper::str_split(data, "\\", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::no);
+    for (auto &part : parts) stl::helper::trim_in_place(part);
+    if (parts.size() >= 3) {
+      unsigned long guid_key{};
+      if (!check_ip_address_validity(main_app.get_user_ip_address(), guid_key)) {
+        main_app.set_user_ip_address(std::move(parts[1]));
+      }
+      auto &current_user = main_app.get_user_for_name(main_app.get_username(), main_app.get_user_ip_address());
+      current_user->no_of_logins++;
+      current_user->last_login_time_stamp = get_current_time_stamp();
+      current_user->is_logged_in = true;
+      save_current_user_data_to_json_file(main_app.get_user_data_file_path());
+      const string message{ format("^7{} ^2has ^1logged in ^2to ^5Tiny^6Rcon ^2server.\n^2Number of logins: ^1{}", current_user->user_name, current_user->no_of_logins) };
+      print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
+    }
   });
 
   main_app.add_message_handler("public-message", [](const string &, const time_t, const string &data, bool) {
@@ -2894,6 +2902,13 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
       while (true) {
         try {
+
+          {
+            unique_lock ul{ main_app.get_command_queue_mutex() };
+            main_app.get_command_queue_cv().wait_for(ul, 20ms, [&]() {
+              return !main_app.is_command_queue_empty() || is_terminate_program.load();
+            });
+          }
 
           while (!is_terminate_program.load() && !main_app.is_command_queue_empty()) {
             auto cmd = main_app.get_command_from_queue();

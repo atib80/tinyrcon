@@ -231,7 +231,6 @@ void cursor_to_bottom(HWND hwnd) noexcept;
 void scroll_to_beginning(HWND hwnd) noexcept;
 void scroll_to(HWND hwnd, DWORD pos) noexcept;
 void scroll_to_bottom(HWND hwnd) noexcept;
-void append(HWND hwnd, const char *str, const bool is_prevent_auto_vertical_scrolling = false) noexcept;
 
 void show_error(HWND parent_window, const char *, const size_t) noexcept;
 size_t get_number_of_lines_in_file(const char *file_path);

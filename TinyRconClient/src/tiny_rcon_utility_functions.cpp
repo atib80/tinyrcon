@@ -83,6 +83,7 @@ extern volatile std::atomic<bool> is_display_banned_countries_data_event;
 extern std::atomic<int> admin_choice;
 extern std::string admin_reason;
 
+mutex print_colored_text_mutex;
 mutex log_data_mutex;
 
 extern volatile atomic<size_t> atomic_counter;
@@ -6373,7 +6374,7 @@ bool delete_temporary_game_file() noexcept
   return false;
 }
 
-size_t print_colored_text(HWND re_control, const char *text, const is_append_message_to_richedit_control print_to_richedit_control, const is_log_message log_to_file, const is_log_datetime is_log_current_date_time, const bool is_prevent_auto_vertical_scrolling, const bool is_remove_color_codes_for_log_message)
+size_t print_colored_text(HWND re_control, const char *text, const is_append_message_to_richedit_control print_to_richedit_control, const is_log_message log_to_file, const is_log_datetime is_log_current_date_time, const bool, const bool is_remove_color_codes_for_log_message)
 {
   const char *message{ text };
   size_t text_len{ stl::helper::len(text) };
@@ -6384,6 +6385,11 @@ size_t print_colored_text(HWND re_control, const char *text, const is_append_mes
   bool is_last_char_new_line{ text[text_len - 1] == '\n' };
 
   if (print_to_richedit_control == is_append_message_to_richedit_control::yes) {
+    lock_guard lg{ print_colored_text_mutex };
+    cursor_to_bottom(re_control);
+    SETTEXTEX stx{};
+    stx.flags = ST_DEFAULT | ST_SELECTION | ST_NEWCHARS;
+    stx.codepage = 1251;
 
     COLORREF bg_color{ color::black };
     COLORREF fg_color{ color::white };
@@ -6406,7 +6412,7 @@ size_t print_colored_text(HWND re_control, const char *text, const is_append_mes
       if (text + 4 <= last && *text == '^' && *(text + 1) == '^' && (*(text + 2) >= '0' && *(text + 2) <= '9') && (*(text + 3) >= '0' && *(text + 3) <= '9') && *(text + 2) == *(text + 3)) {
         text += 3;
         if (!msg.empty()) {
-          append(re_control, msg.c_str(), is_prevent_auto_vertical_scrolling);
+          SendMessage(re_control, EM_SETTEXTEX, reinterpret_cast<WPARAM>(&stx), reinterpret_cast<LPARAM>(msg.c_str()));
           msg.clear();
         }
 
@@ -6419,7 +6425,7 @@ size_t print_colored_text(HWND re_control, const char *text, const is_append_mes
       } else if (text + 2 <= last && *text == '^' && (*(text + 1) >= '0' && *(text + 1) <= '9')) {
         ++text;
         if (!msg.empty()) {
-          append(re_control, msg.c_str(), is_prevent_auto_vertical_scrolling);
+          SendMessage(re_control, EM_SETTEXTEX, reinterpret_cast<WPARAM>(&stx), reinterpret_cast<LPARAM>(msg.c_str()));
           msg.clear();
         }
         fg_color = rich_edit_colors.at(*text);
@@ -6432,12 +6438,12 @@ size_t print_colored_text(HWND re_control, const char *text, const is_append_mes
     }
 
     if (!msg.empty()) {
-      append(re_control, msg.c_str(), is_prevent_auto_vertical_scrolling);
+      SendMessage(re_control, EM_SETTEXTEX, reinterpret_cast<WPARAM>(&stx), reinterpret_cast<LPARAM>(msg.c_str()));
       msg.clear();
     }
 
     if (!is_last_char_new_line) {
-      append(re_control, "\n", is_prevent_auto_vertical_scrolling);
+      SendMessage(re_control, EM_SETTEXTEX, reinterpret_cast<WPARAM>(&stx), reinterpret_cast<LPARAM>("\n"));
       ++printed_chars_count;
     }
   }
@@ -6570,17 +6576,6 @@ void scroll_to_bottom(HWND hwnd) noexcept
   scroll_to(hwnd, SB_BOTTOM);
 }
 
-
-void append(HWND hwnd, const char *str, const bool is_prevent_auto_vertical_scrolling) noexcept
-{
-  cursor_to_bottom(hwnd);
-  SETTEXTEX stx{};
-  stx.flags = ST_DEFAULT | ST_SELECTION | ST_NEWCHARS;
-  stx.codepage = 1251;
-  SendMessage(hwnd, EM_SETTEXTEX, reinterpret_cast<WPARAM>(&stx), reinterpret_cast<LPARAM>(str));
-  if (!is_prevent_auto_vertical_scrolling)
-    scroll_to_bottom(hwnd);
-}
 
 void process_key_down_message(const MSG &msg)
 {
@@ -7281,14 +7276,13 @@ std::pair<bool, game_name_t> check_if_specified_server_ip_port_and_rcon_password
 {
   connection_manager cm;
   string reply;
-  cm.send_and_receive_rcon_data("version", reply, ip_address, port_number, rcon_password, true);
+  main_app.get_connection_manager().send_and_receive_rcon_data("version", reply, ip_address, port_number, rcon_password, true);
 
   if (reply.find("Invalid password.") != string::npos || reply.find("rconpassword") != string::npos || reply.find("Bad rcon") != string::npos) {
-    cm.send_and_receive_non_rcon_data("getstatus", reply, ip_address, port_number, true);
+    main_app.get_connection_manager().send_and_receive_non_rcon_data("getstatus", reply, ip_address, port_number, true);
     const string &gn{ main_app.get_game_server().get_game_name() };
     return { false, game_name_to_game_name_t.contains(gn) ? game_name_to_game_name_t.at(gn) : game_name_t::unknown };
   }
-
 
   if (stl::helper::str_contains(reply, "CoD1", 0, true))
     return { true, game_name_t::cod1 };

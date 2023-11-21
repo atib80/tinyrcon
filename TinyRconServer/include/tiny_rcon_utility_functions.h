@@ -138,7 +138,6 @@ void cursor_to_bottom(HWND hwnd);
 void scroll_to_beginning(HWND hwnd);
 void scroll_to(HWND hwnd, DWORD pos);
 void scroll_to_bottom(HWND hwnd);
-void append(HWND hwnd, const char *str, const bool is_prevent_auto_vertical_scrolling = false);
 
 void show_error(HWND parent_window, const char *, const size_t);
 size_t get_number_of_lines_in_file(const char *file_path);
