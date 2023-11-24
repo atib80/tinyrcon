@@ -19,6 +19,10 @@ public:
     if (udp_socket_for_rcon_commands.is_open()) {
       udp_socket_for_rcon_commands.close();
     }
+
+    if (udp_socket_for_non_rcon_commands.is_open()) {
+      udp_socket_for_non_rcon_commands.close();
+    }
   };
 
   void prepare_rcon_command(char *send_buffer, const std::size_t send_buffer_capacity, const char *command_to_send, const char *rcon_password) const noexcept;

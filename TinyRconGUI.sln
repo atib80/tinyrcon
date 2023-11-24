@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.4.33403.182
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TinyRconClient", ".\TinyRconClient\TinyRconClient.vcxproj", "{D964D9FC-AF9A-46CD-857B-BC0F5F30B280}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TinyRconClient", "TinyRconClient\TinyRconClient.vcxproj", "{D964D9FC-AF9A-46CD-857B-BC0F5F30B280}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TinyRconServer", ".\TinyRconServer\TinyRconServer.vcxproj", "{33CF2788-AEB7-4F0F-895A-3DDD2A04739F}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TinyRconServer", "TinyRconServer\TinyRconServer.vcxproj", "{33CF2788-AEB7-4F0F-895A-3DDD2A04739F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

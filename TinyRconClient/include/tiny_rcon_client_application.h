@@ -118,14 +118,17 @@ class tiny_rcon_client_application
   std::string program_title{ "Welcome to TinyRcon client" };
   std::string user_ip_address;
   std::string current_working_directory;
-  std::wstring current_working_directory_wstring;
   std::string tinyrcon_config_file_path{ "config\\tinyrcon.json" };
   std::string user_data_file_path{ "data\\user.txt" };
-  std::string tempbans_file_path{ "data\\tempbans.txt" };
-  std::string banned_ip_addresses_file_path{ "data\\bans.txt" };
+  std::string temp_bans_file_path{ "data\\tempbans.txt" };
+  std::string ip_bans_file_path{ "data\\bans.txt" };
   std::string ip_range_bans_file_path{ "data\\ip_range_bans.txt" };
-  std::string banned_countries_list_file_path{ "data\\banned_countries.txt" };
-  std::string banned_cities_list_file_path{ "data\\banned_cities.txt" };
+  std::string banned_countries_file_path{ "data\\banned_countries.txt" };
+  std::string banned_cities_file_path{ "data\\banned_cities.txt" };
+  std::string protected_ip_addresses_file_path{ "data\\protected_ip_addresses.txt" };
+  std::string protected_ip_address_ranges_file_path{ "data\\protected_ip_address_ranges.txt" };
+  std::string protected_cities_file_path{ "data\\protected_cities.txt" };
+  std::string protected_countries_file_path{ "data\\protected_countries.txt" };
   std::string ftp_download_site_ip_address{ "85.222.189.119" };
   std::string ftp_download_folder_path{ "tinyrcon" };
   std::string ftp_download_file_pattern{ R"(^_U_TinyRcon[\._-]?v?(\d{1,2}\.\d{1,2}\.\d{1,2}\.\d{1,2})\.exe$)" };
@@ -550,11 +553,6 @@ public:
     return current_working_directory;
   }
 
-  const std::wstring &get_current_working_directory_wstring() const noexcept
-  {
-    return current_working_directory_wstring;
-  }
-
   void set_current_working_directory()
   {
     constexpr size_t max_path_limit{ 32768 };
@@ -565,28 +563,25 @@ public:
     } else {
       std::filesystem::path entry("TinyRcon.exe");
       current_working_directory.assign(entry.parent_path().string());
+      if (!current_working_directory.empty() && current_working_directory.back() != '\\') {
+        if ('/' == current_working_directory.back())
+          current_working_directory.back() = '\\';
+        else
+          current_working_directory.push_back('\\');
+      }
     }
 
     tinyrcon_config_file_path.assign(format("{}{}", current_working_directory, tinyrcon_config_file_path));
     user_data_file_path.assign(format("{}{}", current_working_directory, user_data_file_path));
-    tempbans_file_path.assign(format("{}{}", current_working_directory, tempbans_file_path));
-    banned_ip_addresses_file_path.assign(format("{}{}", current_working_directory, banned_ip_addresses_file_path));
+    temp_bans_file_path.assign(format("{}{}", current_working_directory, temp_bans_file_path));
+    ip_bans_file_path.assign(format("{}{}", current_working_directory, ip_bans_file_path));
     ip_range_bans_file_path.assign(format("{}{}", current_working_directory, ip_range_bans_file_path));
-    banned_countries_list_file_path.assign(format("{}{}", current_working_directory, banned_countries_list_file_path));
-    banned_cities_list_file_path.assign(format("{}{}", current_working_directory, banned_cities_list_file_path));
-  }
-
-  void set_current_working_directory_wstring()
-  {
-    constexpr size_t max_path_limit{ 32768 };
-    std::unique_ptr<wchar_t[]> exe_file_path{ std::make_unique<wchar_t[]>(max_path_limit) };
-    if (const auto path_len = GetModuleFileNameW(nullptr, exe_file_path.get(), max_path_limit); path_len != 0) {
-      std::basic_string_view<wchar_t> exe_file_path_sv(exe_file_path.get(), path_len);
-      current_working_directory_wstring.assign(std::wstring(cbegin(exe_file_path_sv), cbegin(exe_file_path_sv) + exe_file_path_sv.rfind(L'\\') + 1));
-    } else {
-      std::filesystem::path entry(L"TinyRcon.exe");
-      current_working_directory_wstring.assign(entry.parent_path().wstring());
-    }
+    banned_countries_file_path.assign(format("{}{}", current_working_directory, banned_countries_file_path));
+    banned_cities_file_path.assign(format("{}{}", current_working_directory, banned_cities_file_path));
+    protected_ip_addresses_file_path.assign(format("{}{}", current_working_directory, protected_ip_addresses_file_path));
+    protected_ip_address_ranges_file_path.assign(format("{}{}", current_working_directory, protected_ip_address_ranges_file_path));
+    protected_cities_file_path.assign(format("{}{}", current_working_directory, protected_cities_file_path));
+    protected_countries_file_path.assign(format("{}{}", current_working_directory, protected_countries_file_path));
   }
 
   const char *get_tinyrcon_config_file_path() const noexcept
@@ -599,15 +594,14 @@ public:
     return user_data_file_path.c_str();
   }
 
-
-  const char *get_tempbans_file_path() const noexcept
+  const char *get_temp_bans_file_path() const noexcept
   {
-    return tempbans_file_path.c_str();
+    return temp_bans_file_path.c_str();
   }
 
-  const char *get_banned_ip_addresses_file_path() const noexcept
+  const char *get_ip_bans_file_path() const noexcept
   {
-    return banned_ip_addresses_file_path.c_str();
+    return ip_bans_file_path.c_str();
   }
 
   const char *get_ip_range_bans_file_path() const noexcept
@@ -615,14 +609,34 @@ public:
     return ip_range_bans_file_path.c_str();
   }
 
-  const char *get_banned_countries_list_file_path() const noexcept
+  const char *get_banned_countries_file_path() const noexcept
   {
-    return banned_countries_list_file_path.c_str();
+    return banned_countries_file_path.c_str();
   }
 
-  const char *get_banned_cities_list_file_path() const noexcept
+  const char *get_banned_cities_file_path() const noexcept
   {
-    return banned_cities_list_file_path.c_str();
+    return banned_cities_file_path.c_str();
+  }
+
+  const char *get_protected_ip_addresses_file_path() const noexcept
+  {
+    return protected_ip_addresses_file_path.c_str();
+  }
+
+  const char *get_protected_ip_address_ranges_file_path() const noexcept
+  {
+    return protected_ip_address_ranges_file_path.c_str();
+  }
+
+  const char *get_protected_cities_file_path() const noexcept
+  {
+    return protected_cities_file_path.c_str();
+  }
+
+  const char *get_protected_countries_file_path() const noexcept
+  {
+    return protected_countries_file_path.c_str();
   }
 
   const std::string &get_tiny_rcon_ftp_server_username() const noexcept

@@ -345,7 +345,7 @@ void check_for_banned_ip_addresses();
 
 std::pair<player, bool> get_online_player_for_specified_pid(const int);
 
-void kick_player(const int, std::string &);
+void kick_player(const int, const std::string &);
 
 void tempban_player(player &, std::string &);
 

@@ -17,6 +17,7 @@ extern string previous_map;
 extern int selected_row;
 
 static const std::regex ip_address_regex{ R"((\d+\.\d+\.\d+\.\d+:(-?\d+)\s*(-?\d+)\s*(\d+)))" };
+static const string player_name_needle_chars{ "^7" };
 
 using namespace asio;
 
@@ -116,7 +117,9 @@ size_t connection_manager::receive_non_rcon_reply_from_server(const char *remote
       if (!is_process_reply)
         return noOfAllReceivedBytes;
 
-      current = received_reply.c_str() + 15;
+      current = strchr(received_reply.c_str(), '\\');
+      if (nullptr == current) return noOfAllReceivedBytes;
+      ++current;
 
       const char *lastIndex = strchr(current, '\n');
       string_view server_info(current, lastIndex);
@@ -197,12 +200,9 @@ size_t connection_manager::receive_non_rcon_reply_from_server(const char *remote
 
       main_app.get_game_server().set_number_of_players(player_num);
       main_app.get_game_server().set_number_of_online_players(number_of_online_players);
-      main_app.get_game_server().set_number_of_offline_players(number_of_offline_players);
-      ++rcon_status_sent_counter;
-      const bool log_players_data{ rcon_status_sent_counter % 60 == 0 };
-      if (60 == rcon_status_sent_counter)
-        rcon_status_sent_counter = 0;
-      prepare_players_data_for_display_of_getstatus_response(log_players_data);
+      main_app.get_game_server().set_number_of_offline_players(number_of_offline_players);          
+      prepare_players_data_for_display_of_getstatus_response(false);
+      
     }
   }
 
@@ -537,7 +537,7 @@ size_t connection_manager::receive_rcon_reply_from_server(
             while (is_ws(player_line[i])) --i;
 
             string player_name(player_line.c_str() + pn_start, player_line.c_str() + i);
-            auto pn_end = player_name.find_last_of("^7");
+            auto pn_end = player_name.find_last_of(player_name_needle_chars);
             if (string::npos != pn_end)
               player_name.erase(cbegin(player_name) + pn_end, cend(player_name));
             if (const size_t pn_len{ player_name.length() }; (pn_len >= 1) && (player_name[pn_len - 1] == '^' || player_name[pn_len - 1] == '7')) {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <filesystem>
 #include <fstream>
 #include <mutex>
 #include <queue>
@@ -87,6 +88,22 @@ class tiny_rcon_server_application
 
   std::string program_title{ "Welcome to TinyRcon" };
   std::string current_working_directory;
+  std::string tinyrcon_config_file_path{ "config\\tinyrcon.json" };
+  std::string temp_bans_file_path{ "data\\tempbans.txt" };
+  std::string removed_temp_bans_file_path{ "data\\removed_tempbans.txt" };
+  std::string ip_bans_file_path{ "data\\bans.txt" };
+  std::string removed_ip_bans_file_path{ "data\\removed_bans.txt" };
+  std::string ip_range_bans_file_path{ "data\\ip_range_bans.txt" };
+  std::string removed_ip_range_bans_file_path{ "data\\removed_ip_range_bans.txt" };
+  std::string banned_cities_file_path{ "data\\banned_cities.txt" };
+  std::string removed_banned_cities_file_path{ "data\\removed_banned_cities.txt" };
+  std::string banned_countries_file_path{ "data\\banned_countries.txt" };
+  std::string removed_banned_countries_file_path{ "data\\removed_banned_countries.txt" };
+  std::string protected_ip_addresses_file_path{ "data\\protected_ip_addresses.txt" };
+  std::string protected_ip_address_ranges_file_path{ "data\\protected_ip_address_ranges.txt" };
+  std::string protected_cities_file_path{ "data\\protected_cities.txt" };
+  std::string protected_countries_file_path{ "data\\protected_countries.txt" };
+  std::string users_data_file_path{ "data\\users.txt" };
   std::string ftp_download_site_ip_address{ "85.222.189.119" };
   std::string ftp_download_folder_path{ "tinyrcon" };
   std::string ftp_bans_folder_path{ "C:\\tinyrcon\\bans" };
@@ -175,12 +192,6 @@ public:
   inline void set_cod5mp_exe_path(string new_value)
   {
     cod5mp_exe_path = std::move(new_value);
-  }
-
-
-  inline void set_command_line_info(string new_value)
-  {
-    command_line_info = std::move(new_value);
   }
 
   inline connection_manager_for_messages &get_connection_manager_for_messages()
@@ -330,18 +341,141 @@ public:
     return admin_messages["automatic_kick_country_ban_msg"];
   }
 
-  const std::string &get_current_working_directory() const
+  const std::string &get_current_working_directory() const noexcept
   {
     return current_working_directory;
   }
 
   void set_current_working_directory()
   {
-    char exe_file_path[MAX_PATH];
-    if (GetModuleFileNameA(nullptr, exe_file_path, MAX_PATH)) {
-      std::string exe_file_path_str{ exe_file_path };
-      current_working_directory.assign({ exe_file_path_str.cbegin(), exe_file_path_str.cbegin() + exe_file_path_str.rfind('\\') + 1 });
+    constexpr size_t max_path_limit{ 32768 };
+    std::unique_ptr<char[]> exe_file_path{ std::make_unique<char[]>(max_path_limit) };
+    if (const auto path_len = GetModuleFileNameA(nullptr, exe_file_path.get(), max_path_limit); path_len != 0) {
+      std::string_view exe_file_path_sv(exe_file_path.get(), path_len);
+      current_working_directory.assign(string(cbegin(exe_file_path_sv), cbegin(exe_file_path_sv) + exe_file_path_sv.rfind('\\') + 1));
+    } else {
+      std::filesystem::path entry("TinyRconServer.exe");
+      current_working_directory.assign(entry.parent_path().string());
+      if (!current_working_directory.empty() && current_working_directory.back() != '\\') {
+        if ('/' == current_working_directory.back())
+          current_working_directory.back() = '\\';
+        else
+          current_working_directory.push_back('\\');
+      }
     }
+
+    tinyrcon_config_file_path.assign(format("{}{}", current_working_directory, tinyrcon_config_file_path));
+    users_data_file_path.assign(format("{}{}", current_working_directory, users_data_file_path));
+    temp_bans_file_path.assign(format("{}{}", current_working_directory, temp_bans_file_path));
+    ip_bans_file_path.assign(format("{}{}", current_working_directory, ip_bans_file_path));
+    ip_range_bans_file_path.assign(format("{}{}", current_working_directory, ip_range_bans_file_path));
+    banned_countries_file_path.assign(format("{}{}", current_working_directory, banned_countries_file_path));
+    banned_cities_file_path.assign(format("{}{}", current_working_directory, banned_cities_file_path));
+    protected_ip_addresses_file_path.assign(format("{}{}", current_working_directory, protected_ip_addresses_file_path));
+    protected_ip_address_ranges_file_path.assign(format("{}{}", current_working_directory, protected_ip_address_ranges_file_path));
+    protected_cities_file_path.assign(format("{}{}", current_working_directory, protected_cities_file_path));
+    protected_countries_file_path.assign(format("{}{}", current_working_directory, protected_countries_file_path));
+    removed_temp_bans_file_path.assign(format("{}{}", current_working_directory, removed_temp_bans_file_path));
+    removed_ip_bans_file_path.assign(format("{}{}", current_working_directory, removed_ip_bans_file_path));
+    removed_ip_range_bans_file_path.assign(format("{}{}", current_working_directory, removed_ip_range_bans_file_path));
+    removed_banned_countries_file_path.assign(format("{}{}", current_working_directory, removed_banned_countries_file_path));
+    removed_banned_cities_file_path.assign(format("{}{}", current_working_directory, removed_banned_cities_file_path));
+
+    std::string temp_bans_file_path{ "data\\tempbans.txt" };
+    std::string removed_temp_bans_file_path{ "data\\removed_tempbans.txt" };
+    std::string ip_bans_file_path{ "data\\bans.txt" };
+    std::string removed_bans_file_path{ "data\\removed_bans.txt" };
+    std::string ip_range_bans_file_path{ "data\\ip_range_bans.txt" };
+    std::string removed_ip_range_bans_file_path{ "data\\removed_ip_range_bans.txt" };
+    std::string banned_cities_file_path{ "data\\banned_cities.txt" };
+    std::string removed_banned_cities_file_path{ "data\\removed_banned_cities.txt" };
+    std::string banned_countries_file_path{ "data\\banned_countries.txt" };
+    std::string removed_banned_countries_file_path{ "data\\removed_banned_countries.txt" };
+    std::string protected_ip_addresses_file_path{ "data\\protected_ip_addresses.txt" };
+    std::string protected_ip_address_ranges_file_path{ "data\\protected_ip_address_ranges.txt" };
+    std::string protected_cities_file_path{ "data\\protected_cities.txt" };
+    std::string protected_countries_file_path{ "data\\protected_countries.txt" };
+    std::string users_data_file_path{ "data\\users.txt" };
+  }
+
+  const char *get_tinyrcon_config_file_path() const noexcept
+  {
+    return tinyrcon_config_file_path.c_str();
+  }
+
+  const char *get_users_data_file_path() const noexcept
+  {
+    return users_data_file_path.c_str();
+  }
+
+  const char *get_temp_bans_file_path() const noexcept
+  {
+    return temp_bans_file_path.c_str();
+  }
+
+  const char *get_ip_bans_file_path() const noexcept
+  {
+    return ip_bans_file_path.c_str();
+  }
+
+  const char *get_ip_range_bans_file_path() const noexcept
+  {
+    return ip_range_bans_file_path.c_str();
+  }
+
+  const char *get_banned_countries_file_path() const noexcept
+  {
+    return banned_countries_file_path.c_str();
+  }
+
+  const char *get_banned_cities_file_path() const noexcept
+  {
+    return banned_cities_file_path.c_str();
+  }
+
+  const char *get_protected_ip_addresses_file_path() const noexcept
+  {
+    return protected_ip_addresses_file_path.c_str();
+  }
+
+  const char *get_protected_ip_address_ranges_file_path() const noexcept
+  {
+    return protected_ip_address_ranges_file_path.c_str();
+  }
+
+  const char *get_protected_cities_file_path() const noexcept
+  {
+    return protected_cities_file_path.c_str();
+  }
+
+  const char *get_protected_countries_file_path() const noexcept
+  {
+    return protected_countries_file_path.c_str();
+  }
+
+  const char *get_removed_temp_bans_file_path() const noexcept
+  {
+    return removed_temp_bans_file_path.c_str();
+  }
+
+  const char *get_removed_ip_bans_file_path() const noexcept
+  {
+    return removed_ip_bans_file_path.c_str();
+  }
+
+  const char *get_removed_ip_range_bans_file_path() const noexcept
+  {
+    return removed_ip_range_bans_file_path.c_str();
+  }
+
+  const char *get_removed_banned_cities_file_path() const noexcept
+  {
+    return removed_banned_cities_file_path.c_str();
+  }
+
+  const char *get_removed_banned_countries_file_path() const noexcept
+  {
+    return removed_banned_countries_file_path.c_str();
   }
 
   const std::string &get_tiny_rcon_ftp_server_username() const
