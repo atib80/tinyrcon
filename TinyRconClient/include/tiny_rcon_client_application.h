@@ -535,7 +535,7 @@ public:
   {
     if (game_names.contains(game_name))
       return game_names.at(game_name).c_str();
-    return "Unknown game!";
+    return "Unknown game";
   }
 
   bool get_is_draw_border_lines() const noexcept

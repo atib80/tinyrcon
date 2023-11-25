@@ -55,8 +55,7 @@ bool connection_manager_for_messages::wait_for_and_process_response_message(cons
   if (erc)
     return false;
 
-  const string sender_ip{ destination.address().to_v4().to_string() };
-  if (sender_ip != remote_ip)
+  if (destination.address().to_v4().to_string() != remote_ip)
     return false;
 
   string message(incoming_data_buffer, incoming_data_buffer + noOfReceivedBytes);

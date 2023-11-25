@@ -85,15 +85,14 @@ size_t connection_manager::receive_non_rcon_reply_from_server(const char *remote
   while (true) {
     ZeroMemory(incoming_data_buffer, receive_buffer_size);
     ip::udp::endpoint destination{ ip::address::from_string(remote_ip), remote_port };
-    asio::error_code erc{}, erc2{};
+    asio::error_code erc{};
 
     noOfReceivedBytes = udp_socket_for_non_rcon_commands.receive_from(
       buffer(incoming_data_buffer, receive_buffer_size), destination, 0, erc);
 
     if (erc) break;
 
-    const string remote_ip_address{ destination.address().to_v4().to_string(erc2) };
-    if (!erc2 && remote_ip_address != remote_ip) continue;
+    if (destination.address().to_v4().to_string() != remote_ip) continue;
 
     if (noOfReceivedBytes > 0U) {
       ltrim_in_place(incoming_data_buffer, " \t\n\xFF");
@@ -200,9 +199,8 @@ size_t connection_manager::receive_non_rcon_reply_from_server(const char *remote
 
       main_app.get_game_server().set_number_of_players(player_num);
       main_app.get_game_server().set_number_of_online_players(number_of_online_players);
-      main_app.get_game_server().set_number_of_offline_players(number_of_offline_players);          
+      main_app.get_game_server().set_number_of_offline_players(number_of_offline_players);
       prepare_players_data_for_display_of_getstatus_response(false);
-      
     }
   }
 
@@ -212,10 +210,10 @@ size_t connection_manager::receive_non_rcon_reply_from_server(const char *remote
 void connection_manager::prepare_rcon_command(
   char *buffer,
   const size_t buffer_size,
-  const char *rconCommandToSend,
+  const char *rcon_command_to_send,
   const char *rcon_password) const noexcept
 {
-  (void)snprintf(buffer, buffer_size, "\xFF\xFF\xFF\xFFrcon %s %s", rcon_password, rconCommandToSend);
+  (void)snprintf(buffer, buffer_size, "\xFF\xFF\xFF\xFFrcon %s %s", rcon_password, rcon_command_to_send);
 }
 
 size_t connection_manager::send_rcon_command(
@@ -252,25 +250,26 @@ size_t connection_manager::receive_rcon_reply_from_server(
   };
 
   received_reply.clear();
+  const char *start_needle_to_search_for{ "print\n" };
+  const auto start_needle_to_search_for_len{ len("print\n") };
 
   while (true) {
     ZeroMemory(incoming_data_buffer, receive_buffer_size);
     ip::udp::endpoint destination{ ip::address::from_string(remote_ip), remote_port };
-    asio::error_code erc{}, erc2{};
+    asio::error_code erc{};
 
     noOfReceivedBytes = udp_socket_for_rcon_commands.receive_from(
       buffer(incoming_data_buffer, receive_buffer_size), destination, 0, erc);
 
     if (erc) break;
 
-    const string remote_ip_address{ destination.address().to_v4().to_string(erc2) };
-    if (!erc2 && remote_ip_address != remote_ip) continue;
+    if (destination.address().to_v4().to_string() != remote_ip) continue;
 
     if (noOfReceivedBytes > 0U) {
-      const char *start_needle_to_search_for{ "print\n" };
-      const size_t new_line_pos = stl::helper::str_index_of(incoming_data_buffer, start_needle_to_search_for);
-      if (new_line_pos != string::npos) {
-        received_reply.append(incoming_data_buffer + new_line_pos + strlen(start_needle_to_search_for), incoming_data_buffer + noOfReceivedBytes);
+
+      const size_t start_needle_pos = stl::helper::str_index_of(incoming_data_buffer, start_needle_to_search_for);
+      if (start_needle_pos != string::npos) {
+        received_reply.append(incoming_data_buffer + start_needle_pos + start_needle_to_search_for_len, incoming_data_buffer + noOfReceivedBytes);
       } else {
         received_reply.append(incoming_data_buffer, incoming_data_buffer + noOfReceivedBytes);
       }
@@ -285,7 +284,7 @@ size_t connection_manager::receive_rcon_reply_from_server(
   if (noOfAllReceivedBytes > 0) {
 
     const char *start{};
-    if (received_reply.starts_with("\xFF\xFF\xFF\xFFprint\nInvalid password.")) {
+    if (received_reply.starts_with("Invalid password.") || received_reply.starts_with("Bad rcon")) {
       main_app.get_game_server().set_is_connection_settings_valid(false);
       set_admin_actions_buttons_active(FALSE);
     } else {

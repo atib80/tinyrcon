@@ -91,12 +91,7 @@ bool connection_manager_for_messages::wait_for_and_process_response_message()
       const string sender{ std::move(parts[1]) };
       const time_t timestamp{ stoll(parts[3]) };
       const bool is_show_in_messages{ parts[4] == "true" };
-      error_code erc2{};
-      string sender_ip{ remote_endpoint.address().to_v4().to_string(erc2) };
-      if (erc2) {
-        const string error_msg{ format("^3Error getting client's IP address information from their remote endpoint!\n^1Error: {}", erc2.message()) };
-        print_colored_text(app_handles.hwnd_re_messages_data, error_msg.c_str());
-      }
+      string sender_ip{ remote_endpoint.address().to_v4().to_string() };
       const auto &user = main_app.get_user_for_name(sender, sender_ip);
       user->ip_address = std::move(sender_ip);
       user->remote_endpoint = std::move(remote_endpoint);

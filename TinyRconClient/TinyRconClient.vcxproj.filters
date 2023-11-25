@@ -92,11 +92,11 @@
     <ClCompile Include="src\md5.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="include\connection_manager_for_messages.h">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\connection_manager_for_messages.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="include\connection_manager_for_messages.h">
+      <Filter>Header Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
