@@ -626,7 +626,7 @@ typedef struct tagNMSGFOCUS
 
 /// @def SimpleGrid_GetTitleLength(hGrid)
 ///
-/// @brief Get the length, in characters, of the grid’s title bar text.
+/// @brief Get the length, in characters, of the gridï¿½s title bar text.
 ///
 /// @param hGrid The handle of the grid.
 ///
@@ -1053,8 +1053,9 @@ typedef struct tagNMSGFOCUS
 
 ATOM InitSimpleGrid(HINSTANCE hInstance);
 HWND New_SimpleGrid(HWND hParent, DWORD dwID);
-void Grid_OnSetFont(HWND hwnd, HFONT hfont, BOOL fRedraw) noexcept;
+void Grid_OnSetFont(HWND hwnd, HFONT hfont, BOOL fRedraw) ;
 VOID ShowHscroll(HWND);
-int findLongestTextWidthInColumn(HWND hwnd, const int col);
+// VOID SetHomeRow(HWND hwnd, int col, int row);
+int findLongestTextWidthInColumn(HWND hwnd, const int col, const int start_row, const int last_row, const int min_col_width = 160, const int max_col_width = 330);
 
 #endif// GENERICCONTROL_H

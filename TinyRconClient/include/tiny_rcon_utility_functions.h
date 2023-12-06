@@ -19,6 +19,7 @@ struct tiny_rcon_handles
   HINSTANCE hInstance;
   HWND hwnd_main_window;
   HWND hwnd_players_grid;
+  HWND hwnd_servers_grid;
   HWND hwnd_online_admins_information;
   HWND hwnd_match_information;
   HWND hwnd_re_messages_data;
@@ -28,6 +29,9 @@ struct tiny_rcon_handles
   HWND hwnd_combo_box_map;
   HWND hwnd_combo_box_gametype;
   HWND hwnd_combo_box_sortmode;
+  HWND hwnd_button_players_view;
+  HWND hwnd_button_game_servers_list_view;
+  HWND hwnd_button_refresh_game_servers;
   HWND hwnd_button_load;
   HWND hwnd_button_warn;
   HWND hwnd_button_kick;
@@ -36,6 +40,7 @@ struct tiny_rcon_handles
   HWND hwnd_button_view_tempbans;
   HWND hwnd_button_view_ipbans;
   HWND hwnd_button_view_adminsdata;
+  HWND hwnd_button_view_rcon;
   HWND hwnd_refresh_players_data_button;
   HWND hwnd_connect_button;
   HWND hwnd_connect_private_slot_button;
@@ -69,6 +74,8 @@ struct tiny_rcon_handles
   HWND hwnd_cod2_path_button;
   HWND hwnd_cod4_path_button;
   HWND hwnd_cod5_path_button;
+  HWND hwnd_download_speed_info;
+  HWND hwnd_upload_speed_info;
 };
 
 enum class is_append_message_to_richedit_control {
@@ -191,21 +198,21 @@ struct geoip_data
     city[no_of_chars_for_city] = 0;
   }
 
-  constexpr const char *get_country_code() const noexcept
+  constexpr const char *get_country_code() const
   {
     return country_code;
   }
 
-  constexpr const char *get_country_name() const noexcept
+  constexpr const char *get_country_name() const
   {
     return country_name;
   }
-  constexpr const char *get_region() const noexcept
+  constexpr const char *get_region() const
   {
     return region;
   }
 
-  constexpr const char *get_city() const noexcept
+  constexpr const char *get_city() const
   {
     return city;
   }
@@ -216,27 +223,28 @@ struct row_of_player_data_to_display
   char pid[6]{};
   char score[8]{};
   char ping[8]{};
-  char player_name[33]{};
+  char player_name[36]{};
   char ip_address[20]{};
-  char geo_info[128]{};
-  const char *country_code{};
+  char geo_info[128]{ "Unknown, Unknown" };
+  const char *country_code{ "xy" };
 };
 
 bool create_necessary_folders_and_files(const std::vector<std::string> &folder_file_paths);
-void set_rich_edit_control_colors(HWND richEditCtrl, const COLORREF fg_color, const COLORREF bg_color = color::black, const char *font_face_name = "Consolas") noexcept;
-CHARFORMAT get_char_fmt(HWND hwnd, DWORD range = SCF_SELECTION) noexcept;
-void set_char_fmt(HWND hwnd, const CHARFORMAT2 &cf, DWORD range = SCF_SELECTION) noexcept;
-void replace_sel(HWND hwnd, const char *str) noexcept;
-void cursor_to_bottom(HWND hwnd) noexcept;
-void scroll_to_beginning(HWND hwnd) noexcept;
-void scroll_to(HWND hwnd, DWORD pos) noexcept;
-void scroll_to_bottom(HWND hwnd) noexcept;
+void set_rich_edit_control_colors(HWND richEditCtrl, const COLORREF fg_color, const COLORREF bg_color = color::black, const char *font_face_name = "Consolas");
+CHARFORMAT get_char_fmt(HWND hwnd, DWORD range = SCF_SELECTION);
+void set_char_fmt(HWND hwnd, const CHARFORMAT2 &cf, DWORD range = SCF_SELECTION);
+void replace_sel(HWND hwnd, const char *str);
+void cursor_to_bottom(HWND hwnd);
+void scroll_to_beginning(HWND hwnd);
+void scroll_to(HWND hwnd, DWORD pos);
+void scroll_to_bottom(HWND hwnd);
+void append_to_title(HWND window, std::string text, const char *animation_sequence_chars = "-\\|/");
 
-void show_error(HWND parent_window, const char *, const size_t) noexcept;
+void show_error(HWND parent_window, const char *, const size_t);
 size_t get_number_of_lines_in_file(const char *file_path);
 bool parse_geodata_lite_csv_file(const char *);
 
-bool write_tiny_rcon_json_settings_to_file(const char *) noexcept;
+bool write_tiny_rcon_json_settings_to_file(const char *);
 
 bool check_ip_address_validity(std::string_view, unsigned long &);
 bool check_ip_address_range_validity(const std::string &ip_address_range);
@@ -245,7 +253,7 @@ void convert_guid_key_to_country_name(const std::vector<geoip_data> &geo_data,
   std::string_view player_ip,
   player &player_data);
 
-size_t get_number_of_characters_without_color_codes(const char *) noexcept;
+size_t get_number_of_characters_without_color_codes(const char *);
 
 template<typename Iter>
 size_t find_longest_entry_length(
@@ -268,19 +276,19 @@ size_t find_longest_entry_length(
 size_t find_longest_player_name_length(
   const std::vector<player> &,
   const bool,
-  const size_t number_of_players_to_process) noexcept;
+  const size_t number_of_players_to_process);
 size_t find_longest_player_country_city_info_length(
   const std::vector<player> &,
-  const size_t number_of_players_to_process) noexcept;
+  const size_t number_of_players_to_process);
 
 size_t find_longest_user_name_length(
   const std::vector<std::shared_ptr<tiny_rcon_client_user>> &users,
   const bool count_color_codes,
-  const size_t number_of_users_to_process) noexcept;
+  const size_t number_of_users_to_process);
 
 size_t find_longest_user_country_city_info_length(
   const std::vector<std::shared_ptr<tiny_rcon_client_user>> &users,
-  const size_t number_of_users_to_process) noexcept;
+  const size_t number_of_users_to_process);
 
 void parse_tinyrcon_tool_config_file(const char *);
 
@@ -332,7 +340,7 @@ bool check_if_user_provided_argument_is_valid_for_specified_command(
   const char *cmd,
   const std::string &arg);
 
-bool check_if_user_provided_pid_is_valid(const std::string &) noexcept;
+bool check_if_user_provided_pid_is_valid(const std::string &);
 
 void remove_all_color_codes(char *msg);
 void remove_all_color_codes(std::string &);
@@ -357,7 +365,7 @@ void process_user_command(const std::vector<std::string> &);
 
 void process_rcon_command(const std::vector<std::string> &);
 
-volatile bool should_program_terminate(const std::string & = "") noexcept;
+volatile bool should_program_terminate(const std::string & = "");
 
 void sort_players_data(std::vector<player> &, const sort_type sort_method);
 
@@ -371,23 +379,25 @@ void display_admins_data();
 
 const std::string &get_full_gametype_name(const std::string &);
 
-const std::string &get_full_map_name(const std::string &);
+const std::string &get_full_map_name(const std::string &, const game_name_t game_name);
 
 void display_all_available_maps();
 
 void import_geoip_data(std::vector<geoip_data> &, const char *);
 
-void export_geoip_data(const std::vector<geoip_data> &, const char *) noexcept;
+void export_geoip_data(const std::vector<geoip_data> &, const char *);
 
 void change_colors();
 
-void strip_leading_and_trailing_quotes(std::string &) noexcept;
+void strip_leading_and_trailing_quotes(std::string &);
 
-void replace_all_escaped_new_lines_with_new_lines(std::string &) noexcept;
+void replace_all_escaped_new_lines_with_new_lines(std::string &);
 
-bool change_server_setting(const std::vector<std::string> &) noexcept;
+bool change_server_setting(const std::vector<std::string> &);
 
 void log_message(const std::string &, const is_log_datetime = is_log_datetime::yes);
+
+int get_selected_players_pid_number(const int selected_row_in_players_grid);
 
 std::string get_player_name_for_pid(const int);
 
@@ -408,16 +418,16 @@ std::string word_wrap(const char *, const size_t);
 
 std::string get_time_interval_info_string_for_seconds(const time_t seconds);
 
-void change_game_type(const std::string &game_type, const bool = false) noexcept;
-void load_map(const std::string &, const std::string &, const bool = true) noexcept;
+void change_game_type(const std::string &game_type, const bool = false);
+void load_map(const std::string &, const std::string &, const bool = true);
 
 template<typename... T>
-void unused(T &&...) noexcept {}
+void unused(T &&...) {}
 
-void say_slow(HWND control, const char *msg, size_t const len) noexcept;
+void say_slow(HWND control, const char *msg, size_t const len);
 
 template<typename... Args>
-void say(HWND control, const char *szoveg, Args... args) noexcept
+void say(HWND control, const char *szoveg, Args... args)
 {
   static char outbuffer[8196];
 
@@ -426,7 +436,7 @@ void say(HWND control, const char *szoveg, Args... args) noexcept
 }
 
 template<typename... Args>
-void csay(HWND control, const char *szoveg, Args... args) noexcept
+void csay(HWND control, const char *szoveg, Args... args)
 {
   static char outbuffer[8196];
 
@@ -435,61 +445,68 @@ void csay(HWND control, const char *szoveg, Args... args) noexcept
   print_colored_text(control, outbuffer, is_append_message_to_richedit_control::yes);
 }
 
-bool remove_dir_path_sep_char(char *) noexcept;
+bool remove_dir_path_sep_char(char *);
 void replace_forward_slash_with_backward_slash(std::string &);
 
-const char *find_call_of_duty_1_installation_path(const bool is_show_browse_folder_dialog = true) noexcept;
+const char *find_call_of_duty_1_installation_path(const bool is_show_browse_folder_dialog = true);
 
-bool check_if_call_of_duty_1_game_is_running() noexcept;
+bool check_if_call_of_duty_1_game_is_running(DWORD &pid);
 
-const char *find_call_of_duty_2_installation_path(const bool is_show_browse_folder_dialog = true) noexcept;
+const char *find_call_of_duty_2_installation_path(const bool is_show_browse_folder_dialog = true);
 
-bool check_if_call_of_duty_2_game_is_running() noexcept;
+bool check_if_call_of_duty_2_game_is_running(DWORD &pid);
 
-const char *find_call_of_duty_4_installation_path(const bool is_show_browse_folder_dialog = true) noexcept;
+const char *find_call_of_duty_4_installation_path(const bool is_show_browse_folder_dialog = true);
 
-bool check_if_call_of_duty_4_game_is_running() noexcept;
+bool check_if_call_of_duty_4_game_is_running(DWORD &pid);
 
-const char *find_call_of_duty_5_installation_path(const bool is_show_browse_folder_dialog = true) noexcept;
+const char *find_call_of_duty_5_installation_path(const bool is_show_browse_folder_dialog = true);
 
-bool check_if_call_of_duty_5_game_is_running() noexcept;
+bool check_if_call_of_duty_5_game_is_running(DWORD &pid);
 
-const char *BrowseFolder(const char *, const char *) noexcept;
+const char *BrowseFolder(const char *, const char *);
 
 bool connect_to_the_game_server(const std::string &, const game_name_t, const bool, const bool = true);
 
-bool check_if_file_path_exists(const char *) noexcept;
-bool check_if_file_path_exists(const char *) noexcept;
+bool check_if_file_path_exists(const char *);
+bool check_if_file_path_exists(const char *);
 
-bool delete_temporary_game_file() noexcept;
+bool delete_temporary_game_file();
 
-bool get_confirmation_message_from_user(const char *, const char *) noexcept;
-bool check_if_user_wants_to_quit(const char *) noexcept;
-// void process_user_input() noexcept;
+bool get_confirmation_message_from_user(const char *, const char *);
+bool check_if_user_wants_to_quit(const char *);
+// void process_user_input() ;
 void process_key_down_message(const MSG &);
 
 void display_tempbanned_players_remaining_time_period();
 
-void construct_tinyrcon_gui(HWND) noexcept;
-void initialize_players_grid(HWND hgrid, const size_t cols, const size_t rows, const bool is_for_rcon_status = true) noexcept;
-void display_players_data_in_players_grid(HWND playersGrid) noexcept;
-void clear_players_data_in_players_grid(HWND playersGrid, const size_t start_row, const size_t last_row, const size_t cols) noexcept;
-void PutCell(HWND, const int, const int, const char *) noexcept;
-void display_country_flag(HWND, const int, const int, const char *) noexcept;
+void construct_tinyrcon_gui(HWND);
+void initialize_players_grid(HWND hgrid, const size_t cols, const size_t rows, const bool is_for_rcon_status = true);
+void initialize_servers_grid(HWND hgrid, const size_t cols, const size_t rows);
+void display_players_data_in_players_grid(HWND hgrid);
+void display_game_servers_data_in_servers_grid(HWND hgrid);
+void display_game_server_data_in_servers_grid(HWND hgrid, const size_t game_server_index);
+void clear_players_data_in_players_grid(HWND hgrid, const size_t start_row, const size_t last_row, const size_t cols);
+void clear_servers_data_in_servers_grid(HWND hgrid, const size_t start_row, const size_t last_row, const size_t cols);
+void PutCell(HWND, const int, const int, const char *);
+void display_country_flag(HWND, const int, const int, const char *);
 std::string GetCellContents(HWND, const int row, const int col);
 
-bool is_alpha(const char ch) noexcept;
-bool is_decimal_digit(const char ch) noexcept;
-bool is_ws(const char ch) noexcept;
+bool is_alpha(const char ch);
+bool is_decimal_digit(const char ch);
+bool is_ws(const char ch);
 
-void change_hdc_fg_color(HDC hdc, COLORREF fg_color) noexcept;
-bool check_if_selected_cell_indices_are_valid(const int row_index, const int col_index) noexcept;
-void CenterWindow(HWND hwnd) noexcept;
+void change_hdc_fg_color(HDC hdc, COLORREF fg_color);
+bool check_if_selected_cell_indices_are_valid_for_players_grid(const int row_index, const int col_index);
+bool check_if_selected_cell_indices_are_valid_for_game_servers_grid(const int row_index, const int col_index);
+void CenterWindow(HWND hwnd);
 bool show_user_confirmation_dialog(const char *msg, const char *title, const char *edit_label_text = "Reason:");
 
-void process_sort_type_change_request(const sort_type) noexcept;
+void process_sort_type_change_request(const sort_type);
 
-void update_game_server_setting(std::string, std::string);
+class game_server;
+
+void update_game_server_setting(game_server &gs, std::string, std::string);
 
 std::pair<bool, game_name_t> check_if_specified_server_ip_port_and_rcon_password_are_valid(const char *ip_address, const uint_least16_t port, const char *rcon_password);
 
@@ -498,7 +515,7 @@ void process_button_save_changes_click_event(HWND);
 void process_button_test_connection_click_event(HWND);
 extern LRESULT CALLBACK ComboProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubClass, DWORD_PTR);
 // void display_context_menu_over_grid(const int mouse_x, const int mouse_y, const int selected_row);
-inline std::pair<const char *, const char *> get_appropriate_rcon_status_response_header(const game_name_t game_name) noexcept
+inline std::pair<const char *, const char *> get_appropriate_rcon_status_response_header(const game_name_t game_name)
 {
   static constexpr const char *cod1_rcon_status_response_header{ "num score ping name            lastmsg address               qport rate\n" };
   static constexpr const char *cod2_rcon_status_response_header{ "num score ping guid   name            lastmsg address               qport rate\n" };
@@ -522,26 +539,28 @@ inline std::pair<const char *, const char *> get_appropriate_rcon_status_respons
 
 // const std::regex &get_appropriate_status_regex_for_specified_game_name(const game_name_t game_name);
 
-const std::map<std::string, std::string> &get_rcon_map_names_to_full_map_names_for_specified_game_name(const game_name_t) noexcept;
+const std::map<std::string, std::string> &get_rcon_map_names_to_full_map_names_for_specified_game_name(const game_name_t);
 
-const std::map<std::string, std::string> &get_rcon_gametype_names_to_full_gametype_names_for_specified_game_name(const game_name_t) noexcept;
+const std::map<std::string, std::string> &get_rcon_gametype_names_to_full_gametype_names_for_specified_game_name(const game_name_t);
 
-const std::map<std::string, std::string> &get_full_map_names_to_rcon_map_names_for_specified_game_name(const game_name_t) noexcept;
+const std::map<std::string, std::string> &get_full_map_names_to_rcon_map_names_for_specified_game_name(const game_name_t);
 
 bool initialize_and_verify_server_connection_settings();
 
 void initiate_sending_rcon_status_command_now();
 
-void prepare_players_data_for_display(const bool is_log_status_table = false);
-void prepare_players_data_for_display_of_getstatus_response(const bool is_log_status_table = false);
+void prepare_players_data_for_display(game_server &gs, const bool is_log_status_table = false);
+void prepare_players_data_for_display_of_getstatus_response(game_server &gs, const bool is_log_status_table = false);
 
-size_t get_file_size_in_bytes(const char *) noexcept;
+size_t get_file_size_in_bytes(const char *);
 std::string get_date_and_time_for_time_t(const char *date_time_format_str, time_t t_c = 0);
-const char *get_current_short_month_name(const size_t index) noexcept;
+const char *get_current_short_month_name(const size_t index);
 
-void correct_truncated_player_names(const char *ip_address, const uint_least16_t port_number);
-void print_message_about_corrected_player_name(HWND re_hwnd, const char *truncated_name, const char *corrected_name) noexcept;
-void set_admin_actions_buttons_active(const BOOL is_enable = TRUE, const bool is_reset_to_default_sort_mode = true) noexcept;
+bool parse_getstatus_response_for_specified_game_server(game_server &gs);
+bool parse_getinfo_response_for_specified_game_server(game_server &gs, std::string &number_of_online_players, std::string &number_of_max_players);
+void correct_truncated_player_names(game_server &gs, const char *ip_address, const uint_least16_t port_number);
+void print_message_about_corrected_player_name(HWND re_hwnd, const char *truncated_name, const char *corrected_name);
+void set_admin_actions_buttons_active(const BOOL is_enable = TRUE, const bool is_reset_to_default_sort_mode = true);
 
 void set_available_sort_methods(const bool is_admin = true, const bool is_reset_to_default_sort_mode = true);
 std::pair<bool, std::string> extract_7z_file_to_specified_path(const char *compressed_7z_file_path, const char *destination_path);
@@ -566,10 +585,11 @@ time_t get_number_of_seconds_from_date_and_time_string(const std::string &date_a
 std::string get_narrow_ip_address_range_for_specified_ip_address(const std::string &ip_address);
 std::string get_wide_ip_address_range_for_specified_ip_address(const std::string &ip_address);
 void check_if_admins_are_online_and_get_admins_player_names(const std::vector<player> &players, const size_t no_of_online_players);
-bool save_current_user_data_to_json_file(const char *json_file_path) noexcept;
+bool save_current_user_data_to_json_file(const char *json_file_path);
 bool validate_admin_and_show_missing_admin_privileges_message(const bool is_show_message_box, const is_log_message log_message = is_log_message::no, const is_log_datetime log_date_time = is_log_datetime::no);
 void removed_disallowed_character_in_string(std::string &);
 std::string remove_disallowed_character_in_string(const std::string &);
+size_t ltrim_specified_characters(char *src, const size_t buffer_len, const char *needle_chars);
 std::string get_cleaned_user_name(const std::string &name);
 void replace_br_with_new_line(std::string &message);
 void parse_protected_entries_file(const char *file_path, std::set<std::string> &protected_entries);
@@ -580,4 +600,22 @@ void get_first_valid_ip_address_from_ip_address_range(std::string ip_range, play
 bool run_executable(const char *file_path_for_executable);
 void restart_tinyrcon_client();
 size_t get_random_number();
-bool parse_game_type_information_from_rcon_reply(const std::string &rcon_reply);
+bool parse_game_type_information_from_rcon_reply(const std::string &rcon_reply, game_server &gs);
+std::string find_version_of_installed_cod2_game();
+std::string find_game_version_number_of_running_cod2mp_s_executable(DWORD pid);
+bool download_missing_cod2_game_patch_files();
+bool check_if_cod2_v1_0_game_patch_files_are_missing_and_download_them();
+bool check_if_cod2_v1_01_game_patch_files_are_missing_and_download_them();
+bool check_if_cod2_v1_2_game_patch_files_are_missing_and_download_them();
+bool check_if_cod2_v1_3_game_patch_files_are_missing_and_download_them();
+void view_game_servers(HWND grid);
+void refresh_game_servers_data(HWND grid);
+bool parse_and_display_downloaded_game_servers_data(std::string &game_servers_data, const char *version_number, const bool is_display_parsed_game_servers_data = true);
+BOOL enable_privileged_access();
+bool apply_cod2_patch(const std::string &patch_version_number);
+bool terminate_running_game_instance(const game_name_t game_name);
+std::pair<bool, std::string> backup_original_call_of_duty_2_game_files();
+std::pair<bool, std::string> check_if_users_call_of_duty_2_game_supports_patch_and_repatch_commands();
+game_name_t convert_game_name_to_game_name_t(const std::string &game_name);
+std::string wstring_to_string(const wchar_t *s, const char dfault = '?', const std::locale &loc = std::locale());
+std::string get_server_address_for_connect_command(const int selected_server_row);

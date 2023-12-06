@@ -18,7 +18,7 @@ using namespace std::string_literals;
 using namespace std::chrono;
 using namespace std::filesystem;
 
-extern const string program_version{ "1.0.1.7" };
+extern const string program_version{ "1.2.0.0" };
 
 extern std::atomic<bool> is_terminate_program;
 extern volatile std::atomic<bool> is_terminate_tinyrcon_settings_configuration_dialog_window;
@@ -27,9 +27,9 @@ extern string g_message_data_contents;
 tiny_rcon_server_application main_app;
 
 PROCESS_INFORMATION pr_info{};
-
 condition_variable exit_flag{};
 mutex mu{};
+// mutex inform_message_mutex{};
 
 volatile std::atomic<bool> is_display_temporarily_banned_players_data_event{ false };
 volatile std::atomic<bool> is_display_permanently_banned_players_data_event{ false };
@@ -44,7 +44,7 @@ volatile std::atomic<bool> is_display_admins_data_event{ false };
 
 extern const int screen_width{ GetSystemMetrics(SM_CXSCREEN) };
 extern const int screen_height{ GetSystemMetrics(SM_CYSCREEN) - 30 };
-RECT client_rect{ 0, 0, screen_width, screen_height };
+// RECT client_rect{ 0, 0, screen_width, screen_height };
 // extern const char *user_help_message =
 //   R"(^5For a list of possible commands type ^1help ^5or ^1list user ^5or ^1list rcon ^5in the console.
 //^3Type ^1!say "Public message" to all players" ^3[Enter] to send "Public message" to all online players.
@@ -178,10 +178,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
   const string config_file_path{ format("{}{}", main_app.get_current_working_directory(), "config\\tinyrcon.json") };
   const string log_folder_path{ format("{}{}", main_app.get_current_working_directory(), "log") };
-  const string temp_folder_path{ format("{}{}", main_app.get_current_working_directory(), "temp") };
   const string plugins_geoIP_folder_path{ format("{}{}", main_app.get_current_working_directory(), "plugins\\geoIP") };
 
-  if (!create_necessary_folders_and_files({ main_app.get_tinyrcon_config_file_path(), main_app.get_temp_bans_file_path(), main_app.get_ip_bans_file_path(), main_app.get_ip_range_bans_file_path(), main_app.get_banned_cities_file_path(), main_app.get_banned_countries_file_path(), main_app.get_protected_ip_addresses_file_path(), main_app.get_protected_ip_address_ranges_file_path(), main_app.get_protected_cities_file_path(), main_app.get_protected_countries_file_path(), main_app.get_removed_temp_bans_file_path(), main_app.get_removed_ip_bans_file_path(), main_app.get_removed_ip_range_bans_file_path(), main_app.get_removed_banned_cities_file_path(), main_app.get_removed_banned_countries_file_path(), "log", "plugins\\geoIP", "temp" })) {
+  if (!create_necessary_folders_and_files({ main_app.get_tinyrcon_config_file_path(), main_app.get_temp_bans_file_path(), main_app.get_ip_bans_file_path(), main_app.get_ip_range_bans_file_path(), main_app.get_banned_cities_file_path(), main_app.get_banned_countries_file_path(), main_app.get_protected_ip_addresses_file_path(), main_app.get_protected_ip_address_ranges_file_path(), main_app.get_protected_cities_file_path(), main_app.get_protected_countries_file_path(), main_app.get_removed_temp_bans_file_path(), main_app.get_removed_ip_bans_file_path(), main_app.get_removed_ip_range_bans_file_path(), main_app.get_removed_banned_cities_file_path(), main_app.get_removed_banned_countries_file_path(), "log", "plugins\\geoIP" })) {
     show_error(app_handles.hwnd_main_window, "Error creating necessary program folders and files!", 0);
   }
 
@@ -235,32 +234,29 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
 
   main_app.add_message_handler("inform-message", [](const string &, const time_t, const string &data, bool, const string &sender_ip) {
-    print_colored_text(app_handles.hwnd_re_messages_data, data.c_str());
-    auto parts = stl::helper::str_split(data, "\\", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::no);
+    string cleaned_data{ data };
+    replace_br_with_new_line(cleaned_data);
+    print_colored_text(app_handles.hwnd_re_messages_data, cleaned_data.c_str());
+    auto parts = stl::helper::str_split(cleaned_data, "\\", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::no);
     for (auto &part : parts) stl::helper::trim_in_place(part);
     if (parts.size() >= 2 && !parts[0].empty() && !parts[1].empty()) {
-      auto &sent_by{ main_app.get_user_for_name(parts[0], sender_ip) };
-      /* string data_text{ str_join(cbegin(parts) + 1, cend(parts), "|") };
-       const size_t first_pos{ data_text.find_first_not_of(" \t\n") };
-       if (first_pos != string::npos) {
-         size_t last_pos{ data_text.find(' ', first_pos) };
-         last_pos = std::min(last_pos, data_text.length());
-         const string first_word{ get_cleaned_user_name(data_text.substr(first_pos, last_pos - first_pos)) };
-         for (const auto &u : main_app.get_users()) {
-           const string cleaned_admin_name{ get_cleaned_user_name(u->user_name) };
-           if (cleaned_admin_name == first_word) {
-             data_text.erase(cbegin(data_text) + first_pos, cbegin(data_text) + last_pos);
-             break;
-           }
-         }
-       }*/
+      const auto &sent_by{ main_app.get_user_for_name(parts[0], sender_ip) };
 
-      const bool is_display_rcon_public_message{ !main_app.get_sent_rcon_public_messages().contains(parts[1]) };
-      if (is_display_rcon_public_message) {
-        main_app.get_sent_rcon_public_messages().emplace(parts[1]);
-        main_app.get_connection_manager_for_messages().process_and_send_message("inform-message", std::format("accept\\{}", data), true, sent_by);
+      // lock_guard lg{ inform_message_mutex };
+      auto &sent_rcon_public_messages{ main_app.get_sent_rcon_public_messages() };
+      const auto current_ts{ get_current_time_stamp() };
+      if (!sent_rcon_public_messages.contains(parts[1])) {
+        sent_rcon_public_messages.insert({ parts[1], 0 });
+      }
+
+      if (current_ts - sent_rcon_public_messages[parts[1]] >= 5) {
+        if (cleaned_data.find("automatically") != string::npos && cleaned_data.find("kicked") != string::npos) {
+          ++main_app.get_tinyrcon_stats_data().get_no_of_autokicks();
+        }
+        sent_rcon_public_messages[parts[1]] = current_ts;
+        main_app.get_connection_manager_for_messages().process_and_send_message("inform-message", std::format("accept\\{}", cleaned_data), true, sent_by);
       } else {
-        main_app.get_connection_manager_for_messages().process_and_send_message("inform-message", std::format("deny\\{}", data), true, sent_by);
+        main_app.get_connection_manager_for_messages().process_and_send_message("inform-message", std::format("deny\\{}", cleaned_data), true, sent_by);
       }
     }
   });
@@ -311,13 +307,11 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   });
 
   main_app.add_message_handler("request-login", [](const string &user, const time_t timestamp, const string &data, bool, const string &sender_ip) {
-    const string message{ format("^7{} ^3has sent a ^1login request ^3to ^5Tiny^6Rcon ^5server.", user) };
-    print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
     auto parts = stl::helper::str_split(data, "\\", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::no);
     for (auto &part : parts) stl::helper::trim_in_place(part);
     if (parts.size() >= 3) {
       auto &current_user = main_app.get_user_for_name(parts[0], sender_ip);
-      // current_user->ip_address = std::move(parts[1]);
+      // if (!current_user->is_logged_in) {
       player pd{};
       convert_guid_key_to_country_name(main_app.get_connection_manager_for_messages().get_geoip_data(), current_user->ip_address, pd);
       current_user->geo_information = format("{}, {}", pd.country_name, pd.city);
@@ -327,45 +321,53 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       current_user->last_login_time_stamp = get_current_time_stamp();
       save_tiny_rcon_users_data_to_json_file(main_app.get_users_data_file_path());
       display_users_data_in_users_table(app_handles.hwnd_users_table);
-      const string message{ format("^7{} ^2has logged in to ^5Tiny^6Rcon ^5server.\n^2Number of logins: ^1{}", current_user->user_name, current_user->no_of_logins) };
       main_app.add_message_to_queue(message_t("confirm-login", format("{}\\{}\\{}", current_user->user_name, current_user->ip_address, current_user->no_of_logins), current_user, true));
+      main_app.add_message_to_queue(message_t("welcome-message", format("{}\\{}\\{}", current_user->user_name, current_user->ip_address, main_app.get_tinyrcon_stats_data().get_welcome_message(current_user->user_name)), current_user, true));
+      string message{ format("^7{} ^2has logged in to ^5Tiny^6Rcon ^5server.\n^2Number of logins: ^1{}", current_user->user_name, current_user->no_of_logins) };
+      if (parts.size() >= 4) {
+        message.push_back('\n');
+        message += parts[3];
+      }
       for (const auto &u : main_app.get_users()) {
         unsigned long ip_key{};
         if (u.get() != current_user.get() && u->is_logged_in && check_ip_address_validity(u->ip_address, ip_key)) {
           main_app.get_connection_manager_for_messages().process_and_send_message("inform-login", message, true, u);
         }
       }
+      const string message1{ format("^7{} ^3has sent a ^1login request ^3to ^5Tiny^6Rcon ^5server.", user) };
+      print_colored_text(app_handles.hwnd_re_messages_data, message1.c_str());
       print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
+      // }
     }
   });
 
   main_app.add_message_handler("request-logout", [](const string &user, const time_t timestamp, const string &data, bool is_print_in_messages, const string &sender_ip) {
-    if (is_print_in_messages) {
-      const string message{ format("^7{} ^3has sent a ^1logout request ^3to ^5Tiny^6Rcon ^5server.", user) };
-      print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
-      auto parts = stl::helper::str_split(data, "\\", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::no);
-      for (auto &part : parts) stl::helper::trim_in_place(part);
-      if (parts.size() >= 3) {
-        const auto &current_user = main_app.get_user_for_name(parts[0], sender_ip);
-        // current_user->ip_address = std::move(parts[1]);
-        player pd{};
-        convert_guid_key_to_country_name(main_app.get_connection_manager_for_messages().get_geoip_data(), current_user->ip_address, pd);
-        current_user->geo_information = format("{}, {}", pd.country_name, pd.city);
-        current_user->country_code = pd.country_code;
-        current_user->is_logged_in = false;
-        current_user->last_logout_time_stamp = get_current_time_stamp();
-        save_tiny_rcon_users_data_to_json_file(main_app.get_users_data_file_path());
-        display_users_data_in_users_table(app_handles.hwnd_users_table);
-        const string message{ format("^7{} ^2has logged out of ^5Tiny^6Rcon ^5server.\n", current_user->user_name) };
-        main_app.add_message_to_queue(message_t("confirm-logout", format("{}\\{}\\{}", current_user->user_name, current_user->ip_address, current_user->no_of_logins), current_user, true));
-        for (const auto &u : main_app.get_users()) {
-          unsigned long ip_key{};
-          if (u.get() != current_user.get() && check_ip_address_validity(u->ip_address, ip_key)) {
-            main_app.get_connection_manager_for_messages().process_and_send_message("inform-logout", message, true, u);
-          }
+    auto parts = stl::helper::str_split(data, "\\", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::no);
+    for (auto &part : parts) stl::helper::trim_in_place(part);
+    if (parts.size() >= 2) {
+      const auto &current_user = main_app.get_user_for_name(parts[0], sender_ip);
+      // if (current_user->is_logged_in) {
+      const string message1{ format("^7{} ^3has sent a ^1logout request ^3to ^5Tiny^6Rcon ^5server.", user) };
+      print_colored_text(app_handles.hwnd_re_messages_data, message1.c_str());
+      player pd{};
+      convert_guid_key_to_country_name(main_app.get_connection_manager_for_messages().get_geoip_data(), current_user->ip_address, pd);
+      current_user->geo_information = format("{}, {}", pd.country_name, pd.city);
+      current_user->country_code = pd.country_code;
+      current_user->is_logged_in = false;
+      current_user->last_logout_time_stamp = get_current_time_stamp();
+      save_tiny_rcon_users_data_to_json_file(main_app.get_users_data_file_path());
+      display_users_data_in_users_table(app_handles.hwnd_users_table);
+      main_app.get_connection_manager_for_messages().process_and_send_message("confirm-logout", format("{}\\{}\\{}", current_user->user_name, current_user->ip_address, current_user->no_of_logins), true, current_user);
+      // main_app.add_message_to_queue(message_t("confirm-logout", format("{}\\{}\\{}", current_user->user_name, current_user->ip_address, current_user->no_of_logins), current_user, true));
+      const string message2{ format("^7{} ^2has logged out of ^5Tiny^6Rcon ^5server.\n", current_user->user_name) };
+      for (const auto &u : main_app.get_users()) {
+        unsigned long ip_key{};
+        if (u.get() != current_user.get() && check_ip_address_validity(u->ip_address, ip_key)) {
+          main_app.get_connection_manager_for_messages().process_and_send_message("inform-logout", message2, true, u);
         }
-        print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
       }
+      print_colored_text(app_handles.hwnd_re_messages_data, message2.c_str());
+      // }
     }
   });
 
@@ -388,8 +390,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       print_colored_text(app_handles.hwnd_re_messages_data, format("^3Admin's ^1{} ^3file is not found at ^1{}", admins_bans_compressed_file_path, main_app.get_ftp_bans_folder_path()).c_str());
       return;
     }
-
-    // bans12313123213131_1321321311313_85.222.123.123.txt
 
     const unordered_map<string, string> data_files{
       { "tempbans", format("{}data\\tempbans.txt", main_app.get_current_working_directory()) }, { "bans", format("{}data\\bans.txt", main_app.get_current_working_directory()) }, { "ip_range_bans", format("{}data\\ip_range_bans.txt", main_app.get_current_working_directory()) }, { "banned_cities", format("{}data\\banned_cities.txt", main_app.get_current_working_directory()) }, { "banned_countries", format("{}data\\banned_countries.txt", main_app.get_current_working_directory()) }
@@ -559,6 +559,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       auto &protected_ip_addresses = main_app.get_game_server().get_protected_ip_addresses();
       if (!protected_ip_addresses.contains(parts[1])) {
         protected_ip_addresses.emplace(parts[1]);
+        ++main_app.get_tinyrcon_stats_data().get_no_of_protected_ip_addresses();
         save_banned_entries_to_file(main_app.get_protected_ip_addresses_file_path(), protected_ip_addresses);
         player protected_player{};
         strcpy_s(protected_player.ip_address, std::size(protected_player.ip_address), parts[1].c_str());
@@ -614,6 +615,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       auto &protected_ip_address_ranges = main_app.get_game_server().get_protected_ip_address_ranges();
       if (!protected_ip_address_ranges.contains(parts[1])) {
         protected_ip_address_ranges.emplace(parts[1]);
+        ++main_app.get_tinyrcon_stats_data().get_no_of_protected_ip_address_ranges();
         save_banned_entries_to_file(main_app.get_protected_ip_address_ranges_file_path(), protected_ip_address_ranges);
         const string message{ format("^7{} ^2protected IP address range ^1{} ^2with reason: ^1{}", parts[0], parts[1], parts[2]) };
         print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
@@ -662,6 +664,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       auto &protected_cities = main_app.get_game_server().get_protected_cities();
       if (!protected_cities.contains(parts[1])) {
         protected_cities.emplace(parts[1]);
+        ++main_app.get_tinyrcon_stats_data().get_no_of_protected_cities();
         save_banned_entries_to_file(main_app.get_protected_cities_file_path(), protected_cities);
         const string message{ format("^7{} ^2protected city ^1{} ^2with reason: ^1{}", parts[0], parts[1], parts[2]) };
         print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
@@ -710,6 +713,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       auto &protected_countries = main_app.get_game_server().get_protected_countries();
       if (!protected_countries.contains(parts[1])) {
         protected_countries.emplace(parts[1]);
+        ++main_app.get_tinyrcon_stats_data().get_no_of_protected_countries();
         save_banned_entries_to_file(main_app.get_protected_countries_file_path(), protected_countries);
         const string message{ format("^7{} ^2protected country ^1{} ^2with reason: ^1{}", parts[0], parts[1], parts[2]) };
         print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
@@ -748,6 +752,43 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     }
   });
 
+  main_app.add_message_handler("add-map_restart", [](const string &user, const time_t, const string &data, bool, const string &sender_ip) {
+    auto parts = stl::helper::str_split(data, "\\", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::no);
+    for (auto &part : parts) {
+      stl::helper::trim_in_place(part);
+    }
+
+    if (parts.size() >= 4) {
+      auto &user_data = main_app.get_user_for_name(user, sender_ip);
+      user_data->no_of_map_restarts++;
+      ++main_app.get_tinyrcon_stats_data().get_no_of_map_restarts();
+      save_tiny_rcon_users_data_to_json_file(main_app.get_users_data_file_path());
+      display_users_data_in_users_table(app_handles.hwnd_users_table);
+      const string inform_message{ format("^1Admin ^7{} ^5has restarted map ^1{} ^5in ^3{} ^5game type.\n", parts[0], parts[1], parts[2]) };
+      print_colored_text(app_handles.hwnd_re_messages_data, inform_message.c_str());
+      print_colored_text(app_handles.hwnd_re_messages_data, parts[3].c_str());
+    }
+  });
+
+
+  main_app.add_message_handler("add-map_change", [](const string &user, const time_t, const string &data, bool, const string &sender_ip) {
+    auto parts = stl::helper::str_split(data, "\\", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::no);
+    for (auto &part : parts) {
+      stl::helper::trim_in_place(part);
+    }
+
+    if (parts.size() >= 4) {
+      auto &user_data = main_app.get_user_for_name(user, sender_ip);
+      user_data->no_of_map_changes++;
+      ++main_app.get_tinyrcon_stats_data().get_no_of_map_changes();
+      save_tiny_rcon_users_data_to_json_file(main_app.get_users_data_file_path());
+      display_users_data_in_users_table(app_handles.hwnd_users_table);
+      const string inform_message{ format("^1Admin ^7{} ^5has loaded map ^1{} ^5in ^3{} ^5game type.\n", parts[0], parts[1], parts[2]) };
+      print_colored_text(app_handles.hwnd_re_messages_data, inform_message.c_str());
+      print_colored_text(app_handles.hwnd_re_messages_data, parts[3].c_str());
+    }
+  });
+
 
   main_app.add_message_handler("add-warning", [](const string &user, const time_t, const string &data, bool, const string &sender_ip) {
     auto parts = stl::helper::str_split(data, "\\", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::no);
@@ -770,6 +811,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         warned_player);
       auto &user_data = main_app.get_user_for_name(user, sender_ip);
       user_data->no_of_warnings++;
+      ++main_app.get_tinyrcon_stats_data().get_no_of_warnings();
       save_tiny_rcon_users_data_to_json_file(main_app.get_users_data_file_path());
       display_users_data_in_users_table(app_handles.hwnd_users_table);
       const string msg{ format("^7{} ^3has ^1warned ^3player ^7{} ^3[^5IP address ^1{} ^3| ^5geoinfo: ^1{}, {}\n^5Date/time of warning: ^1{} ^3| ^5Reason of warning: ^1{} ^3| ^5Warned by: ^7{}\n", user, warned_player.player_name, warned_player.ip_address, warned_player.country_name, warned_player.city, warned_player.banned_date_time, warned_player.reason, warned_player.banned_by_user_name) };
@@ -804,6 +846,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         kicked_player);
       auto &user_data = main_app.get_user_for_name(user, sender_ip);
       user_data->no_of_kicks++;
+      ++main_app.get_tinyrcon_stats_data().get_no_of_kicks();
       save_tiny_rcon_users_data_to_json_file(main_app.get_users_data_file_path());
       display_users_data_in_users_table(app_handles.hwnd_users_table);
       const string msg{ format("^7{} ^3has ^1kicked ^3player ^7{} ^3[^5IP address ^1{} ^3| ^5geoinfo: ^1{}, {}\n^5Date/time of kick: ^1{} ^3| ^5Reason of kick: ^1{} ^3| ^5Kicked by: ^7{}\n", kicked_player.banned_by_user_name, kicked_player.player_name, kicked_player.ip_address, kicked_player.country_name, kicked_player.city, kicked_player.banned_date_time, kicked_player.reason, kicked_player.banned_by_user_name) };
@@ -838,6 +881,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         temp_banned_player_data);
       auto &user_data = main_app.get_user_for_name(user, sender_ip);
       user_data->no_of_tempbans++;
+      ++main_app.get_tinyrcon_stats_data().get_no_of_tempbans();
       save_tiny_rcon_users_data_to_json_file(main_app.get_users_data_file_path());
       display_users_data_in_users_table(app_handles.hwnd_users_table);
       const string msg{ format("^7{} ^5has temporarily banned ^1IP address {}\n ^5for ^3player name: ^7{} ^5| ^3geoinfo: ^1{}, {} ^5| ^3Date/time of ban: ^1{}\n^3Ban duration: ^1{} hours ^5| ^3Reason of ban: ^1{} ^5| ^3Banned by: ^7{}\n", user, temp_banned_player_data.ip_address, temp_banned_player_data.player_name, temp_banned_player_data.country_name, temp_banned_player_data.city, temp_banned_player_data.banned_date_time, temp_banned_player_data.ban_duration_in_hours, temp_banned_player_data.reason, temp_banned_player_data.banned_by_user_name) };
@@ -906,6 +950,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         pd);
       auto &user_data = main_app.get_user_for_name(user, sender_ip);
       user_data->no_of_guidbans++;
+      ++main_app.get_tinyrcon_stats_data().get_no_of_guid_bans();
       save_tiny_rcon_users_data_to_json_file(main_app.get_users_data_file_path());
       display_users_data_in_users_table(app_handles.hwnd_users_table);
       const string msg{ format("^7{} ^5has banned the ^1GUID key ^5of player:\n^3Name: ^7{} ^5| ^3IP address: ^1{} ^5| ^3GUID: ^1{} ^5| ^3geoinfo: ^1{}, {} ^5| ^3Date/time of ban: ^1{}\n^3Reason of ban: ^1{} ^5| ^3Banned by: ^7{}\n", pd.banned_by_user_name, pd.player_name, pd.ip_address, pd.guid_key, pd.country_name, pd.city, pd.banned_date_time, pd.reason, pd.banned_by_user_name) };
@@ -940,6 +985,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         pd);
       auto &user_data = main_app.get_user_for_name(user, sender_ip);
       user_data->no_of_ipbans++;
+      ++main_app.get_tinyrcon_stats_data().get_no_of_ip_bans();
       save_tiny_rcon_users_data_to_json_file(main_app.get_users_data_file_path());
       display_users_data_in_users_table(app_handles.hwnd_users_table);
       const string msg{ format("^7{} ^3has permanently banned ^1IP address ^3of player ^7{}.\n^3IP address: ^1{} ^5| ^3geoinfo: ^1{}, {} ^5| ^3Date/time of GUID ban: ^1{}\n^3Reason of ban: ^1{} ^5| ^3Banned by: ^7{}\n", pd.banned_by_user_name, pd.player_name, pd.ip_address, pd.country_name, pd.city, pd.banned_date_time, pd.reason, pd.banned_by_user_name) };
@@ -1010,6 +1056,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         pd);
       auto &user_data = main_app.get_user_for_name(user, sender_ip);
       user_data->no_of_iprangebans++;
+      ++main_app.get_tinyrcon_stats_data().get_no_of_ip_address_range_bans();
       save_tiny_rcon_users_data_to_json_file(main_app.get_users_data_file_path());
       display_users_data_in_users_table(app_handles.hwnd_users_table);
       const string msg{ format("^7{} ^5has banned ^1IP address range:\n^5[^3Player name: ^7{} ^5| ^3IP address range: ^1{} ^5| ^3geoinfo: ^1{}, {} ^5| ^3Date/time of ban: ^1{}\n^3Reason of ban: ^1{} ^5| ^3Banned by: ^7{}^5]\n", pd.banned_by_user_name, pd.player_name, pd.ip_address, pd.country_name, pd.city, pd.banned_date_time, pd.reason, pd.banned_by_user_name) };
@@ -1069,6 +1116,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       const time_t timestamp_of_ban{ stoll(parts[2]) };
       auto &user_data = main_app.get_user_for_name(admin, sender_ip);
       user_data->no_of_citybans++;
+      ++main_app.get_tinyrcon_stats_data().get_no_of_city_bans();
       save_tiny_rcon_users_data_to_json_file(main_app.get_users_data_file_path());
       display_users_data_in_users_table(app_handles.hwnd_users_table);
       const string msg{ format("^7{} ^3has banned city ^1{} ^3at ^1{}\n", admin, city, get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", timestamp_of_ban)) };
@@ -1119,6 +1167,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       const time_t timestamp_of_ban{ stoll(parts[2]) };
       auto &user_data = main_app.get_user_for_name(admin, sender_ip);
       user_data->no_of_countrybans++;
+      ++main_app.get_tinyrcon_stats_data().get_no_of_country_bans();
       save_tiny_rcon_users_data_to_json_file(main_app.get_users_data_file_path());
       display_users_data_in_users_table(app_handles.hwnd_users_table);
       const string msg{ format("^7{} ^3has banned country ^1{} ^3at ^1{}\n", admin, country, get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", timestamp_of_ban)) };
@@ -1181,7 +1230,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
   construct_tinyrcon_gui(app_handles.hwnd_main_window);
   main_app.open_log_file("log/commands_history.log");
-  main_app.set_current_working_directory();
 
   const string program_title{ main_app.get_program_title() + " | "s + main_app.get_game_server_name() + " | "s + "version: "s + program_version };
   SetWindowText(app_handles.hwnd_main_window, program_title.c_str());
@@ -1236,6 +1284,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       parse_banned_countries_file(main_app.get_banned_countries_file_path(), main_app.get_game_server().get_banned_countries_set());
       parse_banned_countries_file(main_app.get_removed_banned_countries_file_path(), main_app.get_game_server().get_removed_banned_countries_set(), true);
       print_colored_text(app_handles.hwnd_re_messages_data, "^2Processed ^1banned countries ^2from ^5data\\banned_countries.txt ^2file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+
+      load_tinyrcon_statistics_data("data\\data_stats.json");
 
       is_main_window_constructed = true;
 
@@ -1323,11 +1373,10 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   save_banned_cities_to_file(main_app.get_removed_banned_cities_file_path(), main_app.get_game_server().get_removed_banned_cities_set());
   save_banned_countries_to_file(main_app.get_removed_banned_countries_file_path(), main_app.get_game_server().get_removed_banned_countries_set());
 
+  save_tinyrcon_statistics_data("data\\data_stats.json");
+
   is_terminate_program.store(true);
-  {
-    lock_guard ul{ mu };
-    exit_flag.notify_all();
-  }
+  exit_flag.notify_all();
 
   task_thread.join();
 
@@ -1412,13 +1461,22 @@ bool initialize_main_app(HINSTANCE hInstance, const int nCmdShow)
 
   // AdjustWindowRectEx(&client_rect, WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME, FALSE, 0);
 
-  app_handles.hwnd_main_window = CreateWindowEx(0, wcex.lpszClassName, "Welcome to TinyRcon | version: 2.4", WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME /*WS_OVERLAPPEDWINDOW | WS_HSCROLL | WS_VSCROLL*/, 0, 0, client_rect.right - client_rect.left, client_rect.bottom - client_rect.top, nullptr, nullptr, hInstance, nullptr);
+  RECT desktop_work_area{};
+  SystemParametersInfoA(SPI_GETWORKAREA, 0, &desktop_work_area, 0);
+  // AdjustWindowRectEx(&desktop_work_area, WS_OVERLAPPEDWINDOW /*| WS_HSCROLL | WS_VSCROLL*/, FALSE, WS_EX_OVERLAPPEDWINDOW);
+
+  app_handles.hwnd_main_window = CreateWindowEx(WS_EX_OVERLAPPEDWINDOW, wcex.lpszClassName, "TinyRcon server", WS_OVERLAPPEDWINDOW /*| WS_HSCROLL | WS_VSCROLL*/, 0, 0, desktop_work_area.right - desktop_work_area.left, desktop_work_area.bottom - desktop_work_area.top, nullptr, nullptr, hInstance, nullptr);
+
+  // app_handles.hwnd_main_window = CreateWindowEx(0, wcex.lpszClassName, "Welcome to TinyRcon | version: 2.4", WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME /*WS_OVERLAPPEDWINDOW | WS_HSCROLL | WS_VSCROLL*/, 0, 0, client_rect.right - client_rect.left, client_rect.bottom - client_rect.top, nullptr, nullptr, hInstance, nullptr);
 
   if (!app_handles.hwnd_main_window)
     return false;
 
   ShowWindow(app_handles.hwnd_main_window, nCmdShow);
   UpdateWindow(app_handles.hwnd_main_window);
+  Sleep(50);
+  MoveWindow(app_handles.hwnd_main_window, 0, 0, desktop_work_area.right - desktop_work_area.left, desktop_work_area.bottom - desktop_work_area.top, TRUE);
+  SendMessageA(app_handles.hwnd_main_window, WM_SYSCOMMAND, SC_MAXIMIZE, 0);
   return true;
 }
 
@@ -1477,10 +1535,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
   case WM_TIMER: {
 
     ++counter;
-    if (counter % 10 == 0) {
-      main_app.get_sent_rcon_public_messages().clear();
-    }
-    if (counter % 10 == 0) {
+
+    if (counter % 5 == 0) {
+      /*const auto ts{ get_current_time_stamp() };
+      const string current_time_str{ get_date_and_time_for_time_t("{hh}:{mm}:{ss}", ts) };
+      if (current_time_str.starts_with("00:00")) {
+        reset_daily_activities(main_app.get_daily_activities());
+        main_app.get_daily_activities().set_start_time(ts);
+      }*/
+
+      /*if (!main_app.get_sent_rcon_public_messages().empty()) {
+        main_app.get_sent_rcon_public_messages().clear();
+      }*/
       display_users_data_in_users_table(app_handles.hwnd_users_table);
       display_online_admins_information();
     }
@@ -1496,6 +1562,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
       }
       // save_tiny_rcon_users_data_to_json_file(users_data_file_path);
+      save_tinyrcon_statistics_data("data\\data_stats.json");
     }
 
     HDC hdc = BeginPaint(hWnd, &ps);
@@ -1722,10 +1789,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case ID_QUITBUTTON:
       // if (show_user_confirmation_dialog("^3Do you really want to exit?\n", "Exit TinyRcon server?")) {
       is_terminate_program.store(true);
-      {
-        lock_guard ul{ mu };
-        exit_flag.notify_all();
-      }
+      exit_flag.notify_all();
       PostQuitMessage(0);
       // }
       break;
@@ -1804,10 +1868,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     break;
   case WM_CLOSE:
     is_terminate_program.store(true);
-    {
-      lock_guard ul{ mu };
-      exit_flag.notify_all();
-    }
+    exit_flag.notify_all();
     DestroyWindow(app_handles.hwnd_main_window);
     return 0;
 

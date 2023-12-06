@@ -115,7 +115,7 @@
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(SolutionDir)deps\bit7z\include\;include;$(SolutionDir)deps\asio-1.26.0\include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <LanguageStandard_C>stdc11</LanguageStandard_C>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <AdditionalOptions>-D_WIN32_WINNT=0x0601 %(AdditionalOptions)</AdditionalOptions>
@@ -160,6 +160,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="include\connection_manager_for_messages.h" />
+    <ClInclude Include="include\daily_tinyrcon_activities.h" />
     <ClInclude Include="include\detail\stl_helper_functions_impl.hpp" />
     <ClInclude Include="include\framework.h" />
     <ClInclude Include="include\game_server.h" />

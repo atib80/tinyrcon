@@ -4,8 +4,9 @@
 #include <atlbase.h>
 #include <Wininet.h>
 #include <string>
-#include "tiny_rcon_client_application.h"
+#include <vector>
 #include "internet_handle.h"
+#include "tiny_rcon_utility_functions.h"
 
 DWORD WINAPI worker_function1(void *);
 DWORD WINAPI worker_function2(void *);
@@ -65,27 +66,28 @@ struct version_data
 
 class auto_update_manager
 {
+
 public:
-  auto_update_manager();
+  auto_update_manager() = default;
   ~auto_update_manager() = default;
 
-  bool get_file_version(const std::string &exe_file, version_data &ver, unsigned long &version_number) const noexcept;
+  bool get_file_version(const std::string &exe_file, version_data &ver, unsigned long &version_number) const;
   const std::string &get_self_full_path() const;
   void replace_temporary_version();
-  // void restart_tinyrcon_client();
   void downloaded_latest_version_of_program() const;
-  void set_self_current_working_directory(std::string cwd) noexcept;
-  const std::string &get_self_current_working_directory() const noexcept;
-  void set_self_full_path(std::string path) noexcept;
+  void set_self_current_working_directory(std::string cwd);
+  const std::string &get_self_current_working_directory() const;
+  void set_self_full_path(std::string path);
   const std::string &get_self_file_name() const;
   void set_self_file_name(std::string file_name);
   std::vector<std::string> get_file_name_matches_for_specified_file_pattern(internet_handle &internet_connect_handle, const char *relative_path, const char *file_pattern) const;
   bool download_file(const char *url, const char *downloaded_file_path) const;
+  void check_for_updates();
 
 private:
   mutable unsigned long current_version_number{};
   unsigned long next_version_number{};
-  string next_version_number_str;
+  std::string next_version_number_str;
   bool is_current_instance_temporary_version{};
   std::string self_current_working_directory;
   std::string self_full_path;
@@ -100,80 +102,3 @@ std::string GetFileNameFromPath(const std::string &);
 std::string get_tiny_rcon_client_external_ip_address();
 bool upload_file_to_ftp_server(const char *ftp_host, const char *user_name, const char *user_pass, const char *upload_file_path, const char *ftp_file_path);
 bool download_file_from_ftp_server(const char *ftp_host, const char *user_name, const char *user_pass, const char *download_file_path, const char *ftp_file_path);
-
-class MyCallback : public IBindStatusCallback
-{
-public:
-  MyCallback() = default;
-  ~MyCallback() = default;
-
-  // This one is called by URLDownloadToFile
-  STDMETHOD(OnProgress)
-  (/* [in] */ ULONG ulProgress, /* [in] */ ULONG ulProgressMax, /* [in] */ ULONG ulStatusCode, /* [in] */ LPCWSTR)
-  {
-    // You can use your own logging function here
-    wprintf(L"Downloaded %d of %d. Status code %d\n", ulProgress, ulProgressMax, ulStatusCode);
-    return S_OK;
-  }
-
-  STDMETHOD(OnStartBinding)
-  (/* [in] */ DWORD, /* [in] */ IBinding __RPC_FAR *)
-  {
-    return E_NOTIMPL;
-  }
-
-  STDMETHOD(GetPriority)
-  (/* [out] */ LONG __RPC_FAR *)
-  {
-    return E_NOTIMPL;
-  }
-
-  STDMETHOD(OnLowResource)
-  (/* [in] */ DWORD)
-  {
-    return E_NOTIMPL;
-  }
-
-  STDMETHOD(OnStopBinding)
-  (/* [in] */ HRESULT, /* [unique][in] */ LPCWSTR)
-  {
-    return E_NOTIMPL;
-  }
-
-  STDMETHOD(GetBindInfo)
-  (/* [out] */ DWORD __RPC_FAR *, /* [unique][out][in] */ BINDINFO __RPC_FAR *)
-  {
-    return E_NOTIMPL;
-  }
-
-  STDMETHOD(OnDataAvailable)
-  (/* [in] */ DWORD, /* [in] */ DWORD, /* [in] */ FORMATETC __RPC_FAR *, /* [in] */ STGMEDIUM __RPC_FAR *)
-  {
-    return E_NOTIMPL;
-  }
-
-  STDMETHOD(OnObjectAvailable)
-  (/* [in] */ REFIID, /* [iid_is][in] */ IUnknown __RPC_FAR *)
-  {
-    return E_NOTIMPL;
-  }
-
-  // IUnknown stuff
-  STDMETHOD_(ULONG, AddRef)
-  ()
-  {
-    return 0;
-  }
-
-  STDMETHOD_(ULONG, Release)
-  ()
-  {
-    return 0;
-  }
-
-  STDMETHOD(QueryInterface)
-  (/* [in] */ REFIID, /* [iid_is][out] */ void __RPC_FAR *__RPC_FAR *)
-  {
-    return E_NOTIMPL;
-  }
-};

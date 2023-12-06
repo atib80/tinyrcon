@@ -52,24 +52,24 @@ class MD5
 public:
   typedef unsigned int size_type; // must be 32bit
  
-  MD5() noexcept;
-  MD5(const std::string &text) noexcept;
-  MD5(char *input, const size_t length) noexcept;
-  void update(const unsigned char *buf, size_type length) noexcept;
-  void update(const char *buf, size_type length) noexcept;
-  MD5 &finalize() noexcept;
+  MD5() ;
+  MD5(const std::string &text) ;
+  MD5(char *input, const size_t length) ;
+  void update(const unsigned char *buf, size_type length) ;
+  void update(const char *buf, size_type length) ;
+  MD5 &finalize() ;
   std::string hexdigest() const;
   friend std::ostream& operator<<(std::ostream&, MD5 md5);
  
 private:
-  void init() noexcept;
+  void init() ;
   typedef unsigned char uint1; //  8bit
   typedef unsigned int uint4;  // 32bit
   enum {blocksize = 64}; // VC6 won't eat a const static int here
  
-  void transform(const uint1 block[blocksize]) noexcept;
-  static void decode(uint4 output[], const uint1 input[], size_type len) noexcept;
-  static void encode(uint1 output[], const uint4 input[], size_type len) noexcept;
+  void transform(const uint1 block[blocksize]) ;
+  static void decode(uint4 output[], const uint1 input[], size_type len) ;
+  static void encode(uint1 output[], const uint4 input[], size_type len) ;
  
   bool finalized;
   uint1 buffer[blocksize]; // bytes that didn't fit in last 64 byte chunk

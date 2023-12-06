@@ -5,6 +5,7 @@
 #include <fstream>
 #include <memory>
 #include <mutex>
+#include <sstream>
 #include <queue>
 #include <random>
 #include <string>
@@ -17,6 +18,7 @@
 #include "tiny_rcon_client_user.h"
 #include "internet_handle.h"
 #include "tiny_rcon_utility_functions.h"
+#include "autoupdate.h"
 #include <format>
 
 #undef max
@@ -25,6 +27,7 @@ using std::string;
 
 extern tiny_rcon_handles app_handles;
 
+
 class tiny_rcon_client_application
 {
   bool is_log_file_open{};
@@ -32,17 +35,92 @@ class tiny_rcon_client_application
   bool is_disable_automatic_kick_messages{ false };
   bool is_use_original_admin_messages{ true };
   bool is_ftp_server_online{ true };
+  bool is_installed_cod2_game_steam_version{};
+  bool is_use_different_background_colors_for_even_and_odd_lines{ true };
+  bool is_use_different_foreground_colors_for_even_and_odd_lines{ false };
+  bool is_automatic_city_kick_enabled{ false };
+  bool is_automatic_country_kick_enabled{ false };
+  bool is_enable_automatic_connection_flood_ip_ban{ true };
+  bool is_connection_settings_valid{ true };
+  size_t game_server_index{};
+  size_t game_servers_count{};
+  size_t rcon_game_servers_count{};
+  std::atomic<uint64_t> previous_downloaded_data_in_bytes{ 0ULL };
+  std::atomic<uint64_t> previous_uploaded_data_in_bytes{ 0ULL };
+  std::atomic<uint64_t> next_downloaded_data_in_bytes{ 0ULL };
+  std::atomic<uint64_t> next_uploaded_data_in_bytes{ 0ULL };
+  uint_least16_t tiny_rcon_server_port{ 27015 };
   game_name_t game_name{ game_name_t::unknown };
   std::condition_variable command_queue_cv{};
+  std::mutex command_mutex{};
+  std::recursive_mutex command_queue_mutex{};
+  std::recursive_mutex message_queue_mutex{};
   string username{ "^1Admin" };
-  string game_server_name{
+  std::string game_server_name{
     "185.158.113.146:28995 CoD2 CTF"
   };
-  string codmp_exe_path;
-  string cod2mp_s_exe_path;
-  string iw3mp_exe_path;
-  string cod5mp_exe_path;
-  string command_line_info;
+  std::string codmp_exe_path;
+  std::string cod2mp_s_exe_path;
+  std::string iw3mp_exe_path;
+  std::string cod5mp_exe_path;
+  std::string command_line_info;
+  std::string program_title{ "Welcome to TinyRcon client" };
+  std::string game_version_number{ "1.0" };
+  std::string game_version_information;
+  std::string user_ip_address;
+  std::string current_working_directory;
+  std::string tinyrcon_config_file_path{ "config\\tinyrcon.json" };
+  std::string user_data_file_path{ "data\\user.txt" };
+  std::string temp_bans_file_path{ "data\\tempbans.txt" };
+  std::string ip_bans_file_path{ "data\\bans.txt" };
+  std::string ip_range_bans_file_path{ "data\\ip_range_bans.txt" };
+  std::string banned_countries_file_path{ "data\\banned_countries.txt" };
+  std::string banned_cities_file_path{ "data\\banned_cities.txt" };
+  std::string protected_ip_addresses_file_path{ "data\\protected_ip_addresses.txt" };
+  std::string protected_ip_address_ranges_file_path{ "data\\protected_ip_address_ranges.txt" };
+  std::string protected_cities_file_path{ "data\\protected_cities.txt" };
+  std::string protected_countries_file_path{ "data\\protected_countries.txt" };
+  std::string ftp_download_site_ip_address{ "85.222.189.119" };
+  std::string ftp_download_folder_path{ "tinyrcon" };
+  std::string ftp_download_file_pattern{ R"(^_U_TinyRcon[\._-]?v?(\d{1,2}\.\d{1,2}\.\d{1,2}\.\d{1,2})\.exe$)" };
+  std::string plugins_geoIP_geo_dat_md5;
+  std::ofstream log_file;
+  std::string tiny_rcon_ftp_server_username{ "tinyrcon" };
+  std::string tiny_rcon_ftp_server_password{ "08021980" };
+  std::string tiny_rcon_server_ip_address{
+    "85.222.189.119"
+  };
+  std::string cod2_master_server_ip_address{ "185.34.107.159" };
+
+  string current_match_info{ "^3Map: {MAP_FULL_NAME} ^1({MAP_RCON_NAME}^1) ^3| Gametype: {GAMETYPE_FULL_NAME} ^3| Online/Offline players: {ONLINE_PLAYERS_COUNT}^3|{OFFLINE_PLAYERS_COUNT}" };
+  string odd_player_data_lines_fg_color{ "^5" };
+  string even_player_data_lines_fg_color{ "^5" };
+  string odd_player_data_lines_bg_color{ "^0" };
+  string even_player_data_lines_bg_color{ "^8" };
+  string full_map_name_color{ "^2" };
+  string rcon_map_name_color{ "^1" };
+  string full_game_type_color{ "^2" };
+  string rcon_game_type_color{ "^1" };
+  string online_players_count_color{ "^2" };
+  string offline_players_count_color{ "^1" };
+  string border_line_color{ "^5" };
+  string header_player_pid_color{ "^1" };
+  string data_player_pid_color{ "^1" };
+  string header_player_score_color{ "^4" };
+  string data_player_score_color{ "^4" };
+  string header_player_ping_color{ "^4" };
+  string data_player_ping_color{ "^4" };
+  string header_player_name_color{ "^4" };
+  string header_player_ip_color{ "^4" };
+  string data_player_ip_color{ "^4" };
+  string header_player_geoinfo_color{ "^4" };
+  string data_player_geoinfo_color{ "^4" };
+  string server_message{ "^5| ^3Server is empty!^5" };
+  size_t check_for_banned_players_time_period{ 5u };
+
+  uint_least16_t cod2_master_server_port{ 20710 };
+  map<string, string> server_settings;
+  std::unordered_map<string, size_t> ip_address_frequency;
   std::unordered_map<std::string, std::string> admin_messages{
     { "user_defined_warn_msg", "^7{PLAYERNAME} ^1you have been warned by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}" },
     { "user_defined_kick_msg", "^7{PLAYERNAME} ^1you are being kicked by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}" },
@@ -93,14 +171,25 @@ class tiny_rcon_client_application
     { game_name_t::cod5, "Call of Duty 5: World at War" }
   };
 
-  game_server server;
+  const std::unordered_map<std::string, int> cod2_game_version_to_protocol{
+    { "1.0", 115 },
+    { "1.01", 115 },
+    { "1.2", 117 },
+    { "1.3", 118 }
+  };
+
+  auto_update_manager au;
+
   connection_manager rcon_connection_manager;
   connection_manager_for_messages cm_for_messages;
   std::queue<command_t> command_queue{};
   std::queue<message_t> message_queue{};
 
+  // std::vector<game_server> rcon_game_servers;
+  // std::vector<game_server> game_servers;
+
   std::vector<std::shared_ptr<tiny_rcon_client_user>> users;
-  std::unordered_set<std::string> seen_inform_messages;
+  // std::unordered_set<std::string> seen_inform_messages;
   std::unordered_map<std::string, std::shared_ptr<tiny_rcon_client_user>> name_to_user;
   std::unordered_map<std::string, bool> is_user_data_received;
 
@@ -113,201 +202,455 @@ class tiny_rcon_client_application
   std::unordered_map<std::string, std::function<void(const std::vector<std::string> &)>> command_handlers;
   std::unordered_map<std::string, std::function<void(const std::string &, const time_t, const std::string &, const bool)>> message_handlers;
 
-  std::shared_ptr<tiny_rcon_client_user> current_user{ nullptr };
-
-  std::string program_title{ "Welcome to TinyRcon client" };
-  std::string user_ip_address;
-  std::string current_working_directory;
-  std::string tinyrcon_config_file_path{ "config\\tinyrcon.json" };
-  std::string user_data_file_path{ "data\\user.txt" };
-  std::string temp_bans_file_path{ "data\\tempbans.txt" };
-  std::string ip_bans_file_path{ "data\\bans.txt" };
-  std::string ip_range_bans_file_path{ "data\\ip_range_bans.txt" };
-  std::string banned_countries_file_path{ "data\\banned_countries.txt" };
-  std::string banned_cities_file_path{ "data\\banned_cities.txt" };
-  std::string protected_ip_addresses_file_path{ "data\\protected_ip_addresses.txt" };
-  std::string protected_ip_address_ranges_file_path{ "data\\protected_ip_address_ranges.txt" };
-  std::string protected_cities_file_path{ "data\\protected_cities.txt" };
-  std::string protected_countries_file_path{ "data\\protected_countries.txt" };
-  std::string ftp_download_site_ip_address{ "85.222.189.119" };
-  std::string ftp_download_folder_path{ "tinyrcon" };
-  std::string ftp_download_file_pattern{ R"(^_U_TinyRcon[\._-]?v?(\d{1,2}\.\d{1,2}\.\d{1,2}\.\d{1,2})\.exe$)" };
-  std::string plugins_geoIP_geo_dat_md5;
-  std::ofstream log_file;
-  // std::mutex user_data_mutex{};
-  std::mutex command_mutex{};
-  std::recursive_mutex command_queue_mutex{};
-  std::recursive_mutex message_queue_mutex{};
-  std::string tiny_rcon_ftp_server_username{ "tinyrcon" };
-  std::string tiny_rcon_ftp_server_password{ "08021980" };
-  std::string tiny_rcon_server_ip_address{
-    "85.222.189.119"
-  };
-  uint_least16_t tiny_rcon_server_port{ 27015 };
-
+  // std::shared_ptr<tiny_rcon_client_user> current_user{ nullptr };
+  static constexpr size_t max_game_servers_size{ 4096 };
+  std::array<game_server, max_game_servers_size> game_servers;
 
 public:
   tiny_rcon_client_application() = default;
+
   ~tiny_rcon_client_application() = default;
 
-  bool get_is_disable_automatic_kick_messages() const noexcept
+  bool get_is_disable_automatic_kick_messages() const
   {
     return is_disable_automatic_kick_messages;
   }
 
-  void set_is_disable_automatic_kick_messages(const bool new_value) noexcept
+  void set_is_disable_automatic_kick_messages(const bool new_value)
   {
     is_disable_automatic_kick_messages = new_value;
   }
 
-  bool get_is_use_original_admin_messages() const noexcept
+  bool get_is_use_original_admin_messages() const
   {
     return is_use_original_admin_messages;
   }
 
-  void set_is_use_original_admin_messages(const bool new_value) noexcept
+  void set_is_use_original_admin_messages(const bool new_value)
   {
     is_use_original_admin_messages = new_value;
   }
 
-  bool get_is_ftp_server_online() const noexcept
+  bool get_is_ftp_server_online() const
   {
     return is_ftp_server_online;
   }
 
-  void set_is_ftp_server_online(const bool new_value) noexcept
+  void set_is_ftp_server_online(const bool new_value)
   {
     is_ftp_server_online = new_value;
   }
 
-  inline game_name_t get_game_name() const noexcept
+  bool get_is_installed_cod2_game_steam_version() const
+  {
+    return is_installed_cod2_game_steam_version;
+  }
+
+  void set_is_installed_cod2_game_steam_version(const bool new_value)
+  {
+    is_installed_cod2_game_steam_version = new_value;
+  }
+
+  void set_is_connection_settings_valid(const bool new_value)
+  {
+    is_connection_settings_valid = new_value;
+  }
+
+  bool get_is_connection_settings_valid() const
+  {
+    return is_connection_settings_valid;
+  }
+
+  bool get_is_enable_automatic_connection_flood_ip_ban() const
+  {
+    return is_enable_automatic_connection_flood_ip_ban;
+  }
+
+  void set_is_enable_automatic_connection_flood_ip_ban(const bool new_value)
+  {
+    is_enable_automatic_connection_flood_ip_ban = new_value;
+  }
+
+  bool get_is_automatic_city_kick_enabled() const
+  {
+    return is_automatic_city_kick_enabled;
+  }
+
+  void set_is_automatic_city_kick_enabled(const bool new_value)
+  {
+    is_automatic_city_kick_enabled = new_value;
+  }
+
+  bool get_is_automatic_country_kick_enabled() const
+  {
+    return is_automatic_country_kick_enabled;
+  }
+
+  void set_is_automatic_country_kick_enabled(const bool new_value)
+  {
+    is_automatic_country_kick_enabled = new_value;
+  }
+
+  bool get_is_use_different_background_colors_for_even_and_odd_lines() const
+  {
+    return is_use_different_background_colors_for_even_and_odd_lines;
+  }
+
+  void set_is_use_different_background_colors_for_even_and_odd_lines(const bool new_value)
+  {
+    is_use_different_background_colors_for_even_and_odd_lines = new_value;
+  }
+
+  bool get_is_use_different_foreground_colors_for_even_and_odd_lines() const
+  {
+    return is_use_different_foreground_colors_for_even_and_odd_lines;
+  }
+
+  void set_is_use_different_foreground_colors_for_even_and_odd_lines(const bool new_value)
+  {
+    is_use_different_foreground_colors_for_even_and_odd_lines = new_value;
+  }
+
+  inline game_name_t get_game_name() const
   {
     return game_name;
   }
 
-  inline void set_game_name(const game_name_t new_game_name) noexcept
+  inline void set_game_name(const game_name_t new_game_name)
   {
     game_name = new_game_name;
   }
 
-  inline std::condition_variable &get_command_queue_cv() noexcept
+  inline std::condition_variable &get_command_queue_cv()
   {
     return command_queue_cv;
   }
 
-  inline std::mutex &get_command_queue_mutex() noexcept
+  inline std::mutex &get_command_queue_mutex()
   {
     return command_mutex;
   }
 
-  inline const string &get_username() const noexcept
+  inline const string &get_username() const
   {
     return username;
   }
 
-  inline void set_username(string new_value) noexcept
+  inline void set_username(string new_value)
   {
     remove_disallowed_character_in_string(new_value);
     username = std::move(new_value);
   }
 
-  inline const string &get_game_server_name() const noexcept
+  inline const string &get_game_server_name() const
   {
     return game_server_name;
   }
 
-  inline void set_game_server_name(string new_value) noexcept
+  inline void set_game_server_name(string new_value)
   {
     game_server_name = std::move(new_value);
   }
 
-  inline const string &get_codmp_exe_path() const noexcept
+  inline const string &get_codmp_exe_path()
   {
+    if (!check_if_file_path_exists(codmp_exe_path.c_str())) {
+      codmp_exe_path = find_call_of_duty_1_installation_path(false);
+    }
     return codmp_exe_path;
   }
 
-  inline void set_codmp_exe_path(string new_value) noexcept
+  inline void set_codmp_exe_path(string new_value)
   {
     codmp_exe_path = std::move(new_value);
   }
 
-  inline const string &get_cod2mp_exe_path() const noexcept
+  inline const string &get_cod2mp_exe_path()
   {
+    if (!check_if_file_path_exists(cod2mp_s_exe_path.c_str())) {
+      cod2mp_s_exe_path = find_call_of_duty_2_installation_path(false);
+    }
     return cod2mp_s_exe_path;
   }
 
-  inline void set_cod2mp_exe_path(string new_value) noexcept
+  inline void set_cod2mp_exe_path(string new_value)
   {
     cod2mp_s_exe_path = std::move(new_value);
   }
 
-  inline const string &get_iw3mp_exe_path() const noexcept
+  inline const string &get_iw3mp_exe_path()
   {
+    if (!check_if_file_path_exists(iw3mp_exe_path.c_str())) {
+      iw3mp_exe_path = find_call_of_duty_4_installation_path(false);
+    }
     return iw3mp_exe_path;
   }
 
-  inline void set_iw3mp_exe_path(string new_value) noexcept
+  inline void set_iw3mp_exe_path(string new_value)
   {
     iw3mp_exe_path = std::move(new_value);
   }
 
-  inline const string &get_cod5mp_exe_path() const noexcept
+  inline const string &get_cod5mp_exe_path()
   {
+    if (!check_if_file_path_exists(cod5mp_exe_path.c_str())) {
+      cod5mp_exe_path = find_call_of_duty_5_installation_path(false);
+    }
     return cod5mp_exe_path;
   }
 
-  inline void set_cod5mp_exe_path(string new_value) noexcept
+  inline void set_cod5mp_exe_path(string new_value)
   {
     cod5mp_exe_path = std::move(new_value);
   }
 
 
-  inline void set_command_line_info(string new_value) noexcept
+  inline void set_command_line_info(string new_value)
   {
     command_line_info = std::move(new_value);
   }
 
-  inline connection_manager &get_connection_manager() noexcept
+  inline connection_manager &get_connection_manager()
   {
     return rcon_connection_manager;
   }
 
-  inline connection_manager_for_messages &get_connection_manager_for_messages() noexcept
+  inline connection_manager_for_messages &get_connection_manager_for_messages()
   {
     return cm_for_messages;
   }
 
-  inline game_server &get_game_server() noexcept { return server; }
+  inline auto_update_manager &get_auto_update_manager()
+  {
+    return au;
+  }
+
+  inline size_t get_game_servers_count() const
+  {
+    return game_servers_count;
+  }
+
+  inline void set_game_servers_count(const size_t new_value)
+  {
+    if (new_value < max_game_servers_size)
+      game_servers_count = new_value;
+  }
+
+  inline size_t get_rcon_game_servers_count() const
+  {
+    return rcon_game_servers_count;
+  }
+
+  inline void set_rcon_game_servers_count(const size_t new_value)
+  {
+    rcon_game_servers_count = new_value <= game_servers.size() ? new_value : 0;
+  }
+
+  /*inline size_t get_rcon_server_index() const
+  {
+    return rcon_server_index;
+  }
+
+  void set_rcon_server_index(const size_t new_rcon_server_index)
+  {
+    if (new_rcon_server_index < rcon_game_servers.size())
+      rcon_server_index = new_rcon_server_index;
+  }*/
+
+  inline size_t get_game_server_index() const
+  {
+    return game_server_index;
+  }
+
+  void set_game_server_index(const size_t new_server_index)
+  {
+    if (new_server_index < game_servers_count)
+      game_server_index = new_server_index;
+  }
+
+  //   uint64_t previous_downloaded_data_in_bytes{};
+  inline uint64_t get_previous_downloaded_data_in_bytes() const
+  {
+    return previous_downloaded_data_in_bytes.load();
+  }
+
+  void set_previous_downloaded_data_in_bytes(const size_t new_value)
+  {
+    previous_downloaded_data_in_bytes.store(new_value);
+  }
+
+  // uint64_t previous_uploaded_data_in_bytes{};
+  inline uint64_t get_previous_uploaded_data_in_bytes() const
+  {
+    return previous_uploaded_data_in_bytes.load();
+  }
+
+  void set_previous_uploaded_data_in_bytes(const size_t new_value)
+  {
+    previous_uploaded_data_in_bytes.store(new_value);
+  }
+
+
+  //   uint64_t next_downloaded_data_in_bytes{};
+  inline uint64_t get_next_downloaded_data_in_bytes() const
+  {
+    return next_downloaded_data_in_bytes.load();
+  }
+
+  void add_to_next_downloaded_data_in_bytes(const size_t value)
+  {
+    next_downloaded_data_in_bytes.fetch_add(value);
+  }
+
+  // uint64_t next_uploaded_data_in_bytes{};
+  inline uint64_t get_next_uploaded_data_in_bytes() const
+  {
+    return next_uploaded_data_in_bytes.load();
+  }
+
+  void add_to_next_uploaded_data_in_bytes(const size_t value)
+  {
+    next_uploaded_data_in_bytes.fetch_add(value);
+  }
+
+  void update_download_and_upload_speed_statistics()
+  {
+    static constexpr uint64_t one_gigabyte{ 1024U * 1024U * 1024U };
+    static constexpr uint64_t one_megabyte{ 1024U * 1024U };
+    static constexpr uint64_t one_kilobyte{ 1024U };
+    static auto last_time_stamp = std::chrono::high_resolution_clock::now();
+
+    const auto now_time_stamp = std::chrono::high_resolution_clock::now();
+    const double elapsed_time_interval_in_seconds = static_cast<double>(std::chrono::duration<double, std::milli>{ now_time_stamp - last_time_stamp }.count()) / 1000.0;
+
+    uint64_t uploaded_gigabytes{}, uploaded_megabytes{}, uploaded_kilobytes{};
+    const uint64_t uploaded_bytes = next_uploaded_data_in_bytes.load();
+    std::ostringstream oss_ua;
+
+    if (uploaded_bytes >= one_gigabyte) {
+      oss_ua << std::format("^1{:.2f} GB", static_cast<double>(uploaded_bytes) / one_gigabyte);
+    } else if (uploaded_bytes >= one_megabyte) {
+      oss_ua << std::format("^1{:.2f} MB", static_cast<double>(uploaded_bytes) / one_megabyte);
+    } else if (uploaded_bytes >= one_kilobyte) {
+      oss_ua << std::format("^1{:.2f} kB", static_cast<double>(uploaded_bytes) / one_kilobyte);
+    } else {
+      oss_ua << std::format("^1{} bytes", uploaded_bytes);
+    }
+
+    uploaded_gigabytes = uploaded_megabytes = uploaded_kilobytes = 0ULL;
+    const uint64_t uploaded_bytes_diff = static_cast<uint64_t>((next_uploaded_data_in_bytes.load() - previous_uploaded_data_in_bytes.load()) / elapsed_time_interval_in_seconds);
+    std::ostringstream oss_us;
+    oss_us << "^3Upload speed: ";
+
+    if (uploaded_bytes_diff >= one_gigabyte) {
+      oss_us << std::format("^1{:.2f} GB", static_cast<double>(uploaded_bytes_diff) / one_gigabyte);
+    } else if (uploaded_bytes_diff >= one_megabyte) {
+      oss_us << std::format("^1{:.2f} MB", static_cast<double>(uploaded_bytes_diff) / one_megabyte);
+    } else if (uploaded_bytes_diff >= one_kilobyte) {
+      oss_us << std::format("^1{:.2f} kB", static_cast<double>(uploaded_bytes_diff) / one_kilobyte);
+    } else {
+      oss_us << std::format("^1{} bytes", uploaded_bytes_diff);
+    }
+
+    oss_us << " ^3Total: " << oss_ua.str();
+    const string upload_speed_message{ oss_us.str() };
+    /*SetWindowTextA(app_handles.hwnd_upload_speed_info, "");
+    print_colored_text(app_handles.hwnd_upload_speed_info, upload_speed_message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::no, true);
+    SendMessage(app_handles.hwnd_upload_speed_info, EM_SETSEL, 0, -1);
+    SendMessage(app_handles.hwnd_upload_speed_info, EM_SETFONTSIZE, (WPARAM)2, (LPARAM)NULL);*/
+
+    uint64_t downloaded_gigabytes{}, downloaded_megabytes{}, downloaded_kilobytes{};
+    const uint64_t downloaded_bytes = next_downloaded_data_in_bytes.load();
+    std::ostringstream oss_da;
+
+    if (downloaded_bytes >= one_gigabyte) {
+      oss_da << std::format("^1{:.2f} GB", static_cast<double>(downloaded_bytes) / one_gigabyte);
+    } else if (downloaded_bytes >= one_megabyte) {
+      oss_da << std::format("^1{:.2f} MB", static_cast<double>(downloaded_bytes) / one_megabyte);
+    } else if (downloaded_bytes >= one_kilobyte) {
+      oss_da << std::format("^1{:.2f} kB", static_cast<double>(downloaded_bytes) / one_kilobyte);
+    } else {
+      oss_da << std::format("^1{} bytes", downloaded_bytes);
+    }
+
+    downloaded_gigabytes = downloaded_megabytes = downloaded_kilobytes = 0ULL;
+    const uint64_t downloaded_bytes_diff = static_cast<uint64_t>((next_downloaded_data_in_bytes.load() - previous_downloaded_data_in_bytes.load()) / elapsed_time_interval_in_seconds);
+    std::ostringstream oss_ds;
+
+    oss_ds << "^2Download speed: ";
+
+    if (downloaded_bytes_diff >= one_gigabyte) {
+      oss_ds << std::format("^1{:.2f} GB", static_cast<double>(downloaded_bytes_diff) / one_gigabyte);
+    } else if (downloaded_bytes_diff >= one_megabyte) {
+      oss_ds << std::format("^1{:.2f} MB", static_cast<double>(downloaded_bytes_diff) / one_megabyte);
+    } else if (downloaded_bytes_diff >= one_kilobyte) {
+      oss_ds << std::format("^1{:.2f} kB", static_cast<double>(downloaded_bytes_diff) / one_kilobyte);
+    } else {
+      oss_ds << std::format("^1{} bytes", downloaded_bytes_diff);
+    }
+
+    oss_ds << " ^2Total: " << oss_da.str();
+    const string download_speed_message{ oss_ds.str() };
+    /*SetWindowTextA(app_handles.hwnd_download_speed_info, "");
+    print_colored_text(app_handles.hwnd_download_speed_info, download_speed_message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::no, true);
+    SendMessage(app_handles.hwnd_download_speed_info, EM_SETSEL, 0, -1);
+    SendMessage(app_handles.hwnd_download_speed_info, EM_SETFONTSIZE, (WPARAM)2, (LPARAM)NULL);*/
+    const string speed_message{ format("{} ^5| {}", oss_ds.str(), oss_us.str()) };
+    SetWindowTextA(app_handles.hwnd_upload_speed_info, "");
+    print_colored_text(app_handles.hwnd_upload_speed_info, speed_message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::no, true);
+    /*SendMessage(app_handles.hwnd_upload_speed_info, EM_SETSEL, 0, -1);
+    SendMessage(app_handles.hwnd_upload_speed_info, EM_SETFONTSIZE, (WPARAM)2, (LPARAM)NULL);*/
+
+    previous_uploaded_data_in_bytes.store(next_uploaded_data_in_bytes.load());
+    previous_downloaded_data_in_bytes.store(next_downloaded_data_in_bytes.load());
+    last_time_stamp = now_time_stamp;
+  }
+
+  inline game_server &get_current_game_server()
+  {
+    if (game_server_index >= game_servers_count)
+      game_server_index = 0U;
+
+    return game_servers[game_server_index];
+  }
+
+  inline std::array<game_server, max_game_servers_size> &get_game_servers() { return game_servers; }
+  // inline std::vector<game_server> &get_rcon_game_servers() { return rcon_game_servers; }
 
   inline std::unordered_map<std::string, std::string> &
-    get_admin_messages() noexcept
+    get_admin_messages()
   {
     return admin_messages;
   }
 
-  inline const std::string &get_program_title() const noexcept
+  inline const std::string &get_program_title() const
   {
     return program_title;
   }
 
-  inline void set_program_title(std::string new_program_title) noexcept
+  inline void set_program_title(std::string new_program_title)
   {
     program_title = std::move(new_program_title);
   }
 
-  inline const std::string &get_user_ip_address() const noexcept
+  inline const std::string &get_user_ip_address() const
   {
     return user_ip_address;
   }
 
-  inline void set_user_ip_address(std::string new_user_ip_address) noexcept
+  inline void set_user_ip_address(std::string new_user_ip_address)
   {
     user_ip_address = std::move(new_user_ip_address);
   }
 
-  std::unordered_set<std::string> &get_already_seen_messages() noexcept
+  /*std::unordered_set<std::string> &get_already_seen_messages()
   {
     return seen_inform_messages;
+  }*/
+
+  const std::unordered_map<std::string, int> &get_cod2_game_version_to_protocol()
+  {
+    return cod2_game_version_to_protocol;
   }
 
   std::unordered_map<std::string, std::shared_ptr<tiny_rcon_client_user>> &get_name_to_user()
@@ -378,15 +721,15 @@ public:
     return name_to_user.at(cleaned_name);
   }
 
-  std::shared_ptr<tiny_rcon_client_user> &get_current_user() noexcept
+  /*std::shared_ptr<tiny_rcon_client_user> &get_current_user()
   {
     if (!current_user)
       current_user = get_user_for_name(get_username(), get_user_ip_address());
 
     return current_user;
-  }
+  }*/
 
-  std::unordered_map<std::string, std::string> &get_tinyrcon_dict() noexcept
+  std::unordered_map<std::string, std::string> &get_tinyrcon_dict()
   {
     return tinyrcon_dict;
   }
@@ -531,24 +874,24 @@ public:
     return admin_messages["user_defined_unprotect_country_message"];
   }
 
-  inline const char *get_game_title() noexcept
+  inline const char *get_game_title()
   {
     if (game_names.contains(game_name))
       return game_names.at(game_name).c_str();
     return "Unknown game";
   }
 
-  bool get_is_draw_border_lines() const noexcept
+  bool get_is_draw_border_lines() const
   {
     return is_draw_border_lines;
   }
 
-  void set_is_draw_border_lines(const bool new_value) noexcept
+  void set_is_draw_border_lines(const bool new_value)
   {
     is_draw_border_lines = new_value;
   }
 
-  const std::string &get_current_working_directory() const noexcept
+  const std::string &get_current_working_directory() const
   {
     return current_working_directory;
   }
@@ -584,143 +927,438 @@ public:
     protected_countries_file_path.assign(format("{}{}", current_working_directory, protected_countries_file_path));
   }
 
-  const char *get_tinyrcon_config_file_path() const noexcept
+  const char *get_tinyrcon_config_file_path() const
   {
     return tinyrcon_config_file_path.c_str();
   }
 
-  const char *get_user_data_file_path() const noexcept
+  const char *get_user_data_file_path() const
   {
     return user_data_file_path.c_str();
   }
 
-  const char *get_temp_bans_file_path() const noexcept
+  const char *get_temp_bans_file_path() const
   {
     return temp_bans_file_path.c_str();
   }
 
-  const char *get_ip_bans_file_path() const noexcept
+  const char *get_ip_bans_file_path() const
   {
     return ip_bans_file_path.c_str();
   }
 
-  const char *get_ip_range_bans_file_path() const noexcept
+  const char *get_ip_range_bans_file_path() const
   {
     return ip_range_bans_file_path.c_str();
   }
 
-  const char *get_banned_countries_file_path() const noexcept
+  const char *get_banned_countries_file_path() const
   {
     return banned_countries_file_path.c_str();
   }
 
-  const char *get_banned_cities_file_path() const noexcept
+  const char *get_banned_cities_file_path() const
   {
     return banned_cities_file_path.c_str();
   }
 
-  const char *get_protected_ip_addresses_file_path() const noexcept
+  const char *get_protected_ip_addresses_file_path() const
   {
     return protected_ip_addresses_file_path.c_str();
   }
 
-  const char *get_protected_ip_address_ranges_file_path() const noexcept
+  const char *get_protected_ip_address_ranges_file_path() const
   {
     return protected_ip_address_ranges_file_path.c_str();
   }
 
-  const char *get_protected_cities_file_path() const noexcept
+  const char *get_protected_cities_file_path() const
   {
     return protected_cities_file_path.c_str();
   }
 
-  const char *get_protected_countries_file_path() const noexcept
+  const char *get_protected_countries_file_path() const
   {
     return protected_countries_file_path.c_str();
   }
 
-  const std::string &get_tiny_rcon_ftp_server_username() const noexcept
+  const std::string &get_tiny_rcon_ftp_server_username() const
   {
     return tiny_rcon_ftp_server_username;
   }
 
-  void set_tiny_rcon_ftp_server_username(string new_tiny_rcon_ftp_server_username) noexcept
+  void set_tiny_rcon_ftp_server_username(string new_tiny_rcon_ftp_server_username)
   {
     tiny_rcon_ftp_server_username = std::move(new_tiny_rcon_ftp_server_username);
   }
 
-  const std::string &get_tiny_rcon_ftp_server_password() const noexcept
+  const std::string &get_tiny_rcon_ftp_server_password() const
   {
     return tiny_rcon_ftp_server_password;
   }
 
-  void set_tiny_rcon_ftp_server_password(string new_tiny_rcon_ftp_server_password) noexcept
+  void set_tiny_rcon_ftp_server_password(string new_tiny_rcon_ftp_server_password)
   {
     tiny_rcon_ftp_server_password = std::move(new_tiny_rcon_ftp_server_password);
   }
 
-  // tiny_rcon_server_ip_address
-  const std::string &get_tiny_rcon_server_ip_address() const noexcept
+  const std::string &get_tiny_rcon_server_ip_address() const
   {
     return tiny_rcon_server_ip_address;
   }
 
-  void set_tiny_rcon_server_ip_address(string new_tiny_rcon_server_ip_address) noexcept
+  void set_tiny_rcon_server_ip_address(string new_tiny_rcon_server_ip_address)
   {
     tiny_rcon_server_ip_address = std::move(new_tiny_rcon_server_ip_address);
   }
 
-  // tiny_rcon_server_port
-  uint_least16_t get_tiny_rcon_server_port() const noexcept
+  uint_least16_t get_tiny_rcon_server_port() const
   {
     return tiny_rcon_server_port;
   }
 
-  void set_tiny_rcon_server_port(const int new_tiny_rcon_server_port) noexcept
+  void set_tiny_rcon_server_port(const int new_tiny_rcon_server_port)
   {
     tiny_rcon_server_port = static_cast<uint_least16_t>(new_tiny_rcon_server_port);
   }
 
-  const std::string &get_ftp_download_site_ip_address() const noexcept
+  const std::string &get_game_version_number() const
+  {
+    return game_version_number;
+  }
+
+  void set_game_version_number(string new_game_version_number)
+  {
+    game_version_number = std::move(new_game_version_number);
+  }
+
+  const std::string &get_game_version_information() const
+  {
+    return game_version_information;
+  }
+
+  void set_game_version_information(string new_game_version_information)
+  {
+    game_version_information = std::move(new_game_version_information);
+  }
+
+  const std::string &get_cod2_master_server_ip_address() const
+  {
+    return cod2_master_server_ip_address;
+  }
+
+  void set_cod2_master_server_ip_address(string new_cod2_master_server_ip_address)
+  {
+    cod2_master_server_ip_address = std::move(new_cod2_master_server_ip_address);
+  }
+
+  uint_least16_t get_cod2_master_server_port() const
+  {
+    return cod2_master_server_port;
+  }
+
+  void set_cod2_master_server_port(const int new_cod2_master_server_port)
+  {
+    cod2_master_server_port = static_cast<uint_least16_t>(new_cod2_master_server_port);
+  }
+
+  const std::string &get_ftp_download_site_ip_address() const
   {
     return ftp_download_site_ip_address;
   }
 
-  void set_ftp_download_site_ip_address(string new_ftp_download_site) noexcept
+  void set_ftp_download_site_ip_address(string new_ftp_download_site)
   {
     ftp_download_site_ip_address = std::move(new_ftp_download_site);
   }
-  const std::string &get_ftp_download_folder_path() const noexcept
+  const std::string &get_ftp_download_folder_path() const
   {
     return ftp_download_folder_path;
   }
 
-  void set_ftp_download_folder_path(string new_ftp_download_folder_path) noexcept
+  void set_ftp_download_folder_path(string new_ftp_download_folder_path)
   {
     ftp_download_folder_path = std::move(new_ftp_download_folder_path);
   }
 
-  const std::string &get_ftp_download_file_pattern() const noexcept
+  const std::string &get_ftp_download_file_pattern() const
   {
     return ftp_download_file_pattern;
   }
 
-  void set_ftp_download_file_pattern(string new_ftp_download_file_pattern) noexcept
+  void set_ftp_download_file_pattern(string new_ftp_download_file_pattern)
   {
     ftp_download_file_pattern = std::move(new_ftp_download_file_pattern);
   }
 
-  const std::string &get_plugins_geoIP_geo_dat_md5() const noexcept
+  const std::string &get_plugins_geoIP_geo_dat_md5() const
   {
     return plugins_geoIP_geo_dat_md5;
   }
 
-  void set_plugins_geoIP_geo_dat_md5(string new_plugins_geoIP_geo_dat_md5) noexcept
+  void set_plugins_geoIP_geo_dat_md5(string new_plugins_geoIP_geo_dat_md5)
   {
     plugins_geoIP_geo_dat_md5 = std::move(new_plugins_geoIP_geo_dat_md5);
   }
 
-  bool open_log_file(const char *file_path) noexcept
+  const string &get_current_match_info() const
+  {
+    return current_match_info;
+  }
+
+  void set_current_match_info(string new_value)
+  {
+    current_match_info = std::move(new_value);
+  }
+
+  const string &get_full_map_name_color() const
+  {
+    return full_map_name_color;
+  }
+
+  void set_full_map_name_color(string new_value)
+  {
+    full_map_name_color = std::move(new_value);
+  }
+
+  const string &get_rcon_map_name_color() const
+  {
+    return rcon_map_name_color;
+  }
+
+  void set_rcon_map_name_color(string new_value)
+  {
+    rcon_map_name_color = std::move(new_value);
+  }
+
+  const string &get_full_gametype_name_color() const
+  {
+    return full_game_type_color;
+  }
+
+  void set_full_gametype_color(string new_value)
+  {
+    full_game_type_color = std::move(new_value);
+  }
+
+  const string &get_rcon_gametype_name_color() const
+  {
+    return rcon_game_type_color;
+  }
+
+  void set_rcon_gametype_color(string new_value)
+  {
+    rcon_game_type_color = std::move(new_value);
+  }
+
+  const string &get_online_players_count_color() const
+  {
+    return online_players_count_color;
+  }
+
+  void set_online_players_count_color(string new_value)
+  {
+    online_players_count_color = std::move(new_value);
+  }
+
+  const string &get_offline_players_count_color() const
+  {
+    return offline_players_count_color;
+  }
+
+  void set_offline_players_count_color(string new_value)
+  {
+    offline_players_count_color = std::move(new_value);
+  }
+
+  const string &get_border_line_color() const
+  {
+    return border_line_color;
+  }
+
+  void set_border_line_color(string new_value)
+  {
+    border_line_color = std::move(new_value);
+  }
+
+  const string &get_header_player_pid_color() const
+  {
+    return header_player_pid_color;
+  }
+
+  void set_header_player_pid_color(string new_value)
+  {
+    header_player_pid_color = std::move(new_value);
+  }
+
+  const string &get_data_player_pid_color() const
+  {
+    return data_player_pid_color;
+  }
+
+  void set_data_player_pid_color(string new_value)
+  {
+    data_player_pid_color = std::move(new_value);
+  }
+
+  const string &get_header_player_score_color() const
+  {
+    return header_player_score_color;
+  }
+
+  void set_header_player_score_color(string new_value)
+  {
+    header_player_score_color = std::move(new_value);
+  }
+
+  const string &get_data_player_score_color() const
+  {
+    return data_player_score_color;
+  }
+
+  void set_data_player_score_color(string new_value)
+  {
+    data_player_score_color = std::move(new_value);
+  }
+
+  const string &get_header_player_ping_color() const
+  {
+    return header_player_ping_color;
+  }
+
+  void set_header_player_ping_color(string new_value)
+  {
+    header_player_ping_color = std::move(new_value);
+  }
+
+  const string &get_data_player_ping_color() const
+  {
+    return data_player_ping_color;
+  }
+
+  void set_data_player_ping_color(string new_value)
+  {
+    data_player_ping_color = std::move(new_value);
+  }
+
+  const string &get_header_player_name_color() const
+  {
+    return header_player_name_color;
+  }
+
+  void set_header_player_name_color(string new_value)
+  {
+    header_player_name_color = std::move(new_value);
+  }
+
+  const string &get_header_player_ip_color() const
+  {
+    return header_player_ip_color;
+  }
+
+  void set_header_player_ip_color(string new_value)
+  {
+    header_player_ip_color = std::move(new_value);
+  }
+
+  const string &get_data_player_ip_color() const
+  {
+    return data_player_ip_color;
+  }
+
+  void set_data_player_ip_color(string new_value)
+  {
+    data_player_ip_color = std::move(new_value);
+  }
+
+  const string &get_header_player_geoinfo_color() const
+  {
+    return header_player_geoinfo_color;
+  }
+
+  void set_header_player_geoinfo_color(string new_value)
+  {
+    header_player_geoinfo_color = std::move(new_value);
+  }
+
+  const string &get_data_player_geoinfo_color() const
+  {
+    return data_player_geoinfo_color;
+  }
+
+  void set_data_player_geoinfo_color(string new_value)
+  {
+    data_player_geoinfo_color = std::move(new_value);
+  }
+
+  const string &get_odd_player_data_lines_bg_color() const
+  {
+    return odd_player_data_lines_bg_color;
+  }
+
+  void set_odd_player_data_lines_bg_color(string new_value)
+  {
+    odd_player_data_lines_bg_color = std::move(new_value);
+  }
+
+  const string &get_even_player_data_lines_bg_color() const
+  {
+    return even_player_data_lines_bg_color;
+  }
+
+  void set_even_player_data_lines_bg_color(string new_value)
+  {
+    even_player_data_lines_bg_color = std::move(new_value);
+  }
+
+  const string &get_odd_player_data_lines_fg_color() const
+  {
+    return odd_player_data_lines_fg_color;
+  }
+
+  void set_odd_player_data_lines_fg_color(string new_value)
+  {
+    odd_player_data_lines_fg_color = std::move(new_value);
+  }
+
+  const string &get_even_player_data_lines_fg_color() const
+  {
+    return even_player_data_lines_fg_color;
+  }
+
+  void set_even_player_data_lines_fg_color(string new_value)
+  {
+    even_player_data_lines_fg_color = std::move(new_value);
+  }
+
+  inline const std::string &get_server_message() const
+  {
+    return server_message;
+  }
+
+  inline void set_server_message(std::string new_value)
+  {
+    server_message = std::move(new_value);
+  }
+
+  void set_check_for_banned_players_time_period(size_t new_value)
+  {
+    if (new_value < 5 || new_value > 30) new_value = 5;
+
+    check_for_banned_players_time_period = new_value;
+  }
+
+  size_t get_check_for_banned_players_time_period() const
+  {
+    return check_for_banned_players_time_period;
+  }
+
+  unordered_map<string, size_t> &get_ip_address_frequency()
+  {
+    return ip_address_frequency;
+  }
+
+  bool open_log_file(const char *file_path)
   {
     if (log_file.is_open()) {
       log_file.flush();
@@ -793,7 +1431,7 @@ public:
     return next_message;
   }
 
-  const std::unordered_map<std::string, std::function<void(const std::vector<std::string> &)>> &get_command_handlers() const noexcept
+  const std::unordered_map<std::string, std::function<void(const std::vector<std::string> &)>> &get_command_handlers() const
   {
     return command_handlers;
   }
@@ -808,7 +1446,7 @@ public:
     command_handlers.emplace(std::move(command_names.back()), std::move(command_handler));
   }
 
-  std::pair<bool, const std::function<void(const std::vector<std::string> &)> &> get_command_handler(const std::string &command_name) const noexcept
+  std::pair<bool, const std::function<void(const std::vector<std::string> &)> &> get_command_handler(const std::string &command_name) const
   {
     static std::function<void(const std::vector<std::string> &)> unknown_command_handler{
       [](const std::vector<std::string> &) {}
@@ -819,7 +1457,7 @@ public:
     return make_pair(false, unknown_command_handler);
   }
 
-  const std::unordered_map<std::string, std::function<void(const std::string &, const time_t, const std::string &, const bool)>> &get_message_handlers() const noexcept
+  const std::unordered_map<std::string, std::function<void(const std::string &, const time_t, const std::string &, const bool)>> &get_message_handlers() const
   {
     return message_handlers;
   }
@@ -829,7 +1467,7 @@ public:
     message_handlers.emplace(std::move(message_name), std::move(message_handler));
   }
 
-  const std::function<void(const std::string &, const time_t, const std::string &, const bool)> &get_message_handler(const std::string &message_name) const noexcept
+  const std::function<void(const std::string &, const time_t, const std::string &, const bool)> &get_message_handler(const std::string &message_name) const
   {
     static std::function<void(const std::string &, const time_t, const std::string &, const bool)> unknown_message_handler{
       [](const std::string &, const time_t, const std::string &, const bool) {}
@@ -838,5 +1476,10 @@ public:
     if (message_handlers.contains(message_name))
       return message_handlers.at(message_name);
     return unknown_message_handler;
+  }
+
+  [[nodiscard]] map<string, string> &get_server_settings()
+  {
+    return server_settings;
   }
 };

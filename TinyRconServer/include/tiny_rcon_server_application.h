@@ -14,6 +14,7 @@
 #include "connection_manager_for_messages.h"
 #include "game_server.h"
 #include "tiny_rcon_client_user.h"
+#include "daily_tinyrcon_activities.h"
 
 
 #undef max
@@ -80,7 +81,7 @@ class tiny_rcon_server_application
     { "{REASON}", "not specified" }
   };
 
-  std::unordered_set<std::string> sent_rcon_public_messages;
+  std::unordered_map<std::string, time_t> sent_rcon_public_messages;
   std::unordered_map<std::string, bool> is_user_data_received;
   std::unordered_map<std::string, std::function<void(const std::vector<std::string> &)>> command_handlers;
   std::unordered_map<std::string, std::function<void(const std::string &, time_t, const std::string &, const bool, const string &)>> message_handlers;
@@ -117,6 +118,7 @@ class tiny_rcon_server_application
   std::string tiny_rcon_ftp_server_password;
   std::string tiny_rcon_server_ip_address;
   int tiny_rcon_server_port{};
+  tinyrcon_activities_stats tinyrcon_stats_data;
 
 
 public:
@@ -233,9 +235,9 @@ public:
     player pd{};
     convert_guid_key_to_country_name(cm_for_messages.get_geoip_data(), ip_address, pd);
 
-    if (name.find("Admin") != string::npos) {
+    /*if (name.find("Admin") != string::npos) {
       cleaned_name += std::format("_{}", pd.country_name);
-    }
+    }*/
 
     if (!name_to_user.contains(cleaned_name)) {
       users.emplace_back(std::make_shared<tiny_rcon_client_user>());
@@ -380,22 +382,6 @@ public:
     removed_ip_range_bans_file_path.assign(format("{}{}", current_working_directory, removed_ip_range_bans_file_path));
     removed_banned_countries_file_path.assign(format("{}{}", current_working_directory, removed_banned_countries_file_path));
     removed_banned_cities_file_path.assign(format("{}{}", current_working_directory, removed_banned_cities_file_path));
-
-    std::string temp_bans_file_path{ "data\\tempbans.txt" };
-    std::string removed_temp_bans_file_path{ "data\\removed_tempbans.txt" };
-    std::string ip_bans_file_path{ "data\\bans.txt" };
-    std::string removed_bans_file_path{ "data\\removed_bans.txt" };
-    std::string ip_range_bans_file_path{ "data\\ip_range_bans.txt" };
-    std::string removed_ip_range_bans_file_path{ "data\\removed_ip_range_bans.txt" };
-    std::string banned_cities_file_path{ "data\\banned_cities.txt" };
-    std::string removed_banned_cities_file_path{ "data\\removed_banned_cities.txt" };
-    std::string banned_countries_file_path{ "data\\banned_countries.txt" };
-    std::string removed_banned_countries_file_path{ "data\\removed_banned_countries.txt" };
-    std::string protected_ip_addresses_file_path{ "data\\protected_ip_addresses.txt" };
-    std::string protected_ip_address_ranges_file_path{ "data\\protected_ip_address_ranges.txt" };
-    std::string protected_cities_file_path{ "data\\protected_cities.txt" };
-    std::string protected_countries_file_path{ "data\\protected_countries.txt" };
-    std::string users_data_file_path{ "data\\users.txt" };
   }
 
   const char *get_tinyrcon_config_file_path() const noexcept
@@ -682,7 +668,7 @@ public:
     return unknown_message_handler;
   }
 
-  std::unordered_set<std::string> &get_sent_rcon_public_messages() noexcept
+  std::unordered_map<std::string, time_t> &get_sent_rcon_public_messages() noexcept
   {
     return sent_rcon_public_messages;
   }
@@ -720,4 +706,6 @@ public:
 
     is_user_data_received[cleaned_name] = true;
   }
+
+  tinyrcon_activities_stats &get_tinyrcon_stats_data() noexcept { return tinyrcon_stats_data; }
 };

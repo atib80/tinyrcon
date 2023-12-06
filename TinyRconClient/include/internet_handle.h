@@ -15,30 +15,30 @@ public:
   internet_handle(internet_handle &&rhs) noexcept
   {
     handle = std::move(rhs.handle);
-    rhs.handle = NULL;
+    rhs.handle = nullptr;
   }
 
   internet_handle &operator=(internet_handle &&rhs) noexcept
   {
-    if (NULL != handle) {
+    if (nullptr != handle) {
       InternetCloseHandle(handle);
     }
     handle = std::move(rhs.handle);
-    rhs.handle = NULL;
+    rhs.handle = nullptr;
     return *this;
   }
 
   ~internet_handle() noexcept
   {
-    if (NULL != handle) {
+    if (nullptr != handle) {
       InternetCloseHandle(handle);
-      handle = NULL;
+      handle = nullptr;
     }
   }
 
   explicit operator bool() const noexcept
   {
-    return handle != NULL;
+    return handle != nullptr;
   }
 
   const HINTERNET &get() const noexcept
@@ -48,7 +48,7 @@ public:
 
   void set(HINTERNET &&new_handle) noexcept
   {
-    if (handle != NULL)
+    if (handle != nullptr)
       InternetCloseHandle(handle);
     handle = std::move(new_handle);
   }
@@ -56,9 +56,9 @@ public:
 private:
   void close() noexcept
   {
-    if (NULL != handle) {
+    if (nullptr != handle) {
       InternetCloseHandle(handle);
-      handle = NULL;
+      handle = nullptr;
     }
   }
 };

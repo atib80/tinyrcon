@@ -7,6 +7,7 @@
 #include <cstring>
 #include <memory>
 #include "md5.h"
+#include "tiny_rcon_client_application.h"
 
 #pragma comment(lib, "urlmon.lib")
 #pragma comment(lib, "Version.lib")
@@ -19,6 +20,117 @@ extern PROCESS_INFORMATION pr_info;
 using namespace std;
 
 #define SELF_REMOVE_STRING TEXT("cmd.exe /C ping 1.1.1.1 -n 1 -w 3000 > nul & del /f /q \"%s\"")
+
+class MyCallback : public IBindStatusCallback
+{
+  tiny_rcon_client_application &main_app;
+  tiny_rcon_handles &app_handles;
+  std::string file_name_;
+  ULONG previous_available_data{};
+
+public:
+  MyCallback(tiny_rcon_client_application &main_app, tiny_rcon_handles &app_handles) : main_app{ main_app },
+                                                                                       app_handles{ app_handles }, previous_available_data{} {}
+  ~MyCallback() = default;
+
+  void set_file_name(std::string file_name)
+  {
+    file_name_ = std::move(file_name);
+  }
+
+
+  // This one is called by URLDownloadToFile
+  // STDMETHOD(OnProgress)
+  //(/* [in] */ ULONG ulProgress, /* [in] */ ULONG ulProgressMax, /* [in] */ ULONG ulStatusCode, /* [in] */ LPCWSTR)
+  //{
+  //  // You can use your own logging function here
+  //  wprintf(L"Downloaded %d of %d. Status code %d\n", ulProgress, ulProgressMax, ulStatusCode);
+  //  return S_OK;
+  //}
+
+  // This one is called by URLDownloadToFile
+  STDMETHOD(OnProgress)
+  (/* [in] */ ULONG ulProgress, /* [in] */ ULONG ulProgressMax, /* [in] */ ULONG /*ulStatusCode*/, /* [in] */ LPCWSTR szStatusText)
+  //{
+  {
+    // wcout << ulProgress << L" of " << ulProgressMax << endl; Sleep(200);
+    if (ulProgress != 0 && ulProgressMax != 0) {
+      main_app.add_to_next_downloaded_data_in_bytes(ulProgress - previous_available_data);
+      // main_app.update_download_and_upload_speed_statistics();
+      const double output{ (double(ulProgress) / ulProgressMax) * 100 };
+      previous_available_data = ulProgress;
+      const std::string status_text{ wstring_to_string(szStatusText) };
+      const std::string info_message{ std::format("Downloading file {} ... {:.2f}% (status: {})", file_name_, output, status_text) };
+      append_to_title(app_handles.hwnd_main_window, info_message);
+      Sleep(20);
+    }
+    return S_OK;
+  }
+
+  STDMETHOD(OnStartBinding)
+  (/* [in] */ DWORD, /* [in] */ IBinding __RPC_FAR *)
+  {
+    return E_NOTIMPL;
+  }
+
+  STDMETHOD(GetPriority)
+  (/* [out] */ LONG __RPC_FAR *)
+  {
+    return E_NOTIMPL;
+  }
+
+  STDMETHOD(OnLowResource)
+  (/* [in] */ DWORD)
+  {
+    return E_NOTIMPL;
+  }
+
+  STDMETHOD(OnStopBinding)
+  (/* [in] */ HRESULT, /* [unique][in] */ LPCWSTR)
+  {
+    return E_NOTIMPL;
+  }
+
+  STDMETHOD(GetBindInfo)
+  (/* [out] */ DWORD __RPC_FAR *, /* [unique][out][in] */ BINDINFO __RPC_FAR *)
+  {
+    return E_NOTIMPL;
+  }
+
+  STDMETHOD(OnDataAvailable)
+  (DWORD /*grfBSCF*/,
+    DWORD /*dwSize*/,
+    FORMATETC * /*pformatetc*/,
+    STGMEDIUM * /*pstgmed*/)
+  {
+    return E_NOTIMPL;
+  }
+
+  STDMETHOD(OnObjectAvailable)
+  (/* [in] */ REFIID, /* [iid_is][in] */ IUnknown __RPC_FAR *)
+  {
+    return E_NOTIMPL;
+  }
+
+  // IUnknown stuff
+  STDMETHOD_(ULONG, AddRef)
+  ()
+  {
+    return 0;
+  }
+
+  STDMETHOD_(ULONG, Release)
+  ()
+  {
+    return 0;
+  }
+
+  STDMETHOD(QueryInterface)
+  (/* [in] */ REFIID, /* [iid_is][out] */ void __RPC_FAR *__RPC_FAR *)
+  {
+    return E_NOTIMPL;
+  }
+};
 
 void delete_me()
 {
@@ -40,210 +152,7 @@ std::string get_file_name_from_path(const std::string &file_path)
   return file_path.substr(slash_pos + 1);
 }
 
-auto_update_manager::auto_update_manager()
-{
-  char exe_file_path[MAX_PATH];
-
-  if (GetModuleFileNameA(nullptr, exe_file_path, MAX_PATH)) {
-
-    string exe_file_path_str{ exe_file_path };
-    set_self_current_working_directory({ exe_file_path_str.cbegin(), exe_file_path_str.cbegin() + exe_file_path_str.rfind('\\') + 1 });
-    set_self_full_path(std::move(exe_file_path_str));
-    set_self_file_name(get_file_name_from_path(exe_file_path));
-
-    version_data ver{};
-    unsigned long version_number{};
-    if (get_file_version(exe_file_path, ver, version_number))
-      current_version_number = version_number;
-
-    replace_temporary_version();
-
-    if (is_current_instance_temporary_version)
-      return;
-
-    const string ftp_download_site_info{ "ftp://"s + main_app.get_ftp_download_site_ip_address() + (!main_app.get_ftp_download_folder_path().empty() ? "/"s + main_app.get_ftp_download_folder_path() + "/"s : "/"s) };
-
-    std::snprintf(message_buffer, std::size(message_buffer), "^3Searching for updates at ^1%s\n", ftp_download_site_info.c_str());
-    print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-
-    internet_connection_handles threadParam;
-    threadParam.internet_open_handle.set(InternetOpenA("tinyrcon", INTERNET_OPEN_TYPE_DIRECT, nullptr, nullptr, 0));
-    if (NULL != threadParam.internet_open_handle.get()) {
-
-      // Create a worker thread
-      HANDLE hThread{};
-      DWORD dwThreadID{};
-      DWORD dwExitCode{};
-      DWORD dwTimeout{ 1000 };// 1s for timeout delay
-
-      hThread = CreateThread(
-        nullptr,// Pointer to thread security attributes
-        0,// Initial thread stack size, in bytes
-        worker_function1,// Pointer to thread function
-        &threadParam,// The argument for the new thread
-        0,// Creation flags
-        &dwThreadID// Pointer to returned thread identifier
-      );
-
-      if (0 != hThread) {
-
-        // Wait for the call to InternetConnect in worker function to complete
-        if (WaitForSingleObject(hThread, dwTimeout) == WAIT_TIMEOUT) {
-          main_app.set_is_ftp_server_online(false);
-          snprintf(message_buffer, std::size(message_buffer), "^3Could not connect to ^5%s ^3to check for ^5Tiny^6Rcon ^3updates!\n ^5The FTP download site ^3might be offline at the moment. ^2Please, try again later.\n", ftp_download_site_info.c_str());
-          print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-          // Wait until the worker thread exits
-          WaitForSingleObject(hThread, INFINITE);
-          GetExitCodeThread(hThread, &dwExitCode);
-          CloseHandle(hThread);
-          if (dwExitCode)
-            return;
-        }
-      }
-
-
-      if (NULL != threadParam.internet_connect_handle.get()) {
-
-        string ftp_download_folder_path{
-          main_app.get_ftp_download_folder_path()
-        };
-
-        if (!ftp_download_folder_path.empty() && ftp_download_folder_path.front() != '/')
-          ftp_download_folder_path.insert(0, 1, '/');
-
-        if (ftp_download_folder_path.back() != '/')
-          ftp_download_folder_path.push_back('/');
-
-        auto available_file_names = get_file_name_matches_for_specified_file_pattern(threadParam.internet_connect_handle, ftp_download_folder_path.c_str(), "_U_TinyRcon*.exe");
-
-        unsigned long max_version_number{ current_version_number };
-        regex version_number_regex{ R"((\d+\.\d+.\d+.\d+))" };
-
-        for (auto &ftp_download_file_name : available_file_names) {
-
-          smatch version_smatch_results{};
-          if (regex_search(ftp_download_file_name, version_smatch_results, version_number_regex)) {
-            version_number = version_data::get_version_number(version_smatch_results[1].str());
-            next_version_number_str = version_smatch_results[1].str();
-
-            if (version_number > max_version_number) {
-              next_version_number = max_version_number = version_number;
-              latest_version_to_download = std::move(ftp_download_file_name);
-            }
-          }
-        }
-
-        if (latest_version_to_download.empty()) {
-          snprintf(message_buffer, std::size(message_buffer), "^2There is no newer version of ^5Tiny^6Rcon ^2at ^5%s\n", ftp_download_site_info.c_str());
-          print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-        }
-
-        Sleep(20);
-
-        available_file_names = get_file_name_matches_for_specified_file_pattern(threadParam.internet_connect_handle, ftp_download_folder_path.c_str(), "geo-*.7z");
-        if (!available_file_names.empty()) {
-          const string new_geo_dat_file_name{ available_file_names[0] };
-          const string new_geo_dat_file_md5{ new_geo_dat_file_name.substr(4, new_geo_dat_file_name.length() - 7) };
-          const string current_geo_dat_file_md5 = [&]() {
-            if (main_app.get_plugins_geoIP_geo_dat_md5() != new_geo_dat_file_md5) {
-              const string geo_dat_file_path{ main_app.get_current_working_directory() + "plugins\\geoIP\\geo.dat" };
-              ifstream geo_dat_file(geo_dat_file_path.c_str(), std::ios::binary | std::ios::in);
-
-              if (!geo_dat_file)
-                return string{};
-
-              geo_dat_file.seekg(0, std::ios::end);
-              const size_t length{ static_cast<size_t>(geo_dat_file.tellg()) };
-              geo_dat_file.seekg(0, std::ios::beg);
-
-              unique_ptr<char[]> file_data{ make_unique<char[]>(length) };
-              geo_dat_file.read(file_data.get(), length);
-
-              main_app.set_plugins_geoIP_geo_dat_md5(md5(file_data.get(), length));
-            }
-
-            return main_app.get_plugins_geoIP_geo_dat_md5();
-          }();
-
-          if (current_geo_dat_file_md5 != new_geo_dat_file_md5) {
-            main_app.set_plugins_geoIP_geo_dat_md5(new_geo_dat_file_md5);
-            write_tiny_rcon_json_settings_to_file(main_app.get_tinyrcon_config_file_path());
-            const string seven_zip_dll_file_path{ self_current_working_directory + "7za.dll" };
-            if (!check_if_file_path_exists(seven_zip_dll_file_path.c_str())) {
-              Sleep(20);
-              available_file_names = get_file_name_matches_for_specified_file_pattern(threadParam.internet_connect_handle, ftp_download_folder_path.c_str(), "7za.dll");
-              if (!available_file_names.empty()) {
-                char download_url_buffer[256];
-                snprintf(download_url_buffer, 256, "ftp://%s/%s/7za.dll", main_app.get_ftp_download_site_ip_address().c_str(), main_app.get_ftp_download_folder_path().c_str());
-                snprintf(message_buffer, std::size(message_buffer), "^2Downloading missing ^17za.dll ^2for extracting updated\n ^1geoIP database ^2file from ^5%s\n", ftp_download_site_info.c_str());
-                print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-                if (download_file(download_url_buffer, seven_zip_dll_file_path.c_str())) {
-                  snprintf(message_buffer, std::size(message_buffer), "^2Successfully downloaded ^57za.dll ^2from ^5%s\n", ftp_download_site_info.c_str());
-                  print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-
-                } else {
-                  snprintf(message_buffer, std::size(message_buffer), "^3Failed to download ^57za.dll ^2from ^5%s\n", ftp_download_site_info.c_str());
-                  print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-                }
-              }
-            }
-
-            // download updated geoIP database file geo-3bd1621e4ce010e8b48c9efca8c5d07b.7z and extract it to plugins/geoIP/geo.dat
-            const string old_geo_dat_file_parent_folder_path{ self_current_working_directory + "plugins\\geoIP\\" };
-            const string old_geo_dat_file_path{ old_geo_dat_file_parent_folder_path + "geo.dat" };
-            const string new_geo_dat_7zip_file_path{ self_current_working_directory + "plugins\\geoIP\\"s + new_geo_dat_file_name };
-            if (!check_if_file_path_exists(old_geo_dat_file_parent_folder_path.c_str())) {
-              error_code ec{};
-              std::filesystem::create_directories(old_geo_dat_file_parent_folder_path, ec);
-            }
-            Sleep(20);
-            char download_url_buffer[256];
-            snprintf(download_url_buffer, 256, "ftp://%s/%s/%s", main_app.get_ftp_download_site_ip_address().c_str(), main_app.get_ftp_download_folder_path().c_str(), new_geo_dat_file_name.c_str());
-            snprintf(message_buffer, std::size(message_buffer), "^2Downloading updated ^5%s ^2geoIP database file\n from ^5%s...\n", new_geo_dat_file_name.c_str(), ftp_download_site_info.c_str());
-            print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-            if (download_file(download_url_buffer, new_geo_dat_7zip_file_path.c_str())) {
-              snprintf(message_buffer, std::size(message_buffer), "^2Successfully downloaded updated ^5%s ^2geoIP database file\n from ^5%s.\n", new_geo_dat_file_name.c_str(), ftp_download_site_info.c_str());
-              print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-              snprintf(message_buffer, std::size(message_buffer), "^2Starting to extract downloaded ^5%s ^2geoIP database file\n to ^5plugins/geoIP/geo.dat ...\n", new_geo_dat_file_name.c_str());
-              print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-
-              if (check_if_file_path_exists(old_geo_dat_file_path.c_str())) {
-                DeleteFileA(old_geo_dat_file_path.c_str());
-              }
-
-              // const wstring file_path_to_geo_7z(new_geo_dat_7zip_file_path.cbegin(), new_geo_dat_7zip_file_path.cend());
-              string dir_path_to_geo_7z{ format("{}plugins\\geoIP\\", main_app.get_current_working_directory()) };
-              auto [status, message] = extract_7z_file_to_specified_path(new_geo_dat_7zip_file_path.c_str(), dir_path_to_geo_7z.c_str());
-              if (status) {
-                DeleteFile(new_geo_dat_7zip_file_path.c_str());
-                snprintf(message_buffer, std::size(message_buffer), "^2Finished extracting downloaded ^5%s ^2geoIP database file\n to ^5plugins/geoIP/geo.dat\n", new_geo_dat_file_name.c_str());
-                print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-
-              } else {
-                snprintf(message_buffer, std::size(message_buffer), "^3Failed to extract downloaded ^5%s ^3geoIP database file\n to ^5plugins/geoIP/geo.dat!\n^1Error: ^5%s\n", new_geo_dat_file_name.c_str(), message.c_str());
-                print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-              }
-
-            } else {
-              snprintf(message_buffer, std::size(message_buffer), "^3Failed to download updated ^1%s ^3geoIP database file\n from ^5%s\n", new_geo_dat_file_name.c_str(), ftp_download_site_info.c_str());
-              print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-            }
-          }
-        }
-
-      } else {
-        snprintf(message_buffer, std::size(message_buffer), "^3Could not connect to ^5%s ^3to check for ^5Tiny^6Rcon ^3updates!\n ^5The FTP download site ^3might be offline at the moment. ^2Please, try again later.\n", ftp_download_site_info.c_str());
-        print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-        main_app.set_is_ftp_server_online(false);
-        return;
-      }
-
-      downloaded_latest_version_of_program();
-    }
-  }
-}
-
-bool auto_update_manager::get_file_version(const string &exe_file, version_data &ver, unsigned long &version_number) const noexcept
+bool auto_update_manager::get_file_version(const string &exe_file, version_data &ver, unsigned long &version_number) const
 {
   unique_ptr<BYTE[]> lp_version_info_buffer{};
 
@@ -287,17 +196,17 @@ const string &auto_update_manager::get_self_full_path() const
   return self_full_path;
 }
 
-void auto_update_manager::set_self_current_working_directory(string cwd) noexcept
+void auto_update_manager::set_self_current_working_directory(string cwd)
 {
   self_current_working_directory = std::move(cwd);
 }
 
-const std::string &auto_update_manager::get_self_current_working_directory() const noexcept
+const std::string &auto_update_manager::get_self_current_working_directory() const
 {
   return self_current_working_directory;
 }
 
-void auto_update_manager::set_self_full_path(string path) noexcept
+void auto_update_manager::set_self_full_path(string path)
 {
   self_full_path = std::move(path);
 }
@@ -333,8 +242,11 @@ vector<string> auto_update_manager::get_file_name_matches_for_specified_file_pat
 
 bool auto_update_manager::download_file(const char *download_url, const char *downloaded_file_path) const
 {
-  MyCallback pCallback;
   DeleteUrlCacheEntry(download_url);
+  string file_name{ download_url };
+  file_name.erase(cbegin(file_name), cbegin(file_name) + file_name.rfind('/') + 1);
+  MyCallback pCallback{ main_app, app_handles };
+  pCallback.set_file_name(std::move(file_name));
   HRESULT hr = URLDownloadToFileA(
     nullptr,
     download_url,
@@ -346,18 +258,223 @@ bool auto_update_manager::download_file(const char *download_url, const char *do
 }
 
 
+void auto_update_manager::check_for_updates()
+{
+  char exe_file_path[MAX_PATH];
+
+  if (GetModuleFileNameA(nullptr, exe_file_path, MAX_PATH)) {
+
+    string exe_file_path_str{ exe_file_path };
+    set_self_current_working_directory({ exe_file_path_str.cbegin(), exe_file_path_str.cbegin() + exe_file_path_str.rfind('\\') + 1 });
+    set_self_full_path(std::move(exe_file_path_str));
+    set_self_file_name(get_file_name_from_path(exe_file_path));
+  }
+
+  version_data ver{};
+  unsigned long version_number{};
+  if (get_file_version(exe_file_path, ver, version_number)) {
+    current_version_number = version_number;
+  }
+
+  replace_temporary_version();
+
+  if (is_current_instance_temporary_version)
+    return;
+
+  const string ftp_download_site_info{ "ftp://"s + main_app.get_ftp_download_site_ip_address() + (!main_app.get_ftp_download_folder_path().empty() ? "/"s + main_app.get_ftp_download_folder_path() + "/"s : "/"s) };
+
+  std::snprintf(message_buffer, std::size(message_buffer), "^3Searching for updates at ^1%s\n", ftp_download_site_info.c_str());
+  print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+
+  internet_connection_handles threadParam;
+  threadParam.internet_open_handle.set(InternetOpenA("tinyrcon", INTERNET_OPEN_TYPE_DIRECT, nullptr, nullptr, 0));
+  if (NULL != threadParam.internet_open_handle.get()) {
+
+    // Create a worker thread
+    HANDLE hThread{};
+    DWORD dwThreadID{};
+    DWORD dwExitCode{};
+    DWORD dwTimeout{ 1000 };// 1s for timeout delay
+
+    hThread = CreateThread(
+      nullptr,// Pointer to thread security attributes
+      0,// Initial thread stack size, in bytes
+      worker_function1,// Pointer to thread function
+      &threadParam,// The argument for the new thread
+      0,// Creation flags
+      &dwThreadID// Pointer to returned thread identifier
+    );
+
+    if (0 != hThread) {
+
+      // Wait for the call to InternetConnect in worker function to complete
+      if (WaitForSingleObject(hThread, dwTimeout) == WAIT_TIMEOUT) {
+        main_app.set_is_ftp_server_online(false);
+        snprintf(message_buffer, std::size(message_buffer), "^3Could not connect to ^5%s ^3to check for ^5Tiny^6Rcon ^3updates!\n ^5The FTP download site ^3might be offline at the moment. ^2Please, try again later.\n", ftp_download_site_info.c_str());
+        print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        // Wait until the worker thread exits
+        WaitForSingleObject(hThread, INFINITE);
+        GetExitCodeThread(hThread, &dwExitCode);
+        CloseHandle(hThread);
+        if (dwExitCode)
+          return;
+      }
+    }
+
+
+    if (NULL != threadParam.internet_connect_handle.get()) {
+
+      string ftp_download_folder_path{
+        main_app.get_ftp_download_folder_path()
+      };
+
+      if (!ftp_download_folder_path.empty() && ftp_download_folder_path.front() != '/')
+        ftp_download_folder_path.insert(0, 1, '/');
+
+      if (ftp_download_folder_path.back() != '/')
+        ftp_download_folder_path.push_back('/');
+
+      auto available_file_names = get_file_name_matches_for_specified_file_pattern(threadParam.internet_connect_handle, ftp_download_folder_path.c_str(), "_U_TinyRcon*.exe");
+
+      unsigned long max_version_number{ current_version_number };
+      regex version_number_regex{ R"((\d+\.\d+.\d+.\d+))" };
+
+      for (auto &ftp_download_file_name : available_file_names) {
+
+        smatch version_smatch_results{};
+        if (regex_search(ftp_download_file_name, version_smatch_results, version_number_regex)) {
+          version_number = version_data::get_version_number(version_smatch_results[1].str());
+          next_version_number_str = version_smatch_results[1].str();
+
+          if (version_number > max_version_number) {
+            next_version_number = max_version_number = version_number;
+            latest_version_to_download = std::move(ftp_download_file_name);
+          }
+        }
+      }
+
+      if (latest_version_to_download.empty()) {
+        snprintf(message_buffer, std::size(message_buffer), "^2There is no newer version of ^5Tiny^6Rcon ^2at ^5%s\n", ftp_download_site_info.c_str());
+        print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      }
+
+      Sleep(20);
+
+      available_file_names = get_file_name_matches_for_specified_file_pattern(threadParam.internet_connect_handle, ftp_download_folder_path.c_str(), "geo-*.7z");
+      if (!available_file_names.empty()) {
+        const string new_geo_dat_file_name{ available_file_names[0] };
+        const string new_geo_dat_file_md5{ new_geo_dat_file_name.substr(4, new_geo_dat_file_name.length() - 7) };
+        const string current_geo_dat_file_md5 = [&]() {
+          if (main_app.get_plugins_geoIP_geo_dat_md5() != new_geo_dat_file_md5) {
+            const string geo_dat_file_path{ main_app.get_current_working_directory() + "plugins\\geoIP\\geo.dat" };
+            ifstream geo_dat_file(geo_dat_file_path.c_str(), std::ios::binary | std::ios::in);
+
+            if (!geo_dat_file)
+              return string{};
+
+            geo_dat_file.seekg(0, std::ios::end);
+            const size_t length{ static_cast<size_t>(geo_dat_file.tellg()) };
+            geo_dat_file.seekg(0, std::ios::beg);
+
+            unique_ptr<char[]> file_data{ make_unique<char[]>(length) };
+            geo_dat_file.read(file_data.get(), length);
+
+            main_app.set_plugins_geoIP_geo_dat_md5(md5(file_data.get(), length));
+          }
+
+          return main_app.get_plugins_geoIP_geo_dat_md5();
+        }();
+
+        if (current_geo_dat_file_md5 != new_geo_dat_file_md5) {
+          main_app.set_plugins_geoIP_geo_dat_md5(new_geo_dat_file_md5);
+          write_tiny_rcon_json_settings_to_file(main_app.get_tinyrcon_config_file_path());
+          const string seven_zip_dll_file_path{ self_current_working_directory + "7za.dll" };
+          if (!check_if_file_path_exists(seven_zip_dll_file_path.c_str())) {
+            Sleep(20);
+            available_file_names = get_file_name_matches_for_specified_file_pattern(threadParam.internet_connect_handle, ftp_download_folder_path.c_str(), "7za.dll");
+            if (!available_file_names.empty()) {
+              char download_url_buffer[256];
+              snprintf(download_url_buffer, 256, "ftp://%s/%s/7za.dll", main_app.get_ftp_download_site_ip_address().c_str(), main_app.get_ftp_download_folder_path().c_str());
+              snprintf(message_buffer, std::size(message_buffer), "^2Downloading missing ^17za.dll ^2for extracting updated\n ^1geoIP database ^2file from ^5%s\n", ftp_download_site_info.c_str());
+              print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+              if (download_file(download_url_buffer, seven_zip_dll_file_path.c_str())) {
+                snprintf(message_buffer, std::size(message_buffer), "^2Successfully downloaded ^57za.dll ^2from ^5%s\n", ftp_download_site_info.c_str());
+                print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+
+              } else {
+                snprintf(message_buffer, std::size(message_buffer), "^3Failed to download ^57za.dll ^2from ^5%s\n", ftp_download_site_info.c_str());
+                print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+              }
+            }
+          }
+
+          // download updated geoIP database file geo-3bd1621e4ce010e8b48c9efca8c5d07b.7z and extract it to plugins/geoIP/geo.dat
+          const string old_geo_dat_file_parent_folder_path{ self_current_working_directory + "plugins\\geoIP\\" };
+          const string old_geo_dat_file_path{ old_geo_dat_file_parent_folder_path + "geo.dat" };
+          const string new_geo_dat_7zip_file_path{ self_current_working_directory + R"(plugins\geoIP\)" + new_geo_dat_file_name };
+          if (!check_if_file_path_exists(old_geo_dat_file_parent_folder_path.c_str())) {
+            error_code ec{};
+            std::filesystem::create_directories(old_geo_dat_file_parent_folder_path, ec);
+          }
+          Sleep(20);
+          char download_url_buffer[256];
+          snprintf(download_url_buffer, 256, "ftp://%s/%s/%s", main_app.get_ftp_download_site_ip_address().c_str(), main_app.get_ftp_download_folder_path().c_str(), new_geo_dat_file_name.c_str());
+          snprintf(message_buffer, std::size(message_buffer), "^2Downloading updated ^5%s ^2geoIP database file\n from ^5%s...\n", new_geo_dat_file_name.c_str(), ftp_download_site_info.c_str());
+          print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+          if (download_file(download_url_buffer, new_geo_dat_7zip_file_path.c_str())) {
+            snprintf(message_buffer, std::size(message_buffer), "^2Successfully downloaded updated ^5%s ^2geoIP database file\n from ^5%s.\n", new_geo_dat_file_name.c_str(), ftp_download_site_info.c_str());
+            print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+            snprintf(message_buffer, std::size(message_buffer), "^2Starting to extract downloaded ^5%s ^2geoIP database file\n to ^5plugins/geoIP/geo.dat ...\n", new_geo_dat_file_name.c_str());
+            print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+
+            if (check_if_file_path_exists(old_geo_dat_file_path.c_str())) {
+              DeleteFileA(old_geo_dat_file_path.c_str());
+            }
+
+            // const wstring file_path_to_geo_7z(new_geo_dat_7zip_file_path.cbegin(), new_geo_dat_7zip_file_path.cend());
+            string dir_path_to_geo_7z{ format("{}plugins\\geoIP\\", main_app.get_current_working_directory()) };
+            auto [status, message] = extract_7z_file_to_specified_path(new_geo_dat_7zip_file_path.c_str(), dir_path_to_geo_7z.c_str());
+            if (status) {
+              DeleteFile(new_geo_dat_7zip_file_path.c_str());
+              snprintf(message_buffer, std::size(message_buffer), "^2Finished extracting downloaded ^5%s ^2geoIP database file\n to ^5plugins/geoIP/geo.dat\n", new_geo_dat_file_name.c_str());
+              print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+
+            } else {
+              snprintf(message_buffer, std::size(message_buffer), "^3Failed to extract downloaded ^5%s ^3geoIP database file\n to ^5plugins/geoIP/geo.dat!\n^1Error: ^5%s\n", new_geo_dat_file_name.c_str(), message.c_str());
+              print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+            }
+
+          } else {
+            snprintf(message_buffer, std::size(message_buffer), "^3Failed to download updated ^1%s ^3geoIP database file\n from ^5%s\n", new_geo_dat_file_name.c_str(), ftp_download_site_info.c_str());
+            print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+          }
+        }
+      }
+
+    } else {
+      snprintf(message_buffer, std::size(message_buffer), "^3Could not connect to ^5%s ^3to check for ^5Tiny^6Rcon ^3updates!\n ^5The FTP download site ^3might be offline at the moment. ^2Please, try again later.\n", ftp_download_site_info.c_str());
+      print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      main_app.set_is_ftp_server_online(false);
+      return;
+    }
+
+    downloaded_latest_version_of_program();
+  }
+}
+
 void auto_update_manager::replace_temporary_version()
 {
   if (self_file_name.starts_with("_U_")) {
     is_current_instance_temporary_version = true;
     const string deleted_file_path{ self_current_working_directory + self_file_name.substr(3) };
-    while (PathFileExistsA(deleted_file_path.c_str())) {
-      Sleep(10);
+    for (size_t i{}; i < 5 && check_if_file_path_exists(deleted_file_path.c_str()); ++i) {
+      Sleep(20);
       DeleteFileA(deleted_file_path.c_str());
     }
     const string copy_file_path{ self_current_working_directory + self_file_name };
-    while (!CopyFileA(copy_file_path.c_str(), deleted_file_path.c_str(), FALSE)) {
-      Sleep(10);
+    for (size_t i{}; i < 5 && !CopyFileA(copy_file_path.c_str(), deleted_file_path.c_str(), FALSE); ++i) {
+    // while (!CopyFileA(copy_file_path.c_str(), deleted_file_path.c_str(), FALSE)) {
+      Sleep(20);
     }
     if (run_executable(deleted_file_path.c_str())) {
       if (pr_info.hProcess != NULL)
@@ -371,9 +488,9 @@ void auto_update_manager::replace_temporary_version()
   } else {
     is_current_instance_temporary_version = false;
     const string temp_file_path{ self_current_working_directory + "_U_"s + self_file_name };
-    while (PathFileExistsA(temp_file_path.c_str())) {
+    for (size_t i{}; i < 5 && check_if_file_path_exists(temp_file_path.c_str()); ++i) {
       DeleteFileA(temp_file_path.c_str());
-      Sleep(10);
+      Sleep(20);
     }
   }
 }
@@ -467,7 +584,7 @@ DWORD WINAPI worker_function3(void *param)
 DWORD WINAPI worker_function4(void *param)
 {
   internet_connection_handles *pThreadParm{ reinterpret_cast<internet_connection_handles *>(param) };
-  if (pThreadParm->internet_open_handle.get() != NULL) {
+  if (pThreadParm->internet_open_handle.get() != nullptr) {
     DWORD internet_option_connect_timeout{ 1000 };
     InternetSetOptionA(pThreadParm->internet_open_handle.get(), INTERNET_OPTION_CONNECT_TIMEOUT, &internet_option_connect_timeout, sizeof(internet_option_connect_timeout));
     pThreadParm->internet_connect_handle.set(InternetConnectA(pThreadParm->internet_open_handle.get(), pThreadParm->ftp_host, INTERNET_DEFAULT_FTP_PORT, pThreadParm->user_name, pThreadParm->user_pass, INTERNET_SERVICE_FTP, INTERNET_FLAG_PASSIVE, 0));
@@ -594,7 +711,7 @@ bool download_file_from_ftp_server(const char *ftp_host, const char *user_name, 
   threadParam.download_file_path = download_file_path;
   threadParam.ftp_file_path = ftp_file_path;
 
-  if (NULL != threadParam.internet_open_handle.get()) {
+  if (nullptr != threadParam.internet_open_handle.get()) {
 
     // Create a worker thread
     HANDLE hThread{};
@@ -611,7 +728,7 @@ bool download_file_from_ftp_server(const char *ftp_host, const char *user_name, 
       &dwThreadID// Pointer to returned thread identifier
     );
 
-    if (0 != hThread) {
+    if (nullptr != hThread) {
       // Wait for the call to InternetConnect in worker function to complete
       if (WaitForSingleObject(hThread, dwTimeout) == WAIT_TIMEOUT) {
         // Wait until the worker thread exits
@@ -622,13 +739,13 @@ bool download_file_from_ftp_server(const char *ftp_host, const char *user_name, 
     }
 
     if (dwExitCode) {
-      /* const string error_msg{ format("^3Failed to download file ^1{} ^3from ^5Tiny^6Rcon ^5server ^3for processing!", ftp_file_path) };
-       print_colored_text(app_handles.hwnd_re_messages_data, error_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);*/
+      const string error_msg{ format("^3Failed to download file ^1{} ^3from ^5{}", ftp_file_path, ftp_host) };
+      print_colored_text(app_handles.hwnd_re_messages_data, error_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
       return false;
     }
 
-    /* const string info_msg{ format("^2Successfully downloaded file ^1{} ^2from ^5Tiny^6Rcon ^5server.", ftp_file_path) };
-     print_colored_text(app_handles.hwnd_re_messages_data, info_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);*/
+    /*const string info_msg{ format("^2Successfully downloaded file ^1{} ^2from ^5Tiny^6Rcon ^5server.", ftp_file_path) };
+    print_colored_text(app_handles.hwnd_re_messages_data, info_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);*/
     return true;
   }
   return false;

@@ -3134,7 +3134,7 @@ static void Grid_OnSetFocus(HWND hwnd, HWND hwndOldFocus)
 /// @param fRedraw If TRUE this control should be redrawn immediately.
 ///
 /// @returns VOID.
-void Grid_OnSetFont(HWND hwnd, HFONT hfont, BOOL fRedraw) noexcept
+void Grid_OnSetFont(HWND hwnd, HFONT hfont, BOOL fRedraw) 
 {
   g_lpInst->hfont = hfont;
   if (!g_lpInst->hcolumnheadingfont) {
@@ -4077,6 +4077,7 @@ static LRESULT CALLBACK Grid_Proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
     HANDLE_MSG(hwnd, WM_KEYDOWN, Grid_OnKeyDown);
     HANDLE_MSG(hwnd, WM_KILLFOCUS, Grid_OnKillFocus);
     HANDLE_MSG(hwnd, WM_LBUTTONDOWN, Grid_OnLButtonDown);
+    // HANDLE_MSG(hwnd, WM_LBUTTONDBLCLK, Grid_OnLButtonDoubleClick);
     HANDLE_MSG(hwnd, WM_RBUTTONDOWN, Grid_OnLButtonDown);
     HANDLE_MSG(hwnd, WM_LBUTTONUP, Grid_OnLButtonUp);
     HANDLE_MSG(hwnd, WM_MOUSEMOVE, Grid_OnMouseMove);
@@ -4342,16 +4343,16 @@ static LRESULT CALLBACK Grid_Proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
   return DefWindowProc(hwnd, msg, wParam, lParam);
 }
 
-int findLongestTextWidthInColumn(HWND hwnd, const int col)
+int findLongestTextWidthInColumn(HWND hwnd, const int col, const int start_row, const int last_row, const int min_col_width, const int max_col_width)
 {
-  char buffer[256];
+  char buffer[512];
   HDC hdc;
   SIZE size = { 0, 0 };
   int longest_line{};
   HFONT holdfont;
   hdc = GetDC(hwnd);
   holdfont = (HFONT)SelectObject(hdc, g_lpInst->hfont);
-  for (size_t i{}; i < main_app.get_game_server().get_number_of_players(); ++i) {
+  for (int i {start_row }; i < last_row; ++i) {
     string cell_data{ GetCellContents(hwnd, i, col) };
     const char *text = cell_data.c_str();
     const char *last = text + cell_data.length();
@@ -4379,8 +4380,8 @@ int findLongestTextWidthInColumn(HWND hwnd, const int col)
   SelectObject(hdc, holdfont);
   ReleaseDC(hwnd, hdc);
 
-  if (longest_line >= 330)
-    return 330;
+  if (longest_line >= max_col_width)
+    return max_col_width;
 
-  return std::max<int>(160, longest_line);
+  return std::max<int>(min_col_width, longest_line);
 }

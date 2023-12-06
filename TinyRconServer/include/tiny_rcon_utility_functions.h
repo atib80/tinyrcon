@@ -8,6 +8,7 @@
 #include <regex>
 #include <set>
 #include <connection_manager_for_messages.h>
+#include "daily_tinyrcon_activities.h"
 
 #undef max
 
@@ -290,24 +291,6 @@ void csay(HWND control, const char *szoveg, Args... args)
 bool remove_dir_path_sep_char(char *);
 void replace_forward_slash_with_backward_slash(std::string &);
 
-const char *find_call_of_duty_1_installation_path(const bool is_show_browse_folder_dialog = true);
-
-bool check_if_call_of_duty_1_game_is_running();
-
-const char *find_call_of_duty_2_installation_path(const bool is_show_browse_folder_dialog = true);
-
-bool check_if_call_of_duty_2_game_is_running();
-
-const char *find_call_of_duty_4_installation_path(const bool is_show_browse_folder_dialog = true);
-
-bool check_if_call_of_duty_4_game_is_running();
-
-const char *find_call_of_duty_5_installation_path(const bool is_show_browse_folder_dialog = true);
-
-bool check_if_call_of_duty_5_game_is_running();
-
-const char *BrowseFolder(const char *, const char *);
-
 bool connect_to_the_game_server(const std::string &, const game_name_t, const bool, const bool = true);
 
 bool check_if_file_path_exists(const char *);
@@ -334,7 +317,7 @@ bool is_decimal_digit(const char ch);
 bool is_ws(const char ch);
 
 void change_hdc_fg_color(HDC hdc, COLORREF fg_color);
-bool check_if_selected_cell_indices_are_valid(const int row_index, const int col_index);
+bool check_if_selected_cell_indices_are_valid_for_players_grid(const int row_index, const int col_index);
 void CenterWindow(HWND hwnd);
 bool show_user_confirmation_dialog(const char *msg, const char *title, const char *edit_label_text = "Reason:");
 
@@ -387,3 +370,5 @@ size_t find_longest_user_country_city_info_length(
   const size_t number_of_users_to_process) noexcept;
 void display_admins_data();
 void display_banned_ip_address_ranges(const bool is_save_data_to_log_file = false);
+bool load_tinyrcon_statistics_data(const char *file_path);
+bool save_tinyrcon_statistics_data(const char *file_path);

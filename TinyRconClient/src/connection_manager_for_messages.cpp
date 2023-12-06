@@ -35,17 +35,17 @@ size_t connection_manager_for_messages::process_and_send_message(const std::stri
   }
 
   const string sender{ remove_disallowed_character_in_string(main_app.get_username()) };
-  const string outgoing_data{ format(R"({}\{}\{}\{}\{}\{})", command_name, sender, main_app.get_game_server().get_rcon_password(), t_c, is_show_in_messages ? "true" : "false", data) };
-
+  const string outgoing_data{ format(R"({}\{}\{}\{}\{}\{})", command_name, sender, main_app.get_game_servers()[0].get_rcon_password(), t_c, is_show_in_messages ? "true" : "false", data) };
   const ip::udp::endpoint dst{ ip::address::from_string(remote_ip), remote_port };
-   const size_t sent_bytes = udp_socket_for_messages.send_to(buffer(outgoing_data.c_str(), outgoing_data.length()), dst);
-  return sent_bytes;  
+  const size_t sent_bytes = udp_socket_for_messages.send_to(buffer(outgoing_data.c_str(), outgoing_data.length()), dst);
+  main_app.add_to_next_uploaded_data_in_bytes(sent_bytes);
+  return sent_bytes;
 }
 
 
 bool connection_manager_for_messages::wait_for_and_process_response_message(const std::string &remote_ip, const uint_least16_t remote_port) const
 {
-  char incoming_data_buffer[2048]{};
+  char incoming_data_buffer[receive_buffer_size];
   size_t noOfReceivedBytes{};
 
   ip::udp::endpoint destination{ ip::address::from_string(remote_ip), remote_port };
@@ -55,44 +55,49 @@ bool connection_manager_for_messages::wait_for_and_process_response_message(cons
   if (erc)
     return false;
 
-  if (destination.address().to_v4().to_string() != remote_ip)
-    return false;
+  if (noOfReceivedBytes > 0) {
 
-  string message(incoming_data_buffer, incoming_data_buffer + noOfReceivedBytes);
-  trim_in_place(message);
+    main_app.add_to_next_downloaded_data_in_bytes(noOfReceivedBytes);
 
-  if (noOfReceivedBytes > 0 && '{' != message.front() && '}' != message.back()) {
+    if (destination.address().to_v4().to_string() != remote_ip)
+      return false;
 
-    std::vector<string> parts;
-    size_t count_of_key_values{}, start{};
-    for (size_t next{ string::npos }; (next = message.find('\\', start)) != string::npos; start = next + 1) {
-      parts.emplace_back(cbegin(message) + start, cbegin(message) + next);
-      ++count_of_key_values;
-      if (4 == count_of_key_values) break;
+    string message(incoming_data_buffer, incoming_data_buffer + noOfReceivedBytes);
+    trim_in_place(message);
+
+    if (!message.empty() && '{' != message.front() && '}' != message.back()) {
+
+      std::vector<string> parts;
+      size_t count_of_key_values{}, start{};
+      for (size_t next{ string::npos }; (next = message.find('\\', start)) != string::npos; start = next + 1) {
+        parts.emplace_back(cbegin(message) + start, cbegin(message) + next);
+        ++count_of_key_values;
+        if (4 == count_of_key_values) break;
+      }
+
+      if (count_of_key_values < 4)
+        return false;
+
+      start = message.find('\\', start);
+      if (string::npos == start)
+        return false;
+
+      const string data{ message.substr(start + 1) };
+      for (auto &part : parts)
+        trim_in_place(part);
+
+      int number;
+      if (!is_valid_decimal_whole_number(parts[2], number) || (parts[3] != "true" && parts[3] != "false"))
+        return false;
+
+      const string message_handler_name{ std::move(parts[0]) };
+      const string sender{ std::move(parts[1]) };
+      const time_t timestamp{ stoll(parts[2]) };
+      const bool is_show_in_messages{ parts[3] == "true" };
+      const auto &message_handler = main_app.get_message_handler(message_handler_name);
+      message_handler(sender, timestamp, data, is_show_in_messages);
+      return true;
     }
-
-    if (count_of_key_values < 4)
-      return false;
-
-    start = message.find('\\', start);
-    if (string::npos == start)
-      return false;
-
-    const string data{ message.substr(start + 1) };
-    for (auto &part : parts)
-      trim_in_place(part);
-
-    int number;
-    if (!is_valid_decimal_whole_number(parts[2], number) || (parts[3] != "true" && parts[3] != "false"))
-      return false;
-
-    const string message_handler_name{ std::move(parts[0]) };
-    const string sender{ std::move(parts[1]) };
-    const time_t timestamp{ stoll(parts[2]) };
-    const bool is_show_in_messages{ parts[3] == "true" };
-    const auto &message_handler = main_app.get_message_handler(message_handler_name);
-    message_handler(sender, timestamp, data, is_show_in_messages);
-    return true;
   }
 
   return false;

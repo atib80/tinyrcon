@@ -10,7 +10,7 @@ class connection_manager_for_messages
 {
    using rcv_timeout_option =
      asio::detail::socket_option::integer<SOL_SOCKET, SO_RCVTIMEO>;
-   inline static constexpr size_t receive_buffer_size{ 2048 };
+  inline static constexpr size_t receive_buffer_size{ 4096 };
 
 public:
   connection_manager_for_messages();

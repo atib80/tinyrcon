@@ -17,6 +17,12 @@ struct tiny_rcon_client_user
   size_t no_of_iprangebans{};
   size_t no_of_citybans{};
   size_t no_of_countrybans{};
+  size_t no_of_protected_ip_addresses{};
+  size_t no_of_protected_ip_address_ranges{};
+  size_t no_of_protected_cities{};
+  size_t no_of_protected_countries{};
+  size_t no_of_map_restarts{};
+  size_t no_of_map_changes{};
   time_t last_login_time_stamp{};
   time_t last_logout_time_stamp{};
   const char *country_code{ "xy" };

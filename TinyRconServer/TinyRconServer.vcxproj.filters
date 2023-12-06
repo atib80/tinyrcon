@@ -63,6 +63,9 @@
     <ClInclude Include="include\stack_trace_element.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\daily_tinyrcon_activities.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="data\icons\big_codicon.ico">

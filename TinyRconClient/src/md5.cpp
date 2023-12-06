@@ -100,7 +100,7 @@ inline void MD5::II(uint4 &a, uint4 b, uint4 c, uint4 d, uint4 x, uint4 s, uint4
 //////////////////////////////////////////////
  
 // default ctor, just initailize
-MD5::MD5() noexcept
+MD5::MD5() 
 {
   init();
 }
@@ -108,7 +108,7 @@ MD5::MD5() noexcept
 //////////////////////////////////////////////
  
 // nifty shortcut ctor, compute MD5 for string and finalize it right away
-MD5::MD5(const std::string &text) noexcept
+MD5::MD5(const std::string &text) 
 {
   init();
   update(text.c_str(), static_cast<typename MD5::size_type>(text.length()));
@@ -117,7 +117,7 @@ MD5::MD5(const std::string &text) noexcept
  
 //////////////////////////////
 
-MD5::MD5(char *input, const size_t length) noexcept
+MD5::MD5(char *input, const size_t length) 
 {
   init();
   update(input, length);
@@ -125,7 +125,7 @@ MD5::MD5(char *input, const size_t length) noexcept
 }
 
  
-void MD5::init() noexcept
+void MD5::init() 
 {
   finalized=false;
  
@@ -142,7 +142,7 @@ void MD5::init() noexcept
 //////////////////////////////
  
 // decodes input (unsigned char) into output (uint4). Assumes len is a multiple of 4.
-void MD5::decode(uint4 output[], const uint1 input[], size_type len) noexcept
+void MD5::decode(uint4 output[], const uint1 input[], size_type len) 
 {
   for (unsigned int i = 0, j = 0; j < len; i++, j += 4)
     output[i] = ((uint4)input[j]) | (((uint4)input[j+1]) << 8) |
@@ -153,7 +153,7 @@ void MD5::decode(uint4 output[], const uint1 input[], size_type len) noexcept
  
 // encodes input (uint4) into output (unsigned char). Assumes len is
 // a multiple of 4.
-void MD5::encode(uint1 output[], const uint4 input[], size_type len) noexcept
+void MD5::encode(uint1 output[], const uint4 input[], size_type len) 
 {
   for (size_type i = 0, j = 0; j < len; i++, j += 4) {
     output[j] = input[i] & 0xff;
@@ -166,7 +166,7 @@ void MD5::encode(uint1 output[], const uint4 input[], size_type len) noexcept
 //////////////////////////////
  
 // apply MD5 algo on a block
-void MD5::transform(const uint1 block[blocksize]) noexcept
+void MD5::transform(const uint1 block[blocksize]) 
 {
   uint4 a = state[0], b = state[1], c = state[2], d = state[3], x[16];
   decode (x, block, blocksize);
@@ -256,7 +256,7 @@ void MD5::transform(const uint1 block[blocksize]) noexcept
  
 // MD5 block update operation. Continues an MD5 message-digest
 // operation, processing another message block
-void MD5::update(const unsigned char* input, size_type length) noexcept
+void MD5::update(const unsigned char* input, size_type length) 
 {
   // compute number of bytes mod 64
   size_type index = count[0] / 8 % blocksize;
@@ -294,7 +294,7 @@ void MD5::update(const unsigned char* input, size_type length) noexcept
 //////////////////////////////
  
 // for convenience provide a verson with signed char
-void MD5::update(const char* input, typename MD5::size_type length) noexcept
+void MD5::update(const char* input, typename MD5::size_type length) 
 {
   update((const unsigned char*)input, length);
 }
@@ -303,7 +303,7 @@ void MD5::update(const char* input, typename MD5::size_type length) noexcept
  
 // MD5 finalization. Ends an MD5 message-digest operation, writing the
 // the message digest and zeroizing the context.
-MD5& MD5::finalize() noexcept
+MD5& MD5::finalize() 
 {
   static unsigned char padding[64] = {
     0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

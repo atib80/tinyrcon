@@ -626,7 +626,7 @@ typedef struct tagNMSGFOCUS
 
 /// @def SimpleGrid_GetTitleLength(hGrid)
 ///
-/// @brief Get the length, in characters, of the grid’s title bar text.
+/// @brief Get the length, in characters, of the gridï¿½s title bar text.
 ///
 /// @param hGrid The handle of the grid.
 ///
