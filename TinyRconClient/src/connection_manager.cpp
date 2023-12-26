@@ -3,7 +3,6 @@
 #include "connection_manager.h"
 #include <utility>
 #include <regex>
-// #include "stack_trace_element.h"
 #include "tiny_rcon_client_application.h"
 #include "simple_grid.h"
 
@@ -15,9 +14,6 @@ extern tiny_rcon_client_application main_app;
 extern tiny_rcon_handles app_handles;
 extern const size_t max_players_grid_rows;
 extern string previous_map;
-extern int selected_player_row;
-extern int selected_player_pid;
-extern player selected_player;
 
 static const std::regex player_ip_address_regex{ R"((\d+\.\d+\.\d+\.\d+:(-?\d+)\s*(-?\d+)\s*(\d+)))" };
 static const std::regex bot_ip_address_regex{ R"((\d{5,}\.\d{5,}):(-?\d+)\s*(-?\d+)\s*(\d+))" };
@@ -72,12 +68,6 @@ size_t
 
 size_t connection_manager::receive_non_rcon_reply_from_server(const char *remote_ip, const uint_least16_t remote_port, game_server &gs, std::string &received_reply, const bool is_process_reply) const
 {
-  // string ex_msg{ format(R"(^1Exception ^3thrown from ^1size_t connection_manager::receive_non_rcon_reply_from_server("{}", {}, "{}", {}))", remote_ip, remote_port, received_reply, is_process_reply ? "true" : "false") };
-  // stack_trace_element ste1{
-  //   app_handles.hwnd_re_messages_data,
-  //   std::move(ex_msg)
-  // };
-
   char incoming_data_buffer[receive_buffer_size];
   size_t noOfReceivedBytes{}, noOfAllReceivedBytes{};
 
@@ -105,7 +95,6 @@ size_t connection_manager::receive_non_rcon_reply_from_server(const char *remote
 
       string udp_packet(incoming_data_buffer, incoming_data_buffer + noOfReceivedBytes);
       ltrim_in_place(udp_packet, " \t\n\xFF");
-      // const size_t ltrimmed_char_count = ltrim_specified_characters(incoming_data_buffer, noOfReceivedBytes, " \t\n\xFF");
       if (str_starts_with(udp_packet, string_view{ "getServersResponse\n", len("getServersResponse\n") }, true)) {
 
         if (udp_packet.ends_with("\\EOT"))
@@ -121,7 +110,7 @@ size_t connection_manager::receive_non_rcon_reply_from_server(const char *remote
           break;
         }
 
-      } else {         
+      } else {
         received_reply.append(udp_packet);
         if (str_starts_with(received_reply, string_view{ "infoResponse\n", len("infoResponse\n") }, true)) break;
       }
@@ -254,11 +243,6 @@ size_t connection_manager::send_rcon_command(
   const char *remote_ip,
   const uint_least16_t remote_port) const
 {
-  // string ex_msg{ format(R"(^1Exception ^3thrown from ^1size_t connection_manager::send_rcon_command("{}", "{}", {}))", outgoing_data, remote_ip, remote_port) };
-  // stack_trace_element ste{
-  //   app_handles.hwnd_re_messages_data,
-  //   std::move(ex_msg)
-  // };
 
   const ip::udp::endpoint dst{ ip::address::from_string(remote_ip), remote_port };
   const size_t sent_bytes = udp_socket_for_rcon_commands.send_to(buffer(outgoing_data.c_str(), outgoing_data.length()), dst);
@@ -279,18 +263,11 @@ size_t connection_manager::receive_rcon_reply_from_server(
   char incoming_data_buffer[receive_buffer_size];
   size_t noOfReceivedBytes{}, noOfAllReceivedBytes{};
 
-  // string ex_msg{ format(R"(^1Exception ^3thrown from ^1size_t connection_manager::receive_rcon_reply_from_server("{}", {}, "{}", {}))", remote_ip, remote_port, received_reply, is_process_reply ? "true" : "false") };
-  // stack_trace_element ste1{
-  //   app_handles.hwnd_re_messages_data,
-  //   std::move(ex_msg)
-  // };
-
   received_reply.clear();
   const char *start_needle_to_search_for{ "print\n" };
   const auto start_needle_to_search_for_len{ len("print\n") };
 
   while (true) {
-    // ZeroMemory(incoming_data_buffer, receive_buffer_size);
     const ip::udp::endpoint expected_remote_endpoint{ ip::address::from_string(remote_ip), remote_port };
     ip::udp::endpoint remote_endpoint{};
     asio::error_code erc{};
@@ -348,9 +325,6 @@ size_t connection_manager::receive_rcon_reply_from_server(
         string current_map(start, last);
         trim_in_place(current_map);
         if (previous_map.empty() || current_map != previous_map) {
-          selected_player_row = 0;
-          selected_player_pid = gs.get_players_data()[0].pid;
-          selected_player = gs.get_players_data()[0];
           previous_map = current_map;
           initialize_elements_of_container_to_specified_value(gs.get_players_data(), player{}, 0);
           clear_players_data_in_players_grid(app_handles.hwnd_players_grid, 0, max_players_grid_rows, 7);
@@ -376,11 +350,6 @@ size_t connection_manager::receive_rcon_reply_from_server(
         size_t pl_index{};
 
         if (!is_server_empty_or_error_receiving_udp_datagrams) {
-          /*string ex_msg2{ R"(^1Exception ^3thrown from 'if (!is_server_empty_or_error_receiving_UDP_datagrams){...}')" };
-          stack_trace_element ste2{
-            app_handles.hwnd_re_messages_data,
-            std::move(ex_msg2)
-          };*/
 
           vector<string> lines{ stl::helper::str_split(received_reply, "\n", nullptr) };
           for (size_t i{}; i < lines.size(); ++i) {
@@ -596,7 +565,7 @@ size_t connection_manager::receive_rcon_reply_from_server(
               while (is_ws(player_line[i])) --i;
 
               player_name.assign(player_line.c_str() + pn_start, player_line.c_str() + i);
-              auto pn_end = player_name.find_last_of(player_name_needle_chars);
+              auto pn_end = player_name.find_last_of("^7");
               if (string::npos != pn_end)
                 player_name.erase(cbegin(player_name) + pn_end, cend(player_name));
               if (const size_t pn_len{ player_name.length() }; (pn_len >= 1) && (player_name[pn_len - 1] == '^' || player_name[pn_len - 1] == '7')) {
@@ -608,11 +577,9 @@ size_t connection_manager::receive_rcon_reply_from_server(
             players_data[pl_index].score = player_score;
             strcpy_s(players_data[pl_index].ping, std::size(players_data[pl_index].ping), player_ping.c_str());
             strcpy_s(players_data[pl_index].guid_key, std::size(players_data[pl_index].guid_key), player_guid.c_str());
-            // if (strcmp(player_name.c_str(), players_data[pl_index].player_name) != 0) {
             const size_t no_of_chars_to_copy{ std::min<size_t>(32, player_name.length()) };
             strncpy_s(players_data[pl_index].player_name, std::size(players_data[pl_index].player_name), player_name.c_str(), no_of_chars_to_copy);
             players_data[pl_index].player_name[no_of_chars_to_copy] = '\0';
-            // }
 
             players_data[pl_index].ip_address = ip_address;
             convert_guid_key_to_country_name(geoip_db, players_data[pl_index].ip_address, players_data[pl_index]);
@@ -624,30 +591,6 @@ size_t connection_manager::receive_rcon_reply_from_server(
             }
             ++pl_index;
           }
-
-          const int pid = gs.get_players_data()[selected_player_row].pid;
-          if (pid != selected_player_pid) {
-
-            int row_number{ -1 };
-            for (auto &pd : gs.get_players_data()) {
-              if (pd.pid == selected_player_pid) {
-                ++row_number;
-                selected_player_row = row_number;
-                selected_player = pd;
-                break;
-              }
-            }
-
-            if (-1 == row_number) {
-              selected_player_row = 0;
-              selected_player_pid = gs.get_players_data()[0].pid;
-              selected_player = gs.get_players_data()[0];
-            }
-          }
-        } else {
-          selected_player_row = 0;
-          selected_player_pid = gs.get_players_data()[0].pid;
-          selected_player = gs.get_players_data()[0];
         }
 
         gs.set_number_of_players(pl_index);
@@ -722,9 +665,6 @@ size_t connection_manager::receive_rcon_reply_from_server(
         if (last_pos != string::npos) {
           string current_map(received_reply.substr(first_pos2, last_pos - first_pos2));
           if (previous_map.empty() || current_map != previous_map) {
-            selected_player_row = 0;
-            selected_player_pid = gs.get_players_data()[0].pid;
-            selected_player = gs.get_players_data()[0];
             previous_map = current_map;
             initialize_elements_of_container_to_specified_value(
               gs.get_players_data(), player{}, 0);
@@ -755,7 +695,7 @@ void connection_manager::send_and_receive_rcon_data(
   char outgoing_data_buffer[buffer_size]{};
 
   if (main_app.get_game_server_index() >= main_app.get_rcon_game_servers_count())
-    rcon_password = "abc123";
+    rcon_password = unknown_rcon_password.c_str();
   prepare_rcon_command(outgoing_data_buffer, buffer_size, command_to_send, rcon_password);
   (void)send_rcon_command(outgoing_data_buffer, remote_ip, remote_port);
   if (is_wait_for_reply) {

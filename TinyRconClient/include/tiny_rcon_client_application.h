@@ -42,6 +42,7 @@ class tiny_rcon_client_application
   bool is_automatic_country_kick_enabled{ false };
   bool is_enable_automatic_connection_flood_ip_ban{ true };
   bool is_connection_settings_valid{ true };
+  bool is_bans_synchronized{ false };
   size_t game_server_index{};
   size_t game_servers_count{};
   size_t rcon_game_servers_count{};
@@ -55,7 +56,7 @@ class tiny_rcon_client_application
   std::mutex command_mutex{};
   std::recursive_mutex command_queue_mutex{};
   std::recursive_mutex message_queue_mutex{};
-  string username{ "^1Admin" };
+  string username{ "^3Player" };
   std::string game_server_name{
     "185.158.113.146:28995 CoD2 CTF"
   };
@@ -76,6 +77,7 @@ class tiny_rcon_client_application
   std::string ip_range_bans_file_path{ "data\\ip_range_bans.txt" };
   std::string banned_countries_file_path{ "data\\banned_countries.txt" };
   std::string banned_cities_file_path{ "data\\banned_cities.txt" };
+  std::string banned_names_file_path{ "data\\banned_names.txt" };
   std::string protected_ip_addresses_file_path{ "data\\protected_ip_addresses.txt" };
   std::string protected_ip_address_ranges_file_path{ "data\\protected_ip_address_ranges.txt" };
   std::string protected_cities_file_path{ "data\\protected_cities.txt" };
@@ -128,6 +130,11 @@ class tiny_rcon_client_application
     { "user_defined_ban_msg", "^7{PLAYERNAME} ^1you are being banned by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}" },
     { "user_defined_ip_ban_msg", "^7{PLAYERNAME} ^1you are being permanently banned by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}" },
     { "user_defined_ip_address_range_ban_msg", "^7Admin ^5{ADMINNAME} ^7has ^1banned IP address range ^5{IP_ADDRESS_RANGE}. ^3Reason: ^1{REASON}" },
+    {
+      "user_defined_name_ban_msg",
+      "^7Admin ^5{ADMINNAME} ^7has ^1banned player name: ^7{PLAYERNAME}",
+    },
+    { "user_defined_name_unban_msg", "^7Admin ^5{ADMINNAME} ^7has removed previously ^1banned player name: ^7{PLAYERNAME}" },
     { "user_defined_city_ban_msg", "^7Admin ^5{ADMINNAME} ^1has globally banned city: ^5{CITY_NAME}" },
     { "user_defined_city_unban_msg", "^7Admin ^5{ADMINNAME} ^1has removed previously banned city: ^5{CITY_NAME}" },
     { "user_defined_enable_city_ban_feature_msg", "^7Admin ^5{ADMINNAME} ^7has enabled ^1automatic kick ^7for players with ^1IP addresses ^7from banned cities." },
@@ -137,7 +144,7 @@ class tiny_rcon_client_application
     },
     {
       "user_defined_country_ban_msg",
-      "^7Admin ^5{ADMINNAME} ^1has globally banned country: ^5{COUNTRY_NAME}",
+      "^7Admin ^5{ADMINNAME} ^1has banned country: ^5{COUNTRY_NAME}",
     },
     { "user_defined_country_unban_msg", "^7Admin ^5{ADMINNAME} ^1has removed previously banned country: ^5{COUNTRY_NAME}" },
     { "user_defined_enable_country_ban_feature_msg", "^7Admin ^5{ADMINNAME} ^7has enabled ^1automatic kick ^7for players with ^1IP addresses ^7from banned countries." },
@@ -145,14 +152,16 @@ class tiny_rcon_client_application
     { "automatic_remove_temp_ban_msg", "^1{BANNED_BY}: ^7{PLAYERNAME}'s ^1temporary ban ^7[start date: ^3{TEMP_BAN_START_DATE} ^7expired on ^3{TEMP_BAN_END_DATE}]{{br}}^7has automatically been removed. ^5Reason of ban: ^1{REASON}" },
     { "automatic_kick_temp_ban_msg", "^1{BANNED_BY}: ^7Temporarily banned player {PLAYERNAME} ^7is being automatically ^1kicked.{{br}}^7Your temporary ban expires on ^1{TEMP_BAN_END_DATE}.{{br}}^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{TEMP_BAN_START_DATE}" },
     { "automatic_kick_ip_ban_msg",
-      "^7Player {PLAYERNAME} ^7with a previously ^1banned IP address ^7is being automatically ^1kicked.{{br}}^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{IP_BAN_DATE}" },
-    { "automatic_kick_ip_address_range_ban_msg", "^7Player {PLAYERNAME} ^7with an ^1IP address ^7from a previously ^1banned IP address range ^7is being automatically ^1kicked.{{br}}^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{IP_BAN_DATE}" },
+      "^7Player {PLAYERNAME} ^7with a previously ^1banned IP address ^7is being automatically ^1kicked.{{br}}^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{BAN_DATE}" },
+    { "automatic_kick_ip_address_range_ban_msg", "^7Player {PLAYERNAME} ^7with an ^1IP address ^7from a previously ^1banned IP address range ^7is being automatically ^1kicked.{{br}}^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{BAN_DATE}" },
     {
       "automatic_kick_city_ban_msg",
       "^7Player {PLAYERNAME} ^7with an IP address from a ^1banned city: ^5{CITY_NAME} ^7is being automatically ^1kicked.",
     },
     { "automatic_kick_country_ban_msg",
       "^7Player {PLAYERNAME} ^7with an IP address from a ^1banned country:  ^5{COUNTRY_NAME} ^7is being automatically ^1kicked." },
+    { "automatic_kick_name_ban_msg",
+      "^7Player {PLAYERNAME} ^7with a previously ^1banned player name ^7is being automatically ^1kicked.{{br}}^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{BAN_DATE}" },
     { "user_defined_protect_ip_address_message", "^1{ADMINNAME} ^7has protected ^1IP address ^7of {PLAYERNAME}^7.{{br}}^5Reason: ^1{REASON}" },
     { "user_defined_unprotect_ip_address_message", "^1{ADMINNAME} ^7has removed a previously protected ^1IP address^7.{{br}}^5Reason: ^1{REASON}" },
     { "user_defined_protect_ip_address_range_message", "^1{ADMINNAME} ^7has protected ^1IP address range ^7of {PLAYERNAME}^7.{{br}}^5Reason: ^1{REASON}" },
@@ -185,11 +194,7 @@ class tiny_rcon_client_application
   std::queue<command_t> command_queue{};
   std::queue<message_t> message_queue{};
 
-  // std::vector<game_server> rcon_game_servers;
-  // std::vector<game_server> game_servers;
-
   std::vector<std::shared_ptr<tiny_rcon_client_user>> users;
-  // std::unordered_set<std::string> seen_inform_messages;
   std::unordered_map<std::string, std::shared_ptr<tiny_rcon_client_user>> name_to_user;
   std::unordered_map<std::string, bool> is_user_data_received;
 
@@ -202,7 +207,6 @@ class tiny_rcon_client_application
   std::unordered_map<std::string, std::function<void(const std::vector<std::string> &)>> command_handlers;
   std::unordered_map<std::string, std::function<void(const std::string &, const time_t, const std::string &, const bool)>> message_handlers;
 
-  // std::shared_ptr<tiny_rcon_client_user> current_user{ nullptr };
   static constexpr size_t max_game_servers_size{ 4096 };
   std::array<game_server, max_game_servers_size> game_servers;
 
@@ -211,102 +215,112 @@ public:
 
   ~tiny_rcon_client_application() = default;
 
-  bool get_is_disable_automatic_kick_messages() const
+  bool get_is_disable_automatic_kick_messages() const noexcept
   {
     return is_disable_automatic_kick_messages;
   }
 
-  void set_is_disable_automatic_kick_messages(const bool new_value)
+  void set_is_disable_automatic_kick_messages(const bool new_value) noexcept
   {
     is_disable_automatic_kick_messages = new_value;
   }
 
-  bool get_is_use_original_admin_messages() const
+  bool get_is_use_original_admin_messages() const noexcept
   {
     return is_use_original_admin_messages;
   }
 
-  void set_is_use_original_admin_messages(const bool new_value)
+  void set_is_use_original_admin_messages(const bool new_value) noexcept
   {
     is_use_original_admin_messages = new_value;
   }
 
-  bool get_is_ftp_server_online() const
+  bool get_is_ftp_server_online() const noexcept
   {
     return is_ftp_server_online;
   }
 
-  void set_is_ftp_server_online(const bool new_value)
+  void set_is_ftp_server_online(const bool new_value) noexcept
   {
     is_ftp_server_online = new_value;
   }
 
-  bool get_is_installed_cod2_game_steam_version() const
+  bool get_is_installed_cod2_game_steam_version() const noexcept
   {
     return is_installed_cod2_game_steam_version;
   }
 
-  void set_is_installed_cod2_game_steam_version(const bool new_value)
+  void set_is_installed_cod2_game_steam_version(const bool new_value) noexcept
   {
     is_installed_cod2_game_steam_version = new_value;
   }
 
-  void set_is_connection_settings_valid(const bool new_value)
+  void set_is_connection_settings_valid(const bool new_value) noexcept
   {
     is_connection_settings_valid = new_value;
   }
 
-  bool get_is_connection_settings_valid() const
+  bool get_is_connection_settings_valid() const noexcept
   {
     return is_connection_settings_valid;
   }
 
-  bool get_is_enable_automatic_connection_flood_ip_ban() const
+  void set_is_bans_synchronized(const bool new_value) noexcept
+  {
+    is_bans_synchronized = new_value;
+  }
+
+  bool get_is_bans_synchronized() const noexcept
+  {
+    return is_bans_synchronized;
+  }
+
+  bool get_is_enable_automatic_connection_flood_ip_ban() const noexcept
   {
     return is_enable_automatic_connection_flood_ip_ban;
   }
 
-  void set_is_enable_automatic_connection_flood_ip_ban(const bool new_value)
+  void set_is_enable_automatic_connection_flood_ip_ban(const bool new_value) noexcept
   {
     is_enable_automatic_connection_flood_ip_ban = new_value;
   }
 
-  bool get_is_automatic_city_kick_enabled() const
+  bool get_is_automatic_city_kick_enabled() const noexcept
   {
     return is_automatic_city_kick_enabled;
   }
 
-  void set_is_automatic_city_kick_enabled(const bool new_value)
+  void set_is_automatic_city_kick_enabled(const bool new_value) noexcept
   {
     is_automatic_city_kick_enabled = new_value;
   }
 
-  bool get_is_automatic_country_kick_enabled() const
+  bool get_is_automatic_country_kick_enabled() const noexcept
   {
     return is_automatic_country_kick_enabled;
   }
 
-  void set_is_automatic_country_kick_enabled(const bool new_value)
+  void set_is_automatic_country_kick_enabled(const bool new_value) noexcept
   {
     is_automatic_country_kick_enabled = new_value;
   }
 
-  bool get_is_use_different_background_colors_for_even_and_odd_lines() const
+  bool get_is_use_different_background_colors_for_even_and_odd_lines() const noexcept
   {
     return is_use_different_background_colors_for_even_and_odd_lines;
   }
 
-  void set_is_use_different_background_colors_for_even_and_odd_lines(const bool new_value)
+  void set_is_use_different_background_colors_for_even_and_odd_lines(const bool new_value) noexcept
   {
     is_use_different_background_colors_for_even_and_odd_lines = new_value;
   }
 
-  bool get_is_use_different_foreground_colors_for_even_and_odd_lines() const
+  bool get_is_use_different_foreground_colors_for_even_and_odd_lines() const noexcept
   {
     return is_use_different_foreground_colors_for_even_and_odd_lines;
   }
 
-  void set_is_use_different_foreground_colors_for_even_and_odd_lines(const bool new_value)
+  void set_is_use_different_foreground_colors_for_even_and_odd_lines(const bool new_value) noexcept
   {
     is_use_different_foreground_colors_for_even_and_odd_lines = new_value;
   }
@@ -410,12 +424,12 @@ public:
     command_line_info = std::move(new_value);
   }
 
-  inline connection_manager &get_connection_manager()
+  inline connection_manager &get_connection_manager() noexcept
   {
     return rcon_connection_manager;
   }
 
-  inline connection_manager_for_messages &get_connection_manager_for_messages()
+  inline connection_manager_for_messages &get_connection_manager_for_messages() noexcept
   {
     return cm_for_messages;
   }
@@ -721,14 +735,6 @@ public:
     return name_to_user.at(cleaned_name);
   }
 
-  /*std::shared_ptr<tiny_rcon_client_user> &get_current_user()
-  {
-    if (!current_user)
-      current_user = get_user_for_name(get_username(), get_user_ip_address());
-
-    return current_user;
-  }*/
-
   std::unordered_map<std::string, std::string> &get_tinyrcon_dict()
   {
     return tinyrcon_dict;
@@ -762,6 +768,16 @@ public:
   std::string get_user_defined_ip_address_range_ban_message()
   {
     return admin_messages["user_defined_ip_address_range_ban_msg"];
+  }
+
+  std::string get_user_defined_name_ban_message()
+  {
+    return admin_messages["user_defined_name_ban_msg"];
+  }
+
+  std::string get_user_defined_name_unban_message()
+  {
+    return admin_messages["user_defined_name_unban_msg"];
   }
 
   std::string get_user_defined_city_ban_msg()
@@ -832,6 +848,11 @@ public:
   std::string get_automatic_kick_country_ban_msg()
   {
     return admin_messages["automatic_kick_country_ban_msg"];
+  }
+
+  std::string get_automatic_kick_name_ban_msg()
+  {
+    return admin_messages["automatic_kick_name_ban_msg"];
   }
 
   std::string get_user_defined_protect_ip_address_message()
@@ -921,6 +942,7 @@ public:
     ip_range_bans_file_path.assign(format("{}{}", current_working_directory, ip_range_bans_file_path));
     banned_countries_file_path.assign(format("{}{}", current_working_directory, banned_countries_file_path));
     banned_cities_file_path.assign(format("{}{}", current_working_directory, banned_cities_file_path));
+    banned_names_file_path.assign(format("{}{}", current_working_directory, banned_names_file_path));
     protected_ip_addresses_file_path.assign(format("{}{}", current_working_directory, protected_ip_addresses_file_path));
     protected_ip_address_ranges_file_path.assign(format("{}{}", current_working_directory, protected_ip_address_ranges_file_path));
     protected_cities_file_path.assign(format("{}{}", current_working_directory, protected_cities_file_path));
@@ -960,6 +982,11 @@ public:
   const char *get_banned_cities_file_path() const
   {
     return banned_cities_file_path.c_str();
+  }
+
+  const char *get_banned_names_file_path() const
+  {
+    return banned_names_file_path.c_str();
   }
 
   const char *get_protected_ip_addresses_file_path() const

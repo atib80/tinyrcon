@@ -16,6 +16,7 @@ struct tiny_rcon_client_user
   size_t no_of_guidbans{};
   size_t no_of_ipbans{};
   size_t no_of_iprangebans{};
+  size_t no_of_namebans{};
   size_t no_of_citybans{};
   size_t no_of_countrybans{};
   size_t no_of_protected_ip_addresses{};

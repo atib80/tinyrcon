@@ -63,7 +63,6 @@ bool connection_manager_for_messages::wait_for_and_process_response_message(cons
       return false;
 
     string message(incoming_data_buffer, incoming_data_buffer + noOfReceivedBytes);
-    trim_in_place(message);
 
     if (!message.empty() && '{' != message.front() && '}' != message.back()) {
 
@@ -83,8 +82,6 @@ bool connection_manager_for_messages::wait_for_and_process_response_message(cons
         return false;
 
       const string data{ message.substr(start + 1) };
-      for (auto &part : parts)
-        trim_in_place(part);
 
       int number;
       if (!is_valid_decimal_whole_number(parts[2], number) || (parts[3] != "true" && parts[3] != "false"))

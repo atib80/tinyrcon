@@ -21,7 +21,7 @@ connection_manager_for_messages::connection_manager_for_messages() : udp_socket_
 
     udp_socket_for_messages.open(ip::udp::v4());
     udp_socket_for_messages.set_option(rcv_timeout_option{ 700 });
-    asio::ip::udp::endpoint local_endpoint{ asio::ip::address::from_string(main_app.get_tiny_rcon_server_ip_address()), main_app.get_tiny_rcon_server_port() };
+    asio::ip::udp::endpoint local_endpoint{ asio::ip::address::from_string("192.168.1.15"), 27015 };
     udp_socket_for_messages.bind(local_endpoint);
 
   } catch (std::exception &ex) {
@@ -36,7 +36,7 @@ size_t connection_manager_for_messages::process_and_send_message(const std::stri
       std::chrono::system_clock::now();
     const auto t_c = std::chrono::system_clock::to_time_t(now);
 
-    const string outgoing_data{ format("{}\\{}\\{}\\{}\\{}", command_name, user->user_name, t_c, is_show_in_messages ? "true" : "false", data) };
+    const string outgoing_data{ format(R"({}\{}\{}\{}\{})", command_name, user->user_name, t_c, is_show_in_messages ? "true" : "false", data) };
 
     const size_t sent_bytes = udp_socket_for_messages.send_to(buffer(outgoing_data.c_str(), outgoing_data.length()), user->remote_endpoint);
     return sent_bytes;
@@ -61,7 +61,7 @@ bool connection_manager_for_messages::wait_for_and_process_response_message()
 
 
   string message(incoming_data_buffer, incoming_data_buffer + noOfReceivedBytes);
-  trim_in_place(message);
+  // trim_in_place(message);
 
   string sender_ip{ remote_endpoint.address().to_v4().to_string() };
 
@@ -75,7 +75,7 @@ bool connection_manager_for_messages::wait_for_and_process_response_message()
 
     const string message_contents{ str_join(cbegin(parts) + 5, cend(parts), '\\') };
 
-    int number;
+    int64_t number{};
     if (!is_valid_decimal_whole_number(parts[3], number) || (parts[4] != "true" && parts[4] != "false")) {
       const string incorrectly_formatted_message_received{ format("^3Received an incorrectly formatted message!\n^7{} ^3(IP address: '^1{}^3' and rcon_password: '^1{}^3') sent the following command: '^1{}^3'\nContents of message:\n'^1{}^3'\n", parts[1], sender_ip, parts[2], parts[0], message_contents) };
       print_colored_text(app_handles.hwnd_re_messages_data, incorrectly_formatted_message_received.c_str());
@@ -94,7 +94,7 @@ bool connection_manager_for_messages::wait_for_and_process_response_message()
       if (check_ip_address_validity(user->ip_address, guid)) {
         player pd{};
         strcpy_s(pd.player_name, std::size(pd.player_name), sender.c_str());
-        strcpy_s(pd.ip_address, std::size(pd.ip_address), user->ip_address.c_str());
+        pd.ip_address = user->ip_address;
         convert_guid_key_to_country_name(main_app.get_connection_manager_for_messages().get_geoip_data(), user->ip_address, pd);
         user->geo_information = format("{}, {}", pd.country_name, pd.city);
         user->country_code = pd.country_code;
@@ -106,10 +106,10 @@ bool connection_manager_for_messages::wait_for_and_process_response_message()
       const auto &message_handler = main_app.get_message_handler(message_handler_name);
       message_handler(sender, timestamp, message_contents, is_show_in_messages, user->ip_address);
       return true;
-    } else {
-      const string unathorized_message_received{ format("^3Received an unauthorized message!\n^7{} ^3(IP address: '^1{}^3' and rcon_password: '^1{}^3') sent the following command: '^1{}^3'\nContents of message:\n'^1{}^3'\n", parts[1], sender_ip, parts[2], parts[0], message_contents) };
-      print_colored_text(app_handles.hwnd_re_messages_data, unathorized_message_received.c_str());
     }
+    const string unathorized_message_received{ format("^3Received an unauthorized message!\n^7{} ^3(IP address: '^1{}^3' and rcon_password: '^1{}^3') sent the following command: '^1{}^3'\nContents of message:\n'^1{}^3'\n", parts[1], sender_ip, parts[2], parts[0], message_contents) };
+    print_colored_text(app_handles.hwnd_re_messages_data, unathorized_message_received.c_str());
+
   } else {
     const string incorrectly_formatted_message_received{ format("^3Received an incorrectly formatted message from ^1IP address ({})^3!\n^3Contents of the message:'^1{}^3'\n", sender_ip, message) };
     print_colored_text(app_handles.hwnd_re_messages_data, incorrectly_formatted_message_received.c_str());

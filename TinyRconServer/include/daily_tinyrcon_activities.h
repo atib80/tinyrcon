@@ -4,6 +4,8 @@
 #include <sstream>
 #include <string>
 
+class tiny_rcon_server_application;
+
 class tinyrcon_activities_stats
 {
   size_t no_of_warnings{};
@@ -122,78 +124,17 @@ public:
     return no_of_map_changes;
   }
 
-  /*std::string &get_last_warn_message() noexcept
+  /*std::string get_welcome_message(tiny_rcon_server_application& main_app, const std::string &user_name) const
   {
-    return last_warn_message;
-  }
+    const size_t no_of_ip_bans = main_app.get_game_server().get_banned_ip_addresses_map().size();
+    const size_t no_of_ip_address_range_bans = main_app.get_game_server().get_banned_ip_address_ranges_map().size();
+    const size_t no_of_city_bans = main_app.get_game_server().get_banned_cities_set().size();
+    const size_t no_of_country_bans = main_app.get_game_server().get_banned_countries_set().size();
+    const size_t no_of_protected_ip_addresses = main_app.get_game_server().get_protected_ip_addresses().size();
+    const size_t no_of_protected_ip_address_ranges = main_app.get_game_server().get_protected_ip_address_ranges().size();
+    const size_t no_of_protected_cities = main_app.get_game_server().get_protected_cities().size();
+    const size_t no_of_protected_countries = main_app.get_game_server().get_protected_countries().size();
 
-  std::string &get_last_kick_message() noexcept
-  {
-    return last_kick_message;
-  }
-
-  std::string &get_last_tempban_message() noexcept
-  {
-    return last_tempban_message;
-  }
-
-  std::string &get_last_guid_ban_message() noexcept
-  {
-    return last_guid_ban_message;
-  }
-
-  std::string &get_last_ip_ban_message() noexcept
-  {
-    return last_ip_ban_message;
-  }
-
-  std::string &get_last_ip_address_range_ban_message() noexcept
-  {
-    return last_ip_address_range_ban_message;
-  }
-
-  std::string &get_last_city_ban_message() noexcept
-  {
-    return last_city_ban_message;
-  }
-
-  std::string &get_last_country_ban_message() noexcept
-  {
-    return last_city_ban_message;
-  }
-
-  std::string &get_last_protected_ip_address_message() noexcept
-  {
-    return last_protected_ip_address_message;
-  }
-
-  std::string &get_last_protected_ip_address_range_message() noexcept
-  {
-    return last_protected_ip_address_range_message;
-  }
-
-  std::string &get_last_protected_city_message() noexcept
-  {
-    return last_protected_city_message;
-  }
-
-  std::string &get_last_protected_country_message() noexcept
-  {
-    return last_protected_country_message;
-  }
-
-  std::string &get_last_map_restart_message() noexcept
-  {
-    return last_map_restart_message;
-  }
-
-  std::string &get_last_map_change_message() noexcept
-  {
-    return last_map_change_message;
-  }*/
-
-  std::string get_welcome_message(const std::string &user_name) const
-  {
     std::ostringstream oss;
     oss << std::format("^5Hi, welcome back, ^1admin ^7{}\n", user_name);
     oss << std::format("^5Number of logged ^1auto-kicks ^5so far is ^3{}.\n", no_of_autokicks);
@@ -203,5 +144,5 @@ public:
     oss << std::format("   ^1protected IP address {} ^5of ^3{} ^5{},\n   ^1protected {} ^5of ^3{} ^5{},\n^1protected {} ^5of ^3{} ^5{},\n", no_of_protected_ip_address_ranges != 1 ? "ranges" : "range", no_of_protected_ip_address_ranges, no_of_protected_ip_address_ranges != 1 ? "players" : "player", no_of_protected_cities != 1 ? "cities" : "city", no_of_protected_cities, no_of_protected_cities != 1 ? "players" : "player", no_of_protected_countries != 1 ? "countries" : "country", no_of_protected_countries, no_of_protected_countries != 1 ? "players" : "player");
     oss << std::format("^5Admins executed ^3{} ^1map restarts ^5and ^3{} ^1map changes^5.\n", no_of_map_restarts, no_of_map_changes);
     return oss.str();
-  }
+  }*/
 };

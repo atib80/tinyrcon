@@ -43,6 +43,7 @@ public:
   inline std::vector<geoip_data> &get_geoip_data()  { return geoip_db; }
 
 private:
+  inline static const std::string unknown_rcon_password{ "abc123" };
   inline static std::size_t number_of_sent_non_rcon_commands{};
   inline static std::size_t number_of_sent_rcon_commands{};
   inline static std::size_t rcon_status_sent_counter{};

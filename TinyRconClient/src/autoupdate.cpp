@@ -3,6 +3,7 @@
 #include <iostream>
 #include <filesystem>
 #include <fstream>
+#include <regex>
 #include <string>
 #include <cstring>
 #include <memory>
@@ -228,7 +229,7 @@ vector<string> auto_update_manager::get_file_name_matches_for_specified_file_pat
   WIN32_FIND_DATAA file_data{};
   internet_handle read_file_data_handle{ FtpFindFirstFileA(internet_connect_handle.get(), download_file_path_pattern, &file_data, INTERNET_FLAG_NEED_FILE, INTERNET_NO_CALLBACK) };
 
-  if (read_file_data_handle.get() != NULL) {
+  if (read_file_data_handle.get() != nullptr) {
     while (stl::helper::len(file_data.cFileName) > 0) {
       found_file_names.emplace_back(file_data.cFileName);
       Sleep(20);
@@ -288,7 +289,7 @@ void auto_update_manager::check_for_updates()
 
   internet_connection_handles threadParam;
   threadParam.internet_open_handle.set(InternetOpenA("tinyrcon", INTERNET_OPEN_TYPE_DIRECT, nullptr, nullptr, 0));
-  if (NULL != threadParam.internet_open_handle.get()) {
+  if (nullptr != threadParam.internet_open_handle.get()) {
 
     // Create a worker thread
     HANDLE hThread{};
@@ -305,7 +306,7 @@ void auto_update_manager::check_for_updates()
       &dwThreadID// Pointer to returned thread identifier
     );
 
-    if (0 != hThread) {
+    if (nullptr != hThread) {
 
       // Wait for the call to InternetConnect in worker function to complete
       if (WaitForSingleObject(hThread, dwTimeout) == WAIT_TIMEOUT) {
@@ -322,7 +323,7 @@ void auto_update_manager::check_for_updates()
     }
 
 
-    if (NULL != threadParam.internet_connect_handle.get()) {
+    if (nullptr != threadParam.internet_connect_handle.get()) {
 
       string ftp_download_folder_path{
         main_app.get_ftp_download_folder_path()
@@ -473,13 +474,13 @@ void auto_update_manager::replace_temporary_version()
     }
     const string copy_file_path{ self_current_working_directory + self_file_name };
     for (size_t i{}; i < 5 && !CopyFileA(copy_file_path.c_str(), deleted_file_path.c_str(), FALSE); ++i) {
-    // while (!CopyFileA(copy_file_path.c_str(), deleted_file_path.c_str(), FALSE)) {
+      // while (!CopyFileA(copy_file_path.c_str(), deleted_file_path.c_str(), FALSE)) {
       Sleep(20);
     }
     if (run_executable(deleted_file_path.c_str())) {
-      if (pr_info.hProcess != NULL)
+      if (pr_info.hProcess != nullptr)
         CloseHandle(pr_info.hProcess);
-      if (pr_info.hThread != NULL)
+      if (pr_info.hThread != nullptr)
         CloseHandle(pr_info.hThread);
       delete_me();
       _exit(0);
@@ -508,9 +509,9 @@ void auto_update_manager::downloaded_latest_version_of_program() const
       print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
 
       if (run_executable(exe_file_name.c_str())) {
-        if (pr_info.hProcess != NULL)
+        if (pr_info.hProcess != nullptr)
           CloseHandle(pr_info.hProcess);
-        if (pr_info.hThread != NULL)
+        if (pr_info.hThread != nullptr)
           CloseHandle(pr_info.hThread);
         delete_me();
         _exit(0);
@@ -525,7 +526,7 @@ void auto_update_manager::downloaded_latest_version_of_program() const
 DWORD WINAPI worker_function1(void *param)
 {
   internet_connection_handles *pThreadParm{ reinterpret_cast<internet_connection_handles *>(param) };
-  if (pThreadParm->internet_open_handle.get() != NULL) {
+  if (pThreadParm->internet_open_handle.get() != nullptr) {
     DWORD internet_option_connect_timeout{ 1000 };
     InternetSetOptionA(pThreadParm->internet_open_handle.get(), INTERNET_OPTION_CONNECT_TIMEOUT, &internet_option_connect_timeout, sizeof(internet_option_connect_timeout));
     pThreadParm->internet_connect_handle.set(InternetConnectA(pThreadParm->internet_open_handle.get(), main_app.get_ftp_download_site_ip_address().c_str(), INTERNET_DEFAULT_FTP_PORT, nullptr, nullptr, INTERNET_SERVICE_FTP, INTERNET_FLAG_PASSIVE, 0));
@@ -542,14 +543,14 @@ DWORD WINAPI worker_function1(void *param)
 DWORD WINAPI worker_function2(void *param)
 {
   internet_connection_handles *pThreadParm{ reinterpret_cast<internet_connection_handles *>(param) };
-  if (pThreadParm->internet_open_handle.get() != NULL) {
+  if (pThreadParm->internet_open_handle.get() != nullptr) {
     DWORD internet_option_connect_timeout{ 1000 };
     InternetSetOptionA(pThreadParm->internet_open_handle.get(), INTERNET_OPTION_CONNECT_TIMEOUT, &internet_option_connect_timeout, sizeof(internet_option_connect_timeout));
     /*pThreadParm->internet_connect_handle.set(InternetConnectA(pThreadParm->internet_open_handle.get(), main_app.get_ftp_download_site_ip_address().c_str(), INTERNET_DEFAULT_FTP_PORT, nullptr, nullptr, INTERNET_SERVICE_FTP, INTERNET_FLAG_PASSIVE, 0));*/
     pThreadParm->internet_connect_handle.set(InternetOpenUrl(pThreadParm->internet_open_handle.get(),
       /* "http://myexternalip.com/raw",*/
       "http://icanhazip.com",
-      NULL,
+      nullptr,
       0,
       INTERNET_FLAG_RELOAD,
       0));
@@ -566,7 +567,7 @@ DWORD WINAPI worker_function2(void *param)
 DWORD WINAPI worker_function3(void *param)
 {
   internet_connection_handles *pThreadParm{ reinterpret_cast<internet_connection_handles *>(param) };
-  if (pThreadParm->internet_open_handle.get() != NULL) {
+  if (pThreadParm->internet_open_handle.get() != nullptr) {
     DWORD internet_option_connect_timeout{ 1000 };
     InternetSetOptionA(pThreadParm->internet_open_handle.get(), INTERNET_OPTION_CONNECT_TIMEOUT, &internet_option_connect_timeout, sizeof(internet_option_connect_timeout));
     pThreadParm->internet_connect_handle.set(InternetConnectA(pThreadParm->internet_open_handle.get(), pThreadParm->ftp_host, INTERNET_DEFAULT_FTP_PORT, pThreadParm->user_name, pThreadParm->user_pass, INTERNET_SERVICE_FTP, INTERNET_FLAG_PASSIVE, 0));
@@ -612,7 +613,7 @@ std::string get_tiny_rcon_client_external_ip_address()
     nullptr,
     0));
 
-  if (NULL != threadParam.internet_open_handle.get()) {
+  if (nullptr != threadParam.internet_open_handle.get()) {
 
     // Create a worker thread
     HANDLE hThread{};
@@ -629,7 +630,7 @@ std::string get_tiny_rcon_client_external_ip_address()
       &dwThreadID// Pointer to returned thread identifier
     );
 
-    if (0 != hThread) {
+    if (nullptr != hThread) {
       // Wait for the call to InternetConnect in worker function to complete
       if (WaitForSingleObject(hThread, dwTimeout) == WAIT_TIMEOUT) {
         print_colored_text(app_handles.hwnd_re_messages_data, "^3Could not connect to ^5http://myexternalip.com/raw ^3to retrieve your ^1external IP address ^3for ^5Tiny^6Rcon ^3updates!\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
@@ -662,7 +663,7 @@ bool upload_file_to_ftp_server(const char *ftp_host, const char *user_name, cons
   threadParam.upload_file_path = upload_file_path;
   threadParam.ftp_file_path = ftp_file_path;
 
-  if (NULL != threadParam.internet_open_handle.get()) {
+  if (nullptr != threadParam.internet_open_handle.get()) {
 
     // Create a worker thread
     HANDLE hThread{};
@@ -679,7 +680,7 @@ bool upload_file_to_ftp_server(const char *ftp_host, const char *user_name, cons
       &dwThreadID// Pointer to returned thread identifier
     );
 
-    if (0 != hThread) {
+    if (nullptr != hThread) {
       // Wait for the call to InternetConnect in worker function to complete
       if (WaitForSingleObject(hThread, dwTimeout) == WAIT_TIMEOUT) {
         // Wait until the worker thread exits
@@ -744,8 +745,6 @@ bool download_file_from_ftp_server(const char *ftp_host, const char *user_name, 
       return false;
     }
 
-    /*const string info_msg{ format("^2Successfully downloaded file ^1{} ^2from ^5Tiny^6Rcon ^5server.", ftp_file_path) };
-    print_colored_text(app_handles.hwnd_re_messages_data, info_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);*/
     return true;
   }
   return false;

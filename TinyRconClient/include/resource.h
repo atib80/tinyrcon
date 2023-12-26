@@ -342,6 +342,8 @@
 #define ID_PATCHGAME_V1_2 445
 #define ID_PATCHGAME_V1_3 446
 #define ID_COPYGAMESERVERADDRESS 447
+#define ID_BANNAMEBUTTON 448
+#define ID_VIEWBANNEDPLAYERNAMES 449
 #define IDC_STATIC                      -1
 
 // Next default values for new objects

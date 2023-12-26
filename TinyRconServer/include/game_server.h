@@ -1,40 +1,19 @@
 ﻿#pragma once
 
-#include <atomic>
+#include <set>
 #include <map>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
+#include "player.h"
 
 using std::map;
 using std::unordered_map;
 using std::string;
 using std::unordered_set;
 using std::vector;
-
-struct player
-{
-  explicit player(const int pid = -1, const int score = 0, const char *country_code = "xy", const char *country_name = "Unknown", const char *region = "Unknown", const char *city = "Unknown") : pid{ pid }, score{ score }, country_code{ country_code }, country_name{ country_name }, region{ region }, city{ city } {}
-  int pid;
-  int score{};
-  unsigned long ip_hash_key{};
-  char player_name[33]{};
-  char guid_key[33]{};
-  char banned_date_time[33]{};
-  char ip_address[16]{};
-  char ping[5]{};
-  size_t warned_times{};
-  time_t banned_start_time{};
-  time_t ban_duration_in_hours{ 24 };
-  const char *country_code{};
-  const char *country_name{};
-  const char *region{};
-  const char *city{};
-  std::string reason;
-  std::string banned_by_user_name{ "^1Administrator" };
-};
 
 class game_server
 {
@@ -327,6 +306,26 @@ public:
     return true;
   }
 
+  vector<player> &get_banned_names_vector()
+  {
+    return banned_names_vector;
+  }
+
+  vector<player> &get_removed_banned_names_vector()
+  {
+    return removed_banned_names_vector;
+  }
+
+  unordered_map<string, player> &get_banned_names_map()
+  {
+    return banned_names_map;
+  }
+
+  unordered_map<string, player> &get_removed_banned_names_map()
+  {
+    return removed_banned_names_map;
+  }
+
   bool remove_ip_address_from_temp_banned_ip_addresses(
     const string &new_ip_address)
   {
@@ -376,6 +375,10 @@ public:
     warned_players_data = std::move(new_warned_players_data);
   }
 
+  /*std::set<string> &get_protected_names()
+  {
+    return protected_names_set;
+  }*/
 
   std::set<string> &get_protected_ip_addresses() noexcept
   {
@@ -859,6 +862,8 @@ private:
   std::unordered_map<string, player> banned_ip_address_ranges_map;
   std::unordered_map<string, player> removed_banned_ip_address_ranges_map;
   std::unordered_map<int, player> warned_players_data;
+  std::unordered_map<string, player> banned_names_map;
+  std::unordered_map<string, player> removed_banned_names_map;
   std::set<std::string> banned_cities;
   std::set<std::string> removed_banned_cities;
   std::set<std::string> banned_countries;
@@ -867,15 +872,14 @@ private:
   std::set<string> protected_ip_address_ranges;
   std::set<std::string> protected_cities;
   std::set<std::string> protected_countries;
-  // std::vector<player_data> players_data;
   std::vector<player> temp_banned_ip_addresses_vector;
   std::vector<player> removed_temp_banned_players_data;
   std::vector<player> banned_ip_addresses_vector;
   std::vector<player> removed_banned_ip_addresses_vector;
   std::vector<player> banned_ip_address_ranges_vector;
   std::vector<player> removed_banned_ip_address_ranges_vector;
-  // vector<player_data> protected_ip_addresses_vector;
-  // vector<player_data> protected_ip_address_ranges_vector;
+  std::vector<player> banned_names_vector;
+  std::vector<player> removed_banned_names_vector;
   std::string short_version{ "1.0" };
   std::string ip_address{ "185.158.113.146" };
   std::string sv_hostname{ "CoD2 CTF" };
@@ -917,7 +921,7 @@ private:
   std::string header_player_geoinfo_color{ "^4" };
   std::string data_player_geoinfo_color{ "^4" };
   std::string server_message{ "^5| ^3Server is empty!^5" };
-  std::atomic<size_t> check_for_banned_players_time_period{ 5 };
+  size_t check_for_banned_players_time_period{ 5 };
   int max_number_of_players{ 64 };
   int max_private_clients{};
   int current_number_of_players{};

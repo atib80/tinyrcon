@@ -1,134 +1,13 @@
 #pragma once
 
-#include <string>
-#include <utility>
-#include <vector>
 #include <CommCtrl.h>
 #include <Richedit.h>
 #include <regex>
 #include <set>
 #include <connection_manager_for_messages.h>
-#include "daily_tinyrcon_activities.h"
+#include "tiny_rcon_utility_data_types.h"
 
 #undef max
-
-class tiny_rcon_server_application;
-
-struct tiny_rcon_handles
-{
-  HINSTANCE hInstance;
-  HWND hwnd_main_window;
-  HWND hwnd_users_table;
-  HWND hwnd_online_admins_information;
-  HWND hwnd_re_messages_data;
-  HWND hwnd_e_user_input;
-  HWND hwnd_confirmation_dialog;
-  HWND hwnd_yes_button;
-  HWND hwnd_no_button;
-  HWND hwnd_re_confirmation_message;
-  HWND hwnd_e_reason;
-};
-
-enum class is_append_message_to_richedit_control {
-  no,
-  yes
-};
-
-enum class is_log_message {
-  no,
-  yes
-};
-
-enum class is_log_datetime {
-  no,
-  yes
-};
-
-enum class game_name_t {
-  unknown,
-  cod1,
-  cod2,
-  cod4,
-  cod5
-};
-
-enum class command_type { rcon,
-  user };
-
-struct command_t
-{
-  command_t(std::vector<std::string> cmd, const command_type cmd_type, const bool wait_for_reply) : command{ std::move(cmd) }, type{ cmd_type }, is_wait_for_reply{ wait_for_reply } {}
-  std::vector<std::string> command;
-  command_type type;
-  bool is_wait_for_reply{};
-};
-
-enum class message_type_t { send,
-  receive };
-
-struct message_t
-{
-  explicit message_t(std::string message_command, std::string message_data, const std::shared_ptr<tiny_rcon_client_user> &s, const bool is_show_in_messages = true) : command{ std::move(message_command) }, data{ std::move(message_data) }, sender{ s }, is_show_in_messages{ is_show_in_messages } {}
-  std::string command;
-  std::string data;
-  std::shared_ptr<tiny_rcon_client_user> sender;
-  const bool is_show_in_messages;
-};
-
-enum class sort_type {
-  unknown,
-  pid_desc,
-  pid_asc,
-  score_desc,
-  score_asc,
-  ping_desc,
-  ping_asc,
-  name_desc,
-  name_asc,
-  ip_desc,
-  ip_asc,
-  geo_desc,
-  geo_asc
-};
-
-enum class color_type { black,
-  red,
-  green,
-  yellow,
-  blue,
-  cyan,
-  magenta,
-  white,
-};
-
-namespace color {
-static COLORREF black{ RGB(0, 0, 0) };
-static COLORREF blue{ RGB(0, 0, 255) };
-static COLORREF cyan{ RGB(0, 255, 255) };
-static COLORREF green{ RGB(0, 255, 0) };
-static COLORREF grey{ RGB(128, 128, 128) };
-static COLORREF light_blue{ RGB(173, 216, 230) };
-static COLORREF magenta{ RGB(255, 0, 255) };
-static COLORREF maroon{ RGB(128, 0, 0) };
-static COLORREF purple{ RGB(128, 0, 128) };
-static COLORREF red{ RGB(255, 0, 0) };
-static COLORREF teal{ RGB(0, 128, 128) };
-static COLORREF yellow{ RGB(255, 255, 0) };
-static COLORREF white{ RGB(255, 255, 255) };
-}// namespace color
-
-struct player;
-
-struct row_of_player_data_to_display
-{
-  char pid[6]{};
-  char score[8]{};
-  char ping[8]{};
-  char player_name[33]{};
-  char ip_address[20]{};
-  char geo_info[128]{};
-  const char *country_code{};
-};
 
 bool create_necessary_folders_and_files(const std::vector<std::string> &folder_file_paths);
 void set_rich_edit_control_colors(HWND richEditCtrl, const COLORREF fg_color, const COLORREF bg_color = color::black, const char *font_face_name = "Consolas");
@@ -220,7 +99,7 @@ bool get_user_input();
 void print_help_information(const std::vector<std::string> &);
 
 std::string prepare_current_match_information();
-bool is_valid_decimal_whole_number(const std::string &str, int &number);
+bool is_valid_decimal_whole_number(const std::string &str, int64_t &number);
 
 bool check_if_user_provided_argument_is_valid_for_specified_command(
   const char *cmd,
@@ -237,9 +116,9 @@ void process_user_command(const std::vector<std::string> &);
 
 volatile bool should_program_terminate(const std::string & = "");
 
-void display_permanently_banned_ip_addresses(const bool is_save_data_to_log_file = false);
+void display_permanently_banned_ip_addresses(const size_t number_of_last_bans_to_display = std::string::npos, const bool is_save_data_to_log_file = false);
 
-void display_temporarily_banned_ip_addresses(const bool is_save_data_to_log_file = false);
+void display_temporarily_banned_ip_addresses(const size_t number_of_last_bans_to_display = std::string::npos, const bool is_save_data_to_log_file = false);
 
 void import_geoip_data(std::vector<geoip_data> &, const char *);
 
@@ -369,6 +248,9 @@ size_t find_longest_user_country_city_info_length(
   const std::vector<std::shared_ptr<tiny_rcon_client_user>> &users,
   const size_t number_of_users_to_process) noexcept;
 void display_admins_data();
-void display_banned_ip_address_ranges(const bool is_save_data_to_log_file = false);
+void display_banned_ip_address_ranges(const size_t number_of_last_bans_to_display = std::string::npos, const bool is_save_data_to_log_file = false);
 bool load_tinyrcon_statistics_data(const char *file_path);
 bool save_tinyrcon_statistics_data(const char *file_path);
+void parse_banned_names_file(const char *file_path, std::vector<player> &banned_names_vector, std::unordered_map<std::string, player> &banned_names_map, const bool is_skip_removed_check = false);
+bool add_permanently_banned_player_name(player &pd, std::vector<player> &banned_players_names_vector, std::unordered_map<std::string, player> &banned_players_names_map);
+bool remove_permanently_banned_player_name(player &pd, std::vector<player> &banned_names_vector, std::unordered_map<std::string, player> &banned_names_map);

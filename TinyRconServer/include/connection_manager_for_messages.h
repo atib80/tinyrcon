@@ -59,8 +59,6 @@ struct geoip_data
   }
 };
 
-struct tiny_rcon_client_user;
-
 class connection_manager_for_messages
 {
   using rcv_timeout_option =

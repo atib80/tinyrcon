@@ -3134,7 +3134,7 @@ static void Grid_OnSetFocus(HWND hwnd, HWND hwndOldFocus)
 /// @param fRedraw If TRUE this control should be redrawn immediately.
 ///
 /// @returns VOID.
-void Grid_OnSetFont(HWND hwnd, HFONT hfont, BOOL fRedraw) 
+void Grid_OnSetFont(HWND hwnd, HFONT hfont, BOOL fRedraw)
 {
   g_lpInst->hfont = hfont;
   if (!g_lpInst->hcolumnheadingfont) {
@@ -4352,7 +4352,7 @@ int findLongestTextWidthInColumn(HWND hwnd, const int col, const int start_row, 
   HFONT holdfont;
   hdc = GetDC(hwnd);
   holdfont = (HFONT)SelectObject(hdc, g_lpInst->hfont);
-  for (int i {start_row }; i < last_row; ++i) {
+  for (int i{ start_row }; i < last_row; ++i) {
     string cell_data{ GetCellContents(hwnd, i, col) };
     const char *text = cell_data.c_str();
     const char *last = text + cell_data.length();

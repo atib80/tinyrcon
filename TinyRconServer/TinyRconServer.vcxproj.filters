@@ -66,6 +66,12 @@
     <ClInclude Include="include\daily_tinyrcon_activities.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\player.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\tiny_rcon_utility_data_types.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="data\icons\big_codicon.ico">

@@ -17,9 +17,8 @@
 #include <bitextractor.hpp>
 #include <bitexception.hpp>
 #include <bittypes.hpp>
-#include <crtdbg.h>
+// #include <crtdbg.h>
 #include "stack_trace_element.h"
-// #include "autoupdate.h"
 #include <asio.hpp>
 
 // Call of duty steam appid: 2620
@@ -36,6 +35,7 @@
 using namespace std;
 using namespace stl::helper;
 using namespace std::filesystem;
+namespace fs = std::filesystem;
 
 using stl::helper::trim_in_place;
 
@@ -243,12 +243,10 @@ extern const map<string, string> user_commands_help{
   { "!maps", "^5!maps ^2-> displays all available playable maps. " },
   { "!c", "^5!c [IP:PORT] ^2-> launches your Call of Duty game and connects to currently configured game server or optionally specified game server address ^5[IP:PORT]" },
   { "!cp", "^5!cp [IP:PORT] ^2-> launches your Call of Duty game and connects to currently configured game server or optionally specified game server address ^5[IP:PORT] using a private slot." },
-  // { "!rt", "^5!rt time_period ^2-> sets time period (automatic checking for banned players) to time_period (1-30 seconds)." },
   { "!config", "^5!config [rcon|private|address|name] [new_rcon_password|new_private_password|new_server_address|new_name]\n ^2-> you change tinyrcon's ^1rcon ^2or ^1private slot password^2, registered server ^1IP:port ^2address or your ^1username ^2using this command.\nFor example ^1!config rcon abc123 ^2changes currently used ^1rcon_password ^2to ^1abc123^2\n ^1!config private abc123 ^2changes currently used ^1sv_privatepassword ^2to ^1abc123^2\n ^1!config address 123.101.102.103:28960 ^2changes currently used server ^1IP:port ^2to ^1123.101.102.103:28960\n ^1!config name Administrator ^2changes currently used ^1username ^2to ^1Administrator" },
-  { "!border", "^5Turns ^3on^5|^3off ^5border lines around displayed ^3GUI controls^5." },
   { "!messages", "^5Turns ^3on^5|^3off ^5messages for temporarily and permanently banned players." },
-  { "!banned cities", "^5Displays lists of all currently ^1banned cities" },
-  { "!banned countries", "^5Displays lists of all currently ^1banned countries" },
+  { "!banned cities", "^5Displays all currently ^1banned cities." },
+  { "!banned countries", "^5Displays all currently ^1banned countries." },
   { "!ecb", "^2Enables ^5Tiny^6Rcon's ^2country ban feature." },
   { "!dcb", "^3Disables ^5Tiny^6Rcon's ^3country ban feature." },
   { "!bancountry", "^5!bancountry country name ^2-> ^5Adds player's ^3country ^5to list of banned countries." },
@@ -286,7 +284,14 @@ extern const map<string, string> user_commands_help{
   { "!unprotectcountry",
     "^5!unprotectcountry pid|country_name ^2-> ^5removes protected ^1IP address ^5of player whose ^1pid number ^5or "
     "^1country name ^5is equal to specified ^1pid ^5or ^1country_name^5, respectively." },
-  { "!patch", "^5!patch game_version_number ^2-> ^3patches your game (^1Call of duty 2 English version only^3) ^3to specified ^1game_version_number\n^2Allowed version numbers for ^1game_version_number ^2are ^11.0 1.01 1.2 ^2and ^11.3\n^5Example: ^1!patch 1.3" }
+  { "!banname",
+    "^5!banname pid|player_name [reason] ^2-> ^5bans ^1player name ^5of online player whose ^1pid ^5number is equal to specified ^1'pid' ^5or bans specified player name ^1'player_name'" },
+  { "!unbanname",
+    "^5!unbanname player_name [reason] ^2-> ^3removes previously banned ^1'player name'" },
+  { "!names",
+    "^5!names player_name [reason] ^2-> ^5displays all currently banned names." },
+  { "!stats",
+    "^5!stats ^2-> ^5displays up-to-date ^5Tiny^6Rcon ^1admins' ^5related stats data." }
 };
 
 extern const unordered_set<string> user_commands_set{
@@ -307,6 +312,18 @@ extern const unordered_set<string> user_commands_set{
   "!b",
   "!gb",
   "!globalban",
+  "!bn",
+  "!banname",
+  "!ubn",
+  "!unbanname",
+  "tempbans",
+  "!tempbans",
+  "bans",
+  "!bans",
+  "ranges",
+  "!ranges",
+  "names",
+  "!names",
   "!m",
   "!map",
   "maps",
@@ -314,8 +331,6 @@ extern const unordered_set<string> user_commands_set{
   "!status",
   "s",
   "!s",
-  "bans",
-  "tempbans",
   "t",
   "!t",
   "y",
@@ -324,10 +339,6 @@ extern const unordered_set<string> user_commands_set{
   "!sort",
   "list",
   "!list",
-  "!bans",
-  "ranges",
-  "!ranges",
-  "!tempbans",
   "!addip",
   "!banip",
   "!ub",
@@ -336,10 +347,7 @@ extern const unordered_set<string> user_commands_set{
   "!gs",
   "!getstatus",
   "!config",
-  // "!rt",
-  // "!refreshtime",
-  "border",
-  "!border",
+  "!stats",
   "messages",
   "!messages",
   "!egb",
@@ -365,8 +373,10 @@ extern const unordered_set<string> user_commands_set{
   "!unprotectcity",
   "!protectcountry",
   "!unprotectcountry",
-  "!patch",
-  "!p"
+  "!protectedipaddresses",
+  "!protectedipaddressranges",
+  "!protectedcities",
+  "!protectedcountries"
 };
 
 extern const unordered_set<string> rcon_status_commands{ "s", "!s", "status", "!status" };
@@ -918,6 +928,10 @@ bool write_tiny_rcon_json_settings_to_file(
   config_file << R"("user_defined_ban_msg": ")" << main_app.get_admin_messages()["user_defined_ban_msg"] << "\",\n";
   config_file << R"("user_defined_ip_ban_msg": ")" << main_app.get_admin_messages()["user_defined_ip_ban_msg"] << "\",\n";
   config_file << R"("user_defined_ip_address_range_ban_msg": ")" << main_app.get_admin_messages()["user_defined_ip_address_range_ban_msg"] << "\",\n";
+  config_file << R"("user_defined_name_ban_msg": ")" << main_app.get_admin_messages()["user_defined_name_ban_msg"]
+              << "\",\n";
+  config_file << R"("user_defined_name_unban_msg": ")" << main_app.get_admin_messages()["user_defined_name_unban_msg"]
+              << "\",\n";
   config_file << R"("user_defined_city_ban_msg": ")" << main_app.get_admin_messages()["user_defined_city_ban_msg"] << "\",\n";
   config_file << R"("user_defined_city_unban_msg": ")" << main_app.get_admin_messages()["user_defined_city_unban_msg"] << "\",\n";
   config_file << R"("user_defined_enable_city_ban_feature_msg": ")" << main_app.get_admin_messages()["user_defined_enable_city_ban_feature_msg"] << "\",\n";
@@ -940,6 +954,7 @@ bool write_tiny_rcon_json_settings_to_file(
   config_file << R"("automatic_kick_ip_address_range_ban_msg":  ")" << main_app.get_admin_messages()["automatic_kick_ip_address_range_ban_msg"] << "\",\n";
   config_file << R"("automatic_kick_city_ban_msg": ")" << main_app.get_admin_messages()["automatic_kick_city_ban_msg"] << "\",\n";
   config_file << R"("automatic_kick_country_ban_msg": ")" << main_app.get_admin_messages()["automatic_kick_country_ban_msg"] << "\",\n";
+  config_file << R"("automatic_kick_name_ban_msg": ")" << main_app.get_admin_messages()["automatic_kick_name_ban_msg"] << "\",\n";
   config_file << R"("current_match_info": ")" << main_app.get_current_match_info() << "\",\n";
   config_file << "\"use_different_background_colors_for_even_and_odd_lines\": " << (main_app.get_is_use_different_background_colors_for_even_and_odd_lines() ? "true" : "false") << ",\n";
   config_file << R"("odd_player_data_lines_bg_color": ")" << main_app.get_odd_player_data_lines_bg_color() << "\",\n";
@@ -1168,8 +1183,8 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
     main_app.get_tinyrcon_dict()["{ADMINNAME}"] = std::move(data_line);
   } else {
     found_missing_config_setting = true;
-    main_app.set_username("^1Admin");
-    main_app.get_tinyrcon_dict()["{ADMINNAME}"] = "^1Admin";
+    main_app.set_username("^3Player");
+    main_app.get_tinyrcon_dict()["{ADMINNAME}"] = "^3Player";
   }
 
   if (json_resource["program_title"].exists()) {
@@ -1487,6 +1502,33 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
     main_app.get_admin_messages()["user_defined_ip_address_range_ban_msg"] = "^7Admin ^5{ADMINNAME} ^7has ^1banned IP address range ^5{IP_ADDRESS_RANGE}. ^3Reason: ^1{REASON}";
   }
 
+  if (json_resource["user_defined_name_ban_msg"].exists()) {
+    if (!main_app.get_is_use_original_admin_messages()) {
+      data_line = json_resource["user_defined_name_ban_msg"].as_str();
+      strip_leading_and_trailing_quotes(data_line);
+      main_app.get_admin_messages()["user_defined_name_ban_msg"] = std::move(data_line);
+    } else {
+      main_app.get_admin_messages()["user_defined_name_ban_msg"] = "^7Admin ^5{ADMINNAME} ^7has ^1banned player name: ^7{PLAYERNAME}";
+    }
+  } else {
+    found_missing_config_setting = true;
+    main_app.get_admin_messages()["user_defined_name_ban_msg"] = "^7Admin ^5{ADMINNAME} ^7has ^1banned player name: ^7{PLAYERNAME}";
+    ;
+  }
+
+  if (json_resource["user_defined_name_unban_msg"].exists()) {
+    if (!main_app.get_is_use_original_admin_messages()) {
+      data_line = json_resource["user_defined_name_unban_msg"].as_str();
+      strip_leading_and_trailing_quotes(data_line);
+      main_app.get_admin_messages()["user_defined_name_unban_msg"] = std::move(data_line);
+    } else {
+      main_app.get_admin_messages()["user_defined_name_unban_msg"] = "^7Admin ^5{ADMINNAME} ^7has removed previously ^1banned player name: ^7{PLAYERNAME}";
+    }
+  } else {
+    found_missing_config_setting = true;
+    main_app.get_admin_messages()["user_defined_name_unban_msg"] = "^7Admin ^5{ADMINNAME} ^7has removed previously ^1banned player name: ^7{PLAYERNAME}";
+  }
+
   if (json_resource["user_defined_city_ban_msg"].exists()) {
     if (!main_app.get_is_use_original_admin_messages()) {
       data_line = json_resource["user_defined_city_ban_msg"].as_str();
@@ -1718,17 +1760,17 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
   }
 
   if (json_resource["automatic_kick_ip_ban_msg"].exists()) {
-    main_app.get_admin_messages()["automatic_kick_ip_ban_msg"] = "^7Player {PLAYERNAME} ^7with a previously ^1banned IP address ^7is being automatically ^1kicked.{{br}}^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{IP_BAN_DATE}";
+    main_app.get_admin_messages()["automatic_kick_ip_ban_msg"] = "^7Player {PLAYERNAME} ^7with a previously ^1banned IP address ^7is being automatically ^1kicked.{{br}}^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{BAN_DATE}";
   } else {
     found_missing_config_setting = true;
-    main_app.get_admin_messages()["automatic_kick_ip_ban_msg"] = "^7Player {PLAYERNAME} ^7with a previously ^1banned IP address ^7is being automatically ^1kicked.{{br}}^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{IP_BAN_DATE}";
+    main_app.get_admin_messages()["automatic_kick_ip_ban_msg"] = "^7Player {PLAYERNAME} ^7with a previously ^1banned IP address ^7is being automatically ^1kicked.{{br}}^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{BAN_DATE}";
   }
 
   if (json_resource["automatic_kick_ip_address_range_ban_msg"].exists()) {
-    main_app.get_admin_messages()["automatic_kick_ip_address_range_ban_msg"] = "^7Player {PLAYERNAME} ^7with an ^1IP address ^7from a previously ^1banned IP address range ^7is being automatically ^1kicked.{{br}}^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{IP_BAN_DATE}";
+    main_app.get_admin_messages()["automatic_kick_ip_address_range_ban_msg"] = "^7Player {PLAYERNAME} ^7with an ^1IP address ^7from a previously ^1banned IP address range ^7is being automatically ^1kicked.{{br}}^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{BAN_DATE}";
   } else {
     found_missing_config_setting = true;
-    main_app.get_admin_messages()["automatic_kick_ip_address_range_ban_msg"] = "^7Player {PLAYERNAME} ^7with an ^1IP address ^7from a previously ^1banned IP address range ^7is being automatically ^1kicked.{{br}}^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{IP_BAN_DATE}";
+    main_app.get_admin_messages()["automatic_kick_ip_address_range_ban_msg"] = "^7Player {PLAYERNAME} ^7with an ^1IP address ^7from a previously ^1banned IP address range ^7is being automatically ^1kicked.{{br}}^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{BAN_DATE}";
   }
 
   if (json_resource["automatic_kick_city_ban_msg"].exists()) {
@@ -1743,6 +1785,13 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
   } else {
     found_missing_config_setting = true;
     main_app.get_admin_messages()["automatic_kick_country_ban_msg"] = "^7Player {PLAYERNAME} ^7with an IP address from a ^1banned country:  ^5{COUNTRY_NAME} ^7is being automatically ^1kicked.";
+  }
+
+  if (json_resource["automatic_kick_name_ban_msg"].exists()) {
+    main_app.get_admin_messages()["automatic_kick_name_ban_msg"] = "^7Player {PLAYERNAME} ^7with a previously ^1banned player name ^7is being automatically ^1kicked.{{br}}^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{BAN_DATE}";
+  } else {
+    found_missing_config_setting = true;
+    main_app.get_admin_messages()["automatic_kick_name_ban_msg"] = "^7Player {PLAYERNAME} ^7with a previously ^1banned player name ^7is being automatically ^1kicked.{{br}}^5Reason of ban: ^1{REASON} ^7| ^5Date of ban: ^1{BAN_DATE}";
   }
 
   if (json_resource["current_match_info"].exists()) {
@@ -1952,16 +2001,18 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
   if (json_resource["header_player_geoinfo_color"].exists()) {
     data_line = json_resource["header_player_geoinfo_color"].as_str();
     strip_leading_and_trailing_quotes(data_line);
-    main_app.set_header_player_geoinfo_color(std::move(data_line));
+    // main_app.set_header_player_geoinfo_color(std::move(data_line));
+    main_app.set_header_player_geoinfo_color("^4");
   } else {
     found_missing_config_setting = true;
-    main_app.set_header_player_geoinfo_color("^3");
+    main_app.set_header_player_geoinfo_color("^4");
   }
 
   if (json_resource["data_player_geoinfo_color"].exists()) {
     data_line = json_resource["data_player_geoinfo_color"].as_str();
     strip_leading_and_trailing_quotes(data_line);
-    main_app.set_data_player_geoinfo_color(std::move(data_line));
+    // main_app.set_data_player_geoinfo_color(std::move(data_line));
+    main_app.set_data_player_geoinfo_color("^4");
   } else {
     found_missing_config_setting = true;
     main_app.set_data_player_geoinfo_color("^4");
@@ -2159,6 +2210,67 @@ void parse_tempbans_data_file(const char *file_path, std::vector<player> &temp_b
   }
 }
 
+
+void parse_banned_names_file(const char *file_path, std::vector<player> &banned_names_vector, std::unordered_map<std::string, player> &banned_names_map)
+{
+  string property_key, property_value;
+  ifstream input_file{ file_path };
+  if (!input_file) {
+    const size_t buffer_size{ 1024 };
+    char buffer[buffer_size];
+    strerror_s(buffer, buffer_size, static_cast<int>(GetLastError()));
+    string errorMessage{
+      "^3Couldn't open file at specified path ^1("s + file_path + ")^3! "s + buffer
+    };
+    print_colored_text(app_handles.hwnd_re_messages_data, errorMessage.c_str());
+    ofstream bannedIPsFileToWrite{ file_path };
+    if (!bannedIPsFileToWrite) {
+      strerror_s(buffer, buffer_size, static_cast<int>(GetLastError()));
+      errorMessage.assign(format("^3Couldn't create file at ^1{}^3!\nError: ^1{}", file_path, buffer));
+      print_colored_text(app_handles.hwnd_re_messages_data, errorMessage.c_str());
+    }
+  } else {
+    banned_names_map.clear();
+    banned_names_vector.clear();
+    string readData, information_about_protected_player;
+    while (getline(input_file, readData)) {
+      stl::helper::trim_in_place(readData);
+      vector<string> parts = stl::helper::str_split(readData, "\\", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::no);
+      for (auto &part : parts)
+        stl::helper::trim_in_place(part);
+      if (parts.size() < 5 || parts[2].empty())
+        continue;
+
+      if (!banned_names_map.contains(parts[2])) {
+        player bannedPlayerData{};
+        bannedPlayerData.ip_address = parts[0];
+        strcpy_s(bannedPlayerData.guid_key, std::size(bannedPlayerData.guid_key), parts[1].c_str());
+        strcpy_s(bannedPlayerData.player_name, std::size(bannedPlayerData.player_name), parts[2].c_str());
+        bannedPlayerData.banned_start_time = get_number_of_seconds_from_date_and_time_string(parts[3]);
+        const string converted_ban_date_and_time_info{ get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", bannedPlayerData.banned_start_time) };
+        strcpy_s(bannedPlayerData.banned_date_time, std::size(bannedPlayerData.banned_date_time), converted_ban_date_and_time_info.c_str());
+        bannedPlayerData.reason = std::move(parts[4]);
+        bannedPlayerData.banned_by_user_name = (parts.size() >= 6) ? parts[5] : main_app.get_username();
+        convert_guid_key_to_country_name(
+          main_app.get_connection_manager().get_geoip_data(),
+          bannedPlayerData.ip_address,
+          bannedPlayerData);
+        if (check_if_player_is_protected(bannedPlayerData, "^7enable ^1player name ban ^7for", information_about_protected_player)) {
+          print_colored_text(app_handles.hwnd_re_messages_data, information_about_protected_player.c_str());
+          continue;
+        }
+        banned_names_map.emplace(bannedPlayerData.player_name, bannedPlayerData);
+        banned_names_vector.push_back(std::move(bannedPlayerData));
+      }
+    }
+
+    sort(begin(banned_names_vector), end(banned_names_vector), [](const player &p1, const player &p2) {
+      return p1.banned_start_time < p2.banned_start_time;
+    });
+  }
+}
+
+
 void parse_banned_ip_addresses_file(const char *file_path, std::vector<player> &banned_players, std::unordered_map<std::string, player> &ip_to_banned_player)
 {
   string property_key, property_value;
@@ -2186,7 +2298,7 @@ void parse_banned_ip_addresses_file(const char *file_path, std::vector<player> &
       vector<string> parts = stl::helper::str_split(readData, "\\", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::no);
       for (auto &part : parts)
         stl::helper::trim_in_place(part);
-      if (parts.size() < 5)
+      if (parts.size() < 5 || parts[0].empty())
         continue;
 
       if (!ip_to_banned_player.contains(parts[0])) {
@@ -2598,7 +2710,7 @@ std::pair<bool, player> remove_temp_banned_ip_address(const std::string &ip_addr
     return { false, player{} };
   }
 
-  auto &temp_banned_players = main_app.get_current_game_server().get_temp_banned_players_data();
+  auto &temp_banned_players = main_app.get_current_game_server().get_temp_banned_ip_addresses_vector();
 
   const auto found_iter = find_if(std::begin(temp_banned_players), std::end(temp_banned_players), [&ip_address](const player &p) {
     return ip_address == p.ip_address;
@@ -2633,6 +2745,19 @@ std::pair<bool, player> remove_temp_banned_ip_address(const std::string &ip_addr
   return {
     true, player{}
   };
+}
+
+bool add_permanently_banned_player_name(player &pd, vector<player> &banned_players_names_vector, unordered_map<string, player> &banned_players_names_map)
+{
+  if (len(pd.player_name) == 0 || banned_players_names_map.contains(pd.player_name))
+    return false;
+
+  banned_players_names_map.emplace(pd.player_name, pd);
+  banned_players_names_vector.push_back(std::move(pd));
+
+  save_banned_ip_entries_to_file(main_app.get_banned_names_file_path(), banned_players_names_vector);
+
+  return true;
 }
 
 
@@ -2683,6 +2808,24 @@ bool remove_permanently_banned_ip_address_range(player &pd, std::vector<player> 
   banned_ip_address_ranges_map.erase(pd.ip_address);
 
   save_banned_ip_address_range_entries_to_file(main_app.get_ip_range_bans_file_path(), banned_ip_address_ranges_vector);
+
+  return true;
+}
+
+bool remove_permanently_banned_player_name(player &pd, std::vector<player> &banned_names_vector, std::unordered_map<std::string, player> &banned_names_map)
+{
+  if (len(pd.player_name) == 0 || !banned_names_map.contains(pd.player_name))
+    return false;
+
+  banned_names_vector.erase(remove_if(std::begin(banned_names_vector), std::end(banned_names_vector), [&pd](const player &p) {
+    return strcmp(pd.player_name, p.player_name) == 0;
+  }),
+    std::end(banned_names_vector));
+
+  pd = std::move(banned_names_map.at(pd.player_name));
+  banned_names_map.erase(pd.player_name);
+
+  save_banned_ip_entries_to_file(main_app.get_banned_names_file_path(), banned_names_vector);
 
   return true;
 }
@@ -2890,12 +3033,10 @@ void print_help_information(const std::vector<std::string> &input_parts)
  ^1!m map_name game_type ^3-> loads map 'map_name' in specified game mode 'game_type', example: !m mp_toujane hq
  ^1!map map_name game_type ^5-> loads map 'map_name' in specified game mode 'game_type', example: !map mp_burgundy ctf
  ^1!maps ^5-> displays all available playable maps
- ^1!rt time_period ^3-> sets time period (automatic checking for banned players) to time_period (5-30 seconds). 
  ^1!config rcon abc123 ^5-> changes currently used ^1rcon_password ^5to ^1abc123
  ^1!config private abc123 ^5-> changes currently used ^1sv_privatepassword ^5to ^1abc123
  ^1!config address 123.101.102.103:28960 ^3-> changes currently used server ^1IP:port ^5to ^1123.101.102.103:28960
  ^1!config name Administrator ^5-> changes currently used ^1username ^5to ^1Administrator
- ^1!border on|off ^5-> Turns ^3on^5|^3off ^5border lines around displayed ^3GUI controls^5. 
  ^1!messages on|off ^5-> Turns ^3on^5|^3off ^5messages for temporarily and permanently banned players.
  ^1!egb ^5-> ^2Enables ^5Tiny^6Rcon's ^2city ban feature.
  ^1!dgb ^5-> ^3Disables ^5Tiny^6Rcon's ^3city ban feature.
@@ -2926,9 +3067,10 @@ void print_help_information(const std::vector<std::string> &input_parts)
  specified ^1'pid' ^2or ^1'valid_ip_address'^2, respectively.
  ^1!unprotectcountry pid|country_name ^5-> ^3removes protected ^1IP address ^3of player whose ^1'pid' ^3number or ^1'country name' 
  ^3is equal to specified ^1'pid' ^3or ^1'country_name'^3, respectively.
- ^1!patch game_version_number ^5-> ^2patches your game (^1Call of duty 2 English version only^2) ^2to specified ^1game_version_number
- ^2Allowed version numbers for ^1game_version_number ^2are ^11.0 1.01 1.2 ^2and ^11.3
- ^5Example: ^1!patch 1.3)"
+ ^1!banname pid|player_name [reason] ^5-> ^2bans ^1player name ^2of online player whose ^1pid ^2number is equal to specified ^1'pid' ^2or bans specified player name ^1'player_name'.
+ ^1!unbanname player_name [reason] ^5-> ^3removes previously banned ^1'player name'.
+ ^1!names ^5-> ^2displays all currently banned names.
+ ^1!stats ^5-> ^3displays up-to-date ^5Tiny^6Rcon ^1admins' ^3related stats data.)"
     };
     print_colored_text(app_handles.hwnd_re_messages_data, help_message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
     print_colored_text(app_handles.hwnd_re_messages_data, "^5\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::no);
@@ -3082,10 +3224,6 @@ bool check_if_user_provided_argument_is_valid_for_specified_command(
     return check_ip_address_range_validity(arg);
   }
 
-  if (str_compare_i(cmd, "!p") == 0 || str_compare_i(cmd, "!patch") == 0) {
-    return arg == "1.0" || arg == "1.01" || arg == "1.2" || arg == "1.3";
-  }
-
   return true;
 }
 
@@ -3174,7 +3312,7 @@ void check_for_temp_banned_ip_addresses()
 
   const time_t now_in_seconds = get_current_time_stamp();
 
-  auto &temp_banned_players = main_app.get_current_game_server().get_temp_banned_players_data();
+  auto &temp_banned_players = main_app.get_current_game_server().get_temp_banned_ip_addresses_vector();
   for (auto &tb : temp_banned_players) {
     const time_t ban_expires_time = tb.banned_start_time + (tb.ban_duration_in_hours * 3600);
     if (ban_expires_time <= now_in_seconds) {
@@ -3246,6 +3384,7 @@ void check_for_banned_ip_addresses()
   const auto &protected_countries = main_app.get_current_game_server().get_protected_countries();
   const auto &banned_cities = main_app.get_current_game_server().get_banned_cities_set();
   const auto &protected_cities = main_app.get_current_game_server().get_protected_cities();
+  auto &banned_player_names = main_app.get_current_game_server().get_banned_names_map();
   auto &ip_address_frequency = main_app.get_ip_address_frequency();
   auto &players_data = main_app.get_current_game_server().get_players_data();
   string player_protected_message;
@@ -3265,9 +3404,10 @@ void check_for_banned_ip_addresses()
       main_app.get_tinyrcon_dict()["{PLAYERNAME}"] = get_player_name_for_pid(online_player.pid);
       string reason{ "^1DoS attack" };
       specify_reason_for_player_pid(online_player.pid, reason);
-      string public_message{ "^1{ADMINNAME}: ^5Tiny^6Rcon ^7has successfully automatically banned ^1IP address: "s + online_player.ip_address + " ^7| ^5Player name: ^7{PLAYERNAME} ^7| ^5Reason: ^1{REASON} ^7| ^5Date of ban: ^1{IP_BAN_DATE}\n"s };
-      main_app.get_tinyrcon_dict()["{IP_BAN_DATE}"] = get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}");
+      string public_message{ "^1{ADMINNAME}: ^5Tiny^6Rcon ^7has successfully automatically banned ^1IP address: "s + online_player.ip_address + " ^7| ^5Player name: ^7{PLAYERNAME} ^7| ^5Reason: ^1{REASON} ^7| ^5Date of ban: ^1{BAN_DATE}\n"s };
+      main_app.get_tinyrcon_dict()["{BAN_DATE}"] = get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}");
       main_app.get_tinyrcon_dict()["{REASON}"] = std::move(reason);
+
       build_tiny_rcon_message(public_message);
       // rcon_say(public_message, true);
       const string private_message{
@@ -3289,18 +3429,15 @@ void check_for_banned_ip_addresses()
         main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
         main_app.get_tinyrcon_dict()["{PLAYERNAME}"] = online_player.player_name;
         if (main_app.get_current_game_server().get_banned_player_data_for_ip_address(online_player.ip_address, &pd)) {
-          main_app.get_tinyrcon_dict()["{IP_BAN_DATE}"] = pd.banned_date_time;
+          main_app.get_tinyrcon_dict()["{BAN_DATE}"] = pd.banned_date_time;
           pd.reason = remove_disallowed_character_in_string(pd.reason);
           main_app.get_tinyrcon_dict()["{REASON}"] = pd.reason;
         }
         build_tiny_rcon_message(message);
       }
       const string banned_player_information{ get_player_information(online_player.pid) };
-      const string msg{ format("^1Automatic kick ^5for previously ^1banned IP: {} ^5| Reason: ^1{}\n{}\n", online_player.ip_address, pd.reason, banned_player_information) };
+      const string msg{ format("^1Automatic kick ^5for previously ^3banned IP: ^1{} ^5| ^3Reason: ^1{}\n{}\n", online_player.ip_address, pd.reason, banned_player_information) };
       replace_br_with_new_line(message);
-      // replace_br_with_new_line(msg);
-      /*const string inform_message{ format("{}\\{}\\{}", main_app.get_username(), message, msg) };
-      main_app.add_message_to_queue(message_t("inform-message", inform_message, true));*/
       print_colored_text(app_handles.hwnd_re_messages_data, msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
       kick_player(online_player.pid, message);
     }
@@ -3318,7 +3455,7 @@ void check_for_banned_ip_addresses()
           main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
           main_app.get_tinyrcon_dict()["{PLAYERNAME}"] = online_player.player_name;
           if (main_app.get_current_game_server().get_banned_player_data_for_ip_address_range(online_player.ip_address, &pd)) {
-            main_app.get_tinyrcon_dict()["{IP_BAN_DATE}"] = pd.banned_date_time;
+            main_app.get_tinyrcon_dict()["{BAN_DATE}"] = pd.banned_date_time;
             pd.reason = remove_disallowed_character_in_string(pd.reason);
             main_app.get_tinyrcon_dict()["{REASON}"] = pd.reason;
           }
@@ -3327,9 +3464,6 @@ void check_for_banned_ip_addresses()
         const string banned_player_information{ get_player_information(online_player.pid) };
         const string private_message{ format("^1Automatic kick ^5for player with an ^1IP address ^5from a previously ^1banned IP address range: {}\n ^5| Reason: ^1{}\n{}\n", (is_short_ip_address_range_ban ? narrow_ip_address_range : wide_ip_address_range), pd.reason, banned_player_information) };
         replace_br_with_new_line(public_message);
-        // replace_br_with_new_line(private_message);
-        /*const string inform_message{ format("{}\\{}\\{}", main_app.get_username(), public_message, private_message) };
-        main_app.add_message_to_queue(message_t("inform-message", inform_message, true));*/
         print_colored_text(app_handles.hwnd_re_messages_data, private_message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
         kick_player(online_player.pid, public_message);
       }
@@ -3351,9 +3485,6 @@ void check_for_banned_ip_addresses()
           format("^1Automatic kick ^5for player ^7{} ^5with a previously ^1banned city name: {}\n{}\n", online_player.player_name, online_player.city, banned_player_information)
         };
         replace_br_with_new_line(message);
-        // replace_br_with_new_line(msg);
-        /*const string inform_message{ format("{}\\{}\\{}", main_app.get_username(), message, msg) };
-        main_app.add_message_to_queue(message_t("inform-message", inform_message, true));*/
         print_colored_text(app_handles.hwnd_re_messages_data, msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
         kick_player(online_player.pid, message);
       }
@@ -3375,15 +3506,41 @@ void check_for_banned_ip_addresses()
           format("^1Automatic kick ^5for player ^7{} ^5with a previously ^1banned country name: {}\n{}\n", online_player.player_name, online_player.country_name, banned_player_information)
         };
         replace_br_with_new_line(message);
-        // replace_br_with_new_line(msg);
-        /*const string inform_message{ format("{}\\{}\\{}", main_app.get_username(), message, msg) };
-        main_app.add_message_to_queue(message_t("inform-message", inform_message, true));*/
+        print_colored_text(app_handles.hwnd_re_messages_data, msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        kick_player(online_player.pid, message);
+      }
+    }
+
+    if (!banned_player_names.empty()) {
+      string player_name{ online_player.player_name };
+      remove_all_color_codes(player_name);
+      trim_in_place(player_name);
+      to_lower_case_in_place(player_name);
+
+      if (banned_player_names.contains(player_name)) {
+        string message{ main_app.get_automatic_kick_name_ban_msg() };
+
+        if (main_app.get_is_disable_automatic_kick_messages()) {
+          message.clear();
+        } else {
+          main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
+          main_app.get_tinyrcon_dict()["{PLAYERNAME}"] = online_player.player_name;
+          player &pd = banned_player_names[player_name];
+          main_app.get_tinyrcon_dict()["{BAN_DATE}"] = pd.banned_date_time;
+          pd.reason = remove_disallowed_character_in_string(pd.reason);
+          main_app.get_tinyrcon_dict()["{REASON}"] = pd.reason;
+          build_tiny_rcon_message(message);
+        }
+        const string banned_player_information{ get_player_information(online_player.pid) };
+        const string msg{ format("^1Automatic kick ^5for previously ^3banned player name: ^1{} ^5| ^3Reason: ^1{}\n{}\n", player_name, main_app.get_tinyrcon_dict()["{REASON}"], banned_player_information) };
+        replace_br_with_new_line(message);
         print_colored_text(app_handles.hwnd_re_messages_data, msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
         kick_player(online_player.pid, message);
       }
     }
   }
 }
+
 
 bool check_if_player_is_protected(const player &online_player, const char *admin_command, string &message)
 {
@@ -3467,7 +3624,6 @@ void ban_player(const int pid, std::string &custom_message)
   (void)snprintf(buffer, std::size(buffer), "banclient %d", pid);
   string reply_buffer;
   main_app.get_connection_manager().send_and_receive_rcon_data(buffer, reply_buffer, main_app.get_current_game_server().get_server_ip_address().c_str(), main_app.get_current_game_server().get_server_port(), main_app.get_current_game_server().get_rcon_password().c_str(), main_app.get_current_game_server(), true);
-  // main_app.add_command_to_queue({ "banclient", to_string(pid) }, command_type::rcon, true);
   kick_player(pid, custom_message);
 }
 
@@ -3749,12 +3905,12 @@ void sort_players_data(std::vector<player> &players_data, const sort_type sort_m
   }
 }
 
-void display_temporarily_banned_ip_addresses(const bool is_save_data_to_log_file)
+void display_temporarily_banned_ip_addresses(const size_t number_of_last_bans_to_display, const bool is_save_data_to_log_file)
 {
   size_t longest_name_length{ 12 };
   size_t longest_country_length{ 20 };
   auto &temp_banned_players =
-    main_app.get_current_game_server().get_temp_banned_players_data();
+    main_app.get_current_game_server().get_temp_banned_ip_addresses_vector();
   if (!temp_banned_players.empty()) {
     longest_name_length = std::max(longest_name_length, find_longest_player_name_length(temp_banned_players, false, temp_banned_players.size()));
     longest_country_length =
@@ -3764,7 +3920,7 @@ void display_temporarily_banned_ip_addresses(const bool is_save_data_to_log_file
 
   ostringstream oss;
   ostringstream log;
-  const string decoration_line(141 + longest_name_length + longest_country_length, '=');
+  const string decoration_line(149 + longest_name_length + longest_country_length, '=');
   oss << "^5\n"
       << decoration_line << "\n"
       << "^5| ";
@@ -3773,7 +3929,8 @@ void display_temporarily_banned_ip_addresses(const bool is_save_data_to_log_file
         << decoration_line << "\n"
         << "| ";
   }
-  oss << left << setw(15) << "IP address"
+  oss << left << setw(5) << "No."
+      << " | " << left << setw(15) << "IP address"
       << " | " << left << setw(longest_name_length)
       << "Player name"
       << " | " << left << setw(longest_country_length) << "Country, city"
@@ -3783,7 +3940,8 @@ void display_temporarily_banned_ip_addresses(const bool is_save_data_to_log_file
       << " | " << left << setw(32) << "Banned by admin"
       << "|";
   if (is_save_data_to_log_file) {
-    log << left << setw(15) << "IP address"
+    log << left << setw(5) << "No."
+        << " | " << left << setw(15) << "IP address"
         << " | " << left << setw(longest_name_length)
         << "Player name"
         << " | " << left << setw(longest_country_length) << "Country, city"
@@ -3818,13 +3976,16 @@ void display_temporarily_banned_ip_addresses(const bool is_save_data_to_log_file
     }
   } else {
     const time_t now_in_seconds = get_current_time_stamp();
-
+    const size_t start_index{ number_of_last_bans_to_display != string::npos && number_of_last_bans_to_display <= temp_banned_players.size() ? temp_banned_players.size() - number_of_last_bans_to_display : 0U };
+    size_t no{ start_index };
     bool is_first_color{ true };
-    for (auto &bp : temp_banned_players) {
+    for (size_t i{ start_index }; i < temp_banned_players.size(); ++i) {
+      auto &bp = temp_banned_players[i];
+      ++no;
       const char *next_color{ is_first_color ? "^3" : "^5" };
-      oss << "^5| " << next_color << left << setw(15) << bp.ip_address << " ^5| ^7";
+      oss << "^5| " << next_color << left << setw(5) << no << " ^5| " << next_color << left << setw(15) << bp.ip_address << " ^5| ^7";
       if (is_save_data_to_log_file) {
-        log << "| " << left << setw(15) << bp.ip_address << " | ";
+        log << "| " << left << setw(5) << no << " | " << left << setw(15) << bp.ip_address << " | ";
       }
       stl::helper::trim_in_place(bp.player_name);
       string name{ bp.player_name };
@@ -3907,7 +4068,7 @@ void display_temporarily_banned_ip_addresses(const bool is_save_data_to_log_file
   }
 }
 
-void display_banned_ip_address_ranges(const bool is_save_data_to_log_file)
+void display_banned_ip_address_ranges(const size_t number_of_last_bans_to_display, const bool is_save_data_to_log_file)
 {
   size_t longest_name_length{ 12 };
   size_t longest_country_length{ 20 };
@@ -3922,7 +4083,7 @@ void display_banned_ip_address_ranges(const bool is_save_data_to_log_file)
 
   ostringstream oss;
   ostringstream log;
-  const string decoration_line(119 + longest_name_length + longest_country_length, '=');
+  const string decoration_line(127 + longest_name_length + longest_country_length, '=');
   oss << "^5\n"
       << decoration_line << "\n";
   oss << "^5| ";
@@ -3931,7 +4092,8 @@ void display_banned_ip_address_ranges(const bool is_save_data_to_log_file)
         << decoration_line << "\n"
         << "| ";
   }
-  oss << left << setw(20) << "IP address range"
+  oss << left << setw(5) << "No."
+      << " | " << left << setw(20) << "IP address range"
       << " | " << left << setw(longest_name_length)
       << "Player name"
       << " | " << left << setw(longest_country_length) << "Country, city"
@@ -3940,11 +4102,12 @@ void display_banned_ip_address_ranges(const bool is_save_data_to_log_file)
       << " | " << left << setw(32) << "Banned by admin"
       << "|";
   if (is_save_data_to_log_file) {
-    log << left << setw(20) << "IP address range"
+    log << left << setw(5) << "No."
+        << " | " << left << setw(20) << "IP address range"
         << " | " << left << setw(longest_name_length)
         << "Player name"
         << " | " << left << setw(longest_country_length) << "Country, city"
-        << " | " << left << setw(20) << "Date/time of IP ban"
+        << " | " << left << setw(20) << "Date/time of ban"
         << " | " << left << setw(29) << "Reason"
         << " | " << left << setw(32) << "Banned by admin"
         << "|";
@@ -3974,13 +4137,16 @@ void display_banned_ip_address_ranges(const bool is_save_data_to_log_file)
     }
   } else {
     bool is_first_color{ true };
-    size_t no{};
-    for (auto &bp : banned_players) {
+
+    const size_t start_index{ number_of_last_bans_to_display != string::npos && number_of_last_bans_to_display <= banned_players.size() ? banned_players.size() - number_of_last_bans_to_display : 0U };
+    size_t no{ start_index };
+    for (size_t i{ start_index }; i < banned_players.size(); ++i) {
+      auto &bp = banned_players[i];
       ++no;
       const char *next_color{ is_first_color ? "^3" : "^5" };
-      oss << "^5| " << next_color << left << setw(20) << bp.ip_address << " ^5| ^7";
+      oss << "^5| " << next_color << left << setw(5) << no << " ^5| " << next_color << left << setw(20) << bp.ip_address << " ^5| ^7";
       if (is_save_data_to_log_file) {
-        log << "| " << left << setw(20) << bp.ip_address << " | ";
+        log << "| " << left << setw(5) << no << " | " << left << setw(20) << bp.ip_address << " | ";
       }
       stl::helper::trim_in_place(bp.player_name);
       string name{ bp.player_name };
@@ -4172,7 +4338,7 @@ void display_protected_entries(const char *table_title, const std::set<std::stri
   }
 }
 
-void display_permanently_banned_ip_addresses(const bool is_save_data_to_log_file)
+void display_permanently_banned_ip_addresses(const size_t number_of_last_bans_to_display, const bool is_save_data_to_log_file)
 {
   size_t longest_name_length{ 12 };
   size_t longest_country_length{ 20 };
@@ -4201,7 +4367,7 @@ void display_permanently_banned_ip_addresses(const bool is_save_data_to_log_file
       << " | " << left << setw(longest_name_length)
       << "Player name"
       << " | " << left << setw(longest_country_length) << "Country, city"
-      << " | " << left << setw(20) << "Date/time of IP ban"
+      << " | " << left << setw(20) << "Date/time of ban"
       << " | " << left << setw(29) << "Reason"
       << " | " << left << setw(32) << "Banned by admin"
       << "|";
@@ -4210,7 +4376,7 @@ void display_permanently_banned_ip_addresses(const bool is_save_data_to_log_file
         << " | " << left << setw(longest_name_length)
         << "Player name"
         << " | " << left << setw(longest_country_length) << "Country, city"
-        << " | " << left << setw(20) << "Date/time of IP ban"
+        << " | " << left << setw(20) << "Date/time of ban"
         << " | " << left << setw(29) << "Reason"
         << " | " << left << setw(32) << "Banned by admin"
         << "|";
@@ -4240,8 +4406,184 @@ void display_permanently_banned_ip_addresses(const bool is_save_data_to_log_file
     }
   } else {
     bool is_first_color{ true };
-    size_t no{};
-    for (auto &bp : banned_players) {
+    const size_t start_index{ number_of_last_bans_to_display != string::npos && number_of_last_bans_to_display <= banned_players.size() ? banned_players.size() - number_of_last_bans_to_display : 0U };
+    size_t no{ start_index };
+    for (size_t i{ start_index }; i < banned_players.size(); ++i) {
+      auto &bp = banned_players[i];
+      ++no;
+      const char *next_color{ is_first_color ? "^3" : "^5" };
+      oss << "^5| " << next_color << left << setw(5) << no << " ^5| " << next_color << left << setw(15) << bp.ip_address << " ^5| ^7";
+      if (is_save_data_to_log_file) {
+        log << "| " << left << setw(5) << no << " | " << left << setw(15) << bp.ip_address << " | ";
+      }
+      stl::helper::trim_in_place(bp.player_name);
+      string name{ bp.player_name };
+      remove_all_color_codes(name);
+      const size_t printed_name_char_count1{ get_number_of_characters_without_color_codes(bp.player_name) };
+      const size_t printed_name_char_count2{ name.length() };
+      if (printed_name_char_count1 < longest_name_length) {
+        oss << left << setw(longest_name_length) << bp.player_name + string(longest_name_length - printed_name_char_count1, ' ');
+      } else {
+        oss << left << setw(longest_name_length) << bp.player_name;
+      }
+      if (is_save_data_to_log_file) {
+        if (printed_name_char_count2 < longest_name_length) {
+          log << left << setw(longest_name_length) << name + string(longest_name_length - printed_name_char_count2, ' ');
+        } else {
+          log << left << setw(longest_name_length) << name;
+        }
+      }
+      oss << " ^5| ";
+      if (is_save_data_to_log_file) {
+        log << " | ";
+      }
+      char buffer2[256];
+      snprintf(buffer2, std::size(buffer2), "%s, %s", (len(bp.country_name) != 0 ? bp.country_name : bp.region), bp.city);
+      stl::helper::trim_in_place(bp.reason);
+      string reason{ bp.reason };
+      oss << next_color << left << setw(longest_country_length) << buffer2 << " ^5| " << next_color << left << setw(20) << bp.banned_date_time
+          << " ^5| ";
+      const size_t printed_reason_char_count1{ get_number_of_characters_without_color_codes(reason.c_str()) };
+      if (printed_reason_char_count1 < 29) {
+        oss << next_color << left << setw(29) << (reason + string(29 - printed_reason_char_count1, ' '));
+      } else {
+        oss << next_color << left << reason;
+      }
+      oss << " ^5| ";
+      stl::helper::trim_in_place(bp.banned_by_user_name);
+      string banned_by_user{ bp.banned_by_user_name };
+      const size_t printed_reason_char_count3{ get_number_of_characters_without_color_codes(banned_by_user.c_str()) };
+      if (printed_reason_char_count3 < 32) {
+        oss << "^7" << left << setw(32) << (banned_by_user + string(32 - printed_reason_char_count3, ' '));
+      } else {
+        oss << "^7" << next_color << left << banned_by_user;
+      }
+      oss << "^5|\n";
+      if (is_save_data_to_log_file) {
+        remove_all_color_codes(reason);
+        remove_all_color_codes(banned_by_user);
+        log << left << setw(longest_country_length) << buffer2 << " | " << left << setw(20) << bp.banned_date_time
+            << " | ";
+        const size_t printed_reason_char_count2{ reason.length() };
+        if (printed_reason_char_count2 < 29) {
+          log << left << setw(29) << (reason + string(29 - printed_reason_char_count2, ' '));
+        } else {
+          log << reason;
+        }
+        log << " | ";
+        const size_t printed_reason_char_count4{ banned_by_user.length() };
+        if (printed_reason_char_count4 < 32) {
+          log << left << setw(32) << (banned_by_user + string(32 - printed_reason_char_count4, ' '));
+        } else {
+          log << banned_by_user;
+        }
+        log << "|\n";
+      }
+      is_first_color = !is_first_color;
+    }
+  }
+  oss << string{ "^5"s + decoration_line + "\n\n"s };
+  if (is_save_data_to_log_file) {
+    log << string{ decoration_line + "\n\n"s };
+  }
+  const string message{ oss.str() };
+  print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true);
+  if (is_save_data_to_log_file) {
+    log_message(log.str(), is_log_datetime::yes);
+  }
+}
+
+void display_banned_player_names(const char *title, const size_t number_of_last_bans_to_display, const bool is_save_data_to_log_file)
+{
+  size_t longest_name_length{ 12 };
+  size_t longest_country_length{ 20 };
+  auto &banned_players =
+    main_app.get_current_game_server().get_banned_names_vector();
+  if (!banned_players.empty()) {
+    longest_name_length = std::max(longest_name_length, find_longest_player_name_length(banned_players, false, banned_players.size()));
+    longest_country_length =
+      std::max(longest_country_length,
+        find_longest_player_country_city_info_length(banned_players, banned_players.size()));
+  }
+
+  ostringstream oss;
+  ostringstream log;
+  const string decoration_line(122 + longest_name_length + longest_country_length, '=');
+  oss << "^5\n"
+      << decoration_line << "\n";
+  std::string title_str{ title };
+  stl::helper::trim_in_place(title_str);
+  remove_all_color_codes(title_str);
+  const size_t printed_name_char_count{ get_number_of_characters_without_color_codes(title) };
+  const size_t padding_size{ (decoration_line.length() - 4u - printed_name_char_count) };
+  const string pad_str(padding_size, ' ');
+  if (printed_name_char_count + 4u < decoration_line.length()) {
+    oss << "^5| " << left << title << right << pad_str << " ^5|\n";
+  } else {
+    oss << "^5| " << left << title << " ^5|\n";
+  }
+  oss << decoration_line << "\n";
+  oss << "^5| ";
+  if (is_save_data_to_log_file) {
+    log << "\n"
+        << decoration_line << "\n";
+    if (printed_name_char_count + 4u < decoration_line.length()) {
+      log << "| " << left << title_str << right << pad_str << " |\n";
+    } else {
+      log << "| " << left << title_str << " |\n";
+    }
+    log << decoration_line << "\n"
+        << "| ";
+  }
+  oss << left << setw(5) << "No."
+      << " | " << left << setw(15) << "IP address"
+      << " | " << left << setw(longest_name_length)
+      << "Player name"
+      << " | " << left << setw(longest_country_length) << "Country, city"
+      << " | " << left << setw(20) << "Date/time of ban"
+      << " | " << left << setw(29) << "Reason"
+      << " | " << left << setw(32) << "Banned by admin"
+      << "|";
+  if (is_save_data_to_log_file) {
+    oss << left << setw(5) << "No."
+        << " | " << left << setw(15) << "IP address"
+        << " | " << left << setw(longest_name_length)
+        << "Player name"
+        << " | " << left << setw(longest_country_length) << "Country, city"
+        << " | " << left << setw(20) << "Date/time of ban"
+        << " | " << left << setw(29) << "Reason"
+        << " | " << left << setw(32) << "Banned by admin"
+        << "|";
+  }
+  oss << "^5\n"
+      << decoration_line << "\n";
+  if (is_save_data_to_log_file) {
+    log << "\n"
+        << decoration_line << "\n";
+  }
+  if (banned_players.empty()) {
+    const size_t message_len = stl::helper::len("| There are no players banned by player names yet.");
+    oss << "^5| ^3There are no players banned by player names yet.";
+    if (is_save_data_to_log_file) {
+      log << "| There are no players banned by player names yet.";
+    }
+
+    if (message_len + 2 < decoration_line.length()) {
+      oss << string(decoration_line.length() - 2 - message_len, ' ');
+      if (is_save_data_to_log_file) {
+        log << string(decoration_line.length() - 2 - message_len, ' ');
+      }
+    }
+    oss << " ^5|\n";
+    if (is_save_data_to_log_file) {
+      log << " |\n";
+    }
+  } else {
+    bool is_first_color{ true };
+    const size_t start_index{ number_of_last_bans_to_display != string::npos && number_of_last_bans_to_display <= banned_players.size() ? banned_players.size() - number_of_last_bans_to_display : 0U };
+    size_t no{ start_index };
+    for (size_t i{ start_index }; i < banned_players.size(); ++i) {
+      auto &bp = banned_players[i];
       ++no;
       const char *next_color{ is_first_color ? "^3" : "^5" };
       oss << "^5| " << next_color << left << setw(5) << no << " ^5| " << next_color << left << setw(15) << bp.ip_address << " ^5| ^7";
@@ -4339,7 +4681,7 @@ void display_admins_data()
   }
 
   ostringstream oss;
-  const string decoration_line(224 + longest_name_length + longest_geoinfo_length, '=');
+  const string decoration_line(237 + longest_name_length + longest_geoinfo_length, '=');
   oss << "^5\n"
       << decoration_line << "\n";
   oss << "^5| ";
@@ -4359,6 +4701,7 @@ void display_admins_data()
       << " | " << left << setw(13) << "IP range bans"
       << " | " << left << setw(10) << "City bans"
       << " | " << left << setw(13) << "Country bans"
+      << " | " << left << setw(10) << "Name bans"
       << "|";
   oss << "^5\n"
       << decoration_line << "\n";
@@ -4374,8 +4717,6 @@ void display_admins_data()
   } else {
     bool is_first_color{ true };
     for (auto &user : users) {
-      /*if (!main_app.get_is_user_data_received_for_user(user->user_name, user->ip_address))
-        continue;*/
       const char *next_color{ is_first_color ? "^3" : "^5" };
       oss << "^5| ";
 
@@ -4419,7 +4760,7 @@ void display_admins_data()
 
       oss << next_color << left << setw(16) << user->ip_address << " ^5| " << next_color << left << setw(longest_geoinfo_length) << user->geo_information << " ^5| " << next_color << left << setw(20) << get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", user->last_login_time_stamp) << " ^5| " << next_color << left << setw(20) << get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", user->last_logout_time_stamp) << " ^5| " << next_color << left << setw(10) << user->no_of_logins << " ^5| " << next_color << left << setw(10) << user->no_of_warnings << " ^5| " << next_color << left << setw(10) << user->no_of_kicks << " ^5| " << next_color << left << setw(10) << user->no_of_tempbans << " ^5| " << next_color << left << setw(10) << user->no_of_guidbans << " ^5| " << next_color << left << setw(10) << user->no_of_ipbans
           << " ^5| " << next_color << left << setw(13) << user->no_of_iprangebans
-          << " ^5| " << next_color << left << setw(10) << user->no_of_citybans << " ^5| " << next_color << left << setw(13) << user->no_of_countrybans << "^5|\n";
+          << " ^5| " << next_color << left << setw(10) << user->no_of_citybans << " ^5| " << next_color << left << setw(13) << user->no_of_countrybans << " ^5| " << next_color << left << setw(10) << user->no_of_namebans << "^5|\n";
 
       is_first_color = !is_first_color;
     }
@@ -4657,7 +4998,7 @@ void change_colors()
     } while (!color_code.empty() && !regex_match(color_code, color_code_regex));
 
     if (color_code.empty())
-      color_code = "^3";
+      color_code = "^4";
     else if (color_code[0] != '^')
       color_code.insert(0, 1, '^');
     main_app.set_even_player_data_lines_fg_color(color_code);
@@ -4720,7 +5061,7 @@ void change_colors()
     } while (!color_code.empty() && !regex_match(color_code, color_code_regex));
 
     if (color_code.empty())
-      color_code = "^3";
+      color_code = "^4";
     else if (color_code[0] != '^')
       color_code.insert(0, 1, '^');
     main_app.set_header_player_ping_color(color_code);
@@ -4732,7 +5073,7 @@ void change_colors()
     } while (!color_code.empty() && !regex_match(color_code, color_code_regex));
 
     if (color_code.empty())
-      color_code = "^3";
+      color_code = "^4";
     else if (color_code[0] != '^')
       color_code.insert(0, 1, '^');
     main_app.set_data_player_ping_color(color_code);
@@ -4921,17 +5262,14 @@ void log_message(const string &msg, const is_log_datetime is_log_current_date_ti
   }
 }
 
-int get_selected_players_pid_number(const int selected_row_in_players_grid)
+int get_selected_players_pid_number(const int selected_row_in_players_grid, const int selected_col_in_players_grid)
 {
 
-  if (check_if_selected_cell_indices_are_valid_for_players_grid(selected_row_in_players_grid, 0)) {
+  if (check_if_selected_cell_indices_are_valid_for_players_grid(selected_row_in_players_grid, selected_col_in_players_grid)) {
     string selected_pid_str{ GetCellContents(app_handles.hwnd_players_grid, selected_row_in_players_grid, 0) };
     if (selected_pid_str.length() >= 2 && '^' == selected_pid_str[0] && is_decimal_digit(selected_pid_str[1]))
       selected_pid_str.erase(0, 2);
-    if (int pid{}; is_valid_decimal_whole_number(selected_pid_str, pid) && pid >= 0 && pid < max_players_grid_rows) {
-      if (auto &selected_player = get_player_data_for_pid(pid); selected_player.pid == pid)
-        return pid;
-    }
+    if (int pid{}; is_valid_decimal_whole_number(selected_pid_str, pid) && pid >= 0 && pid < max_players_grid_rows) return pid;
   }
 
   return -1;
@@ -4970,9 +5308,15 @@ std::string get_player_information(const int pid, const bool is_every_property_o
       const auto &p = players_data[i];
       (void)snprintf(buffer, std::size(buffer), "^3Player name: ^7%s %s ^3PID: ^1%d %s ^3GUID: ^1%s %s ^3Score: ^1%d %s ^3Ping: ^1%s\n ^3IP: ^1%s %s ^3Country, city: ^1%s, %s", p.player_name, (is_every_property_on_new_line ? "\n" : "^5|"), p.pid, (is_every_property_on_new_line ? "\n" : "^5|"), p.guid_key, (is_every_property_on_new_line ? "\n" : "^5|"), p.score, (is_every_property_on_new_line ? "\n" : "^5|"), p.ping, p.ip_address.c_str(), (is_every_property_on_new_line ? "\n" : "^5|"), p.country_name, p.city);
       string result{ buffer };
-      if (!p.banned_by_user_name.empty()) {
+      if (main_app.get_current_game_server().get_banned_ip_addresses_map().contains(p.ip_address) || main_app.get_current_game_server().get_temp_banned_ip_addresses_map().contains(p.ip_address) || !p.banned_by_user_name.empty()) {
         result += is_every_property_on_new_line ? "\n" : " ^5|";
-        result += format(" ^3Banned by admin: ^7{}", p.banned_by_user_name);
+        if (main_app.get_current_game_server().get_banned_ip_addresses_map().contains(p.ip_address)) {
+          result += format(" ^3Banned by admin: ^7{}", main_app.get_current_game_server().get_banned_ip_addresses_map()[p.ip_address].banned_by_user_name);
+        } else if (main_app.get_current_game_server().get_temp_banned_ip_addresses_map().contains(p.ip_address)) {
+          result += format(" ^3Banned by admin: ^7{}", main_app.get_current_game_server().get_temp_banned_ip_addresses_map()[p.ip_address].banned_by_user_name);
+        } else {
+          result += format(" ^3Banned by admin: ^7{}", p.banned_by_user_name);
+        }
       }
       return result;
     }
@@ -4991,8 +5335,18 @@ std::string get_player_information_for_player(player &p)
 
   (void)snprintf(buffer, std::size(buffer), "^3Player name: ^7%s ^5| ^3PID: ^1%d ^5| ^3Score: ^1%d ^5| ^3Ping: ^1%s\n ^3GUID: ^1%s ^5| ^3IP: ^1%s ^5| ^3Country, city: ^1%s, %s", p.player_name, p.pid, p.score, p.ping, p.guid_key, p.ip_address.c_str(), p.country_name, p.city);
   string result{ buffer };
-  if (!p.banned_by_user_name.empty()) {
-    result += format(" ^5| ^3Banned by admin: ^7{}", p.banned_by_user_name);
+  // if (!p.banned_by_user_name.empty()) {
+  //   result += format(" ^5| ^3Banned by admin: ^7{}", p.banned_by_user_name);
+  // }
+
+  if (main_app.get_current_game_server().get_banned_ip_addresses_map().contains(p.ip_address) || main_app.get_current_game_server().get_temp_banned_ip_addresses_map().contains(p.ip_address) || !p.banned_by_user_name.empty()) {
+    if (main_app.get_current_game_server().get_banned_ip_addresses_map().contains(p.ip_address)) {
+      result += format(" ^5| ^3Banned by admin: ^7{}", main_app.get_current_game_server().get_banned_ip_addresses_map()[p.ip_address].banned_by_user_name);
+    } else if (main_app.get_current_game_server().get_temp_banned_ip_addresses_map().contains(p.ip_address)) {
+      result += format(" ^5| ^3Banned by admin: ^7{}", main_app.get_current_game_server().get_temp_banned_ip_addresses_map()[p.ip_address].banned_by_user_name);
+    } else {
+      result += format(" ^5| ^3Banned by admin: ^7{}", p.banned_by_user_name);
+    }
   }
   return result;
 }
@@ -6284,7 +6638,6 @@ bool connect_to_the_game_server(const std::string &server_ip_port_address, const
     break;
 
   case game_name_t::cod2:
-    enable_privileged_access();
     if (check_if_call_of_duty_2_game_is_running(pid)) {
       terminate_running_game_instance(game_name_t::cod2);
       const string temporary_game_file{ string(main_app.get_cod2mp_exe_path().cbegin(), main_app.get_cod2mp_exe_path().cbegin() + main_app.get_cod2mp_exe_path().rfind('\\') + 1) + "__CoD2MP_s" };
@@ -6292,10 +6645,6 @@ bool connect_to_the_game_server(const std::string &server_ip_port_address, const
         DeleteFileA(temporary_game_file.c_str());
       }
     }
-    /* if (check_if_call_of_duty_2_game_is_running(pid)) {
-       print_colored_text(app_handles.hwnd_re_messages_data, "Call of Duty 2 Multiplayer game is already running in the background.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-       return false;
-     }*/
 
     game_path = main_app.get_cod2mp_exe_path().c_str();
     if (!check_if_file_path_exists(game_path) && !stl::helper::str_contains(game_path, "-applaunch 2630")) {
@@ -6760,7 +7109,7 @@ void process_key_down_message(const MSG &msg)
 
 void display_tempbanned_players_remaining_time_period()
 {
-  auto &tembanned_players = main_app.get_current_game_server().get_temp_banned_players_data();
+  auto &tembanned_players = main_app.get_current_game_server().get_temp_banned_ip_addresses_vector();
   if (tembanned_players.empty())
     return;
   std::sort(std::begin(tembanned_players), std::end(tembanned_players), [](const player &pl1, const player &pl2) {
@@ -6801,7 +7150,6 @@ void display_tempbanned_players_remaining_time_period()
 
 void construct_tinyrcon_gui(HWND hWnd)
 {
-  // const long draw_border_lines_flag{ WS_BORDER };
   if (app_handles.hwnd_online_admins_information != nullptr) {
     ShowWindow(app_handles.hwnd_online_admins_information, SW_HIDE);
     DestroyWindow(app_handles.hwnd_online_admins_information);
@@ -6871,29 +7219,31 @@ void construct_tinyrcon_gui(HWND hWnd)
     print_colored_text(app_handles.hwnd_re_help_data, user_help_message, is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::no, true);
   }
 
-  app_handles.hwnd_e_user_input = CreateWindowEx(0, "Edit", nullptr, WS_GROUP | WS_TABSTOP | WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT | ES_AUTOHSCROLL, 140, screen_height - 77, 250, 20, hWnd, reinterpret_cast<HMENU>(ID_USEREDIT), app_handles.hInstance, nullptr);
+  app_handles.hwnd_e_user_input = CreateWindowEx(0, "Edit", nullptr, WS_GROUP | WS_TABSTOP | WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT | ES_AUTOHSCROLL, 125, screen_height - 70, 305, 20, hWnd, reinterpret_cast<HMENU>(ID_USEREDIT), app_handles.hInstance, nullptr);
 
-  app_handles.hwnd_button_warn = CreateWindowEx(NULL, "Button", "&Warn", WS_GROUP | WS_TABSTOP | BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 10, screen_height - 123, 80, 30, hWnd, reinterpret_cast<HMENU>(ID_WARNBUTTON), app_handles.hInstance, nullptr);
+  app_handles.hwnd_button_warn = CreateWindowEx(NULL, "Button", "&Warn", WS_GROUP | WS_TABSTOP | BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 10, screen_height - 118, 80, 30, hWnd, reinterpret_cast<HMENU>(ID_WARNBUTTON), app_handles.hInstance, nullptr);
 
-  app_handles.hwnd_button_kick = CreateWindowEx(NULL, "Button", "&Kick", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 110, screen_height - 123, 80, 30, hWnd, reinterpret_cast<HMENU>(ID_KICKBUTTON), app_handles.hInstance, nullptr);
+  app_handles.hwnd_button_kick = CreateWindowEx(NULL, "Button", "&Kick", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 110, screen_height - 118, 80, 30, hWnd, reinterpret_cast<HMENU>(ID_KICKBUTTON), app_handles.hInstance, nullptr);
 
-  app_handles.hwnd_button_tempban = CreateWindowEx(NULL, "Button", "&Tempban", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 210, screen_height - 123, 100, 30, hWnd, reinterpret_cast<HMENU>(ID_TEMPBANBUTTON), app_handles.hInstance, nullptr);
+  app_handles.hwnd_button_tempban = CreateWindowEx(NULL, "Button", "&Tempban", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 210, screen_height - 118, 100, 30, hWnd, reinterpret_cast<HMENU>(ID_TEMPBANBUTTON), app_handles.hInstance, nullptr);
 
-  app_handles.hwnd_button_ipban = CreateWindowEx(NULL, "Button", "Ban &IP", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 330, screen_height - 123, 100, 30, hWnd, reinterpret_cast<HMENU>(ID_IPBANBUTTON), app_handles.hInstance, nullptr);
+  app_handles.hwnd_button_ipban = CreateWindowEx(NULL, "Button", "Ban &IP", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 330, screen_height - 118, 100, 30, hWnd, reinterpret_cast<HMENU>(ID_IPBANBUTTON), app_handles.hInstance, nullptr);
 
-  app_handles.hwnd_button_view_tempbans = CreateWindowEx(NULL, "Button", "View temporary bans", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 450, screen_height - 123, 180, 30, hWnd, reinterpret_cast<HMENU>(ID_VIEWTEMPBANSBUTTON), app_handles.hInstance, nullptr);
+  app_handles.hwnd_button_view_tempbans = CreateWindowEx(NULL, "Button", "View temporary bans", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 450, screen_height - 118, 180, 30, hWnd, reinterpret_cast<HMENU>(ID_VIEWTEMPBANSBUTTON), app_handles.hInstance, nullptr);
 
-  app_handles.hwnd_button_view_ipbans = CreateWindowEx(NULL, "Button", "View IP bans", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 650, screen_height - 123, 140, 30, hWnd, reinterpret_cast<HMENU>(ID_VIEWIPBANSBUTTON), app_handles.hInstance, nullptr);
+  app_handles.hwnd_button_view_ipbans = CreateWindowEx(NULL, "Button", "View IP bans", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 650, screen_height - 118, 140, 30, hWnd, reinterpret_cast<HMENU>(ID_VIEWIPBANSBUTTON), app_handles.hInstance, nullptr);
 
-  app_handles.hwnd_button_view_adminsdata = CreateWindowEx(NULL, "Button", "View admins' data", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 810, screen_height - 123, 150, 30, hWnd, reinterpret_cast<HMENU>(ID_VIEWADMINSDATA), app_handles.hInstance, nullptr);
+  app_handles.hwnd_button_view_adminsdata = CreateWindowEx(NULL, "Button", "View admins' data", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 810, screen_height - 118, 150, 30, hWnd, reinterpret_cast<HMENU>(ID_VIEWADMINSDATA), app_handles.hInstance, nullptr);
 
-  app_handles.hwnd_connect_button = CreateWindowEx(NULL, "Button", "Join server", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 413, screen_height - 82, 100, 30, hWnd, reinterpret_cast<HMENU>(ID_CONNECTBUTTON), app_handles.hInstance, nullptr);
+  // 413
+  app_handles.hwnd_connect_button = CreateWindowEx(NULL, "Button", "Join server", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 650, screen_height - 77, 140, 30, hWnd, reinterpret_cast<HMENU>(ID_CONNECTBUTTON), app_handles.hInstance, nullptr);
 
-  app_handles.hwnd_connect_private_slot_button = CreateWindowEx(NULL, "Button", "Join server (private slot)", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 533, screen_height - 82, 200, 30, hWnd, reinterpret_cast<HMENU>(ID_CONNECTPRIVATESLOTBUTTON), app_handles.hInstance, nullptr);
+  app_handles.hwnd_connect_private_slot_button = CreateWindowEx(NULL, "Button", "Join server (private slot)", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 450, screen_height - 77, 180, 30, hWnd, reinterpret_cast<HMENU>(ID_CONNECTPRIVATESLOTBUTTON), app_handles.hInstance, nullptr);
 
-  app_handles.hwnd_say_button = CreateWindowEx(NULL, "Button", "Send public message", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 753, screen_height - 82, 170, 30, hWnd, reinterpret_cast<HMENU>(ID_SAY_BUTTON), app_handles.hInstance, nullptr);
+  // 790
+  app_handles.hwnd_say_button = CreateWindowEx(NULL, "Button", "Send public message", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 810, screen_height - 77, 150, 30, hWnd, reinterpret_cast<HMENU>(ID_SAY_BUTTON), app_handles.hInstance, nullptr);
 
-  app_handles.hwnd_tell_button = CreateWindowEx(NULL, "Button", "Send private message", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 943, screen_height - 82, 170, 30, hWnd, reinterpret_cast<HMENU>(ID_TELL_BUTTON), app_handles.hInstance, nullptr);
+  app_handles.hwnd_tell_button = CreateWindowEx(NULL, "Button", "Send private message", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 980, screen_height - 77, 140, 30, hWnd, reinterpret_cast<HMENU>(ID_TELL_BUTTON), app_handles.hInstance, nullptr);
 
   app_handles.hwnd_quit_button = CreateWindowEx(NULL, "Button", "E&xit", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, screen_width - 100, screen_height - 102, 70, 28, hWnd, reinterpret_cast<HMENU>(ID_QUITBUTTON), app_handles.hInstance, nullptr);
 
@@ -6923,32 +7273,14 @@ void construct_tinyrcon_gui(HWND hWnd)
 
   SetWindowSubclass(app_handles.hwnd_combo_box_gametype, ComboProc, 0, 0);
 
-  app_handles.hwnd_button_load = CreateWindowEx(NULL, "Button", "Load map", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, screen_width / 2 + 530, screen_height / 2 + 28, 80, 25, hWnd, reinterpret_cast<HMENU>(ID_LOADBUTTON), app_handles.hInstance, nullptr);
-
-  /*if (app_handles.hwnd_download_speed_info != nullptr) {
-    ShowWindow(app_handles.hwnd_download_speed_info, SW_HIDE);
-    DestroyWindow(app_handles.hwnd_download_speed_info);
-  }
-
-  app_handles.hwnd_download_speed_info = CreateWindowEx(0, RICHEDIT_CLASS, nullptr, WS_VISIBLE | WS_CHILD | ES_LEFT | ES_READONLY, screen_width / 2 + 170, screen_height - 100, 370, 30, hWnd, nullptr, app_handles.hInstance, nullptr);
-  if (!app_handles.hwnd_match_information)
-    FatalAppExit(0, "Couldn't create 'app_handles.hwnd_download_speed_info' richedit control!");
-
-  assert(app_handles.hwnd_download_speed_info != nullptr);
-  SendMessage(app_handles.hwnd_download_speed_info, EM_SETBKGNDCOLOR, NULL, color::black);
-  scroll_to_beginning(app_handles.hwnd_download_speed_info);
-  set_rich_edit_control_colors(app_handles.hwnd_download_speed_info, color::white, color::black, "Lucida Console");
-  print_colored_text(app_handles.hwnd_download_speed_info, "^3Initializing and configuring ^5Tiny^6Rcon ^3settings...", is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::no);
-
-  SendMessage(app_handles.hwnd_download_speed_info, EM_SETSEL, 0, -1);
-  SendMessage(app_handles.hwnd_download_speed_info, EM_SETFONTSIZE, (WPARAM)2, (LPARAM)NULL);*/
+  app_handles.hwnd_button_load = CreateWindowEx(NULL, "Button", "Load map", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, screen_width / 2 + 540, screen_height / 2 + 28, 80, 25, hWnd, reinterpret_cast<HMENU>(ID_LOADBUTTON), app_handles.hInstance, nullptr);
 
   if (app_handles.hwnd_upload_speed_info != nullptr) {
     ShowWindow(app_handles.hwnd_upload_speed_info, SW_HIDE);
     DestroyWindow(app_handles.hwnd_upload_speed_info);
   }
 
-  app_handles.hwnd_upload_speed_info = CreateWindowEx(0, RICHEDIT_CLASS, nullptr, WS_VISIBLE | WS_CHILD | ES_RIGHT | ES_READONLY, screen_width - 720, screen_height - 60, 710, 30, hWnd, nullptr, app_handles.hInstance, nullptr);
+  app_handles.hwnd_upload_speed_info = CreateWindowEx(0, RICHEDIT_CLASS, nullptr, WS_VISIBLE | WS_CHILD | ES_RIGHT | ES_READONLY, screen_width - 640, screen_height - 60, 630, 30, hWnd, nullptr, app_handles.hInstance, nullptr);
   if (!app_handles.hwnd_match_information)
     FatalAppExit(0, "Couldn't create 'app_handles.hwnd_upload_speed_info' richedit control!");
 
@@ -6957,9 +7289,6 @@ void construct_tinyrcon_gui(HWND hWnd)
   scroll_to_beginning(app_handles.hwnd_upload_speed_info);
   set_rich_edit_control_colors(app_handles.hwnd_upload_speed_info, color::white, color::black, "Lucida Console");
   print_colored_text(app_handles.hwnd_upload_speed_info, "^3Initializing and configuring ^5Tiny^6Rcon^3...", is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::no);
-
-  /*SendMessage(app_handles.hwnd_upload_speed_info, EM_SETSEL, 0, -1);
-  SendMessage(app_handles.hwnd_upload_speed_info, EM_SETFONTSIZE, (WPARAM)2, (LPARAM)NULL);*/
 
   app_handles.hwnd_progress_bar = CreateWindowEx(0, PROGRESS_CLASS, nullptr, WS_CHILD | WS_VISIBLE | PBS_MARQUEE | PBS_SMOOTH, screen_width - 200, screen_height - 140, 170, 23, hWnd, nullptr, app_handles.hInstance, nullptr);
 
@@ -7136,6 +7465,8 @@ void clear_servers_data_in_servers_grid(HWND hgrid, const size_t start_row, cons
 
 void display_players_data_in_players_grid(HWND hgrid)
 {
+  display_online_admins_information();
+
   const size_t number_of_players{ main_app.get_current_game_server().get_number_of_players() };
 
   Edit_SetText(app_handles.hwnd_match_information, "");
@@ -7233,7 +7564,7 @@ void display_game_server_data_in_servers_grid(HWND hgrid, const size_t i)
 void initialize_servers_grid(HWND hgrid, const size_t cols, const size_t rows)
 {
   selected_server_row = 0;
-  main_app.set_game_server_index(selected_server_row);
+  main_app.set_game_server_index(0U);
   SimpleGrid_ResetContent(hgrid);
   SimpleGrid_SetAllowColResize(hgrid, TRUE);
   SimpleGrid_Enable(hgrid, TRUE);
@@ -8884,12 +9215,6 @@ bool initialize_and_verify_server_connection_settings()
 void initiate_sending_rcon_status_command_now()
 {
   main_app.set_game_server_index(selected_server_row);
-
-  /*if (main_app.get_game_server_index() < main_app.get_rcon_game_servers_count()) {
-    print_colored_text(app_handles.hwnd_re_messages_data, "^2Executing rcon command: ^5!s\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-  } else {
-    print_colored_text(app_handles.hwnd_re_messages_data, "^2Executing rcon command: ^5!gs\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-  }*/
   atomic_counter.store(5u);
   is_refresh_players_data_event.store(true);
 }
@@ -8908,7 +9233,7 @@ void prepare_players_data_for_display(game_server &gs, const bool is_log_status_
   check_for_banned_ip_addresses();
   check_for_warned_players();
   check_if_admins_are_online_and_get_admins_player_names(players, number_of_players);
-  display_online_admins_information();
+  // display_online_admins_information();
 
   if (number_of_players > 0) {
     sort_players_data(players, type_of_sort);
@@ -9741,23 +10066,23 @@ void check_if_admins_are_online_and_get_admins_player_names(const std::vector<pl
   }
 }
 
-bool save_current_user_data_to_json_file(const char *json_file_path)
+bool save_current_user_data_to_json_file(const char *file_path)
 {
 
-  std::ofstream config_file{ json_file_path };
+  std::ofstream config_file{ file_path };
 
   if (!config_file) {
-    const string re_msg{ "Error saving tinyrcon admin's data\nto specified json file path ("s + json_file_path + ".\nPlease make sure that the main application folder's properties are not set to read-only mode!"s };
-    show_error(app_handles.hwnd_main_window, re_msg.c_str(), 0);
+    const string re_msg{ format("^1Error ^3saving ^5Tiny^6Rcon ^1user's data ^3to specified file:\n\t^5{}^3Please make sure that the ^5Tiny^6Rcon ^3folder is not set to ^1read-only ^3mode.", file_path) };
+    print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str());
     return false;
   }
 
   const auto &me = main_app.get_user_for_name(main_app.get_username(), main_app.get_user_ip_address());
   const string user_name{ remove_disallowed_character_in_string(main_app.get_username()) };
-  config_file << format(R"({}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{})", user_name, (me->is_admin ? "true" : "false"), (me->is_logged_in ? "true" : "false"), (me->is_online ? "true" : "false"), me->ip_address, me->geo_information, me->last_login_time_stamp, me->last_logout_time_stamp, me->no_of_logins, me->no_of_warnings, me->no_of_kicks, me->no_of_tempbans, me->no_of_guidbans, me->no_of_ipbans, me->no_of_iprangebans, me->no_of_citybans, me->no_of_countrybans);
-
+  config_file << format(R"({}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{})", user_name, (me->is_admin ? "true" : "false"), (me->is_logged_in ? "true" : "false"), (me->is_online ? "true" : "false"), me->ip_address, me->geo_information, me->last_login_time_stamp, me->last_logout_time_stamp, me->no_of_logins, me->no_of_warnings, me->no_of_kicks, me->no_of_tempbans, me->no_of_guidbans, me->no_of_ipbans, me->no_of_iprangebans, me->no_of_citybans, me->no_of_countrybans, me->no_of_namebans);
 
   config_file << flush;
+
   return true;
 }
 
@@ -9768,44 +10093,57 @@ void load_tinyrcon_client_user_data(const char *file_path)
   if (!configFile) {
     save_current_user_data_to_json_file(file_path);
     configFile.open(file_path, std::ios_base::in);
+    if (!configFile) {
+      const auto f_path{ fs::path(file_path) };
+      const string re_msg{ format("^1Error ^3opening ^5Tiny^6Rcon ^1user's data ^3to specified file:\n\t^5{}\n^3Please make sure that the ^5{} ^3file\n\texists and that it is not set to ^1read-only ^3mode.", file_path, (f_path.has_filename() ? f_path.filename().string() : string{ file_path })) };
+      print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str());
+      return;
+    }
   }
 
   string data;
   getline(configFile, data);
+  trim_in_place(data);
   auto parts = stl::helper::str_split(data, "\\", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::no);
-  for (auto &part : parts)
-    stl::helper::trim_in_place(part);
+  for (auto &part : parts) stl::helper::trim_in_place(part);
 
-  const auto &u = main_app.get_user_for_name(parts[0], main_app.get_user_ip_address());
+  string username{ parts.size() >= 1 ? parts[0] : "^3Player" };
+  const bool is_admin{ parts.size() >= 2 && parts[1] == "true" || parts[1] == "false" ? parts[1] == "true" : true };
+  const bool is_logged_in{ parts.size() >= 3 && parts[2] == "true" || parts[2] == "false" ? parts[2] == "true" : false };
+  const bool is_online{ parts.size() >= 4 && parts[3] == "true" || parts[3] == "false" ? parts[3] == "true" : false };
+  string ip_address{ parts.size() >= 5 ? parts[4] : "n/a" };
 
-  u->user_name = std::move(parts[0]);
-  u->is_admin = parts[1] == "true";
-  u->is_logged_in = true;
-  u->is_online = false;
-  /*unsigned long guid{};
-  if (check_ip_address_validity(parts[4], guid)) {
+  const auto &u = main_app.get_user_for_name(username, main_app.get_user_ip_address());
+  u->user_name = std::move(username);
+  u->is_admin = is_admin;
+  u->is_logged_in = is_logged_in;
+  u->is_online = is_online;
+  unsigned long guid{};
+  if (check_ip_address_validity(ip_address, guid)) {
     player admin{};
-    convert_guid_key_to_country_name(main_app.get_connection_manager().get_geoip_data(), parts[4], admin);
-    u->ip_address = std::move(parts[4]);
+    convert_guid_key_to_country_name(main_app.get_connection_manager().get_geoip_data(), ip_address, admin);
+    u->ip_address = std::move(ip_address);
     u->country_code = admin.country_code;
     u->geo_information = format("{}, {}", admin.country_name, admin.city);
   } else {
     u->ip_address = "n/a";
     u->geo_information = "n/a";
     u->country_code = "xy";
-  }*/
+  }
 
-  u->last_login_time_stamp = stoll(parts[6]);
-  u->last_logout_time_stamp = stoll(parts[7]);
-  u->no_of_logins = stoul(parts[8]);
-  u->no_of_warnings = stoul(parts[9]);
-  u->no_of_kicks = stoul(parts[10]);
-  u->no_of_tempbans = stoul(parts[11]);
-  u->no_of_guidbans = stoul(parts[12]);
-  u->no_of_ipbans = stoul(parts[13]);
-  u->no_of_iprangebans = stoul(parts[14]);
-  u->no_of_citybans = stoul(parts[15]);
-  u->no_of_countrybans = stoul(parts[16]);
+  int number{};
+  u->last_login_time_stamp = parts.size() >= 7 && is_valid_decimal_whole_number(parts[6], number) ? number : 0;
+  u->last_logout_time_stamp = parts.size() >= 8 && is_valid_decimal_whole_number(parts[7], number) ? number : 0;
+  u->no_of_logins = static_cast<size_t>(parts.size() >= 9 && is_valid_decimal_whole_number(parts[8], number) ? number : 0);
+  u->no_of_warnings = static_cast<size_t>(parts.size() >= 10 && is_valid_decimal_whole_number(parts[9], number) ? number : 0);
+  u->no_of_kicks = static_cast<size_t>(parts.size() >= 11 && is_valid_decimal_whole_number(parts[10], number) ? number : 0);
+  u->no_of_tempbans = static_cast<size_t>(parts.size() >= 12 && is_valid_decimal_whole_number(parts[11], number) ? number : 0);
+  u->no_of_guidbans = static_cast<size_t>(parts.size() >= 13 && is_valid_decimal_whole_number(parts[12], number) ? number : 0);
+  u->no_of_ipbans = static_cast<size_t>(parts.size() >= 14 && is_valid_decimal_whole_number(parts[13], number) ? number : 0);
+  u->no_of_iprangebans = static_cast<size_t>(parts.size() >= 15 && is_valid_decimal_whole_number(parts[14], number) ? number : 0);
+  u->no_of_citybans = static_cast<size_t>(parts.size() >= 16 && is_valid_decimal_whole_number(parts[15], number) ? number : 0);
+  u->no_of_countrybans = static_cast<size_t>(parts.size() >= 17 && is_valid_decimal_whole_number(parts[16], number) ? number : 0);
+  u->no_of_namebans = static_cast<size_t>(parts.size() >= 18 && is_valid_decimal_whole_number(parts[17], number) ? number : 0);
 }
 
 bool validate_admin_and_show_missing_admin_privileges_message(const bool is_show_message_box, const is_log_message log_message, const is_log_datetime log_date_time)
@@ -9825,7 +10163,6 @@ bool validate_admin_and_show_missing_admin_privileges_message(const bool is_show
 
 void removed_disallowed_character_in_string(std::string &input)
 {
-  // const string disallowed_chars{ "\\/-[]\"'{|}%:;=+\b\f\n\r\t " };
   string_view disallowed_chars{ "\\", len("\\") };
   const std::unordered_set<char> disallowed_characters(cbegin(disallowed_chars), cend(disallowed_chars));
   string cleaned_input{};
@@ -9838,10 +10175,9 @@ void removed_disallowed_character_in_string(std::string &input)
 
 std::string remove_disallowed_character_in_string(const std::string &input)
 {
-  // const string disallowed_chars{ "\\/-[]\"'{|}%:;=+\b\f\n\r\t " };
   string_view disallowed_chars{ "\\[]:", len("\\[]:") };
   const std::unordered_set<char> disallowed_characters(cbegin(disallowed_chars), cend(disallowed_chars));
-  string cleaned_input{};
+  string cleaned_input;
   for (const char ch : input) {
     if (!disallowed_characters.contains(ch))
       cleaned_input.push_back(ch);
@@ -9912,9 +10248,9 @@ bool run_executable(const char *file_path_for_executable)
 
 void restart_tinyrcon_client()
 {
-  const string tinyrcon_exe_file_path{ main_app.get_current_working_directory() + "TinyRcon.exe" };
+  // const string tinyrcon_exe_file_path{ main_app.get_current_working_directory() + "TinyRcon.exe" };
 
-  if (run_executable(tinyrcon_exe_file_path.c_str())) {
+  if (run_executable(main_app.get_auto_update_manager().get_self_full_path().c_str())) {
     is_terminate_program.store(true);
     PostQuitMessage(0);
     CloseWindow(app_handles.hwnd_main_window);
@@ -9993,368 +10329,368 @@ std::string find_version_of_installed_cod2_game()
   return "1.0";
 }
 
-bool download_missing_cod2_game_patch_files()
-{
-  if (!check_if_file_path_exists(main_app.get_cod2mp_exe_path().c_str())) {
-    find_call_of_duty_2_installation_path(false);
-  }
-  const char *cod2mp_s_file_path = main_app.get_cod2mp_exe_path().c_str();
-  if (!cod2mp_s_file_path || len(cod2mp_s_file_path) == 0 || strcmp(cod2mp_s_file_path, "C:\\") == 0 || !check_if_file_path_exists(cod2mp_s_file_path))
-    return false;
-
-  bool is_downloaded_patch_file{};
-
-  path cod2mp_s_path{ cod2mp_s_file_path };
-  const string cod2_patches_folder_path{ cod2mp_s_path.parent_path().string() + "\\cod2_patches" };
-
-  static const vector<string> necessary_folders{
-    cod2_patches_folder_path,
-    format("{}\\1_0", cod2_patches_folder_path),
-    format("{}\\1_01", cod2_patches_folder_path),
-    format("{}\\1_2", cod2_patches_folder_path),
-    format("{}\\1_2\\main", cod2_patches_folder_path),
-    format("{}\\1_3", cod2_patches_folder_path),
-    format("{}\\1_3\\main", cod2_patches_folder_path),
-    format("{}\\cod_temp_file_remover", cod2_patches_folder_path)
-  };
-
-  if (!create_necessary_folders_and_files(necessary_folders))
-    return false;
-
-
-  const string ftp_download_site_info{ "ftp://"s + main_app.get_ftp_download_site_ip_address() + (!main_app.get_ftp_download_folder_path().empty() ? "/"s + main_app.get_ftp_download_folder_path() + "/"s : "/"s) };
-
-
-  static const unordered_map<string, string>
-    cod2_1_0_patch_files{
-      { format("{}\\1_0\\CoD2MP_s.exe", cod2_patches_folder_path), "cod2_patches/1_0/CoD2MP_s.exe" },
-      { format("{}\\1_0\\gfx_d3d_mp_x86_s.dll", cod2_patches_folder_path),
-        "cod2_patches/1_0/gfx_d3d_mp_x86_s.dll" },
-      { format("{}\\1_0\\gfx_d3d_x86_s.dll", cod2_patches_folder_path),
-        "cod2_patches/1_0/gfx_d3d_x86_s.dll" },
-      { format("{}\\1_0\\mss32.dll", cod2_patches_folder_path), "cod2_patches/1_0/mss32.dll" }
-    };
-
-  for (const auto &file_path : cod2_1_0_patch_files) {
-    if (!check_if_file_path_exists(file_path.first.c_str())) {
-      const string file_name{ string(file_path.second.cbegin() + file_path.second.rfind('/') + 1, file_path.second.cend()) };
-      const string download_url_buffer{ format("ftp://{}/{}/{}", main_app.get_ftp_download_site_ip_address(), main_app.get_ftp_download_folder_path(), file_path.second) };
-      const string message_before{ format("^3Downloading missing CoD2 v1.0 game file ^5{}^3...\n", file_name) };
-      print_colored_text(app_handles.hwnd_re_messages_data, message_before.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-      if (main_app.get_auto_update_manager().download_file(download_url_buffer.c_str(), file_path.first.c_str())) {
-        const string message_after{ format("^2Successfully downloaded missing CoD2 v1.0 game file ^5{}^2.\n", file_name) };
-        print_colored_text(app_handles.hwnd_re_messages_data, message_after.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-        is_downloaded_patch_file = true;
-      }
-    }
-  }
-
-  static const unordered_map<string, string>
-    cod2_1_01_patch_files{
-      { format("{}\\1_01\\CoD2MP_s.exe", cod2_patches_folder_path), "cod2_patches/1_01/CoD2MP_s.exe" },
-      { format("{}\\1_01\\gfx_d3d_mp_x86_s.dll", cod2_patches_folder_path), "cod2_patches/1_01/gfx_d3d_mp_x86_s.dll" },
-      { format("{}\\1_01\\gfx_d3d_x86_s.dll", cod2_patches_folder_path), "cod2_patches/1_01/gfx_d3d_x86_s.dll" },
-      { format("{}\\1_01\\mss32.dll", cod2_patches_folder_path), "cod2_patches/1_01/mss32.dll" },
-      // { format("{}\\1_01\\version.inf", cod2_patches_folder_path), "cod2_patches/1_01/version.inf" }
-    };
-
-  for (const auto &file_path : cod2_1_01_patch_files) {
-    if (!check_if_file_path_exists(file_path.first.c_str())) {
-      const string file_name{ string(file_path.second.cbegin() + file_path.second.rfind('/') + 1, file_path.second.cend()) };
-      const string download_url_buffer{ format("ftp://{}/{}/{}", main_app.get_ftp_download_site_ip_address(), main_app.get_ftp_download_folder_path(), file_path.second) };
-      const string message_before{ format("^3Downloading missing CoD2 v1.01 game file ^5{}^3...\n", file_name) };
-      print_colored_text(app_handles.hwnd_re_messages_data, message_before.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-      if (main_app.get_auto_update_manager().download_file(download_url_buffer.c_str(), file_path.first.c_str())) {
-        const string message_after{ format("^2Successfully downloaded missing CoD2 v1.01 game file ^5{}^2.\n", file_name) };
-        print_colored_text(app_handles.hwnd_re_messages_data, message_after.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-        is_downloaded_patch_file = true;
-      }
-    }
-  }
-
-  static const unordered_map<string, string>
-    cod2_1_2_patch_files{
-      { format("{}\\1_2\\CoD2MP_s.exe", cod2_patches_folder_path),
-        "cod2_patches/1_2/CoD2MP_s.exe" },
-      { format("{}\\1_2\\gfx_d3d_mp_x86_s.dll", cod2_patches_folder_path),
-        "cod2_patches/1_2/gfx_d3d_mp_x86_s.dll" },
-      { format("{}\\1_2\\gfx_d3d_x86_s.dll", cod2_patches_folder_path),
-        "cod2_patches/1_2/gfx_d3d_x86_s.dll" },
-      { format(R"({}\1_2\main\iw_15.iwd)", cod2_patches_folder_path), "cod2_patches/1_2/main/iw_15.iwd" }
-    };
-
-  for (const auto &file_path : cod2_1_2_patch_files) {
-    if (!check_if_file_path_exists(file_path.first.c_str())) {
-      const string file_name{ string(file_path.second.cbegin() + file_path.second.rfind('/') + 1, file_path.second.cend()) };
-      const string download_url_buffer{ format("ftp://{}/{}/{}", main_app.get_ftp_download_site_ip_address(), main_app.get_ftp_download_folder_path(), file_path.second) };
-      const string message_before{ format("^3Downloading missing CoD2 v1.2 game file ^5{}^3...\n", file_name) };
-      print_colored_text(app_handles.hwnd_re_messages_data, message_before.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-      if (main_app.get_auto_update_manager().download_file(download_url_buffer.c_str(), file_path.first.c_str())) {
-        const string message_after{ format("^2Successfully downloaded missing CoD2 v1.2 game file ^5{}^2.\n", file_name) };
-        print_colored_text(app_handles.hwnd_re_messages_data, message_after.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-        is_downloaded_patch_file = true;
-      }
-    }
-  }
-
-  static const unordered_map<string, string>
-    cod2_1_3_patch_files{
-      { format("{}\\1_3\\CoD2MP_s.exe", cod2_patches_folder_path), "cod2_patches/1_3/CoD2MP_s.exe" },
-      { format("{}\\1_3\\gfx_d3d_mp_x86_s.dll", cod2_patches_folder_path), "cod2_patches/1_3/gfx_d3d_mp_x86_s.dll" },
-      { format("{}\\1_3\\gfx_d3d_x86_s.dll", cod2_patches_folder_path), "cod2_patches/1_3/gfx_d3d_x86_s.dll" },
-      { format(R"({}\1_3\main\iw_15.iwd)", cod2_patches_folder_path), "cod2_patches/1_3/main/iw_15.iwd" },
-      { format(R"({}\1_3\main\localized_english_iw11.iwd)", cod2_patches_folder_path), "cod2_patches/1_3/main/localized_english_iw11.iwd" }
-    };
-
-  for (const auto &file_path : cod2_1_3_patch_files) {
-    if (!check_if_file_path_exists(file_path.first.c_str())) {
-      const string file_name{ string(file_path.second.cbegin() + file_path.second.rfind('/') + 1, file_path.second.cend()) };
-      const string download_url_buffer{ format("ftp://{}/{}/{}", main_app.get_ftp_download_site_ip_address(), main_app.get_ftp_download_folder_path(), file_path.second) };
-      const string message_before{ format("^3Downloading missing CoD2 v1.3 game file ^5{}^3...\n", file_name) };
-      print_colored_text(app_handles.hwnd_re_messages_data, message_before.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-      if (main_app.get_auto_update_manager().download_file(download_url_buffer.c_str(), file_path.first.c_str())) {
-        const string message_after{ format("^2Successfully downloaded missing CoD2 v1.3 game file ^5{}^2.\n", file_name) };
-        print_colored_text(app_handles.hwnd_re_messages_data, message_after.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-        is_downloaded_patch_file = true;
-      }
-    }
-  }
-
-  static const unordered_map<string, string>
-    cod2_patches_script_files{
-      { format("{}\\install_cod2_1.0_eng_patch.bat", cod2_patches_folder_path), "cod2_patches/install_cod2_1.0_eng_patch.bat" },
-      { format("{}\\install_cod2_1.01_eng_patch.bat", cod2_patches_folder_path), "cod2_patches/install_cod2_1.01_eng_patch.bat" },
-      { format("{}\\install_cod2_1.2_eng_patch.bat", cod2_patches_folder_path), "cod2_patches/install_cod2_1.2_eng_patch.bat" },
-      { format("{}\\install_cod2_1.3_eng_patch.bat", cod2_patches_folder_path), "cod2_patches/install_cod2_1.3_eng_patch.bat" },
-      { format("{}\\cod_temp_file_remover\\cod_temp_file_remover.exe", cod2_patches_folder_path), "cod2_patches/cod_temp_file_remover/cod_temp_file_remover.exe" }
-    };
-
-  for (const auto &file_path : cod2_patches_script_files) {
-    if (!check_if_file_path_exists(file_path.first.c_str())) {
-      const string file_name{ string(file_path.second.cbegin() + file_path.second.rfind('/') + 1, file_path.second.cend()) };
-      const string download_url_buffer{ format("ftp://{}/{}/{}", main_app.get_ftp_download_site_ip_address(), main_app.get_ftp_download_folder_path(), file_path.second) };
-      const string message_before{ format("^3Downloading a missing CoD2 patch related script file: ^5{}\n", file_name) };
-      print_colored_text(app_handles.hwnd_re_messages_data, message_before.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-      if (main_app.get_auto_update_manager().download_file(download_url_buffer.c_str(), file_path.first.c_str())) {
-        const string message_after{ format("^2Successfully downloaded a missing CoD2 patch related script file: ^5{}\n", file_name) };
-        print_colored_text(app_handles.hwnd_re_messages_data, message_after.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-        is_downloaded_patch_file = true;
-      }
-    }
-  }
-
-  return is_downloaded_patch_file;
-}
-
-bool check_if_cod2_v1_0_game_patch_files_are_missing_and_download_them()
-{
-  if (!check_if_file_path_exists(main_app.get_cod2mp_exe_path().c_str())) {
-    find_call_of_duty_2_installation_path(true);
-  }
-  const char *cod2mp_s_file_path = main_app.get_cod2mp_exe_path().c_str();
-  if (!cod2mp_s_file_path || len(cod2mp_s_file_path) == 0 || strcmp(cod2mp_s_file_path, "C:\\") == 0 || !check_if_file_path_exists(cod2mp_s_file_path))
-    return false;
-
-  bool is_downloaded_patch_file{};
-
-  path cod2mp_s_path{ cod2mp_s_file_path };
-  const string cod2_patches_folder_path{ cod2mp_s_path.parent_path().string() + "\\cod2_patches" };
-
-  static const vector<string> necessary_folders{
-    cod2_patches_folder_path,
-    format("{}\\1_0", cod2_patches_folder_path)
-  };
-
-  if (!create_necessary_folders_and_files(necessary_folders))
-    return false;
-
-
-  const string ftp_download_site_info{ "ftp://"s + main_app.get_ftp_download_site_ip_address() + (!main_app.get_ftp_download_folder_path().empty() ? "/"s + main_app.get_ftp_download_folder_path() + "/"s : "/"s) };
-
-
-  static const unordered_map<string, string>
-    cod2_1_0_patch_files{
-      { format("{}\\1_0\\CoD2MP_s.exe", cod2_patches_folder_path), "cod2_patches/1_0/CoD2MP_s.exe" },
-      { format("{}\\1_0\\gfx_d3d_mp_x86_s.dll", cod2_patches_folder_path),
-        "cod2_patches/1_0/gfx_d3d_mp_x86_s.dll" },
-      { format("{}\\1_0\\gfx_d3d_x86_s.dll", cod2_patches_folder_path),
-        "cod2_patches/1_0/gfx_d3d_x86_s.dll" },
-      { format("{}\\1_0\\mss32.dll", cod2_patches_folder_path), "cod2_patches/1_0/mss32.dll" }
-    };
-
-  for (const auto &file_path : cod2_1_0_patch_files) {
-    if (!check_if_file_path_exists(file_path.first.c_str())) {
-      const string file_name{ string(file_path.second.cbegin() + file_path.second.rfind('/') + 1, file_path.second.cend()) };
-      const string download_url_buffer{ format("ftp://{}/{}/{}", main_app.get_ftp_download_site_ip_address(), main_app.get_ftp_download_folder_path(), file_path.second) };
-      const string message_before{ format("^3Downloading missing CoD2 v1.0 game file ^5{}^3...\n", file_name) };
-      print_colored_text(app_handles.hwnd_re_messages_data, message_before.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-      if (main_app.get_auto_update_manager().download_file(download_url_buffer.c_str(), file_path.first.c_str())) {
-        const string message_after{ format("^2Successfully downloaded missing CoD2 v1.0 game file ^5{}^2.\n", file_name) };
-        print_colored_text(app_handles.hwnd_re_messages_data, message_after.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-        is_downloaded_patch_file = true;
-      }
-    }
-  }
-
-  return is_downloaded_patch_file;
-}
-
-bool check_if_cod2_v1_01_game_patch_files_are_missing_and_download_them()
-{
-  if (!check_if_file_path_exists(main_app.get_cod2mp_exe_path().c_str())) {
-    find_call_of_duty_2_installation_path(true);
-  }
-  const char *cod2mp_s_file_path = main_app.get_cod2mp_exe_path().c_str();
-  if (!cod2mp_s_file_path || len(cod2mp_s_file_path) == 0 || strcmp(cod2mp_s_file_path, "C:\\") == 0 || !check_if_file_path_exists(cod2mp_s_file_path))
-    return false;
-
-  bool is_downloaded_patch_file{};
-
-  path cod2mp_s_path{ cod2mp_s_file_path };
-  const string cod2_patches_folder_path{ cod2mp_s_path.parent_path().string() + "\\cod2_patches" };
-
-  static const vector<string> necessary_folders{
-    cod2_patches_folder_path,
-    format("{}\\1_01", cod2_patches_folder_path)
-  };
-
-  if (!create_necessary_folders_and_files(necessary_folders))
-    return false;
-
-
-  const string ftp_download_site_info{ "ftp://"s + main_app.get_ftp_download_site_ip_address() + (!main_app.get_ftp_download_folder_path().empty() ? "/"s + main_app.get_ftp_download_folder_path() + "/"s : "/"s) };
-
-  static const unordered_map<string, string>
-    cod2_1_01_patch_files{
-      { format("{}\\1_01\\CoD2MP_s.exe", cod2_patches_folder_path), "cod2_patches/1_01/CoD2MP_s.exe" },
-      { format("{}\\1_01\\gfx_d3d_mp_x86_s.dll", cod2_patches_folder_path), "cod2_patches/1_01/gfx_d3d_mp_x86_s.dll" },
-      { format("{}\\1_01\\gfx_d3d_x86_s.dll", cod2_patches_folder_path), "cod2_patches/1_01/gfx_d3d_x86_s.dll" },
-      { format("{}\\1_01\\mss32.dll", cod2_patches_folder_path), "cod2_patches/1_01/mss32.dll" },
-      // { format("{}\\1_01\\version.inf", cod2_patches_folder_path), "cod2_patches/1_01/version.inf" }
-    };
-
-  for (const auto &file_path : cod2_1_01_patch_files) {
-    if (!check_if_file_path_exists(file_path.first.c_str())) {
-      const string file_name{ string(file_path.second.cbegin() + file_path.second.rfind('/') + 1, file_path.second.cend()) };
-      const string download_url_buffer{ format("ftp://{}/{}/{}", main_app.get_ftp_download_site_ip_address(), main_app.get_ftp_download_folder_path(), file_path.second) };
-      const string message_before{ format("^3Downloading missing CoD2 v1.01 game file ^5{}^3...\n", file_name) };
-      print_colored_text(app_handles.hwnd_re_messages_data, message_before.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-      if (main_app.get_auto_update_manager().download_file(download_url_buffer.c_str(), file_path.first.c_str())) {
-        const string message_after{ format("^2Successfully downloaded missing CoD2 v1.01 game file ^5{}^2.\n", file_name) };
-        print_colored_text(app_handles.hwnd_re_messages_data, message_after.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-        is_downloaded_patch_file = true;
-      }
-    }
-  }
-
-  return is_downloaded_patch_file;
-}
-
-bool check_if_cod2_v1_2_game_patch_files_are_missing_and_download_them()
-{
-  if (!check_if_file_path_exists(main_app.get_cod2mp_exe_path().c_str())) {
-    find_call_of_duty_2_installation_path(true);
-  }
-  const char *cod2mp_s_file_path = main_app.get_cod2mp_exe_path().c_str();
-  if (!cod2mp_s_file_path || len(cod2mp_s_file_path) == 0 || strcmp(cod2mp_s_file_path, "C:\\") == 0 || !check_if_file_path_exists(cod2mp_s_file_path))
-    return false;
-
-  bool is_downloaded_patch_file{};
-
-  path cod2mp_s_path{ cod2mp_s_file_path };
-  const string cod2_patches_folder_path{ cod2mp_s_path.parent_path().string() + "\\cod2_patches" };
-
-  static const vector<string> necessary_folders{
-    cod2_patches_folder_path,
-    format("{}\\1_2", cod2_patches_folder_path),
-    format("{}\\1_2\\main", cod2_patches_folder_path)
-  };
-
-  if (!create_necessary_folders_and_files(necessary_folders))
-    return false;
-
-
-  const string ftp_download_site_info{ "ftp://"s + main_app.get_ftp_download_site_ip_address() + (!main_app.get_ftp_download_folder_path().empty() ? "/"s + main_app.get_ftp_download_folder_path() + "/"s : "/"s) };
-
-  static const unordered_map<string, string>
-    cod2_1_2_patch_files{
-      { format("{}\\1_2\\CoD2MP_s.exe", cod2_patches_folder_path),
-        "cod2_patches/1_2/CoD2MP_s.exe" },
-      { format("{}\\1_2\\gfx_d3d_mp_x86_s.dll", cod2_patches_folder_path),
-        "cod2_patches/1_2/gfx_d3d_mp_x86_s.dll" },
-      { format("{}\\1_2\\gfx_d3d_x86_s.dll", cod2_patches_folder_path),
-        "cod2_patches/1_2/gfx_d3d_x86_s.dll" },
-      { format(R"({}\1_2\main\iw_15.iwd)", cod2_patches_folder_path), "cod2_patches/1_2/main/iw_15.iwd" }
-    };
-
-  for (const auto &file_path : cod2_1_2_patch_files) {
-    if (!check_if_file_path_exists(file_path.first.c_str())) {
-      const string file_name{ string(file_path.second.cbegin() + file_path.second.rfind('/') + 1, file_path.second.cend()) };
-      const string download_url_buffer{ format("ftp://{}/{}/{}", main_app.get_ftp_download_site_ip_address(), main_app.get_ftp_download_folder_path(), file_path.second) };
-      const string message_before{ format("^3Downloading missing CoD2 v1.2 game file ^5{}^3...\n", file_name) };
-      print_colored_text(app_handles.hwnd_re_messages_data, message_before.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-      if (main_app.get_auto_update_manager().download_file(download_url_buffer.c_str(), file_path.first.c_str())) {
-        const string message_after{ format("^2Successfully downloaded missing CoD2 v1.2 game file ^5{}^2.\n", file_name) };
-        print_colored_text(app_handles.hwnd_re_messages_data, message_after.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-        is_downloaded_patch_file = true;
-      }
-    }
-  }
-
-  return is_downloaded_patch_file;
-}
-
-bool check_if_cod2_v1_3_game_patch_files_are_missing_and_download_them()
-{
-  if (!check_if_file_path_exists(main_app.get_cod2mp_exe_path().c_str())) {
-    find_call_of_duty_2_installation_path(true);
-  }
-  const char *cod2mp_s_file_path = main_app.get_cod2mp_exe_path().c_str();
-  if (!cod2mp_s_file_path || len(cod2mp_s_file_path) == 0 || strcmp(cod2mp_s_file_path, "C:\\") == 0 || !check_if_file_path_exists(cod2mp_s_file_path))
-    return false;
-
-  bool is_downloaded_patch_file{};
-
-  path cod2mp_s_path{ cod2mp_s_file_path };
-  const string cod2_patches_folder_path{ cod2mp_s_path.parent_path().string() + "\\cod2_patches" };
-
-  static const vector<string> necessary_folders{
-    cod2_patches_folder_path,
-    format("{}\\1_3", cod2_patches_folder_path),
-    format("{}\\1_3\\main", cod2_patches_folder_path)
-  };
-
-  if (!create_necessary_folders_and_files(necessary_folders))
-    return false;
-
-
-  const string ftp_download_site_info{ "ftp://"s + main_app.get_ftp_download_site_ip_address() + (!main_app.get_ftp_download_folder_path().empty() ? "/"s + main_app.get_ftp_download_folder_path() + "/"s : "/"s) };
-
-  static const unordered_map<string, string>
-    cod2_1_3_patch_files{
-      { format("{}\\1_3\\CoD2MP_s.exe", cod2_patches_folder_path), "cod2_patches/1_3/CoD2MP_s.exe" },
-      { format("{}\\1_3\\gfx_d3d_mp_x86_s.dll", cod2_patches_folder_path), "cod2_patches/1_3/gfx_d3d_mp_x86_s.dll" },
-      { format("{}\\1_3\\gfx_d3d_x86_s.dll", cod2_patches_folder_path), "cod2_patches/1_3/gfx_d3d_x86_s.dll" },
-      { format(R"({}\1_3\main\iw_15.iwd)", cod2_patches_folder_path), "cod2_patches/1_3/main/iw_15.iwd" },
-      { format(R"({}\1_3\main\localized_english_iw11.iwd)", cod2_patches_folder_path), "cod2_patches/1_3/main/localized_english_iw11.iwd" }
-    };
-
-  for (const auto &file_path : cod2_1_3_patch_files) {
-    if (!check_if_file_path_exists(file_path.first.c_str())) {
-      const string file_name{ string(file_path.second.cbegin() + file_path.second.rfind('/') + 1, file_path.second.cend()) };
-      const string download_url_buffer{ format("ftp://{}/{}/{}", main_app.get_ftp_download_site_ip_address(), main_app.get_ftp_download_folder_path(), file_path.second) };
-      const string message_before{ format("^3Downloading missing CoD2 v1.3 game file ^5{}^3...\n", file_name) };
-      print_colored_text(app_handles.hwnd_re_messages_data, message_before.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-      if (main_app.get_auto_update_manager().download_file(download_url_buffer.c_str(), file_path.first.c_str())) {
-        const string message_after{ format("^2Successfully downloaded missing CoD2 v1.3 game file ^5{}^2.\n", file_name) };
-        print_colored_text(app_handles.hwnd_re_messages_data, message_after.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-        is_downloaded_patch_file = true;
-      }
-    }
-  }
-
-  return is_downloaded_patch_file;
-}
+// bool download_missing_cod2_game_patch_files()
+// {
+//   if (!check_if_file_path_exists(main_app.get_cod2mp_exe_path().c_str())) {
+//     find_call_of_duty_2_installation_path(false);
+//   }
+//   const char *cod2mp_s_file_path = main_app.get_cod2mp_exe_path().c_str();
+//   if (!cod2mp_s_file_path || len(cod2mp_s_file_path) == 0 || strcmp(cod2mp_s_file_path, "C:\\") == 0 || !check_if_file_path_exists(cod2mp_s_file_path))
+//     return false;
+//
+//   bool is_downloaded_patch_file{};
+//
+//   path cod2mp_s_path{ cod2mp_s_file_path };
+//   const string cod2_patches_folder_path{ cod2mp_s_path.parent_path().string() + "\\cod2_patches" };
+//
+//   static const vector<string> necessary_folders{
+//     cod2_patches_folder_path,
+//     format("{}\\1_0", cod2_patches_folder_path),
+//     format("{}\\1_01", cod2_patches_folder_path),
+//     format("{}\\1_2", cod2_patches_folder_path),
+//     format("{}\\1_2\\main", cod2_patches_folder_path),
+//     format("{}\\1_3", cod2_patches_folder_path),
+//     format("{}\\1_3\\main", cod2_patches_folder_path),
+//     format("{}\\cod_temp_file_remover", cod2_patches_folder_path)
+//   };
+//
+//   if (!create_necessary_folders_and_files(necessary_folders))
+//     return false;
+//
+//
+//   const string ftp_download_site_info{ "ftp://"s + main_app.get_ftp_download_site_ip_address() + (!main_app.get_ftp_download_folder_path().empty() ? "/"s + main_app.get_ftp_download_folder_path() + "/"s : "/"s) };
+//
+//
+//   static const unordered_map<string, string>
+//     cod2_1_0_patch_files{
+//       { format("{}\\1_0\\CoD2MP_s.exe", cod2_patches_folder_path), "cod2_patches/1_0/CoD2MP_s.exe" },
+//       { format("{}\\1_0\\gfx_d3d_mp_x86_s.dll", cod2_patches_folder_path),
+//         "cod2_patches/1_0/gfx_d3d_mp_x86_s.dll" },
+//       { format("{}\\1_0\\gfx_d3d_x86_s.dll", cod2_patches_folder_path),
+//         "cod2_patches/1_0/gfx_d3d_x86_s.dll" },
+//       { format("{}\\1_0\\mss32.dll", cod2_patches_folder_path), "cod2_patches/1_0/mss32.dll" }
+//     };
+//
+//   for (const auto &file_path : cod2_1_0_patch_files) {
+//     if (!check_if_file_path_exists(file_path.first.c_str())) {
+//       const string file_name{ string(file_path.second.cbegin() + file_path.second.rfind('/') + 1, file_path.second.cend()) };
+//       const string download_url_buffer{ format("ftp://{}/{}/{}", main_app.get_ftp_download_site_ip_address(), main_app.get_ftp_download_folder_path(), file_path.second) };
+//       const string message_before{ format("^3Downloading missing CoD2 v1.0 game file ^5{}^3...\n", file_name) };
+//       print_colored_text(app_handles.hwnd_re_messages_data, message_before.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+//       if (main_app.get_auto_update_manager().download_file(download_url_buffer.c_str(), file_path.first.c_str())) {
+//         const string message_after{ format("^2Successfully downloaded missing CoD2 v1.0 game file ^5{}^2.\n", file_name) };
+//         print_colored_text(app_handles.hwnd_re_messages_data, message_after.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+//         is_downloaded_patch_file = true;
+//       }
+//     }
+//   }
+//
+//   static const unordered_map<string, string>
+//     cod2_1_01_patch_files{
+//       { format("{}\\1_01\\CoD2MP_s.exe", cod2_patches_folder_path), "cod2_patches/1_01/CoD2MP_s.exe" },
+//       { format("{}\\1_01\\gfx_d3d_mp_x86_s.dll", cod2_patches_folder_path), "cod2_patches/1_01/gfx_d3d_mp_x86_s.dll" },
+//       { format("{}\\1_01\\gfx_d3d_x86_s.dll", cod2_patches_folder_path), "cod2_patches/1_01/gfx_d3d_x86_s.dll" },
+//       { format("{}\\1_01\\mss32.dll", cod2_patches_folder_path), "cod2_patches/1_01/mss32.dll" },
+//       // { format("{}\\1_01\\version.inf", cod2_patches_folder_path), "cod2_patches/1_01/version.inf" }
+//     };
+//
+//   for (const auto &file_path : cod2_1_01_patch_files) {
+//     if (!check_if_file_path_exists(file_path.first.c_str())) {
+//       const string file_name{ string(file_path.second.cbegin() + file_path.second.rfind('/') + 1, file_path.second.cend()) };
+//       const string download_url_buffer{ format("ftp://{}/{}/{}", main_app.get_ftp_download_site_ip_address(), main_app.get_ftp_download_folder_path(), file_path.second) };
+//       const string message_before{ format("^3Downloading missing CoD2 v1.01 game file ^5{}^3...\n", file_name) };
+//       print_colored_text(app_handles.hwnd_re_messages_data, message_before.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+//       if (main_app.get_auto_update_manager().download_file(download_url_buffer.c_str(), file_path.first.c_str())) {
+//         const string message_after{ format("^2Successfully downloaded missing CoD2 v1.01 game file ^5{}^2.\n", file_name) };
+//         print_colored_text(app_handles.hwnd_re_messages_data, message_after.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+//         is_downloaded_patch_file = true;
+//       }
+//     }
+//   }
+//
+//   static const unordered_map<string, string>
+//     cod2_1_2_patch_files{
+//       { format("{}\\1_2\\CoD2MP_s.exe", cod2_patches_folder_path),
+//         "cod2_patches/1_2/CoD2MP_s.exe" },
+//       { format("{}\\1_2\\gfx_d3d_mp_x86_s.dll", cod2_patches_folder_path),
+//         "cod2_patches/1_2/gfx_d3d_mp_x86_s.dll" },
+//       { format("{}\\1_2\\gfx_d3d_x86_s.dll", cod2_patches_folder_path),
+//         "cod2_patches/1_2/gfx_d3d_x86_s.dll" },
+//       { format(R"({}\1_2\main\iw_15.iwd)", cod2_patches_folder_path), "cod2_patches/1_2/main/iw_15.iwd" }
+//     };
+//
+//   for (const auto &file_path : cod2_1_2_patch_files) {
+//     if (!check_if_file_path_exists(file_path.first.c_str())) {
+//       const string file_name{ string(file_path.second.cbegin() + file_path.second.rfind('/') + 1, file_path.second.cend()) };
+//       const string download_url_buffer{ format("ftp://{}/{}/{}", main_app.get_ftp_download_site_ip_address(), main_app.get_ftp_download_folder_path(), file_path.second) };
+//       const string message_before{ format("^3Downloading missing CoD2 v1.2 game file ^5{}^3...\n", file_name) };
+//       print_colored_text(app_handles.hwnd_re_messages_data, message_before.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+//       if (main_app.get_auto_update_manager().download_file(download_url_buffer.c_str(), file_path.first.c_str())) {
+//         const string message_after{ format("^2Successfully downloaded missing CoD2 v1.2 game file ^5{}^2.\n", file_name) };
+//         print_colored_text(app_handles.hwnd_re_messages_data, message_after.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+//         is_downloaded_patch_file = true;
+//       }
+//     }
+//   }
+//
+//   static const unordered_map<string, string>
+//     cod2_1_3_patch_files{
+//       { format("{}\\1_3\\CoD2MP_s.exe", cod2_patches_folder_path), "cod2_patches/1_3/CoD2MP_s.exe" },
+//       { format("{}\\1_3\\gfx_d3d_mp_x86_s.dll", cod2_patches_folder_path), "cod2_patches/1_3/gfx_d3d_mp_x86_s.dll" },
+//       { format("{}\\1_3\\gfx_d3d_x86_s.dll", cod2_patches_folder_path), "cod2_patches/1_3/gfx_d3d_x86_s.dll" },
+//       { format(R"({}\1_3\main\iw_15.iwd)", cod2_patches_folder_path), "cod2_patches/1_3/main/iw_15.iwd" },
+//       { format(R"({}\1_3\main\localized_english_iw11.iwd)", cod2_patches_folder_path), "cod2_patches/1_3/main/localized_english_iw11.iwd" }
+//     };
+//
+//   for (const auto &file_path : cod2_1_3_patch_files) {
+//     if (!check_if_file_path_exists(file_path.first.c_str())) {
+//       const string file_name{ string(file_path.second.cbegin() + file_path.second.rfind('/') + 1, file_path.second.cend()) };
+//       const string download_url_buffer{ format("ftp://{}/{}/{}", main_app.get_ftp_download_site_ip_address(), main_app.get_ftp_download_folder_path(), file_path.second) };
+//       const string message_before{ format("^3Downloading missing CoD2 v1.3 game file ^5{}^3...\n", file_name) };
+//       print_colored_text(app_handles.hwnd_re_messages_data, message_before.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+//       if (main_app.get_auto_update_manager().download_file(download_url_buffer.c_str(), file_path.first.c_str())) {
+//         const string message_after{ format("^2Successfully downloaded missing CoD2 v1.3 game file ^5{}^2.\n", file_name) };
+//         print_colored_text(app_handles.hwnd_re_messages_data, message_after.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+//         is_downloaded_patch_file = true;
+//       }
+//     }
+//   }
+//
+//   static const unordered_map<string, string>
+//     cod2_patches_script_files{
+//       { format("{}\\install_cod2_1.0_eng_patch.bat", cod2_patches_folder_path), "cod2_patches/install_cod2_1.0_eng_patch.bat" },
+//       { format("{}\\install_cod2_1.01_eng_patch.bat", cod2_patches_folder_path), "cod2_patches/install_cod2_1.01_eng_patch.bat" },
+//       { format("{}\\install_cod2_1.2_eng_patch.bat", cod2_patches_folder_path), "cod2_patches/install_cod2_1.2_eng_patch.bat" },
+//       { format("{}\\install_cod2_1.3_eng_patch.bat", cod2_patches_folder_path), "cod2_patches/install_cod2_1.3_eng_patch.bat" },
+//       { format("{}\\cod_temp_file_remover\\cod_temp_file_remover.exe", cod2_patches_folder_path), "cod2_patches/cod_temp_file_remover/cod_temp_file_remover.exe" }
+//     };
+//
+//   for (const auto &file_path : cod2_patches_script_files) {
+//     if (!check_if_file_path_exists(file_path.first.c_str())) {
+//       const string file_name{ string(file_path.second.cbegin() + file_path.second.rfind('/') + 1, file_path.second.cend()) };
+//       const string download_url_buffer{ format("ftp://{}/{}/{}", main_app.get_ftp_download_site_ip_address(), main_app.get_ftp_download_folder_path(), file_path.second) };
+//       const string message_before{ format("^3Downloading a missing CoD2 patch related script file: ^5{}\n", file_name) };
+//       print_colored_text(app_handles.hwnd_re_messages_data, message_before.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+//       if (main_app.get_auto_update_manager().download_file(download_url_buffer.c_str(), file_path.first.c_str())) {
+//         const string message_after{ format("^2Successfully downloaded a missing CoD2 patch related script file: ^5{}\n", file_name) };
+//         print_colored_text(app_handles.hwnd_re_messages_data, message_after.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+//         is_downloaded_patch_file = true;
+//       }
+//     }
+//   }
+//
+//   return is_downloaded_patch_file;
+// }
+//
+// bool check_if_cod2_v1_0_game_patch_files_are_missing_and_download_them()
+//{
+//   if (!check_if_file_path_exists(main_app.get_cod2mp_exe_path().c_str())) {
+//     find_call_of_duty_2_installation_path(true);
+//   }
+//   const char *cod2mp_s_file_path = main_app.get_cod2mp_exe_path().c_str();
+//   if (!cod2mp_s_file_path || len(cod2mp_s_file_path) == 0 || strcmp(cod2mp_s_file_path, "C:\\") == 0 || !check_if_file_path_exists(cod2mp_s_file_path))
+//     return false;
+//
+//   bool is_downloaded_patch_file{};
+//
+//   path cod2mp_s_path{ cod2mp_s_file_path };
+//   const string cod2_patches_folder_path{ cod2mp_s_path.parent_path().string() + "\\cod2_patches" };
+//
+//   static const vector<string> necessary_folders{
+//     cod2_patches_folder_path,
+//     format("{}\\1_0", cod2_patches_folder_path)
+//   };
+//
+//   if (!create_necessary_folders_and_files(necessary_folders))
+//     return false;
+//
+//
+//   const string ftp_download_site_info{ "ftp://"s + main_app.get_ftp_download_site_ip_address() + (!main_app.get_ftp_download_folder_path().empty() ? "/"s + main_app.get_ftp_download_folder_path() + "/"s : "/"s) };
+//
+//
+//   static const unordered_map<string, string>
+//     cod2_1_0_patch_files{
+//       { format("{}\\1_0\\CoD2MP_s.exe", cod2_patches_folder_path), "cod2_patches/1_0/CoD2MP_s.exe" },
+//       { format("{}\\1_0\\gfx_d3d_mp_x86_s.dll", cod2_patches_folder_path),
+//         "cod2_patches/1_0/gfx_d3d_mp_x86_s.dll" },
+//       { format("{}\\1_0\\gfx_d3d_x86_s.dll", cod2_patches_folder_path),
+//         "cod2_patches/1_0/gfx_d3d_x86_s.dll" },
+//       { format("{}\\1_0\\mss32.dll", cod2_patches_folder_path), "cod2_patches/1_0/mss32.dll" }
+//     };
+//
+//   for (const auto &file_path : cod2_1_0_patch_files) {
+//     if (!check_if_file_path_exists(file_path.first.c_str())) {
+//       const string file_name{ string(file_path.second.cbegin() + file_path.second.rfind('/') + 1, file_path.second.cend()) };
+//       const string download_url_buffer{ format("ftp://{}/{}/{}", main_app.get_ftp_download_site_ip_address(), main_app.get_ftp_download_folder_path(), file_path.second) };
+//       const string message_before{ format("^3Downloading missing CoD2 v1.0 game file ^5{}^3...\n", file_name) };
+//       print_colored_text(app_handles.hwnd_re_messages_data, message_before.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+//       if (main_app.get_auto_update_manager().download_file(download_url_buffer.c_str(), file_path.first.c_str())) {
+//         const string message_after{ format("^2Successfully downloaded missing CoD2 v1.0 game file ^5{}^2.\n", file_name) };
+//         print_colored_text(app_handles.hwnd_re_messages_data, message_after.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+//         is_downloaded_patch_file = true;
+//       }
+//     }
+//   }
+//
+//   return is_downloaded_patch_file;
+// }
+//
+// bool check_if_cod2_v1_01_game_patch_files_are_missing_and_download_them()
+//{
+//   if (!check_if_file_path_exists(main_app.get_cod2mp_exe_path().c_str())) {
+//     find_call_of_duty_2_installation_path(true);
+//   }
+//   const char *cod2mp_s_file_path = main_app.get_cod2mp_exe_path().c_str();
+//   if (!cod2mp_s_file_path || len(cod2mp_s_file_path) == 0 || strcmp(cod2mp_s_file_path, "C:\\") == 0 || !check_if_file_path_exists(cod2mp_s_file_path))
+//     return false;
+//
+//   bool is_downloaded_patch_file{};
+//
+//   path cod2mp_s_path{ cod2mp_s_file_path };
+//   const string cod2_patches_folder_path{ cod2mp_s_path.parent_path().string() + "\\cod2_patches" };
+//
+//   static const vector<string> necessary_folders{
+//     cod2_patches_folder_path,
+//     format("{}\\1_01", cod2_patches_folder_path)
+//   };
+//
+//   if (!create_necessary_folders_and_files(necessary_folders))
+//     return false;
+//
+//
+//   const string ftp_download_site_info{ "ftp://"s + main_app.get_ftp_download_site_ip_address() + (!main_app.get_ftp_download_folder_path().empty() ? "/"s + main_app.get_ftp_download_folder_path() + "/"s : "/"s) };
+//
+//   static const unordered_map<string, string>
+//     cod2_1_01_patch_files{
+//       { format("{}\\1_01\\CoD2MP_s.exe", cod2_patches_folder_path), "cod2_patches/1_01/CoD2MP_s.exe" },
+//       { format("{}\\1_01\\gfx_d3d_mp_x86_s.dll", cod2_patches_folder_path), "cod2_patches/1_01/gfx_d3d_mp_x86_s.dll" },
+//       { format("{}\\1_01\\gfx_d3d_x86_s.dll", cod2_patches_folder_path), "cod2_patches/1_01/gfx_d3d_x86_s.dll" },
+//       { format("{}\\1_01\\mss32.dll", cod2_patches_folder_path), "cod2_patches/1_01/mss32.dll" },
+//       // { format("{}\\1_01\\version.inf", cod2_patches_folder_path), "cod2_patches/1_01/version.inf" }
+//     };
+//
+//   for (const auto &file_path : cod2_1_01_patch_files) {
+//     if (!check_if_file_path_exists(file_path.first.c_str())) {
+//       const string file_name{ string(file_path.second.cbegin() + file_path.second.rfind('/') + 1, file_path.second.cend()) };
+//       const string download_url_buffer{ format("ftp://{}/{}/{}", main_app.get_ftp_download_site_ip_address(), main_app.get_ftp_download_folder_path(), file_path.second) };
+//       const string message_before{ format("^3Downloading missing CoD2 v1.01 game file ^5{}^3...\n", file_name) };
+//       print_colored_text(app_handles.hwnd_re_messages_data, message_before.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+//       if (main_app.get_auto_update_manager().download_file(download_url_buffer.c_str(), file_path.first.c_str())) {
+//         const string message_after{ format("^2Successfully downloaded missing CoD2 v1.01 game file ^5{}^2.\n", file_name) };
+//         print_colored_text(app_handles.hwnd_re_messages_data, message_after.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+//         is_downloaded_patch_file = true;
+//       }
+//     }
+//   }
+//
+//   return is_downloaded_patch_file;
+// }
+//
+// bool check_if_cod2_v1_2_game_patch_files_are_missing_and_download_them()
+//{
+//   if (!check_if_file_path_exists(main_app.get_cod2mp_exe_path().c_str())) {
+//     find_call_of_duty_2_installation_path(true);
+//   }
+//   const char *cod2mp_s_file_path = main_app.get_cod2mp_exe_path().c_str();
+//   if (!cod2mp_s_file_path || len(cod2mp_s_file_path) == 0 || strcmp(cod2mp_s_file_path, "C:\\") == 0 || !check_if_file_path_exists(cod2mp_s_file_path))
+//     return false;
+//
+//   bool is_downloaded_patch_file{};
+//
+//   path cod2mp_s_path{ cod2mp_s_file_path };
+//   const string cod2_patches_folder_path{ cod2mp_s_path.parent_path().string() + "\\cod2_patches" };
+//
+//   static const vector<string> necessary_folders{
+//     cod2_patches_folder_path,
+//     format("{}\\1_2", cod2_patches_folder_path),
+//     format("{}\\1_2\\main", cod2_patches_folder_path)
+//   };
+//
+//   if (!create_necessary_folders_and_files(necessary_folders))
+//     return false;
+//
+//
+//   const string ftp_download_site_info{ "ftp://"s + main_app.get_ftp_download_site_ip_address() + (!main_app.get_ftp_download_folder_path().empty() ? "/"s + main_app.get_ftp_download_folder_path() + "/"s : "/"s) };
+//
+//   static const unordered_map<string, string>
+//     cod2_1_2_patch_files{
+//       { format("{}\\1_2\\CoD2MP_s.exe", cod2_patches_folder_path),
+//         "cod2_patches/1_2/CoD2MP_s.exe" },
+//       { format("{}\\1_2\\gfx_d3d_mp_x86_s.dll", cod2_patches_folder_path),
+//         "cod2_patches/1_2/gfx_d3d_mp_x86_s.dll" },
+//       { format("{}\\1_2\\gfx_d3d_x86_s.dll", cod2_patches_folder_path),
+//         "cod2_patches/1_2/gfx_d3d_x86_s.dll" },
+//       { format(R"({}\1_2\main\iw_15.iwd)", cod2_patches_folder_path), "cod2_patches/1_2/main/iw_15.iwd" }
+//     };
+//
+//   for (const auto &file_path : cod2_1_2_patch_files) {
+//     if (!check_if_file_path_exists(file_path.first.c_str())) {
+//       const string file_name{ string(file_path.second.cbegin() + file_path.second.rfind('/') + 1, file_path.second.cend()) };
+//       const string download_url_buffer{ format("ftp://{}/{}/{}", main_app.get_ftp_download_site_ip_address(), main_app.get_ftp_download_folder_path(), file_path.second) };
+//       const string message_before{ format("^3Downloading missing CoD2 v1.2 game file ^5{}^3...\n", file_name) };
+//       print_colored_text(app_handles.hwnd_re_messages_data, message_before.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+//       if (main_app.get_auto_update_manager().download_file(download_url_buffer.c_str(), file_path.first.c_str())) {
+//         const string message_after{ format("^2Successfully downloaded missing CoD2 v1.2 game file ^5{}^2.\n", file_name) };
+//         print_colored_text(app_handles.hwnd_re_messages_data, message_after.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+//         is_downloaded_patch_file = true;
+//       }
+//     }
+//   }
+//
+//   return is_downloaded_patch_file;
+// }
+//
+// bool check_if_cod2_v1_3_game_patch_files_are_missing_and_download_them()
+//{
+//   if (!check_if_file_path_exists(main_app.get_cod2mp_exe_path().c_str())) {
+//     find_call_of_duty_2_installation_path(true);
+//   }
+//   const char *cod2mp_s_file_path = main_app.get_cod2mp_exe_path().c_str();
+//   if (!cod2mp_s_file_path || len(cod2mp_s_file_path) == 0 || strcmp(cod2mp_s_file_path, "C:\\") == 0 || !check_if_file_path_exists(cod2mp_s_file_path))
+//     return false;
+//
+//   bool is_downloaded_patch_file{};
+//
+//   path cod2mp_s_path{ cod2mp_s_file_path };
+//   const string cod2_patches_folder_path{ cod2mp_s_path.parent_path().string() + "\\cod2_patches" };
+//
+//   static const vector<string> necessary_folders{
+//     cod2_patches_folder_path,
+//     format("{}\\1_3", cod2_patches_folder_path),
+//     format("{}\\1_3\\main", cod2_patches_folder_path)
+//   };
+//
+//   if (!create_necessary_folders_and_files(necessary_folders))
+//     return false;
+//
+//
+//   const string ftp_download_site_info{ "ftp://"s + main_app.get_ftp_download_site_ip_address() + (!main_app.get_ftp_download_folder_path().empty() ? "/"s + main_app.get_ftp_download_folder_path() + "/"s : "/"s) };
+//
+//   static const unordered_map<string, string>
+//     cod2_1_3_patch_files{
+//       { format("{}\\1_3\\CoD2MP_s.exe", cod2_patches_folder_path), "cod2_patches/1_3/CoD2MP_s.exe" },
+//       { format("{}\\1_3\\gfx_d3d_mp_x86_s.dll", cod2_patches_folder_path), "cod2_patches/1_3/gfx_d3d_mp_x86_s.dll" },
+//       { format("{}\\1_3\\gfx_d3d_x86_s.dll", cod2_patches_folder_path), "cod2_patches/1_3/gfx_d3d_x86_s.dll" },
+//       { format(R"({}\1_3\main\iw_15.iwd)", cod2_patches_folder_path), "cod2_patches/1_3/main/iw_15.iwd" },
+//       { format(R"({}\1_3\main\localized_english_iw11.iwd)", cod2_patches_folder_path), "cod2_patches/1_3/main/localized_english_iw11.iwd" }
+//     };
+//
+//   for (const auto &file_path : cod2_1_3_patch_files) {
+//     if (!check_if_file_path_exists(file_path.first.c_str())) {
+//       const string file_name{ string(file_path.second.cbegin() + file_path.second.rfind('/') + 1, file_path.second.cend()) };
+//       const string download_url_buffer{ format("ftp://{}/{}/{}", main_app.get_ftp_download_site_ip_address(), main_app.get_ftp_download_folder_path(), file_path.second) };
+//       const string message_before{ format("^3Downloading missing CoD2 v1.3 game file ^5{}^3...\n", file_name) };
+//       print_colored_text(app_handles.hwnd_re_messages_data, message_before.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+//       if (main_app.get_auto_update_manager().download_file(download_url_buffer.c_str(), file_path.first.c_str())) {
+//         const string message_after{ format("^2Successfully downloaded missing CoD2 v1.3 game file ^5{}^2.\n", file_name) };
+//         print_colored_text(app_handles.hwnd_re_messages_data, message_after.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+//         is_downloaded_patch_file = true;
+//       }
+//     }
+//   }
+//
+//   return is_downloaded_patch_file;
+// }
 
 void view_game_servers(HWND grid)
 {
@@ -10365,10 +10701,10 @@ void view_game_servers(HWND grid)
 void refresh_game_servers_data(HWND hgrid)
 {
   if (is_refreshing_game_servers_data_event.load()) return;
+  is_refreshing_game_servers_data_event.store(true);
 
   char buffer[32];
 
-  is_refreshing_game_servers_data_event.store(true);
   string number_of_online_players, number_of_max_players;
   for (size_t i{}; i < main_app.get_rcon_game_servers_count(); ++i) {
     auto &gs = main_app.get_game_servers()[i];
@@ -10390,7 +10726,6 @@ void refresh_game_servers_data(HWND hgrid)
 
   const string game_version_number{ find_version_of_installed_cod2_game() };
   const int protocol = main_app.get_cod2_game_version_to_protocol().contains(game_version_number) ? main_app.get_cod2_game_version_to_protocol().at(game_version_number) : 115;
-  const auto is_support_for_english_patches = check_if_users_call_of_duty_2_game_supports_patch_and_repatch_commands();
 
   const string getservers_command_to_send{ format("getservers {} full empty", protocol) };
   string received_reply;
@@ -10534,232 +10869,6 @@ bool parse_and_display_downloaded_game_servers_data(std::string &game_servers_da
   return true;
 }
 
-string find_game_version_number_of_running_cod2mp_s_executable(DWORD pid)
-{
-  static const vector<char> cod2_1_0_version_info{ 'C', 'o', 'D', '2', ' ', 'M', 'P', 0, '1', '.', '0', 0 };
-  static const vector<char> cod2_1_01_version_info{ 'C', 'o', 'D', '2', ' ', 'M', 'P', 0, '1', '.', '0', '1', 0 };
-  static const vector<char> cod2_1_2_version_info{ 'C', 'o', 'D', '2', ' ', 'M', 'P', 0, '1', '.', '2', 0 };
-  static const vector<char> cod2_1_3_version_info{ 'C', 'o', 'D', '2', ' ', 'M', 'P', 0, '1', '.', '3', 0 };
-
-  auto close_handle = [](HANDLE *handle) {
-    if (handle) {
-      CloseHandle(*handle);
-    }
-  };
-
-  std::unique_ptr<HANDLE, decltype(close_handle)> smart_handle{};
-  HANDLE process{ OpenProcess(PROCESS_VM_READ | PROCESS_QUERY_INFORMATION, FALSE, pid) };
-  smart_handle.reset(&process);
-
-  if (process) {
-    SYSTEM_INFO si;
-    GetSystemInfo(&si);
-
-    MEMORY_BASIC_INFORMATION info;
-    std::vector<char> chunk;
-    const char *p{};
-    while (p < si.lpMaximumApplicationAddress) {
-      if (VirtualQueryEx(process, p, &info, sizeof(info)) == sizeof(info)) {
-        p = (char *)info.BaseAddress;
-        chunk.resize(info.RegionSize);
-        SIZE_T bytesRead;
-        if (ReadProcessMemory(process, p, &chunk[0], info.RegionSize, &bytesRead)) {
-          for (size_t i = 0; i < (bytesRead - cod2_1_01_version_info.size()); ++i) {
-            if (memcmp(cod2_1_0_version_info.data(), &chunk[i], cod2_1_0_version_info.size()) == 0) {
-              return "1.0";
-            }
-            if (memcmp(cod2_1_01_version_info.data(), &chunk[i], cod2_1_01_version_info.size()) == 0) {
-              return "1.01";
-            }
-            if (memcmp(cod2_1_2_version_info.data(), &chunk[i], cod2_1_2_version_info.size()) == 0) {
-              return "1.2";
-            }
-            if (memcmp(cod2_1_3_version_info.data(), &chunk[i], cod2_1_3_version_info.size()) == 0) {
-              return "1.3";
-            }
-          }
-        }
-        p += info.RegionSize;
-      }
-    }
-  }
-  return "1.0";
-}
-
-BOOL enable_privileged_access()
-{
-  LUID PrivilegeRequired;
-  DWORD dwLen = 0, iCount = 0;
-  BOOL bRes = FALSE;
-  HANDLE hToken = nullptr;
-  BYTE *pBuffer = nullptr;
-  TOKEN_PRIVILEGES *pPrivs = nullptr;
-
-  bRes = LookupPrivilegeValue(nullptr, SE_DEBUG_NAME, &PrivilegeRequired);
-  if (!bRes) return FALSE;
-
-  bRes = OpenThreadToken(GetCurrentThread(), TOKEN_QUERY | TOKEN_ADJUST_PRIVILEGES, TRUE, &hToken);
-  if (!bRes) return FALSE;
-
-  bRes = GetTokenInformation(hToken, TokenPrivileges, nullptr, 0, &dwLen);
-
-  if (TRUE == bRes) {
-    CloseHandle(hToken);
-    return FALSE;
-  }
-
-  pBuffer = static_cast<BYTE *>(HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, dwLen));
-
-  if (nullptr == pBuffer) return FALSE;
-
-  if (!GetTokenInformation(hToken, TokenPrivileges, pBuffer, dwLen, &dwLen)) {
-    CloseHandle(hToken);
-    HeapFree(GetProcessHeap(), 0, pBuffer);
-    return FALSE;
-  }
-
-  // Iterate through all the privileges and enable the one required
-  bRes = FALSE;
-  pPrivs = (TOKEN_PRIVILEGES *)pBuffer;
-  for (iCount = 0; iCount < pPrivs->PrivilegeCount; iCount++) {
-    if (pPrivs->Privileges[iCount].Luid.LowPart == PrivilegeRequired.LowPart && pPrivs->Privileges[iCount].Luid.HighPart == PrivilegeRequired.HighPart) {
-      pPrivs->Privileges[iCount].Attributes |= SE_PRIVILEGE_ENABLED;
-      // here it's found
-      bRes = AdjustTokenPrivileges(hToken, FALSE, pPrivs, dwLen, nullptr, nullptr);
-      break;
-    }
-  }
-
-  CloseHandle(hToken);
-  HeapFree(GetProcessHeap(), 0, pBuffer);
-  return bRes;
-}
-
-bool apply_cod2_patch(const std::string &patch_version_number)
-{
-
-  if (!check_if_file_path_exists(main_app.get_cod2mp_exe_path().c_str())) {
-    find_call_of_duty_2_installation_path(true);
-  }
-  const char *cod2mp_s_file_path = main_app.get_cod2mp_exe_path().c_str();
-  if (!cod2mp_s_file_path || len(cod2mp_s_file_path) == 0 || strcmp(cod2mp_s_file_path, "C:\\") == 0 || !check_if_file_path_exists(cod2mp_s_file_path))
-    return false;
-
-  const path cod2mp_s_path{ cod2mp_s_file_path };
-  const string cod2_game_folder_path{ cod2mp_s_path.parent_path().string() };
-  const string cod2_patches_folder_path{ cod2_game_folder_path + "\\cod2_patches" };
-
-  if (patch_version_number == "1.0") {
-    check_if_cod2_v1_0_game_patch_files_are_missing_and_download_them();
-
-    const unordered_map<string, string>
-      cod2_1_0_patch_files{
-        { format("{}\\1_0\\CoD2MP_s.exe", cod2_patches_folder_path), format("{}\\CoD2MP_s.exe", cod2_game_folder_path) },
-        { format("{}\\1_0\\gfx_d3d_mp_x86_s.dll", cod2_patches_folder_path), format("{}\\gfx_d3d_mp_x86_s.dll", cod2_game_folder_path) },
-        { format("{}\\1_0\\gfx_d3d_x86_s.dll", cod2_patches_folder_path), format("{}\\gfx_d3d_x86_s.dll", cod2_game_folder_path) },
-        { format("{}\\1_0\\mss32.dll", cod2_patches_folder_path), format("{}\\mss32.dll", cod2_game_folder_path) }
-      };
-
-    for (const auto &patch_file : cod2_1_0_patch_files) {
-      if (FALSE == CopyFileA(patch_file.first.c_str(), patch_file.second.c_str(), FALSE)) {
-        const string file_name{ patch_file.first.substr(patch_file.first.rfind('\\') + 1) };
-        const string warning_msg{ format("^3Couldn't copy file ^1{}\n ^3to ^1{}!", patch_file.first, patch_file.second) };
-        print_colored_text(app_handles.hwnd_re_messages_data, warning_msg.c_str());
-        return false;
-      }
-    }
-
-    const vector<string>
-      cod2_1_0_patch_delete_files{
-        format("{}\\main\\iw_15.iwd", cod2_game_folder_path),
-        format("{}\\main\\localized_english_iw11.iwd", cod2_game_folder_path)
-      };
-
-    for (const auto &delete_file : cod2_1_0_patch_delete_files) {
-      DeleteFileA(delete_file.c_str());
-    }
-  } else if (patch_version_number == "1.01") {
-    check_if_cod2_v1_01_game_patch_files_are_missing_and_download_them();
-
-    const unordered_map<string, string>
-      cod2_1_01_patch_files{
-        { format("{}\\1_01\\CoD2MP_s.exe", cod2_patches_folder_path), format("{}\\CoD2MP_s.exe", cod2_game_folder_path) },
-        { format("{}\\1_01\\gfx_d3d_mp_x86_s.dll", cod2_patches_folder_path), format("{}\\gfx_d3d_mp_x86_s.dll", cod2_game_folder_path) },
-        { format("{}\\1_01\\gfx_d3d_x86_s.dll", cod2_patches_folder_path), format("{}\\gfx_d3d_x86_s.dll", cod2_game_folder_path) },
-        { format("{}\\1_01\\mss32.dll", cod2_patches_folder_path), format("{}\\mss32.dll", cod2_game_folder_path) }
-      };
-
-    for (const auto &patch_file : cod2_1_01_patch_files) {
-      if (FALSE == CopyFileA(patch_file.first.c_str(), patch_file.second.c_str(), FALSE)) {
-        const string file_name{ patch_file.first.substr(patch_file.first.rfind('\\') + 1) };
-        const string warning_msg{ format("^3Couldn't copy file ^1{}\n ^3to ^1{}!", patch_file.first, patch_file.second) };
-        print_colored_text(app_handles.hwnd_re_messages_data, warning_msg.c_str());
-        return false;
-      }
-    }
-
-    const vector<string>
-      cod2_1_01_patch_delete_files{
-        format("{}\\main\\iw_15.iwd", cod2_game_folder_path),
-        format("{}\\main\\localized_english_iw11.iwd", cod2_game_folder_path)
-      };
-
-    for (const auto &delete_file : cod2_1_01_patch_delete_files) {
-      DeleteFileA(delete_file.c_str());
-    }
-  } else if (patch_version_number == "1.2") {
-    check_if_cod2_v1_2_game_patch_files_are_missing_and_download_them();
-
-    const unordered_map<string, string>
-      cod2_1_2_patch_files{
-        { format("{}\\1_2\\CoD2MP_s.exe", cod2_patches_folder_path), format("{}\\CoD2MP_s.exe", cod2_game_folder_path) },
-        { format("{}\\1_2\\gfx_d3d_mp_x86_s.dll", cod2_patches_folder_path), format("{}\\gfx_d3d_mp_x86_s.dll", cod2_game_folder_path) },
-        { format("{}\\1_2\\gfx_d3d_x86_s.dll", cod2_patches_folder_path), format("{}\\gfx_d3d_x86_s.dll", cod2_game_folder_path) },
-        { format(R"({}\1_2\main\iw_15.iwd)", cod2_patches_folder_path), format("{}\\main\\iw_15.iwd", cod2_game_folder_path) }
-      };
-
-    for (const auto &patch_file : cod2_1_2_patch_files) {
-      if (FALSE == CopyFileA(patch_file.first.c_str(), patch_file.second.c_str(), FALSE)) {
-        const string file_name{ patch_file.first.substr(patch_file.first.rfind('\\') + 1) };
-        const string warning_msg{ format("^3Couldn't copy file ^1{}\n ^3to ^1{}!", patch_file.first, patch_file.second) };
-        print_colored_text(app_handles.hwnd_re_messages_data, warning_msg.c_str());
-        return false;
-      }
-    }
-
-    const vector<string>
-      cod2_1_2_patch_delete_files{
-        format("{}\\main\\localized_english_iw11.iwd", cod2_game_folder_path)
-      };
-
-    for (const auto &delete_file : cod2_1_2_patch_delete_files) {
-      DeleteFileA(delete_file.c_str());
-    }
-  } else if (patch_version_number == "1.3") {
-    check_if_cod2_v1_3_game_patch_files_are_missing_and_download_them();
-
-    const unordered_map<string, string>
-      cod2_1_3_patch_files{
-        { format("{}\\1_3\\CoD2MP_s.exe", cod2_patches_folder_path), format("{}\\CoD2MP_s.exe", cod2_game_folder_path) },
-        { format("{}\\1_3\\gfx_d3d_mp_x86_s.dll", cod2_patches_folder_path), format("{}\\gfx_d3d_mp_x86_s.dll", cod2_game_folder_path) },
-        { format("{}\\1_3\\gfx_d3d_x86_s.dll", cod2_patches_folder_path), format("{}\\gfx_d3d_x86_s.dll", cod2_game_folder_path) },
-        { format(R"({}\1_3\main\iw_15.iwd)", cod2_patches_folder_path), format("{}\\main\\iw_15.iwd", cod2_game_folder_path) },
-        { format(R"({}\1_3\main\localized_english_iw11.iwd)", cod2_patches_folder_path), format("{}\\main\\localized_english_iw11.iwd", cod2_game_folder_path) }
-      };
-
-    for (const auto &patch_file : cod2_1_3_patch_files) {
-      if (FALSE == CopyFileA(patch_file.first.c_str(), patch_file.second.c_str(), FALSE)) {
-        const string file_name{ patch_file.first.substr(patch_file.first.rfind('\\') + 1) };
-        const string warning_msg{ format("^3Couldn't copy file ^1{}\n ^3to ^1{}!", patch_file.first, patch_file.second) };
-        print_colored_text(app_handles.hwnd_re_messages_data, warning_msg.c_str());
-        return false;
-      }
-    }
-  }
-
-  return true;
-}
-
 bool terminate_running_game_instance(const game_name_t game_name)
 {
 
@@ -10801,142 +10910,6 @@ bool terminate_running_game_instance(const game_name_t game_name)
   return false;
 }
 
-std::pair<bool, std::string> backup_original_call_of_duty_2_game_files()
-{
-
-  if (!check_if_file_path_exists(main_app.get_cod2mp_exe_path().c_str())) {
-    find_call_of_duty_2_installation_path(true);
-  }
-
-  const char *cod2mp_s_file_path = main_app.get_cod2mp_exe_path().c_str();
-  if (!cod2mp_s_file_path || len(cod2mp_s_file_path) == 0 || strcmp(cod2mp_s_file_path, "C:\\") == 0 || !check_if_file_path_exists(cod2mp_s_file_path))
-    return {
-      false, ""
-    };
-
-  const path cod2mp_s_path{ cod2mp_s_file_path };
-  const string cod2_game_folder_path{ cod2mp_s_path.parent_path().string() };
-  string cod2_backup_folder_path{ cod2_game_folder_path + "\\backup_of_your_cod2_files" };
-  string cod2_backup_folder_main_path{ cod2_game_folder_path + "\\backup_of_your_cod2_files\\main" };
-
-  if (!create_necessary_folders_and_files({ cod2_backup_folder_path, cod2_backup_folder_main_path })) {
-    const string warning_message{ format("^3Could not create backup of your ^1original game files ^3because\n failed to create the backup folder ^1'backup_of_your_cod2_files' ^3at ^1'{}'^3!\n", cod2_game_folder_path) };
-    return {
-      false, ""
-    };
-  }
-
-  bool is_copied_file{};
-
-  static const unordered_map<string, string>
-    cod2_backup_file_paths{
-      { format("{}\\CoD2MP_s.exe", cod2_backup_folder_path), format("{}\\CoD2MP_s.exe", cod2_game_folder_path) },
-      { format("{}\\gfx_d3d_mp_x86_s.dll", cod2_backup_folder_path), format("{}\\gfx_d3d_mp_x86_s.dll", cod2_game_folder_path) },
-      { format("{}\\gfx_d3d_x86_s.dll", cod2_backup_folder_path), format("{}\\gfx_d3d_x86_s.dll", cod2_game_folder_path) },
-      { format(R"({}\main\iw_15.iwd)", cod2_backup_folder_path), format("{}\\main\\iw_15.iwd", cod2_game_folder_path) },
-      { format(R"({}\main\localized_english_iw11.iwd)", cod2_backup_folder_path), format("{}\\main\\localized_english_iw11.iwd", cod2_game_folder_path) }
-    };
-
-  for (const auto &file_path : cod2_backup_file_paths) {
-    if (!check_if_file_path_exists(file_path.first.c_str()) && check_if_file_path_exists(file_path.second.c_str())) {
-      is_copied_file = CopyFileA(file_path.second.c_str(), file_path.first.c_str(), FALSE) != FALSE;
-    }
-  }
-
-  return { is_copied_file, cod2_backup_folder_path };
-}
-
-std::pair<bool, std::string> check_if_users_call_of_duty_2_game_supports_patch_and_repatch_commands()
-{
-
-  if (!check_if_file_path_exists(main_app.get_cod2mp_exe_path().c_str())) {
-    find_call_of_duty_2_installation_path(true);
-  }
-
-  const char *cod2mp_s_file_path = main_app.get_cod2mp_exe_path().c_str();
-  if (!cod2mp_s_file_path || len(cod2mp_s_file_path) == 0 || strcmp(cod2mp_s_file_path, "C:\\") == 0 || main_app.get_cod2mp_exe_path().find("-applaunch 2630") != string::npos || !check_if_file_path_exists(cod2mp_s_file_path))
-    return {
-      false, "Unknown"
-    };
-
-  const path cod2mp_s_path{ cod2mp_s_file_path };
-  const string cod2_game_main_folder_path{ cod2mp_s_path.parent_path().string() + "\\main" };
-
-  string localized_language;
-
-  WIN32_FIND_DATAA ffd{};
-  const size_t buffer_size{ 1024U };
-  char szDir[buffer_size];
-  char buf[buffer_size];
-  // char buf2[buffer_size];
-  // size_t length_of_arg;
-  HANDLE hFind = INVALID_HANDLE_VALUE;
-  // DWORD dwError{};
-
-  GetCurrentDirectoryA(buffer_size, buf);
-  const string original_working_dir_path{ buf };
-  SetCurrentDirectory(cod2_game_main_folder_path.c_str());
-
-  strcpy_s(szDir, buffer_size, cod2_game_main_folder_path.c_str());
-  strcat_s(szDir, buffer_size, "\\*");
-
-  hFind = FindFirstFileA(szDir, &ffd);
-
-  if (INVALID_HANDLE_VALUE != hFind) {
-
-    do {
-      if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
-
-      const string file_name{ ffd.cFileName };
-
-      if (size_t start_pos{}; (start_pos = file_name.find("localized_")) != string::npos) {
-
-        start_pos += len("localized_");
-        const size_t last_pos{
-          file_name.find("_iw", start_pos)
-        };
-
-        localized_language = file_name.substr(start_pos, last_pos - start_pos);
-        if (!localized_language.empty()) {
-          localized_language[0] = static_cast<char>(std::toupper(localized_language[0]));
-        } else {
-          localized_language = "Unknown";
-        }
-        break;
-      }
-    } while (FindNextFileA(hFind, &ffd) != 0);
-
-    FindClose(hFind);
-  }
-
-  SetCurrentDirectory(original_working_dir_path.c_str());
-
-  static const vector<string>
-    cod2_main_localized_english_file_paths{
-      format(R"({}\localized_english_iw00.iwd)", cod2_game_main_folder_path),
-      format(R"({}\localized_english_iw01.iwd)", cod2_game_main_folder_path),
-      format(R"({}\localized_english_iw02.iwd)", cod2_game_main_folder_path),
-      format(R"({}\localized_english_iw03.iwd)", cod2_game_main_folder_path),
-      format(R"({}\localized_english_iw04.iwd)", cod2_game_main_folder_path),
-      format(R"({}\localized_english_iw05.iwd)", cod2_game_main_folder_path),
-      format(R"({}\localized_english_iw06.iwd)", cod2_game_main_folder_path),
-      format(R"({}\localized_english_iw07.iwd)", cod2_game_main_folder_path),
-      format(R"({}\localized_english_iw08.iwd)", cod2_game_main_folder_path),
-      format(R"({}\localized_english_iw09.iwd)", cod2_game_main_folder_path),
-      format(R"({}\localized_english_iw10.iwd)", cod2_game_main_folder_path)
-    };
-
-  for (const auto &file_path : cod2_main_localized_english_file_paths) {
-    if (!check_if_file_path_exists(file_path.c_str())) return {
-      false, localized_language
-    };
-  }
-
-  return {
-    true, "English"
-  };
-}
-
 game_name_t convert_game_name_to_game_name_t(const std::string &game_name)
 {
   for (const auto &p : game_name_to_game_name_t) {
@@ -10946,20 +10919,6 @@ game_name_t convert_game_name_to_game_name_t(const std::string &game_name)
 
   return game_name_t::cod2;
 }
-
-// bool store_game_server_status_data_in_displayed_game_server_data_array(const size_t sid, std::string server_name, std::string server_address, std::string online_and_max_players, std::string current_map, std::string current_gametype, const char *is_voice_enabled, const char *country_code)
-//{
-//   if (sid >= max_servers_grid_rows) return false;
-//   displayed_servers_data[sid].sid = format("^4{}", to_string(sid + 1));
-//   displayed_servers_data[sid].server_name = std::move(server_name);
-//   displayed_servers_data[sid].server_address = std::move(server_address);
-//   displayed_servers_data[sid].online_and_max_players = std::move(online_and_max_players);
-//   displayed_servers_data[sid].current_map = std::move(current_map);
-//   displayed_servers_data[sid].current_gametype = std::move(current_gametype);
-//   strcpy_s(displayed_servers_data[sid].is_voice_enabled, std::size(displayed_servers_data[sid].is_voice_enabled), is_voice_enabled);
-//   displayed_servers_data[sid].country_code = country_code;
-//   return true;
-// }
 
 std::string wstring_to_string(const wchar_t *s, const char dfault, const std::locale &loc)
 {

@@ -1,233 +1,12 @@
 #pragma once
 
-#include <string>
-#include <utility>
-#include <vector>
+#include "tiny_rcon_utility_data_types.h"
 #include <CommCtrl.h>
 #include <Richedit.h>
 #include <regex>
 #include <set>
-#include "stl_helper_functions.hpp"
-#include "tiny_rcon_client_user.h"
 
 #undef max
-
-class tiny_rcon_client_application;
-
-struct tiny_rcon_handles
-{
-  HINSTANCE hInstance;
-  HWND hwnd_main_window;
-  HWND hwnd_players_grid;
-  HWND hwnd_servers_grid;
-  HWND hwnd_online_admins_information;
-  HWND hwnd_match_information;
-  HWND hwnd_re_messages_data;
-  HWND hwnd_re_help_data;
-  HWND hwnd_e_user_input;
-  HWND hwnd_progress_bar;
-  HWND hwnd_combo_box_map;
-  HWND hwnd_combo_box_gametype;
-  HWND hwnd_combo_box_sortmode;
-  HWND hwnd_button_players_view;
-  HWND hwnd_button_game_servers_list_view;
-  HWND hwnd_button_refresh_game_servers;
-  HWND hwnd_button_load;
-  HWND hwnd_button_warn;
-  HWND hwnd_button_kick;
-  HWND hwnd_button_tempban;
-  HWND hwnd_button_ipban;
-  HWND hwnd_button_view_tempbans;
-  HWND hwnd_button_view_ipbans;
-  HWND hwnd_button_view_adminsdata;
-  HWND hwnd_button_view_rcon;
-  HWND hwnd_refresh_players_data_button;
-  HWND hwnd_connect_button;
-  HWND hwnd_connect_private_slot_button;
-  HWND hwnd_say_button;
-  HWND hwnd_tell_button;
-  HWND hwnd_quit_button;
-  HWND hwnd_confirmation_dialog;
-  HWND hwnd_yes_button;
-  HWND hwnd_no_button;
-  HWND hwnd_re_confirmation_message;
-  HWND hwnd_e_reason;
-  HWND hwnd_configuration_dialog;
-  HWND hwnd_user_name;
-  HWND hwnd_server_name;
-  HWND hwnd_server_ip_address;
-  HWND hwnd_server_port;
-  HWND hwnd_rcon_password;
-  HWND hwnd_enable_city_ban;
-  HWND hwnd_enable_country_ban;
-  HWND hwnd_save_settings_button;
-  HWND hwnd_test_connection_button;
-  HWND hwnd_close_button;
-  HWND hwnd_exit_tinyrcon_button;
-  HWND hwnd_configure_server_settings_button;
-  HWND hwnd_clear_messages_button;
-  HWND hwnd_cod1_path_edit;
-  HWND hwnd_cod2_path_edit;
-  HWND hwnd_cod4_path_edit;
-  HWND hwnd_cod5_path_edit;
-  HWND hwnd_cod1_path_button;
-  HWND hwnd_cod2_path_button;
-  HWND hwnd_cod4_path_button;
-  HWND hwnd_cod5_path_button;
-  HWND hwnd_download_speed_info;
-  HWND hwnd_upload_speed_info;
-};
-
-enum class is_append_message_to_richedit_control {
-  no,
-  yes
-};
-
-enum class is_log_message {
-  no,
-  yes
-};
-
-enum class is_log_datetime {
-  no,
-  yes
-};
-
-enum class game_name_t {
-  unknown,
-  cod1,
-  cod2,
-  cod4,
-  cod5
-};
-
-enum class command_type { rcon,
-  user };
-
-struct command_t
-{
-  command_t(std::vector<std::string> cmd, const command_type cmd_type, const bool wait_for_reply) : command{ std::move(cmd) }, type{ cmd_type }, is_wait_for_reply{ wait_for_reply } {}
-  std::vector<std::string> command;
-  command_type type;
-  bool is_wait_for_reply{};
-};
-
-enum class message_type_t { send,
-  receive };
-
-struct message_t
-{
-  explicit message_t(std::string message_command, std::string message_data, const bool is_show_in_messages = true) : command{ std::move(message_command) }, data{ std::move(message_data) }, is_show_in_messages{ is_show_in_messages } {}
-  std::string command;
-  std::string data;
-  const bool is_show_in_messages;
-};
-
-enum class sort_type {
-  unknown,
-  pid_desc,
-  pid_asc,
-  score_desc,
-  score_asc,
-  ping_desc,
-  ping_asc,
-  name_desc,
-  name_asc,
-  ip_desc,
-  ip_asc,
-  geo_desc,
-  geo_asc
-};
-
-enum class color_type { black,
-  red,
-  green,
-  yellow,
-  blue,
-  cyan,
-  magenta,
-  white,
-};
-
-namespace color {
-static COLORREF black{ RGB(0, 0, 0) };
-static COLORREF blue{ RGB(0, 0, 255) };
-static COLORREF cyan{ RGB(0, 255, 255) };
-static COLORREF green{ RGB(0, 255, 0) };
-static COLORREF grey{ RGB(128, 128, 128) };
-static COLORREF light_blue{ RGB(173, 216, 230) };
-static COLORREF magenta{ RGB(255, 0, 255) };
-static COLORREF maroon{ RGB(128, 0, 0) };
-static COLORREF purple{ RGB(128, 0, 128) };
-static COLORREF red{ RGB(255, 0, 0) };
-static COLORREF teal{ RGB(0, 128, 128) };
-static COLORREF yellow{ RGB(255, 255, 0) };
-static COLORREF white{ RGB(255, 255, 255) };
-}// namespace color
-
-struct player;
-
-struct geoip_data
-{
-  unsigned long lower_ip_bound;
-  unsigned long upper_ip_bound;
-  char country_code[4];
-  char country_name[35];
-  char region[35];
-  char city[35];
-
-  geoip_data() = default;
-
-  geoip_data(const unsigned long lib, const unsigned long uib, const char *code, const char *country, const char *reg, const char *ci) : lower_ip_bound{ lib }, upper_ip_bound{ uib }
-  {
-
-    const size_t no_of_chars_for_country_code = std::min<size_t>(3U, stl::helper::len(code));
-    memcpy(country_code, code, no_of_chars_for_country_code);
-    country_code[no_of_chars_for_country_code] = 0;
-
-    const size_t no_of_chars_for_country_name = std::min<size_t>(34U, stl::helper::len(country));
-    memcpy(country_name, country, no_of_chars_for_country_name);
-    country_name[no_of_chars_for_country_name] = 0;
-
-    const size_t no_of_chars_for_region = std::min<size_t>(34U, stl::helper::len(reg));
-    memcpy(region, reg, no_of_chars_for_region);
-    region[no_of_chars_for_region] = 0;
-
-    const size_t no_of_chars_for_city = std::min<size_t>(34U, stl::helper::len(ci));
-    memcpy(city, ci, no_of_chars_for_city);
-    city[no_of_chars_for_city] = 0;
-  }
-
-  constexpr const char *get_country_code() const
-  {
-    return country_code;
-  }
-
-  constexpr const char *get_country_name() const
-  {
-    return country_name;
-  }
-  constexpr const char *get_region() const
-  {
-    return region;
-  }
-
-  constexpr const char *get_city() const
-  {
-    return city;
-  }
-};
-
-struct row_of_player_data_to_display
-{
-  char pid[6]{};
-  char score[8]{};
-  char ping[8]{};
-  char player_name[36]{};
-  char ip_address[20]{};
-  char geo_info[128]{ "Unknown, Unknown" };
-  const char *country_code{ "xy" };
-};
 
 bool create_necessary_folders_and_files(const std::vector<std::string> &folder_file_paths);
 void set_rich_edit_control_colors(HWND richEditCtrl, const COLORREF fg_color, const COLORREF bg_color = color::black, const char *font_face_name = "Consolas");
@@ -296,6 +75,8 @@ void load_tinyrcon_client_user_data(const char *);
 
 void parse_tempbans_data_file(const char *file_path, std::vector<player> &temp_banned_players, std::unordered_map<std::string, player> &ip_to_temp_banned_player);
 
+void parse_banned_names_file(const char *file_path, std::vector<player> &banned_names_vector, std::unordered_map<std::string, player> &banned_names_map);
+
 void parse_banned_ip_addresses_file(const char *file_path, std::vector<player> &banned_players, std::unordered_map<std::string, player> &ip_to_banned_player);
 
 void parse_banned_ip_address_ranges_file(const char *file_path, std::vector<player> &banned_ip_address_ranges, std::unordered_map<std::string, player> &ip_address_range_to_banned_player);
@@ -314,9 +95,11 @@ bool temp_ban_player_ip_address(player &player_data);
 bool global_ban_player_ip_address(player &player_data);
 
 bool add_temporarily_banned_ip_address(player &pd, std::vector<player> &temp_banned_players_data, std::unordered_map<std::string, player> &ip_to_temp_banned_player_data);
+bool add_permanently_banned_player_name(player &pd, std::vector<player> &banned_players_names_vector, std::unordered_map<std::string, player> &banned_players_names_map);
 bool add_permanently_banned_ip_address(player &pd, std::vector<player> &banned_players_data, std::unordered_map<std::string, player> &ip_to_banned_player_data);
 bool add_permanently_banned_ip_address_range(player &pd, std::vector<player> &banned_ip_address_ranges_vector, std::unordered_map<std::string, player> &banned_ip_address_ranges_map);
 bool remove_permanently_banned_ip_address_range(player &pd, std::vector<player> &banned_ip_address_ranges_vector, std::unordered_map<std::string, player> &banned_ip_address_ranges_map);
+bool remove_permanently_banned_player_name(player &pd, std::vector<player> &banned_names_vector, std::unordered_map<std::string, player> &banned_names_map);
 bool add_permanently_banned_city(const std::string &city, std::set<std::string> &banned_cities);
 bool add_permanently_banned_country(const std::string &country, std::set<std::string> &banned_countries);
 bool remove_permanently_banned_city(const std::string &city, std::set<std::string> &banned_cities);
@@ -369,11 +152,13 @@ volatile bool should_program_terminate(const std::string & = "");
 
 void sort_players_data(std::vector<player> &, const sort_type sort_method);
 
-void display_banned_ip_address_ranges(const bool is_save_data_to_log_file = false);
+void display_banned_ip_address_ranges(const size_t number_of_last_bans_to_display = std::string::npos, const bool is_save_data_to_log_file = false);
 
-void display_permanently_banned_ip_addresses(const bool is_save_data_to_log_file = false);
+void display_permanently_banned_ip_addresses(const size_t number_of_last_bans_to_display = std::string::npos, const bool is_save_data_to_log_file = false);
 
-void display_temporarily_banned_ip_addresses(const bool is_save_data_to_log_file = false);
+void display_temporarily_banned_ip_addresses(const size_t number_of_last_bans_to_display = std::string::npos, const bool is_save_data_to_log_file = false);
+
+void display_banned_player_names(const char *title, const size_t number_of_last_bans_to_display = std::string::npos, const bool is_save_data_to_log_file = false);
 
 void display_admins_data();
 
@@ -397,7 +182,7 @@ bool change_server_setting(const std::vector<std::string> &);
 
 void log_message(const std::string &, const is_log_datetime = is_log_datetime::yes);
 
-int get_selected_players_pid_number(const int selected_row_in_players_grid);
+int get_selected_players_pid_number(const int selected_row_in_players_grid, const int selected_col_in_players_grid);
 
 std::string get_player_name_for_pid(const int);
 
@@ -469,13 +254,11 @@ const char *BrowseFolder(const char *, const char *);
 bool connect_to_the_game_server(const std::string &, const game_name_t, const bool, const bool = true);
 
 bool check_if_file_path_exists(const char *);
-bool check_if_file_path_exists(const char *);
 
 bool delete_temporary_game_file();
 
 bool get_confirmation_message_from_user(const char *, const char *);
 bool check_if_user_wants_to_quit(const char *);
-// void process_user_input() ;
 void process_key_down_message(const MSG &);
 
 void display_tempbanned_players_remaining_time_period();
@@ -601,21 +384,13 @@ bool run_executable(const char *file_path_for_executable);
 void restart_tinyrcon_client();
 size_t get_random_number();
 bool parse_game_type_information_from_rcon_reply(const std::string &rcon_reply, game_server &gs);
-std::string find_version_of_installed_cod2_game();
-std::string find_game_version_number_of_running_cod2mp_s_executable(DWORD pid);
-bool download_missing_cod2_game_patch_files();
-bool check_if_cod2_v1_0_game_patch_files_are_missing_and_download_them();
-bool check_if_cod2_v1_01_game_patch_files_are_missing_and_download_them();
-bool check_if_cod2_v1_2_game_patch_files_are_missing_and_download_them();
-bool check_if_cod2_v1_3_game_patch_files_are_missing_and_download_them();
 void view_game_servers(HWND grid);
 void refresh_game_servers_data(HWND grid);
 bool parse_and_display_downloaded_game_servers_data(std::string &game_servers_data, const char *version_number, const bool is_display_parsed_game_servers_data = true);
-BOOL enable_privileged_access();
-bool apply_cod2_patch(const std::string &patch_version_number);
 bool terminate_running_game_instance(const game_name_t game_name);
-std::pair<bool, std::string> backup_original_call_of_duty_2_game_files();
-std::pair<bool, std::string> check_if_users_call_of_duty_2_game_supports_patch_and_repatch_commands();
 game_name_t convert_game_name_to_game_name_t(const std::string &game_name);
 std::string wstring_to_string(const wchar_t *s, const char dfault = '?', const std::locale &loc = std::locale());
 std::string get_server_address_for_connect_command(const int selected_server_row);
+std::string find_version_of_installed_cod2_game();
+bool add_permanently_banned_player_name(player &pd, std::vector<player> &banned_players_names_vector, std::unordered_map<std::string, player> &banned_players_names_map);
+bool remove_permanently_banned_player_name(player &pd, std::vector<player> &banned_names_vector, std::unordered_map<std::string, player> &banned_names_map);

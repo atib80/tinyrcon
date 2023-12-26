@@ -15,6 +15,7 @@ struct tiny_rcon_client_user
   size_t no_of_guidbans{};
   size_t no_of_ipbans{};
   size_t no_of_iprangebans{};
+  size_t no_of_namebans{};
   size_t no_of_citybans{};
   size_t no_of_countrybans{};
   size_t no_of_protected_ip_addresses{};
@@ -27,7 +28,7 @@ struct tiny_rcon_client_user
   time_t last_logout_time_stamp{};
   const char *country_code{ "xy" };
   std::string user_name{
-    "^1Admin"
+    "^3Player"
   };
   std::string player_name;
   std::string ip_address;

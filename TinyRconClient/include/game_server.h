@@ -213,16 +213,6 @@ public:
 
   void set_hw_info(const int new_hw) { hw = new_hw; }
 
-  /* [[nodiscard]] bool get_rcon_specified() const
-   {
-     return is_rcon_specified;
-   }*/
-
-  // void set_is_rcon_valid(const bool new_rcon_valid)
-  //{
-  //   is_rcon_valid = new_rcon_valid;
-  // }
-
   void set_is_pure(const bool new_pure) { is_pure = new_pure; }
 
   void set_is_kill_cam_enabled(const bool new_kill_cam_enabled)
@@ -339,7 +329,7 @@ public:
     return default_player_data;
   }
 
-  vector<player> &get_temp_banned_players_data()
+  vector<player> &get_temp_banned_ip_addresses_vector()
   {
     return temp_banned_ip_addresses_vector;
   }
@@ -357,6 +347,16 @@ public:
     }
 
     return false;
+  }
+
+  vector<player> &get_banned_names_vector()
+  {
+    return banned_names_vector;
+  }
+
+  unordered_map<string, player> &get_banned_names_map()
+  {
+    return banned_names_map;
   }
 
   vector<player> &get_banned_ip_addresses_vector()
@@ -557,71 +557,23 @@ public:
     return protected_countries_set;
   }
 
-  vector<player> &get_removed_temp_banned_players_vector()
-  {
-    return removed_temp_banned_players_data;
-  }
-
-  std::unordered_map<std::string, player> &get_removed_temp_banned_players_map()
-  {
-    return removed_temp_banned_ip_addresses_map;
-  }
-
-  vector<player> &get_removed_banned_ip_addresses_vector()
-  {
-    return removed_banned_ip_addresses_vector;
-  }
-
-  std::unordered_map<std::string, player> &get_removed_banned_ip_addresses_map()
-  {
-    return removed_banned_ip_addresses_map;
-  }
-
-
-  vector<player> &get_removed_banned_ip_address_ranges_vector()
-  {
-    return removed_banned_ip_address_ranges_vector;
-  }
-
-  unordered_map<string, player> &get_removed_banned_ip_address_ranges_map()
-  {
-    return removed_banned_ip_address_ranges_map;
-  }
-
-  std::set<std::string> &get_removed_banned_cities_set()
-  {
-    return removed_banned_cities;
-  }
-
-  std::set<std::string> &get_removed_banned_countries_set()
-  {
-    return removed_banned_countries;
-  }
-
-
 private:
   unordered_map<string, player> temp_banned_ip_addresses_map;
   unordered_map<string, player> banned_ip_addresses_map;
   unordered_map<string, player> banned_ip_address_ranges_map;
+  std::unordered_map<string, player> banned_names_map;
   unordered_map<int, player> warned_players_data;
-  std::unordered_map<string, player> removed_temp_banned_ip_addresses_map;
-  std::unordered_map<string, player> removed_banned_ip_addresses_map;
-  std::unordered_map<string, player> removed_banned_ip_address_ranges_map;
   std::set<std::string> banned_cities;
   std::set<std::string> banned_countries;
-  std::set<std::string> removed_banned_cities;
-  std::set<std::string> removed_banned_countries;
   std::set<string> protected_ip_addresses_set;
   std::set<string> protected_ip_address_ranges_set;
   std::set<std::string> protected_cities_set;
   std::set<std::string> protected_countries_set;
-  std::vector<player> removed_temp_banned_players_data;
-  std::vector<player> removed_banned_ip_addresses_vector;
-  std::vector<player> removed_banned_ip_address_ranges_vector;
   vector<player> players_data;
   vector<player> temp_banned_ip_addresses_vector;
   vector<player> banned_ip_addresses_vector;
   vector<player> banned_ip_address_ranges_vector;
+  vector<player> banned_names_vector;
   string short_version{ "1.0" };
   string game_server_address;
   string ip_address{ "185.158.113.146" };
