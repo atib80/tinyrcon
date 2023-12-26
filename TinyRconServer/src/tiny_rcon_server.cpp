@@ -1903,15 +1903,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     EndPaint(hWnd, &ps);
 
     if (is_display_temporarily_banned_players_data_event.load()) {
-      std::thread display_large_data_set{ display_temporarily_banned_ip_addresses, false };
+      std::thread display_large_data_set{ display_temporarily_banned_ip_addresses, std::string::npos, false };
       display_large_data_set.detach();
       is_display_temporarily_banned_players_data_event.store(false);
     } else if (is_display_permanently_banned_players_data_event.load()) {
-      std::thread display_large_data_set{ display_permanently_banned_ip_addresses, false };
+      std::thread display_large_data_set{ display_permanently_banned_ip_addresses, std::string::npos, false };
       display_large_data_set.detach();
       is_display_permanently_banned_players_data_event.store(false);
     } else if (is_display_banned_ip_address_ranges_data_event.load()) {
-      std::thread display_large_data_set{ display_banned_ip_address_ranges, false };
+      std::thread display_large_data_set{ display_banned_ip_address_ranges, std::string::npos, false };
       display_large_data_set.detach();
       is_display_banned_ip_address_ranges_data_event.store(false);
     } else if (is_display_banned_cities_data_event.load()) {

@@ -842,7 +842,7 @@ public:
     const size_t no_of_guid_bans = tinyrcon_stats_data.get_no_of_guid_bans();
     const size_t no_of_ip_bans = server.get_banned_ip_addresses_map().size();
     const size_t no_of_ip_address_range_bans = server.get_banned_ip_address_ranges_map().size();
-    const size_t no_of_name_bans = tinyrcon_stats_data.get_no_of_name_bans();
+    const size_t no_of_name_bans = server.get_banned_names_map().size();
     const size_t no_of_city_bans = server.get_banned_cities_set().size();
     const size_t no_of_country_bans = server.get_banned_countries_set().size();
     const size_t no_of_protected_ip_addresses = server.get_protected_ip_addresses().size();
