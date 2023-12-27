@@ -160,7 +160,7 @@ void display_temporarily_banned_ip_addresses(const size_t number_of_last_bans_to
 
 void display_banned_player_names(const char *title, const size_t number_of_last_bans_to_display = std::string::npos, const bool is_save_data_to_log_file = false);
 
-void display_admins_data();
+void display_admins_data(const std::vector<std::shared_ptr<tiny_rcon_client_user>> &users, const char *title);
 
 const std::string &get_full_gametype_name(const std::string &);
 
@@ -394,3 +394,4 @@ std::string get_server_address_for_connect_command(const int selected_server_row
 std::string find_version_of_installed_cod2_game();
 bool add_permanently_banned_player_name(player &pd, std::vector<player> &banned_players_names_vector, std::unordered_map<std::string, player> &banned_players_names_map);
 bool remove_permanently_banned_player_name(player &pd, std::vector<player> &banned_names_vector, std::unordered_map<std::string, player> &banned_names_map);
+void print_text_element(const char *text, const char *color_code, const size_t max_width, std::ostringstream &oss, const bool is_left_justified = true, const bool is_print_color_code = true);

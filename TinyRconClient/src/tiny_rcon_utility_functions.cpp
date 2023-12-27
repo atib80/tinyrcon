@@ -4667,12 +4667,35 @@ void display_banned_player_names(const char *title, const size_t number_of_last_
   }
 }
 
-void display_admins_data()
+void print_text_element(const char *text, const char *color_code, const size_t max_width, std::ostringstream &oss, const bool is_left_justified, const bool is_print_color_code)
+{
+  if (is_print_color_code) {
+    string text_with_colors{
+      string{ color_code } + string{ text }
+    };
+    stl::helper::trim_in_place(text_with_colors);
+    const size_t printed_name_char_count{ get_number_of_characters_without_color_codes(text_with_colors.c_str()) };
+    if (printed_name_char_count < max_width) {
+      oss << (is_left_justified ? left : right) << setw(max_width) << text_with_colors + string(max_width - printed_name_char_count, ' ');
+    } else {
+      oss << (is_left_justified ? left : right) << setw(max_width) << text_with_colors;
+    }
+  } else {
+    string text_no_colors{ text };
+    remove_all_color_codes(text_no_colors);
+    stl::helper::trim_in_place(text_no_colors);
+    if (text_no_colors.length() < max_width) {
+      oss << (is_left_justified ? left : right) << setw(max_width) << text_no_colors + string(max_width - text_no_colors.length(), ' ');
+    } else {
+      oss << (is_left_justified ? left : right) << setw(max_width) << text_no_colors;
+    }
+  }
+}
+
+void display_admins_data(const std::vector<std::shared_ptr<tiny_rcon_client_user>> &users, const char *title)
 {
   size_t longest_name_length{ 12 };
   size_t longest_geoinfo_length{ 20 };
-  const auto &users =
-    main_app.get_users();
   if (!users.empty()) {
     longest_name_length = std::max(longest_name_length, find_longest_user_name_length(users, false, users.size()));
     longest_geoinfo_length =
@@ -4684,6 +4707,150 @@ void display_admins_data()
   const string decoration_line(237 + longest_name_length + longest_geoinfo_length, '=');
   oss << "^5\n"
       << decoration_line << "\n";
+  std::string title_str{ title };
+  stl::helper::trim_in_place(title_str);
+  remove_all_color_codes(title_str);
+  const size_t printed_name_char_count{ get_number_of_characters_without_color_codes(title) };
+  const size_t padding_size{ (decoration_line.length() - 4u - printed_name_char_count) };
+  const string pad_str(padding_size, ' ');
+  if (printed_name_char_count + 4u < decoration_line.length()) {
+    oss << "^5| " << left << title << right << pad_str << " ^5|\n";
+  } else {
+    oss << "^5| " << left << title << " ^5|\n";
+  }
+  oss << decoration_line << "\n";
+  oss << "^5| ";
+  oss << left << setw(longest_name_length) << "User name"
+      << " | " << left << setw(13) << "Is logged in?"
+      << " | " << left << setw(11) << "Is online?"
+      << " | " << left << setw(16) << "IP address"
+      << " | " << left << setw(longest_geoinfo_length) << "Country, city"
+      << " | " << left << setw(20) << "Last login"
+      << " | " << left << setw(20) << "Last logout"
+      << " | ";
+  print_text_element("Logins", "^1", 10, oss);
+  oss << " ^5| ";
+  print_text_element("Warnings", "^2", 10, oss);
+  oss << " ^5| ";
+  print_text_element("Kicks", "^1", 10, oss);
+  oss << " ^5| ";
+  print_text_element("Tempbans", "^2", 10, oss);
+  oss << " ^5| ";
+  print_text_element("GUID bans", "^1", 10, oss);
+  oss << " ^5| ";
+  print_text_element("IP bans", "^2", 10, oss);
+  oss << " ^5| ";
+  print_text_element("IP range bans", "^1", 13, oss);
+  oss << " ^5| ";
+  print_text_element("City bans", "^2", 10, oss);
+  oss << " ^5| ";
+  print_text_element("Country bans", "^1", 13, oss);
+  oss << " ^5| ";
+  print_text_element("Name bans", "^2", 10, oss);
+  oss << "^5|";
+  oss << "^5\n"
+      << decoration_line << "\n";
+  if (users.empty()) {
+    const size_t message_len = stl::helper::len("| There is no received administrator (user) data.");
+    oss << "^5| ^3There is no received administrator (user) data.";
+
+    if (message_len + 2 < decoration_line.length()) {
+      oss << string(decoration_line.length() - 2 - message_len, ' ');
+    }
+    oss << " ^5|\n";
+
+  } else {
+    bool is_first_color{ true };
+    char buffer[16];
+    for (auto &user : users) {
+      const char *next_color{ is_first_color ? "^3" : "^5" };
+      oss << "^5| ";
+      print_text_element(user->user_name.c_str(), "^7", longest_name_length, oss);
+
+      oss << " ^5| ";
+      print_text_element(user->is_logged_in ? "yes" : "no", user->is_logged_in ? "^2" : "^1", 13, oss);
+
+      oss << " ^5| ";
+      print_text_element(user->is_online ? "yes" : "no", user->is_online ? "^2" : "^1", 11, oss);
+
+      oss << " ^5| ";
+      print_text_element(user->ip_address.c_str(), next_color, 16, oss);
+      oss << " ^5| ";
+      print_text_element(user->geo_information.c_str(), next_color, longest_geoinfo_length, oss);
+      oss << " ^5| ";
+      print_text_element(get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", user->last_login_time_stamp).c_str(), next_color, 20, oss);
+      oss << " ^5| ";
+      print_text_element(get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", user->last_logout_time_stamp).c_str(), next_color, 20, oss);
+      oss << " ^5| ";
+      snprintf(buffer, std::size(buffer), "%lu", user->no_of_logins);
+      print_text_element(buffer, "^1", 10, oss);
+      oss << " ^5| ";
+      snprintf(buffer, std::size(buffer), "%lu", user->no_of_warnings);
+      print_text_element(buffer, "^2", 10, oss);
+      oss << " ^5| ";
+      snprintf(buffer, std::size(buffer), "%lu", user->no_of_kicks);
+      print_text_element(buffer, "^1", 10, oss);
+      oss << " ^5| ";
+      snprintf(buffer, std::size(buffer), "%lu", user->no_of_tempbans);
+      print_text_element(buffer, "^2", 10, oss);
+      oss << " ^5| ";
+      snprintf(buffer, std::size(buffer), "%lu", user->no_of_guidbans);
+      print_text_element(buffer, "^1", 10, oss);
+      oss << " ^5| ";
+      snprintf(buffer, std::size(buffer), "%lu", user->no_of_ipbans);
+      print_text_element(buffer, "^2", 10, oss);
+      oss << " ^5| ";
+      snprintf(buffer, std::size(buffer), "%lu", user->no_of_iprangebans);
+      print_text_element(buffer, "^1", 13, oss);
+      oss << " ^5| ";
+      snprintf(buffer, std::size(buffer), "%lu", user->no_of_citybans);
+      print_text_element(buffer, "^2", 10, oss);
+      oss << " ^5| ";
+      snprintf(buffer, std::size(buffer), "%lu", user->no_of_countrybans);
+      print_text_element(buffer, "^1", 13, oss);
+      oss << " ^5| ";
+      snprintf(buffer, std::size(buffer), "%lu", user->no_of_namebans);
+      print_text_element(buffer, "^2", 10, oss);
+      oss << "^5|\n";
+
+      is_first_color = !is_first_color;
+    }
+  }
+  oss << string{ "^5"s + decoration_line + "\n\n"s };
+
+  const string message{ oss.str() };
+  print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true);
+}
+
+/*
+void display_admins_data(const std::vector<std::shared_ptr<tiny_rcon_client_user>> &users, const char *title)
+{
+  size_t longest_name_length{ 12 };
+  size_t longest_geoinfo_length{ 20 };
+  if (!users.empty()) {
+    longest_name_length = std::max(longest_name_length, find_longest_user_name_length(users, false, users.size()));
+    longest_geoinfo_length =
+      std::max(longest_geoinfo_length,
+        find_longest_user_country_city_info_length(users, users.size()));
+  }
+
+
+  ostringstream oss;
+  const string decoration_line(237 + longest_name_length + longest_geoinfo_length, '=');
+  oss << "^5\n"
+      << decoration_line << "\n";
+  std::string title_str{ title };
+  stl::helper::trim_in_place(title_str);
+  remove_all_color_codes(title_str);
+  const size_t printed_name_char_count{ get_number_of_characters_without_color_codes(title) };
+  const size_t padding_size{ (decoration_line.length() - 4u - printed_name_char_count) };
+  const string pad_str(padding_size, ' ');
+  if (printed_name_char_count + 4u < decoration_line.length()) {
+    oss << "^5| " << left << title << right << pad_str << " ^5|\n";
+  } else {
+    oss << "^5| " << left << title << " ^5|\n";
+  }
+  oss << decoration_line << "\n";
   oss << "^5| ";
   oss << left << setw(longest_name_length) << "User name"
       << " | " << left << setw(13) << "Is logged in?"
@@ -4768,8 +4935,9 @@ void display_admins_data()
   oss << string{ "^5"s + decoration_line + "\n\n"s };
 
   const string message{ oss.str() };
-  print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true);
+  print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::no, false, true, true);
 }
+*/
 
 const std::string &get_full_gametype_name(const std::string &rcon_gametype_name)
 {
@@ -8509,23 +8677,23 @@ const std::map<std::string, std::string> &get_rcon_map_names_to_full_map_names_f
     { "mp_industry", "Industry, Germany" },
     { "gob_rats", "Gob Rats" },
     { "mp_gob_rats", "Gob Rats v2" },
-    { "mp_breach", "^2Currahee! ^7Breach" },
-    { "mp_nuked", "^1Nuketown^5, Arizona" },
+    { "mp_breach", "Currahee! Breach" },
+    { "mp_nuked", "Nuketown, Arizona" },
     { "mp_zaafrane", "Zaafrane, Tunisia" },
     { "mp_tripoli", "Tripoli, Libya" },
     { "mp_gob_subzero", "Gob Subzero" },
-    { "gob_italy2", "[GOB] Italy EXTRA!" },
+    { "gob_italy2", "Gob Italy EXTRA!" },
     { "mp_devilscreek", "Devils Creek" },
     { "mp_naout", "North Africa, Outpost" },
-    { "mp_rouen", "^2Currahee! ^7Rouen" },
-    { "mp_verimatmatav1", "Matmata, ^2Verindra" },
-    { "mp_verimatmatav2", "Matmata^1II, ^2Verindra" },
-    { "mp_veribank", "^5Verindra ^2Bank" },
-    { "mp_gob_eulogy", "[GOB] Eulogy" },
-    { "mp_wuesten", "^1W^9uesten^1S^9turm" },
+    { "mp_rouen", "Currahee! Rouen" },
+    { "mp_verimatmatav1", "Matmata, Verindra" },
+    { "mp_verimatmatav2", "MatmataII, Verindra" },
+    { "mp_veribank", "Verindra Bank" },
+    { "mp_gob_eulogy", "Gob Eulogy" },
+    { "mp_wuesten", "WuestenSturm" },
     { "mp_tuscany", "Tuscany, Italy" },
     { "mp_malta", "Malta, Italy" },
-    { "mp_jojo", "^3JoJo" },
+    { "mp_jojo", "JoJo" },
     { "mp_dicky2", "Dicky v2" },
     { "mp_lcftown", "LCF Town v1.0" },
     { "mp_houn", "Houn, Libya" },
@@ -8534,46 +8702,46 @@ const std::map<std::string, std::string> &get_rcon_map_names_to_full_map_names_f
     { "mp_africorps", "Africorps vs. Desertrats" },
     { "mp_warsaw", "Warsaw, Poland" },
     { "mp_valley_summer_2", "Valley Summer v2" },
-    { "mp_bzt", "Bazna, ^3Tunisia" },
-    { "jm_kuwehr2", "Kuwehr^32 ^7by ^3Rez|l ^7and ^6P^9nin" },
-    { "gob_icestation", "[GOB] Icestation" },
+    { "mp_bzt", "Bazna, Tunisia" },
+    { "jm_kuwehr2", "Kuwehr2 by Rez|l and Pnin" },
+    { "gob_icestation", "Gob Icestation" },
     { "mp_coalminev2", "Coal Mine v2" },
-    { "mp_warzonev1", "^1W^9arzone" },
-    { "mp_2011", "^1T^9he ^1S^9hort ^1L^9ine ^12011" },
-    { "mp_worldcup", "Worldcup by ^3Kams" },
+    { "mp_warzonev1", "Warzone" },
+    { "mp_2011", "The Short Line 2011" },
+    { "mp_worldcup", "Worldcup by Kams" },
     { "mp_factory", "Factory, Germany" },
-    { "mp_gob_mice", "[GOB] Mice" },
-    { "mp_killers_city", "^1KILLERS ^7city" },
-    { "mp_cbxmap", "[CBX]-map" },
+    { "mp_gob_mice", "Gob Mice" },
+    { "mp_killers_city", "KILLERS city" },
+    { "mp_cbxmap", "CBX-map" },
     { "mp_fog", "Fog" },
     { "mp_libya", "Libya (VehiclesMod)" },
-    { "mp_rock_island", "^1Rock ^3Island" },
+    { "mp_rock_island", "Rock Island" },
     { "mp_canal_final", "Canal, Belgium" },
     { "mtl_the_rock", "MTL The Rock" },
     { "mp_battlefield", "Battlefield, France" },
     { "mp_rhine", "Rhine" },
     { "mp_harbor", "Harbor" },
     { "mp_el_milh", "El Milh, Africa" },
-    { "mp_sfrance_final", "MoH:Southern France(Final)" },
-    { "mp_panodra", "Panodra[^1W^4P^3C^7]" },
+    { "mp_sfrance_final", "MoHSouthern France(Final)" },
+    { "mp_panodra", "PanodraWPC" },
     { "mp_clanfight_r", "MtO Clanfight Revisited!" },
     { "mp_airfield2", "Airfield v2" },
-    { "mp_curra_tuscany2", "^2Currahee ^7Tuscany 2" },
+    { "mp_curra_tuscany2", "Currahee Tuscany 2" },
     { "mp_reckoning_day", "Reckoning day" },
-    { "mp_coddm2", "-]K6[- Destroyed Village France" },
+    { "mp_coddm2", "K6 Destroyed Village France" },
     { "mp_delta_mission", "Delta Mission, The day after..." },
     { "gob_iced", "Gob Iced" },
     { "mp_mroa_rathouse", "MRoA Rathouse" },
     { "mp_gp2", "Gaperon2" },
-    { "warehouse", "^1Ware^7House" },
-    { "mp_bathroom", "^3Da ^2B^1ath^2R^1oom" },
-    { "mp_winter_toujane", "^2Currahee ^7Winter Toujane" },
-    { "mp_izmir", "Izmir ^1by ^7(^3P^4H^1k^7) ^3Schenk" },
+    { "warehouse", "WareHouse" },
+    { "mp_bathroom", "Da BathRoom" },
+    { "mp_winter_toujane", "Currahee Winter Toujane" },
+    { "mp_izmir", "Izmir by (PHk) Schenk" },
     { "mp_complex_v2", "The Complex v2" },
-    { "mp_port", "^1Port, ^5Tunisia" },
+    { "mp_port", "Port, Tunisia" },
     { "mp_hill24", "Hill24" },
     { "mp_powcamp", "Prisoners of War Camp, Germany" },
-    { "mp_v2", "^1V2" },
+    { "mp_v2", "V2" },
     { "mp_valence_v2", "Valence, France" },
     { "mp_vallente", "Vallente, France" },
     { "mp_depot", "Depot, Germany" },
@@ -8587,7 +8755,7 @@ const std::map<std::string, std::string> &get_rcon_map_names_to_full_map_names_f
     { "mp_rts2", "Road to Stalingrad" },
     { "mp_stalingrad_2", "Stalingrad v2 - Summer" },
     { "mp_neuville", "Neuville, France" },
-    { "mp_street", "-]K6[- Street" },
+    { "mp_street", "K6 Street" },
     { "mp_dustville", "Dustville" },
     { "mp_ctf", "Morte Ville" },
     { "mp_maaloy_s", "Maaloy, Summer" },
@@ -8604,7 +8772,7 @@ const std::map<std::string, std::string> &get_rcon_map_names_to_full_map_names_f
     { "mp_cunisia", "Cunisia" },
     { "mp_cologne", "Cologne, Germany" },
     { "mp_cairo", "11th ACR Kairo" },
-    { "mp_cr_kasserine", "[CR] Kasserine, Tunisia" },
+    { "mp_cr_kasserine", "CR Kasserine, Tunisia" },
     { "mp_mareth", "Mareth, Tunisia" },
     { "mp_scrapyard", "Abandoned Scrapyard" },
     { "mp_nfactorys", "New Factory" },
@@ -8612,17 +8780,17 @@ const std::map<std::string, std::string> &get_rcon_map_names_to_full_map_names_f
     { "mp_orionzen", "Currahee! Orion Zen" },
     { "mp_woods", "Woods" },
     { "mp_grandville", "Granville Depot" },
-    { "mp_burgundy_v2", "Burgundy ^3v2, ^5France" },
+    { "mp_burgundy_v2", "Burgundy v2, France" },
     { "mp_hungbulung_v2", "Hungbulung v2" },
     { "mp_harbor_v2", "Harbor v2" },
     { "mp_gob_eulogy_v2", "Gob Eulogy v2" },
     { "mp_containers_park", "Container Park" },
     { "mp_mitres", "Mitres" },
-    { "mp_oc", "^2Octagon" },
+    { "mp_oc", "Octagon" },
     { "mp_bayeux", "Bayeux, France" },
     { "mp_CoD_Dust", "cod2 Dust" },
     { "mp_tower", "The tower" },
-    { "mp_dbt_rats", ":[DBT]: Rats" },
+    { "mp_dbt_rats", ":DBT: Rats" },
     { "mp_crazymaze", "CrazyMaze" },
     { "mp_gamerpistol", "Gamer pistol" },
     { "mp_hawkeyeaim", "Hawkey's Aim map" },
@@ -8639,38 +8807,38 @@ const std::map<std::string, std::string> &get_rcon_map_names_to_full_map_names_f
     { "mp_fontenay", "Fontenay, France" },
     { "mp_shipment_v2", "Shipment v2" },
     { "mp_temporal", "TFC's Port" },
-    { "v_gob_aim", ":[Gob]: Aim" },
+    { "v_gob_aim", "Gob Aim" },
     { "mp_industryv2", "Industry, Germany" },
-    { "mp_oasis", "^9[^2TFC^9]^2 Oasis" },
-    { "mp_alburjundi", "^2Currahee ^7Al Burjundi" },
+    { "mp_oasis", "TFC Oasis" },
+    { "mp_alburjundi", "Currahee Al Burjundi" },
     { "mp_stlo", "Saint Lo" },
     { "mp_emt", "Egyptian Market Town (Day)" },
     { "mp_prison", "TFC's Prison" },
     { "gob_scopeshot2", "Scopeshot v2.0" },
-    { "mp_hybrid", "^1Hybrid´s ^5Game" },
-    { "mp_survival_1", "|^4EMS^7| - Survival" },
+    { "mp_hybrid", "Hybrid's Game" },
+    { "mp_survival_1", "EMS - Survival" },
     { "mp_bataan", "Bataan" },
     { "mp_blockarena", "Blockarena" },
     { "mp_vovel", "Vovel2, Russia" },
-    { "mp_subzero_plus", ":[Gob]: Subzero Plus" },
+    { "mp_subzero_plus", "Gob Subzero Plus" },
     { "mp_assink", "Het Assink Lyceum" },
     { "mp_theros_park", "Theros Park" },
     { "mp_bumbarsky", "Bumbarsky, Pudgura" },
     { "mp_bridge", "The Bridge" },
     { "mp_pavlov", "Pavlov's House, Russia" },
-    { "mp_badarena", "^7-=^1BAD^7=- ^7Arena" },
+    { "mp_badarena", "BAD Arena" },
     { "mp_deadend", "Dead End" },
     { "mp_kraut_hammer", "Kraut Hammer beta v2" },
     { "mp_winter_assault", "Winter Assault" },
     { "mp_tobruk", "Tobruk, Libya" },
-    { "mp_farao_eye", "^3Farao E^7y^3e" },
-    { "mp_omaze_v3", "^9Outlaw ^1Maze" },
+    { "mp_farao_eye", "Farao Eye" },
+    { "mp_omaze_v3", "Outlaw Maze" },
     { "mp_labyrinth", "Labyrinth" },
     { "mp_ctflaby", "Labyrinth" },
     { "dc_degeast", "DC-De Geast" },
     { "mp_training", "The devil's training map" },
     { "mp_harmata", "Harmata, Egypt" },
-    { "mp_tuscany_ext_beta", "^2Currahee! ^7Tuscany (Extended), Italy" },
+    { "mp_tuscany_ext_beta", "Currahee! Tuscany (Extended), Italy" },
     { "mp_africa_v2", "Somewhere in Africa v2" },
     { "mp_marketsquare_b1", "Market Square" },
     { "mp_Argentan_France", "Argentan, France" },
@@ -8681,44 +8849,44 @@ const std::map<std::string, std::string> &get_rcon_map_names_to_full_map_names_f
     { "mp_tank_depot", "Tank Depot, Germany" },
     { "mp_boneville", "Boneville, France" },
     { "mp_toujentan", "Toujentan, Frenchisia" },
-    { "mp_remagen2", "MoH:Remagen (Final)" },
-    { "mp_sand_dune", "^3Sand dune" },
+    { "mp_remagen2", "MoHRemagen (Final)" },
+    { "mp_sand_dune", "Sand dune" },
     { "mp_chelm", "Chelm, Poland" },
     { "mp_giantroom", "Rat Room v3" },
     { "mp_carentan_ville", "Carentan Ville, France" },
     { "mp_oradour", "Oradour-Sur-Glane" },
-    { "mtl_purgatory", "^4M^3T^1L ^5Purgatory" },
+    { "mtl_purgatory", "MTL Purgatory" },
     { "mp_rouen_hq", "Rouen, France" },
     { "mp_alger", "Alger by Kams" },
-    { "mp_draguignan", "Draguignan by ^3Kams" },
-    { "gob_tozeur", ":[GoB]: Tozeur" },
+    { "mp_draguignan", "Draguignan by Kams" },
+    { "gob_tozeur", "Gob Tozeur" },
     { "mp_ship2", "Ship v2" },
-    { "mp_gob_arena", ":[GoB]: Arena" },
-    { "mp_nijmegen_bridge", "^1Nijmegen ^3Bridge" },
+    { "mp_gob_arena", "Gob Arena" },
+    { "mp_nijmegen_bridge", "Nijmegen Bridge" },
     { "mp_bigred", "Big Red" },
     { "mp_bobo", "Bobo" },
     { "mp_argentan_france", "Argentan,France" },
-    { "mp_comproom_v1", "^739th^9||^7Comp. Room" },
+    { "mp_comproom_v1", "39th||Comp. Room" },
     { "mp_craville", "Craville Belgium" },
-    { "mp_accona_desert", "^2Accona ^3Desert" },
-    { "mp_utca", "^1Hardened street" },
+    { "mp_accona_desert", "Accona Desert" },
+    { "mp_utca", "Hardened street" },
     { "mp_mythicals_carentan", "Carentan v2, France" },
     { "mp_normandy_farm", "Normandy Farm" },
     { "mp_natnarak", "Natnarak, Libya" },
-    { "mp_newburgundy", "^^0|Team^7C| ^1New Burgundy" },
+    { "mp_newburgundy", "TeamC New Burgundy" },
     { "btw_n10", "Btw. N10" },
     { "mp_zeppelinfeld", "Zeppelinfeld, Germany" },
     { "mp_waldcamp_day", "Waldcamp day, Germany" },
     { "mp_sg_marketgarden", "Market Garden" },
-    { "mp_survival_2", "|^4EMS^7| - Survival v2" },
+    { "mp_survival_2", "EMS - Survival v2" },
     { "mp_oase", "Oasis, Africa" },
     { "mp_rusty", "Rusty" },
     { "mp_stuttgart", "Stuttgart, Germany" },
     { "mp_pecs", "Pecs, Hungary" },
     { "mp_st", "Small town" },
-    { "mp_aimgobII", "^4Gob ^1Aim ^7by (PHk) Schenk" },
-    { "fr_mouseb", "^4|[^7FR^1]| ^2Mouse[B]" },
-    { "mp_gob_arena_v2", ":[GoB]: Arena v2" },
+    { "mp_aimgobII", "Gob Aim by (PHk) Schenk" },
+    { "fr_mouseb", "FR MouseB" },
+    { "mp_gob_arena_v2", "Gob Arena v2" },
     { "mp_island_fortress", "Island Fortress" },
     { "mp_grimms_depot", "GR1MMs Depot" },
     { "mp_bridge2", "The Bridge v2" },
@@ -8726,28 +8894,28 @@ const std::map<std::string, std::string> &get_rcon_map_names_to_full_map_names_f
     { "mp_de", "Dead End" },
     { "mp_sd2", "Sadia v2" },
     { "mp_ut2", "Road to Salvation" },
-    { "mp_fh2", "^4Fohadiszallas ^3-=^1T.^7P.^2K.^3=- ^1v2" },
+    { "mp_fh2", "Fohadiszallas -=T.P.K.=- v2" },
     { "mp_sa", "Sniper Arena, Australia" },
     { "r2", "Rostov, Russia" },
-    { "mp_hw", ":[-UDW-]: High Wire" },
+    { "mp_hw", "UDW High Wire" },
     { "mp_b2", "Bandit" },
     { "mp_p2", "Port, Algeria" },
     { "mp_vs2", "Verschneit v2" },
     { "mp_rb", "River base" },
     { "mp_cm", "Cat and Mouse" },
     { "mp_depot_v2", "Depot v2 by Lonsofore" },
-    { "mp_cr", "^739th^9||^7Comp. Room" },
+    { "mp_cr", "39th||Comp. Room" },
     { "mp_gr", "Rat Room v3" },
-    { "mp_wr", "^5Winter" },
-    { "mp_fb", "^2{BPU} ^7Facility Beta" },
-    { "mp_lu", "^2[^1T^2n^1T^2]^1Playground" },
+    { "mp_wr", "Winter" },
+    { "mp_fb", "{BPU} Facility Beta" },
+    { "mp_lu", "TnTPlayground" },
     { "mp_su", "Subone, Siberia" },
-    { "mp_st2", "[MoH]: Stalingrad, Russia" },
-    { "mp_wp", "^2{^3TFL^2} ^4W^5i^4n^5t^4e^5r ^4P^5l^4a^5c^4e" },
+    { "mp_st2", "MoH Stalingrad, Russia" },
+    { "mp_wp", "TFL Winter Place" },
     { "mp_wz", "Warzone v1" },
     { "mp_dt", "Deathtrap" },
     { "mp_bv2", "Bathroom v2" },
-    { "mp_ma", "Mansion, ^7Ru^4ss^1ia" }
+    { "mp_ma", "Mansion, Russia" }
   };
 
 
@@ -8896,23 +9064,23 @@ const std::map<std::string, std::string> &get_full_map_names_to_rcon_map_names_f
     { "Industry, Germany", "mp_industry" },
     { "Gob Rats", "gob_rats" },
     { "Gob Rats v2", "mp_gob_rats" },
-    { "^2Currahee! ^7Breach", "mp_breach" },
-    { "^1Nuketown^5, Arizona", "mp_nuked" },
+    { "Currahee! Breach", "mp_breach" },
+    { "Nuketown, Arizona", "mp_nuked" },
     { "Zaafrane, Tunisia", "mp_zaafrane" },
     { "Tripoli, Libya", "mp_tripoli" },
     { "Gob Subzero", "mp_gob_subzero" },
-    { "[GOB] Italy EXTRA!", "gob_italy2" },
+    { "Gob Italy EXTRA!", "gob_italy2" },
     { "Devils Creek", "mp_devilscreek" },
     { "North Africa, Outpost", "mp_naout" },
-    { "^2Currahee! ^7Rouen", "mp_rouen" },
-    { "Matmata, ^2Verindra", "mp_verimatmatav1" },
-    { "Matmata^1II, ^2Verindra", "mp_verimatmatav2" },
-    { "^5Verindra ^2Bank", "mp_veribank" },
-    { "[GOB] Eulogy", "mp_gob_eulogy" },
-    { "^1W^9uesten^1S^9turm", "mp_wuesten" },
+    { "Currahee! Rouen", "mp_rouen" },
+    { "Matmata, Verindra", "mp_verimatmatav1" },
+    { "MatmataII, Verindra", "mp_verimatmatav2" },
+    { "Verindra Bank", "mp_veribank" },
+    { "Gob Eulogy", "mp_gob_eulogy" },
+    { "WuestenSturm", "mp_wuesten" },
     { "Tuscany, Italy", "mp_tuscany" },
     { "Malta, Italy", "mp_malta" },
-    { "^3JoJo", "mp_jojo" },
+    { "JoJo", "mp_jojo" },
     { "Dicky v2", "mp_dicky2" },
     { "LCF Town v1.0", "mp_lcftown" },
     { "Houn, Libya", "mp_houn" },
@@ -8921,46 +9089,46 @@ const std::map<std::string, std::string> &get_full_map_names_to_rcon_map_names_f
     { "Africorps vs. Desertrats", "mp_africorps" },
     { "Warsaw, Poland", "mp_warsaw" },
     { "Valley Summer v2", "mp_valley_summer_2" },
-    { "Bazna, ^3Tunisia", "mp_bzt" },
-    { "Kuwehr^32 ^7by ^3Rez|l ^7and ^6P^9nin", "jm_kuwehr2" },
-    { "[GOB] Icestation", "gob_icestation" },
+    { "Bazna, Tunisia", "mp_bzt" },
+    { "Kuwehr2 by Rez|l and Pnin", "jm_kuwehr2" },
+    { "Gob Icestation", "gob_icestation" },
     { "Coal Mine v2", "mp_coalminev2" },
-    { "^1W^9arzone", "mp_warzonev1" },
-    { "^1T^9he ^1S^9hort ^1L^9ine ^12011", "mp_2011" },
-    { "Worldcup by ^3Kams", "mp_worldcup" },
+    { "Warzone", "mp_warzonev1" },
+    { "The Short Line 2011", "mp_2011" },
+    { "Worldcup by Kams", "mp_worldcup" },
     { "Factory, Germany", "mp_factory" },
-    { "[GOB] Mice", "mp_gob_mice" },
-    { "^1KILLERS ^7city", "mp_killers_city" },
-    { "[CBX]-map", "mp_cbxmap" },
+    { "Gob Mice", "mp_gob_mice" },
+    { "KILLERS city", "mp_killers_city" },
+    { "CBX-map", "mp_cbxmap" },
     { "Fog", "mp_fog" },
     { "Libya (VehiclesMod)", "mp_libya" },
-    { "^1Rock ^3Island", "mp_rock_island" },
+    { "Rock Island", "mp_rock_island" },
     { "Canal, Belgium", "mp_canal_final" },
     { "MTL The Rock", "mtl_the_rock" },
     { "Battlefield, France", "mp_battlefield" },
     { "Rhine", "mp_rhine" },
     { "Harbor", "mp_harbor" },
     { "El Milh, Africa", "mp_el_milh" },
-    { "MoH:Southern France(Final)", "mp_sfrance_final" },
-    { "Panodra[^1W^4P^3C^7]", "mp_panodra" },
+    { "MoHSouthern France(Final)", "mp_sfrance_final" },
+    { "PanodraWPC", "mp_panodra" },
     { "MtO Clanfight Revisited!", "mp_clanfight_r" },
     { "Airfield v2", "mp_airfield2" },
-    { "^2Currahee ^7Tuscany 2", "mp_curra_tuscany2" },
+    { "Currahee Tuscany 2", "mp_curra_tuscany2" },
     { "Reckoning day", "mp_reckoning_day" },
-    { "-]K6[- Destroyed Village France", "mp_coddm2" },
+    { "K6 Destroyed Village France", "mp_coddm2" },
     { "Delta Mission, The day after...", "mp_delta_mission" },
     { "Gob Iced", "gob_iced" },
     { "MRoA Rathouse", "mp_mroa_rathouse" },
     { "Gaperon2", "mp_gp2" },
-    { "^1Ware^7House", "warehouse" },
-    { "^3Da ^2B^1ath^2R^1oom", "mp_bathroom" },
-    { "^2Currahee ^7Winter Toujane", "mp_winter_toujane" },
-    { "Izmir ^1by ^7(^3P^4H^1k^7) ^3Schenk", "mp_izmir" },
+    { "WareHouse", "warehouse" },
+    { "Da BathRoom", "mp_bathroom" },
+    { "Currahee Winter Toujane", "mp_winter_toujane" },
+    { "Izmir by (PHk) Schenk", "mp_izmir" },
     { "The Complex v2", "mp_complex_v2" },
-    { "^1Port, ^5Tunisia", "mp_port" },
+    { "Port, Tunisia", "mp_port" },
     { "Hill24", "mp_hill24" },
     { "Prisoners of War Camp, Germany", "mp_powcamp" },
-    { "^1V2", "mp_v2" },
+    { "V2", "mp_v2" },
     { "Valence, France", "mp_valence_v2" },
     { "Vallente, France", "mp_vallente" },
     { "Depot, Germany", "mp_depot" },
@@ -8974,7 +9142,7 @@ const std::map<std::string, std::string> &get_full_map_names_to_rcon_map_names_f
     { "Road to Stalingrad", "mp_rts2" },
     { "Stalingrad v2 - Summer", "mp_stalingrad_2" },
     { "Neuville, France", "mp_neuville" },
-    { "-]K6[- Street", "mp_street" },
+    { "K6 Street", "mp_street" },
     { "Dustville", "mp_dustville" },
     { "Morte Ville", "mp_ctf" },
     { "Maaloy, Summer", "mp_maaloy_s" },
@@ -8991,7 +9159,7 @@ const std::map<std::string, std::string> &get_full_map_names_to_rcon_map_names_f
     { "Cunisia", "mp_cunisia" },
     { "Cologne, Germany", "mp_cologne" },
     { "11th ACR Kairo", "mp_cairo" },
-    { "[CR] Kasserine, Tunisia", "mp_cr_kasserine" },
+    { "CR Kasserine, Tunisia", "mp_cr_kasserine" },
     { "Mareth, Tunisia", "mp_mareth" },
     { "Abandoned Scrapyard", "mp_scrapyard" },
     { "New Factory", "mp_nfactorys" },
@@ -8999,17 +9167,17 @@ const std::map<std::string, std::string> &get_full_map_names_to_rcon_map_names_f
     { "Currahee! Orion Zen", "mp_orionzen" },
     { "Woods", "mp_woods" },
     { "Granville Depot", "mp_grandville" },
-    { "Burgundy ^3v2, ^5France", "mp_burgundy_v2" },
+    { "Burgundy v2, France", "mp_burgundy_v2" },
     { "Hungbulung v2", "mp_hungbulung_v2" },
     { "Harbor v2", "mp_harbor_v2" },
     { "Gob Eulogy v2", "mp_gob_eulogy_v2" },
     { "Container Park", "mp_containers_park" },
     { "Mitres", "mp_mitres" },
-    { "^2Octagon", "mp_oc" },
+    { "Octagon", "mp_oc" },
     { "Bayeux, France", "mp_bayeux" },
     { "cod2 Dust", "mp_CoD_Dust" },
     { "The tower", "mp_tower" },
-    { ":[DBT]: Rats", "mp_dbt_rats" },
+    { ":DBT: Rats", "mp_dbt_rats" },
     { "CrazyMaze", "mp_crazymaze" },
     { "Gamer pistol", "mp_gamerpistol" },
     { "Hawkey's Aim map", "mp_hawkeyeaim" },
@@ -9026,38 +9194,38 @@ const std::map<std::string, std::string> &get_full_map_names_to_rcon_map_names_f
     { "Fontenay, France", "mp_fontenay" },
     { "Shipment v2", "mp_shipment_v2" },
     { "TFC's Port", "mp_temporal" },
-    { ":[Gob]: Aim", "v_gob_aim" },
+    { "Gob Aim", "v_gob_aim" },
     { "Industry, Germany", "mp_industryv2" },
-    { "^9[^2TFC^9]^2 Oasis", "mp_oasis" },
-    { "^2Currahee ^7Al Burjundi", "mp_alburjundi" },
+    { "TFC Oasis", "mp_oasis" },
+    { "Currahee Al Burjundi", "mp_alburjundi" },
     { "Saint Lo", "mp_stlo" },
     { "Egyptian Market Town (Day)", "mp_emt" },
     { "TFC's Prison", "mp_prison" },
     { "Scopeshot v2.0", "gob_scopeshot2" },
-    { "^1Hybrid´s ^5Game", "mp_hybrid" },
-    { "|^4EMS^7| - Survival", "mp_survival_1" },
+    { "Hybrid´s Game", "mp_hybrid" },
+    { "EMS - Survival", "mp_survival_1" },
     { "Bataan", "mp_bataan" },
     { "Blockarena", "mp_blockarena" },
     { "Vovel2, Russia", "mp_vovel" },
-    { ":[Gob]: Subzero Plus", "mp_subzero_plus" },
+    { "Gob Subzero Plus", "mp_subzero_plus" },
     { "Het Assink Lyceum", "mp_assink" },
     { "Theros Park", "mp_theros_park" },
     { "Bumbarsky, Pudgura", "mp_bumbarsky" },
     { "The Bridge", "mp_bridge" },
     { "Pavlov's House, Russia", "mp_pavlov" },
-    { "^7-=^1BAD^7=- ^7Arena", "mp_badarena" },
+    { "BAD Arena", "mp_badarena" },
     { "Dead End", "mp_deadend" },
     { "Kraut Hammer beta v2", "mp_kraut_hammer" },
     { "Winter Assault", "mp_winter_assault" },
     { "Tobruk, Libya", "mp_tobruk" },
-    { "^3Farao E^7y^3e", "mp_farao_eye" },
-    { "^9Outlaw ^1Maze", "mp_omaze_v3" },
+    { "Farao Eye", "mp_farao_eye" },
+    { "Outlaw Maze", "mp_omaze_v3" },
     { "Labyrinth", "mp_labyrinth" },
     { "Labyrinth", "mp_ctflaby" },
     { "DC-De Geast", "dc_degeast" },
     { "The devil's training map", "mp_training" },
     { "Harmata, Egypt", "mp_harmata" },
-    { "^2Currahee! ^7Tuscany (Extended), Italy", "mp_tuscany_ext_beta" },
+    { "Currahee! Tuscany (Extended), Italy", "mp_tuscany_ext_beta" },
     { "Somewhere in Africa v2", "mp_africa_v2" },
     { "Market Square", "mp_marketsquare_b1" },
     { "Argentan, France", "mp_Argentan_France" },
@@ -9068,44 +9236,44 @@ const std::map<std::string, std::string> &get_full_map_names_to_rcon_map_names_f
     { "Tank Depot, Germany", "mp_tank_depot" },
     { "Boneville, France", "mp_boneville" },
     { "Toujentan, Frenchisia", "mp_toujentan" },
-    { "MoH:Remagen (Final)", "mp_remagen2" },
-    { "^3Sand dune", "mp_sand_dune" },
+    { "MoHRemagen (Final)", "mp_remagen2" },
+    { "Sand dune", "mp_sand_dune" },
     { "Chelm, Poland", "mp_chelm" },
     { "Rat Room v3", "mp_giantroom" },
     { "Carentan Ville, France", "mp_carentan_ville" },
     { "Oradour-Sur-Glane", "mp_oradour" },
-    { "^4M^3T^1L ^5Purgatory", "mtl_purgatory" },
+    { "MTL Purgatory", "mtl_purgatory" },
     { "Rouen, France", "mp_rouen_hq" },
     { "Alger by Kams", "mp_alger" },
-    { "Draguignan by ^3Kams", "mp_draguignan" },
-    { ":[GoB]: Tozeur", "gob_tozeur" },
+    { "Draguignan by Kams", "mp_draguignan" },
+    { "Gob Tozeur", "gob_tozeur" },
     { "Ship v2", "mp_ship2" },
-    { ":[GoB]: Arena", "mp_gob_arena" },
-    { "^1Nijmegen ^3Bridge", "mp_nijmegen_bridge" },
+    { "Gob Arena", "mp_gob_arena" },
+    { "Nijmegen Bridge", "mp_nijmegen_bridge" },
     { "Big Red", "mp_bigred" },
     { "Bobo", "mp_bobo" },
     { "Argentan,France", "mp_argentan_france" },
-    { "^739th^9||^7Comp. Room", "mp_comproom_v1" },
+    { "39th||Comp. Room", "mp_comproom_v1" },
     { "Craville Belgium", "mp_craville" },
-    { "^2Accona ^3Desert", "mp_accona_desert" },
-    { "^1Hardened street", "mp_utca" },
+    { "Accona Desert", "mp_accona_desert" },
+    { "Hardened street", "mp_utca" },
     { "Carentan v2, France", "mp_mythicals_carentan" },
     { "Normandy Farm", "mp_normandy_farm" },
     { "Natnarak, Libya", "mp_natnarak" },
-    { "^^0|Team^7C| ^1New Burgundy", "mp_newburgundy" },
+    { "TeamC New Burgundy", "mp_newburgundy" },
     { "Btw. N10", "btw_n10" },
     { "Zeppelinfeld, Germany", "mp_zeppelinfeld" },
     { "Waldcamp day, Germany", "mp_waldcamp_day" },
     { "Market Garden", "mp_sg_marketgarden" },
-    { "|^4EMS^7| - Survival v2", "mp_survival_2" },
+    { "EMS - Survival v2", "mp_survival_2" },
     { "Oasis, Africa", "mp_oase" },
     { "Rusty", "mp_rusty" },
     { "Stuttgart, Germany", "mp_stuttgart" },
     { "Pecs, Hungary", "mp_pecs" },
     { "Small town", "mp_st" },
-    { "^4Gob ^1Aim ^7by (PHk) Schenk", "mp_aimgobII" },
-    { "^4|[^7FR^1]| ^2Mouse[B]", "fr_mouseb" },
-    { ":[GoB]: Arena v2", "mp_gob_arena_v2" },
+    { "Gob Aim by (PHk) Schenk", "mp_aimgobII" },
+    { "FR MouseB", "fr_mouseb" },
+    { "Gob Arena v2", "mp_gob_arena_v2" },
     { "Island Fortress", "mp_island_fortress" },
     { "GR1MMs Depot", "mp_grimms_depot" },
     { "The Bridge v2", "mp_bridge2" },
@@ -9113,28 +9281,28 @@ const std::map<std::string, std::string> &get_full_map_names_to_rcon_map_names_f
     { "Dead End", "mp_de" },
     { "Sadia v2", "mp_sd2" },
     { "Road to Salvation", "mp_ut2" },
-    { "^4Fohadiszallas ^3-=^1T.^7P.^2K.^3=- ^1v2", "mp_fh2" },
+    { "Fohadiszallas -=T.P.K.=- v2", "mp_fh2" },
     { "Sniper Arena, Australia", "mp_sa" },
     { "Rostov, Russia", "r2" },
-    { ":[-UDW-]: High Wire", "mp_hw" },
+    { "UDW High Wire", "mp_hw" },
     { "Bandit", "mp_b2" },
     { "Port, Algeria", "mp_p2" },
     { "Verschneit v2", "mp_vs2" },
     { "River base", "mp_rb" },
     { "Cat and Mouse", "mp_cm" },
     { "Depot v2 by Lonsofore", "mp_depot_v2" },
-    { "^739th^9||^7Comp. Room", "mp_cr" },
+    { "39th||Comp. Room", "mp_cr" },
     { "Rat Room v3", "mp_gr" },
-    { "^5Winter", "mp_wr" },
-    { "^2{BPU} ^7Facility Beta", "mp_fb" },
-    { "^2[^1T^2n^1T^2]^1Playground", "mp_lu" },
+    { "Winter", "mp_wr" },
+    { "{BPU} Facility Beta", "mp_fb" },
+    { "TnTPlayground", "mp_lu" },
     { "Subone, Siberia", "mp_su" },
-    { "[MoH]: Stalingrad, Russia", "mp_st2" },
-    { "^2{^3TFL^2} ^4W^5i^4n^5t^4e^5r ^4P^5l^4a^5c^4e", "mp_wp" },
+    { "MoH Stalingrad, Russia", "mp_st2" },
+    { "TFL Winter Place", "mp_wp" },
     { "Warzone v1", "mp_wz" },
     { "Deathtrap", "mp_dt" },
     { "Bathroom v2", "mp_bv2" },
-    { "Mansion, ^7Ru^4ss^1ia", "mp_ma" }
+    { "Mansion, Russia", "mp_ma" }
   };
 
   static const map<string, string> cod4_full_map_name_rcon_map_names{

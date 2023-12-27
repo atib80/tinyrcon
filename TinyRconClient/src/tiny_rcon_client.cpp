@@ -22,7 +22,7 @@ using namespace std::string_literals;
 using namespace std::chrono;
 using namespace std::filesystem;
 
-extern const string program_version{ "2.7.0.6" };
+extern const string program_version{ "2.7.0.8" };
 
 extern const std::regex ip_address_and_port_regex;
 
@@ -4054,7 +4054,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       display_large_data_set.detach();
       is_display_banned_countries_data_event.store(false);
     } else if (is_display_admins_data_event.load()) {
-      std::thread display_large_data_set{ display_admins_data };
+      std::thread display_large_data_set{ [&]() {
+        display_admins_data(main_app.get_users(), "^5Tiny^6Rcon ^1Administrators");
+      } };
       display_large_data_set.detach();
       is_display_admins_data_event.store(false);
     } else if (is_display_protected_ip_addresses_data_event.load()) {
