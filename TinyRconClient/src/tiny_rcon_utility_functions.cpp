@@ -4667,31 +4667,6 @@ void display_banned_player_names(const char *title, const size_t number_of_last_
   }
 }
 
-void print_text_element(const char *text, const char *color_code, const size_t max_width, std::ostringstream &oss, const bool is_left_justified, const bool is_print_color_code)
-{
-  if (is_print_color_code) {
-    string text_with_colors{
-      string{ color_code } + string{ text }
-    };
-    stl::helper::trim_in_place(text_with_colors);
-    const size_t printed_name_char_count{ get_number_of_characters_without_color_codes(text_with_colors.c_str()) };
-    if (printed_name_char_count < max_width) {
-      oss << (is_left_justified ? left : right) << setw(max_width) << text_with_colors + string(max_width - printed_name_char_count, ' ');
-    } else {
-      oss << (is_left_justified ? left : right) << setw(max_width) << text_with_colors;
-    }
-  } else {
-    string text_no_colors{ text };
-    remove_all_color_codes(text_no_colors);
-    stl::helper::trim_in_place(text_no_colors);
-    if (text_no_colors.length() < max_width) {
-      oss << (is_left_justified ? left : right) << setw(max_width) << text_no_colors + string(max_width - text_no_colors.length(), ' ');
-    } else {
-      oss << (is_left_justified ? left : right) << setw(max_width) << text_no_colors;
-    }
-  }
-}
-
 void display_admins_data(const std::vector<std::shared_ptr<tiny_rcon_client_user>> &users, const char *title)
 {
   size_t longest_name_length{ 12 };
@@ -4728,25 +4703,25 @@ void display_admins_data(const std::vector<std::shared_ptr<tiny_rcon_client_user
       << " | " << left << setw(20) << "Last login"
       << " | " << left << setw(20) << "Last logout"
       << " | ";
-  print_text_element("Logins", "^1", 10, oss);
+  oss << text_element{ "Logins", 10, "^1" };
   oss << " ^5| ";
-  print_text_element("Warnings", "^2", 10, oss);
+  oss << text_element{ "Warnings", 10, "^2" };
   oss << " ^5| ";
-  print_text_element("Kicks", "^1", 10, oss);
+  oss << text_element{ "Kicks", 10, "^1" };
   oss << " ^5| ";
-  print_text_element("Tempbans", "^2", 10, oss);
+  oss << text_element{ "Tempbans", 10, "^2" };
   oss << " ^5| ";
-  print_text_element("GUID bans", "^1", 10, oss);
+  oss << text_element{ "GUID bans", 10, "^1" };
   oss << " ^5| ";
-  print_text_element("IP bans", "^2", 10, oss);
+  oss << text_element{ "IP bans", 10, "^2" };
   oss << " ^5| ";
-  print_text_element("IP range bans", "^1", 13, oss);
+  oss << text_element{ "IP range bans", 13, "^1" };
   oss << " ^5| ";
-  print_text_element("City bans", "^2", 10, oss);
+  oss << text_element{ "City bans", 10, "^2" };
   oss << " ^5| ";
-  print_text_element("Country bans", "^1", 13, oss);
+  oss << text_element{ "Country bans", 13, "^1" };
   oss << " ^5| ";
-  print_text_element("Name bans", "^2", 10, oss);
+  oss << text_element{ "Name bans", 10, "^2" };
   oss << "^5|";
   oss << "^5\n"
       << decoration_line << "\n";
@@ -4765,52 +4740,66 @@ void display_admins_data(const std::vector<std::shared_ptr<tiny_rcon_client_user
     for (auto &user : users) {
       const char *next_color{ is_first_color ? "^3" : "^5" };
       oss << "^5| ";
-      print_text_element(user->user_name.c_str(), "^7", longest_name_length, oss);
+      oss << text_element{ user->user_name.c_str(), longest_name_length, "^7" };
 
       oss << " ^5| ";
-      print_text_element(user->is_logged_in ? "yes" : "no", user->is_logged_in ? "^2" : "^1", 13, oss);
+      oss << text_element{ user->is_logged_in ? "yes" : "no", 13, user->is_logged_in ? "^2" : "^1" };
 
       oss << " ^5| ";
-      print_text_element(user->is_online ? "yes" : "no", user->is_online ? "^2" : "^1", 11, oss);
+      oss << text_element{ user->is_online ? "yes" : "no", 11, user->is_online ? "^2" : "^1" };
 
       oss << " ^5| ";
-      print_text_element(user->ip_address.c_str(), next_color, 16, oss);
+      oss << text_element{ user->ip_address.c_str(), 16, next_color };
+
       oss << " ^5| ";
-      print_text_element(user->geo_information.c_str(), next_color, longest_geoinfo_length, oss);
+      oss << text_element{ user->geo_information.c_str(), longest_geoinfo_length, next_color };
+
       oss << " ^5| ";
-      print_text_element(get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", user->last_login_time_stamp).c_str(), next_color, 20, oss);
+      oss << text_element{ get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", user->last_login_time_stamp).c_str(), 20, next_color };
+
       oss << " ^5| ";
-      print_text_element(get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", user->last_logout_time_stamp).c_str(), next_color, 20, oss);
+      oss << text_element{ get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", user->last_logout_time_stamp).c_str(), 20, next_color };
+
       oss << " ^5| ";
       snprintf(buffer, std::size(buffer), "%lu", user->no_of_logins);
-      print_text_element(buffer, "^1", 10, oss);
+      oss << text_element{ buffer, 10, "^1" };
+
       oss << " ^5| ";
       snprintf(buffer, std::size(buffer), "%lu", user->no_of_warnings);
-      print_text_element(buffer, "^2", 10, oss);
+      oss << text_element{ buffer, 10, "^2" };
+
       oss << " ^5| ";
       snprintf(buffer, std::size(buffer), "%lu", user->no_of_kicks);
-      print_text_element(buffer, "^1", 10, oss);
+      oss << text_element{ buffer, 10, "^1" };
+
       oss << " ^5| ";
       snprintf(buffer, std::size(buffer), "%lu", user->no_of_tempbans);
-      print_text_element(buffer, "^2", 10, oss);
+      oss << text_element{ buffer, 10, "^2" };
+
       oss << " ^5| ";
       snprintf(buffer, std::size(buffer), "%lu", user->no_of_guidbans);
-      print_text_element(buffer, "^1", 10, oss);
+      oss << text_element{ buffer, 10, "^1" };
+
       oss << " ^5| ";
       snprintf(buffer, std::size(buffer), "%lu", user->no_of_ipbans);
-      print_text_element(buffer, "^2", 10, oss);
+      oss << text_element{ buffer, 10, "^2" };
+
       oss << " ^5| ";
       snprintf(buffer, std::size(buffer), "%lu", user->no_of_iprangebans);
-      print_text_element(buffer, "^1", 13, oss);
+      oss << text_element{ buffer, 13, "^1" };
+
       oss << " ^5| ";
       snprintf(buffer, std::size(buffer), "%lu", user->no_of_citybans);
-      print_text_element(buffer, "^2", 10, oss);
+      oss << text_element{ buffer, 10, "^2" };
+
       oss << " ^5| ";
       snprintf(buffer, std::size(buffer), "%lu", user->no_of_countrybans);
-      print_text_element(buffer, "^1", 13, oss);
+      oss << text_element{ buffer, 13, "^1" };
+
       oss << " ^5| ";
       snprintf(buffer, std::size(buffer), "%lu", user->no_of_namebans);
-      print_text_element(buffer, "^2", 10, oss);
+      oss << text_element{ buffer, 10, "^2" };
+
       oss << "^5|\n";
 
       is_first_color = !is_first_color;
@@ -4822,122 +4811,6 @@ void display_admins_data(const std::vector<std::shared_ptr<tiny_rcon_client_user
   print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true);
 }
 
-/*
-void display_admins_data(const std::vector<std::shared_ptr<tiny_rcon_client_user>> &users, const char *title)
-{
-  size_t longest_name_length{ 12 };
-  size_t longest_geoinfo_length{ 20 };
-  if (!users.empty()) {
-    longest_name_length = std::max(longest_name_length, find_longest_user_name_length(users, false, users.size()));
-    longest_geoinfo_length =
-      std::max(longest_geoinfo_length,
-        find_longest_user_country_city_info_length(users, users.size()));
-  }
-
-
-  ostringstream oss;
-  const string decoration_line(237 + longest_name_length + longest_geoinfo_length, '=');
-  oss << "^5\n"
-      << decoration_line << "\n";
-  std::string title_str{ title };
-  stl::helper::trim_in_place(title_str);
-  remove_all_color_codes(title_str);
-  const size_t printed_name_char_count{ get_number_of_characters_without_color_codes(title) };
-  const size_t padding_size{ (decoration_line.length() - 4u - printed_name_char_count) };
-  const string pad_str(padding_size, ' ');
-  if (printed_name_char_count + 4u < decoration_line.length()) {
-    oss << "^5| " << left << title << right << pad_str << " ^5|\n";
-  } else {
-    oss << "^5| " << left << title << " ^5|\n";
-  }
-  oss << decoration_line << "\n";
-  oss << "^5| ";
-  oss << left << setw(longest_name_length) << "User name"
-      << " | " << left << setw(13) << "Is logged in?"
-      << " | " << left << setw(11) << "Is online?"
-      << " | " << left << setw(16) << "IP address"
-      << " | " << left << setw(longest_geoinfo_length) << "Country, city"
-      << " | " << left << setw(20) << "Last login"
-      << " | " << left << setw(20) << "Last logout"
-      << " | " << left << setw(10) << "Logins"
-      << " | " << left << setw(10) << "Warnings"
-      << " | " << left << setw(10) << "Kicks"
-      << " | " << left << setw(10) << "Tempbans"
-      << " | " << left << setw(10) << "GUID bans"
-      << " | " << left << setw(10) << "IP bans"
-      << " | " << left << setw(13) << "IP range bans"
-      << " | " << left << setw(10) << "City bans"
-      << " | " << left << setw(13) << "Country bans"
-      << " | " << left << setw(10) << "Name bans"
-      << "|";
-  oss << "^5\n"
-      << decoration_line << "\n";
-  if (users.empty()) {
-    const size_t message_len = stl::helper::len("| There is no received administrator (user) data.");
-    oss << "^5| ^3There is no received administrator (user) data.";
-
-    if (message_len + 2 < decoration_line.length()) {
-      oss << string(decoration_line.length() - 2 - message_len, ' ');
-    }
-    oss << " ^5|\n";
-
-  } else {
-    bool is_first_color{ true };
-    for (auto &user : users) {
-      const char *next_color{ is_first_color ? "^3" : "^5" };
-      oss << "^5| ";
-
-      stl::helper::trim_in_place(user->user_name);
-      string name{ user->user_name };
-      remove_all_color_codes(name);
-      const size_t printed_name_char_count1{ get_number_of_characters_without_color_codes(user->user_name.c_str()) };
-      if (printed_name_char_count1 < longest_name_length) {
-        oss << "^7" << left << setw(longest_name_length) << user->user_name + string(longest_name_length - printed_name_char_count1, ' ');
-      } else {
-        oss << "^7" << left << setw(longest_name_length) << user->user_name;
-      }
-
-      oss << " ^5| ";
-
-      string is_logged_in{ user->is_logged_in ? "^2yes" : "^1no" };
-      string is_logged_in_without_color_codes{ is_logged_in };
-      remove_all_color_codes(is_logged_in_without_color_codes);
-      size_t printed_field_char_count{ get_number_of_characters_without_color_codes(is_logged_in.c_str()) };
-      size_t printed_field_char_count2{ is_logged_in_without_color_codes.length() };
-      if (printed_field_char_count < 13) {
-        oss << left << setw(13) << is_logged_in + string(13 - printed_field_char_count, ' ');
-      } else {
-        oss << left << setw(13) << is_logged_in;
-      }
-
-      oss << " ^5| ";
-
-      const string is_online_in{ user->is_online ? "^2yes" : "^1no" };
-      const string &is_online_in_without_color_codes{ is_online_in };
-      remove_all_color_codes(is_logged_in_without_color_codes);
-      printed_field_char_count = get_number_of_characters_without_color_codes(is_online_in.c_str());
-      printed_field_char_count2 = is_online_in_without_color_codes.length();
-      if (printed_field_char_count < 11) {
-        oss << left << setw(11) << is_online_in + string(11 - printed_field_char_count, ' ');
-      } else {
-        oss << left << setw(11) << is_online_in;
-      }
-
-      oss << " ^5| ";
-
-      oss << next_color << left << setw(16) << user->ip_address << " ^5| " << next_color << left << setw(longest_geoinfo_length) << user->geo_information << " ^5| " << next_color << left << setw(20) << get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", user->last_login_time_stamp) << " ^5| " << next_color << left << setw(20) << get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", user->last_logout_time_stamp) << " ^5| " << next_color << left << setw(10) << user->no_of_logins << " ^5| " << next_color << left << setw(10) << user->no_of_warnings << " ^5| " << next_color << left << setw(10) << user->no_of_kicks << " ^5| " << next_color << left << setw(10) << user->no_of_tempbans << " ^5| " << next_color << left << setw(10) << user->no_of_guidbans << " ^5| " << next_color << left << setw(10) << user->no_of_ipbans
-          << " ^5| " << next_color << left << setw(13) << user->no_of_iprangebans
-          << " ^5| " << next_color << left << setw(10) << user->no_of_citybans << " ^5| " << next_color << left << setw(13) << user->no_of_countrybans << " ^5| " << next_color << left << setw(10) << user->no_of_namebans << "^5|\n";
-
-      is_first_color = !is_first_color;
-    }
-  }
-  oss << string{ "^5"s + decoration_line + "\n\n"s };
-
-  const string message{ oss.str() };
-  print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::no, false, true, true);
-}
-*/
 
 const std::string &get_full_gametype_name(const std::string &rcon_gametype_name)
 {

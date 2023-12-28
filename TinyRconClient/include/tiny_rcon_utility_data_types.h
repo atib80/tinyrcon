@@ -233,6 +233,39 @@ struct row_of_player_data_to_display
   const char *country_code{ "xy" };
 };
 
+extern size_t get_number_of_characters_without_color_codes(const char *);
+
+class text_element
+{
+  const char *text_{};
+  const size_t width_{};
+  const char *color_code_{};
+  const bool is_left_adjusted_{ true };
+
+public:
+  explicit text_element(const char *text, const size_t width, const char *color_code = nullptr, const bool is_left_adjusted = true) : text_{ text }, width_{ width }, color_code_{ color_code }, is_left_adjusted_{ is_left_adjusted } {}
+  explicit operator std::string() const
+  {
+    std::ostringstream oss;
+    std::string text_with_colors{ std::string{ color_code_ } + text_ };
+    stl::helper::trim_in_place(text_with_colors);
+    const size_t printed_name_char_count{ get_number_of_characters_without_color_codes(text_with_colors.c_str()) };
+    if (printed_name_char_count < width_) {
+      oss << (is_left_adjusted_ ? std::left : std::right) << std::setw(width_) << text_with_colors + std::string(width_ - printed_name_char_count, ' ');
+    } else {
+      oss << (is_left_adjusted_ ? std::left : std::right) << std::setw(width_) << text_with_colors;
+    }
+
+    return oss.str();
+  }
+};
+
+inline std::ostream &operator<<(std::ostream &os, const text_element &te)
+{
+  os << static_cast<std::string>(te);
+  return os;
+}
+
 template<typename T>
 concept string_convertible = requires(const T &value) {
   {

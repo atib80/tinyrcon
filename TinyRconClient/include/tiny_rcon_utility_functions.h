@@ -394,4 +394,3 @@ std::string get_server_address_for_connect_command(const int selected_server_row
 std::string find_version_of_installed_cod2_game();
 bool add_permanently_banned_player_name(player &pd, std::vector<player> &banned_players_names_vector, std::unordered_map<std::string, player> &banned_players_names_map);
 bool remove_permanently_banned_player_name(player &pd, std::vector<player> &banned_names_vector, std::unordered_map<std::string, player> &banned_names_map);
-void print_text_element(const char *text, const char *color_code, const size_t max_width, std::ostringstream &oss, const bool is_left_justified = true, const bool is_print_color_code = true);
