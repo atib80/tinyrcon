@@ -18,7 +18,7 @@ using namespace std::string_literals;
 using namespace std::chrono;
 using namespace std::filesystem;
 
-extern const string program_version{ "1.2.0.1" };
+extern const string program_version{ "1.2.0.2" };
 
 extern std::atomic<bool> is_terminate_program;
 extern volatile std::atomic<bool> is_terminate_tinyrcon_settings_configuration_dialog_window;
@@ -405,13 +405,191 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     }
   });
 
+  // request-tempbans
+  main_app.add_message_handler("request-tempbans", [](const string &user, const time_t timestamp, const string &data, bool is_print_in_messages, const string &sender_ip) {
+    const auto &temp_banned_players =
+      main_app.get_game_server().get_temp_banned_players_data();
+    const size_t start_index{ 50U <= temp_banned_players.size() ? temp_banned_players.size() - 50U : 0U };
+    auto &admin = main_app.get_user_for_name(user, sender_ip);
+    admin->is_logged_in = true;
+    print_colored_text(app_handles.hwnd_re_messages_data, format("^5Received request from ^7{} ^5to send them the ^1last {} temporary ban ^5entries.", admin->user_name, temp_banned_players.size() < 50U ? temp_banned_players.size() : 50U).c_str());
+    size_t message_length{};
+    ostringstream oss;
+    for (size_t i{ start_index }; i < temp_banned_players.size(); ++i) {
+      const auto &tb_player = temp_banned_players[i];
+      const string data_line{ format("{}\\{}\\{}\\{}\\{}\\{}\\{}\n", tb_player.ip_address, tb_player.player_name, tb_player.banned_date_time, tb_player.banned_start_time, tb_player.ban_duration_in_hours, remove_disallowed_character_in_string(tb_player.reason), tb_player.banned_by_user_name) };
+      oss << data_line;
+      message_length += data_line.length();
+      if (message_length > 1300) {
+        main_app.add_message_to_queue(message_t("receive-tempbans", oss.str(), admin));
+        oss.str(string{});
+        oss.clear();
+        message_length = 0U;
+      }
+    }
+
+    if (message_length > 0U) {
+      const string last_data_line{ oss.str() };
+      main_app.add_message_to_queue(message_t("receive-tempbans", last_data_line, admin));
+    }
+  });
+
+  // request-ipaddressbans
+  main_app.add_message_handler("request-ipaddressbans", [](const string &user, const time_t timestamp, const string &data, bool is_print_in_messages, const string &sender_ip) {
+    const auto &banned_ip_addresses =
+      main_app.get_game_server().get_banned_ip_addresses_vector();
+    const size_t start_index{ 50U <= banned_ip_addresses.size() ? banned_ip_addresses.size() - 50U : 0U };
+    auto &admin = main_app.get_user_for_name(user, sender_ip);
+    admin->is_logged_in = true;
+    print_colored_text(app_handles.hwnd_re_messages_data, format("^5Received request from ^7{} ^5to send them the ^1last {} IP address ban ^5entries.", admin->user_name, banned_ip_addresses.size() < 50U ? banned_ip_addresses.size() : 50U).c_str());
+    size_t message_length{};
+    ostringstream oss;
+    for (size_t i{ start_index }; i < banned_ip_addresses.size(); ++i) {
+      const auto &banned_player = banned_ip_addresses[i];
+      const string data_line{ format("{}\\{}\\{}\\{}\\{}\\{}\n", banned_player.ip_address, banned_player.guid_key, banned_player.player_name, banned_player.banned_date_time, remove_disallowed_character_in_string(banned_player.reason), banned_player.banned_by_user_name) };
+      oss << data_line;
+      message_length += data_line.length();
+      if (message_length > 1300) {
+        main_app.add_message_to_queue(message_t("receive-ipaddressbans", oss.str(), admin));
+        oss.str(string{});
+        oss.clear();
+        message_length = 0U;
+      }
+    }
+
+    if (message_length > 0U) {
+      const string last_data_line{ oss.str() };
+      main_app.add_message_to_queue(message_t("receive-ipaddressbans", last_data_line, admin));
+    }
+  });
+
+  // request-ipaddressrangebans
+  main_app.add_message_handler("request-ipaddressrangebans", [](const string &user, const time_t timestamp, const string &data, bool is_print_in_messages, const string &sender_ip) {
+    const auto &banned_ip_address_ranges =
+      main_app.get_game_server().get_banned_ip_address_ranges_vector();
+    const size_t start_index{ 50U <= banned_ip_address_ranges.size() ? banned_ip_address_ranges.size() - 50U : 0U };
+    auto &admin = main_app.get_user_for_name(user, sender_ip);
+    admin->is_logged_in = true;
+    print_colored_text(app_handles.hwnd_re_messages_data, format("^5Received request from ^7{} ^5to send them the ^1last {} IP address range ban ^5entries.", admin->user_name, banned_ip_address_ranges.size() < 50U ? banned_ip_address_ranges.size() : 50U).c_str());
+    size_t message_length{};
+    ostringstream oss;
+    for (size_t i{ start_index }; i < banned_ip_address_ranges.size(); ++i) {
+      const auto &banned_player = banned_ip_address_ranges[i];
+      string ip{ banned_player.ip_address };
+      if (!ip.ends_with(".*")) {
+        const size_t last_dot_pos{ ip.rfind('.') };
+        if (last_dot_pos != string::npos) {
+          ip.replace(cbegin(ip) + last_dot_pos, cend(ip), ".*");
+        }
+      }
+      const string data_line{ format("{}\\{}\\{}\\{}\\{}\\{}\n", ip, banned_player.guid_key, banned_player.player_name, banned_player.banned_date_time, remove_disallowed_character_in_string(banned_player.reason), banned_player.banned_by_user_name) };
+      oss << data_line;
+      message_length += data_line.length();
+      if (message_length > 1300) {
+        main_app.add_message_to_queue(message_t("receive-ipaddressrangebans", oss.str(), admin));
+        oss.str(string{});
+        oss.clear();
+        message_length = 0U;
+      }
+    }
+
+    if (message_length > 0U) {
+      const string last_data_line{ oss.str() };
+      main_app.add_message_to_queue(message_t("receive-ipaddressrangebans", last_data_line, admin));
+    }
+  });
+
+  // request-namebans
+  main_app.add_message_handler("request-namebans", [](const string &user, const time_t timestamp, const string &data, bool is_print_in_messages, const string &sender_ip) {
+    const auto &banned_names =
+      main_app.get_game_server().get_banned_names_vector();
+    const size_t start_index{ 50U <= banned_names.size() ? banned_names.size() - 50U : 0U };
+    auto &admin = main_app.get_user_for_name(user, sender_ip);
+    admin->is_logged_in = true;
+    print_colored_text(app_handles.hwnd_re_messages_data, format("^5Received request from ^7{} ^5to send them the ^1last {} banned name ^5entries.", admin->user_name, banned_names.size() < 50U ? banned_names.size() : 50U).c_str());
+    size_t message_length{};
+    ostringstream oss;
+    for (size_t i{ start_index }; i < banned_names.size(); ++i) {
+      const auto &banned_player = banned_names[i];
+      const string data_line{ format("{}\\{}\\{}\\{}\\{}\\{}\n", banned_player.ip_address, banned_player.guid_key, banned_player.player_name, banned_player.banned_date_time, remove_disallowed_character_in_string(banned_player.reason), banned_player.banned_by_user_name) };
+      oss << data_line;
+      message_length += data_line.length();
+      if (message_length > 1300) {
+        main_app.add_message_to_queue(message_t("receive-namebans", oss.str(), admin));
+        oss.str(string{});
+        oss.clear();
+        message_length = 0U;
+      }
+    }
+
+    if (message_length > 0U) {
+      const string last_data_line{ oss.str() };
+      main_app.add_message_to_queue(message_t("receive-namebans", last_data_line, admin));
+    }
+  });
+
+  // request-citybans
+  main_app.add_message_handler("request-citybans", [](const string &user, const time_t timestamp, const string &data, bool is_print_in_messages, const string &sender_ip) {
+    const auto &banned_cities =
+      main_app.get_game_server().get_banned_cities_set();
+    auto &admin = main_app.get_user_for_name(user, sender_ip);
+    admin->is_logged_in = true;
+    print_colored_text(app_handles.hwnd_re_messages_data, format("^5Received request from ^7{} ^5to send them ^1all of the banned city ^5entries.", admin->user_name).c_str());
+    size_t message_length{};
+    ostringstream oss;
+    for (const auto &banned_city : banned_cities) {
+      const string data_line{ format("{}\n", banned_city) };
+      oss << data_line;
+      message_length += data_line.length();
+      if (message_length > 1300) {
+        main_app.add_message_to_queue(message_t("receive-citybans", oss.str(), admin));
+        oss.str(string{});
+        oss.clear();
+        message_length = 0U;
+      }
+    }
+
+    if (message_length > 0U) {
+      const string last_data_line{ oss.str() };
+      main_app.add_message_to_queue(message_t("receive-citybans", last_data_line, admin));
+    }
+  });
+
+  // request-countrybans
+  main_app.add_message_handler("request-countrybans", [](const string &user, const time_t timestamp, const string &data, bool is_print_in_messages, const string &sender_ip) {
+    const auto &banned_countries =
+      main_app.get_game_server().get_banned_countries_set();
+    auto &admin = main_app.get_user_for_name(user, sender_ip);
+    admin->is_logged_in = true;
+    print_colored_text(app_handles.hwnd_re_messages_data, format("^5Received request from ^7{} ^5to send them all ^1all of the banned country ^5entries.", admin->user_name).c_str());
+    size_t message_length{};
+    ostringstream oss;
+    for (const auto &banned_country : banned_countries) {
+      const string data_line{ format("{}\n", banned_country) };
+      oss << data_line;
+      message_length += data_line.length();
+      if (message_length > 1300) {
+        main_app.add_message_to_queue(message_t("receive-countrybans", oss.str(), admin));
+        oss.str(string{});
+        oss.clear();
+        message_length = 0U;
+      }
+    }
+
+    if (message_length > 0U) {
+      const string last_data_line{ oss.str() };
+      main_app.add_message_to_queue(message_t("receive-countrybans", last_data_line, admin));
+    }
+  });
+
+
   main_app.add_message_handler("request-admindata", [](const string &user, const time_t timestamp, const string &data, bool is_print_in_messages, const string &sender_ip) {
     auto &user_data = main_app.get_user_for_name(user, sender_ip);
     user_data->is_logged_in = true;
     const auto &users = main_app.get_users();
     if (!users.empty()) {
       for (size_t i{}; i < users.size(); ++i) {
-        const string admin_data{ format(R"({}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{})", users[i]->user_name, (users[i]->is_admin ? "true" : "false"), (users[i]->is_logged_in ? "true" : "false"), (users[i]->is_online ? "true" : "false"), users[i]->ip_address, users[i]->geo_information, users[i]->last_login_time_stamp, users[i]->last_logout_time_stamp, users[i]->no_of_logins, users[i]->no_of_warnings, users[i]->no_of_kicks, users[i]->no_of_tempbans, users[i]->no_of_guidbans, users[i]->no_of_ipbans, users[i]->no_of_iprangebans, users[i]->no_of_citybans, users[i]->no_of_countrybans) };
+        const string admin_data{ format(R"({}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{})", users[i]->user_name, (users[i]->is_admin ? "true" : "false"), (users[i]->is_logged_in ? "true" : "false"), (users[i]->is_online ? "true" : "false"), users[i]->ip_address, users[i]->geo_information, users[i]->last_login_time_stamp, users[i]->last_logout_time_stamp, users[i]->no_of_logins, users[i]->no_of_warnings, users[i]->no_of_kicks, users[i]->no_of_tempbans, users[i]->no_of_guidbans, users[i]->no_of_ipbans, users[i]->no_of_iprangebans, users[i]->no_of_citybans, users[i]->no_of_countrybans, users[i]->no_of_namebans) };
         main_app.add_message_to_queue(message_t("receive-admindata", admin_data, user_data));
       }
     }
@@ -1545,7 +1723,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     [&]() {
       IsGUIThread(TRUE);
       print_colored_text(app_handles.hwnd_re_messages_data, "^3Started parsing ^1tinyrcon.json ^3file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-      print_colored_text(app_handles.hwnd_re_messages_data, "^2Finished parsing ^1tinyrcon.json ^3file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);  
+      print_colored_text(app_handles.hwnd_re_messages_data, "^2Finished parsing ^1tinyrcon.json ^3file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
       print_colored_text(app_handles.hwnd_re_messages_data, "^3Started importing serialized binary geological data from\n ^1'plugins/geoIP/geo.dat' ^3file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
       // const string geo_dat_file_path{ main_app.get_current_working_directory() + "plugins\\geoIP\\IP2LOCATION-LITE-DB3.csv" };
       // parse_geodata_lite_csv_file(geo_dat_file_path.c_str());

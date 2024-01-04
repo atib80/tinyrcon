@@ -17,9 +17,7 @@
 #include <bitextractor.hpp>
 #include <bitexception.hpp>
 #include <bittypes.hpp>
-// #include <crtdbg.h>
 #include "stack_trace_element.h"
-#include <asio.hpp>
 
 // Call of duty steam appid: 2620
 // Call of duty 2 steam appid: 2630
@@ -69,12 +67,11 @@ extern volatile std::atomic<bool> is_display_permanently_banned_players_data_eve
 extern volatile std::atomic<bool> is_display_temporarily_banned_players_data_event;
 extern volatile std::atomic<bool> is_display_banned_cities_data_event;
 extern volatile std::atomic<bool> is_display_banned_countries_data_event;
-// extern volatile std::atomic<bool> is_display_players_data;
 extern volatile std::atomic<bool> is_refreshing_game_servers_data_event;
 extern std::atomic<int> admin_choice;
 extern std::string admin_reason;
 
-mutex log_data_mutex;
+std::mutex log_data_mutex;
 
 extern volatile atomic<size_t> atomic_counter;
 
@@ -293,6 +290,7 @@ extern const map<string, string> user_commands_help{
   { "!stats",
     "^5!stats ^2-> ^5displays up-to-date ^5Tiny^6Rcon ^1admins' ^5related stats data." }
 };
+
 
 extern const unordered_set<string> user_commands_set{
   "!admins",
@@ -2207,6 +2205,10 @@ void parse_tempbans_data_file(const char *file_path, std::vector<player> &temp_b
         temp_banned_players.push_back(std::move(temp_banned_player_data));
       }
     }
+
+    sort(begin(temp_banned_players), end(temp_banned_players), [](const player &p1, const player &p2) {
+      return p1.banned_start_time < p2.banned_start_time;
+    });
   }
 }
 
@@ -2983,6 +2985,7 @@ bool get_user_input()
   SetWindowText(app_handles.hwnd_e_user_input, "");
   // ReleaseCapture();
   // SetFocus(app_handles.hwnd_main_window);
+  // SetForegroundWindow(app_handles.hwnd_main_window);
   return should_program_terminate(user_input);
 }
 
@@ -3207,7 +3210,7 @@ bool check_if_user_provided_argument_is_valid_for_specified_command(
   const string &arg)
 {
   int number{};
-  if ((str_compare_i(cmd, "!k") == 0) || (str_compare_i(cmd, "!kick") == 0) || (str_compare_i(cmd, "clientkick") == 0) || (str_compare_i(cmd, "!tb") == 0) || (str_compare_i(cmd, "!tempban") == 0) || (str_compare_i(cmd, "tempbanclient") == 0) || (str_compare_i(cmd, "!b") == 0) || (str_compare_i(cmd, "!ban") == 0) || (str_compare_i(cmd, "banclient") == 0)) {
+  if ((str_compare_i(cmd, "!w") == 0) || (str_compare_i(cmd, "!warn") == 0) || (str_compare_i(cmd, "!k") == 0) || (str_compare_i(cmd, "!kick") == 0) || (str_compare_i(cmd, "clientkick") == 0) || (str_compare_i(cmd, "!tb") == 0) || (str_compare_i(cmd, "!tempban") == 0) || (str_compare_i(cmd, "tempbanclient") == 0) || (str_compare_i(cmd, "!b") == 0) || (str_compare_i(cmd, "!ban") == 0) || (str_compare_i(cmd, "banclient") == 0)) {
     return is_valid_decimal_whole_number(arg, number) && check_if_user_provided_pid_is_valid(arg);
   }
 
@@ -3920,6 +3923,11 @@ void display_temporarily_banned_ip_addresses(const size_t number_of_last_bans_to
 
   ostringstream oss;
   ostringstream log;
+
+  const size_t number_of_entries_to_display{ number_of_last_bans_to_display != string::npos && number_of_last_bans_to_display < temp_banned_players.size() ? number_of_last_bans_to_display : temp_banned_players.size() };
+  oss << format("\n^5Last ^1{} ^5temporary {}:", number_of_entries_to_display, number_of_entries_to_display != 1 ? "bans" : "ban");
+  log << format("\nLast {} temporary {}:", number_of_entries_to_display, number_of_entries_to_display != 1 ? "bans" : "ban");
+
   const string decoration_line(149 + longest_name_length + longest_country_length, '=');
   oss << "^5\n"
       << decoration_line << "\n"
@@ -4062,7 +4070,7 @@ void display_temporarily_banned_ip_addresses(const size_t number_of_last_bans_to
     log << string{ decoration_line + "\n\n"s };
   }
   const string message{ oss.str() };
-  print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true);
+  print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::no, true);
   if (is_save_data_to_log_file) {
     log_message(log.str(), is_log_datetime::yes);
   }
@@ -4083,6 +4091,11 @@ void display_banned_ip_address_ranges(const size_t number_of_last_bans_to_displa
 
   ostringstream oss;
   ostringstream log;
+
+  const size_t number_of_entries_to_display{ number_of_last_bans_to_display != string::npos && number_of_last_bans_to_display < banned_players.size() ? number_of_last_bans_to_display : banned_players.size() };
+
+  oss << format("\n^5Last ^1{} ^5IP address range {}:", number_of_entries_to_display, number_of_entries_to_display != 1 ? "bans" : "ban");
+  log << format("\nLast {} IP address range {}:", number_of_entries_to_display, number_of_entries_to_display != 1 ? "bans" : "ban");
   const string decoration_line(127 + longest_name_length + longest_country_length, '=');
   oss << "^5\n"
       << decoration_line << "\n";
@@ -4221,7 +4234,7 @@ void display_banned_ip_address_ranges(const size_t number_of_last_bans_to_displa
     log << string{ decoration_line + "\n\n"s };
   }
   const string message{ oss.str() };
-  print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true);
+  print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::no, true);
   if (is_save_data_to_log_file) {
     log_message(log.str(), is_log_datetime::yes);
   }
@@ -4332,7 +4345,7 @@ void display_protected_entries(const char *table_title, const std::set<std::stri
     log << string{ decoration_line + "\n\n"s };
   }
   const string message{ oss.str() };
-  print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true);
+  print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::no, true);
   if (is_save_data_to_log_file) {
     log_message(log.str(), is_log_datetime::yes);
   }
@@ -4353,6 +4366,11 @@ void display_permanently_banned_ip_addresses(const size_t number_of_last_bans_to
 
   ostringstream oss;
   ostringstream log;
+
+  const size_t number_of_entries_to_display{ number_of_last_bans_to_display != string::npos && number_of_last_bans_to_display < banned_players.size() ? number_of_last_bans_to_display : banned_players.size() };
+
+  oss << format("\n^5Last ^1{} ^5IP address {}:", number_of_entries_to_display, number_of_entries_to_display != 1 ? "bans" : "ban");
+  log << format("\nLast {} IP address {}:", number_of_entries_to_display, number_of_entries_to_display != 1 ? "bans" : "ban");
   const string decoration_line(122 + longest_name_length + longest_country_length, '=');
   oss << "^5\n"
       << decoration_line << "\n";
@@ -4487,7 +4505,7 @@ void display_permanently_banned_ip_addresses(const size_t number_of_last_bans_to
     log << string{ decoration_line + "\n\n"s };
   }
   const string message{ oss.str() };
-  print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true);
+  print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::no, true);
   if (is_save_data_to_log_file) {
     log_message(log.str(), is_log_datetime::yes);
   }
@@ -4508,6 +4526,11 @@ void display_banned_player_names(const char *title, const size_t number_of_last_
 
   ostringstream oss;
   ostringstream log;
+
+  const size_t number_of_entries_to_display{ number_of_last_bans_to_display != string::npos && number_of_last_bans_to_display < banned_players.size() ? number_of_last_bans_to_display : banned_players.size() };
+
+  oss << format("\n^5Last ^1{} ^5banned player {}:", number_of_entries_to_display, number_of_entries_to_display != 1 ? "names" : "name");
+  log << format("\nLast {} banned player {}:", number_of_entries_to_display, number_of_entries_to_display != 1 ? "names" : "name");
   const string decoration_line(122 + longest_name_length + longest_country_length, '=');
   oss << "^5\n"
       << decoration_line << "\n";
@@ -4661,7 +4684,7 @@ void display_banned_player_names(const char *title, const size_t number_of_last_
     log << string{ decoration_line + "\n\n"s };
   }
   const string message{ oss.str() };
-  print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true);
+  print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::no, true);
   if (is_save_data_to_log_file) {
     log_message(log.str(), is_log_datetime::yes);
   }
@@ -4808,7 +4831,7 @@ void display_admins_data(const std::vector<std::shared_ptr<tiny_rcon_client_user
   oss << string{ "^5"s + decoration_line + "\n\n"s };
 
   const string message{ oss.str() };
-  print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true);
+  print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::no, true);
 }
 
 
@@ -7288,7 +7311,7 @@ void construct_tinyrcon_gui(HWND hWnd)
 
   app_handles.hwnd_quit_button = CreateWindowEx(NULL, "Button", "E&xit", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, screen_width - 100, screen_height - 102, 70, 28, hWnd, reinterpret_cast<HMENU>(ID_QUITBUTTON), app_handles.hInstance, nullptr);
 
-  app_handles.hwnd_clear_messages_button = CreateWindowEx(NULL, "Button", "Clear messages", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, screen_width / 2 + 170, 8, 120, 28, hWnd, reinterpret_cast<HMENU>(ID_CLEARMESSAGESCREENBUTTON), app_handles.hInstance, nullptr);
+  app_handles.hwnd_clear_messages_button = CreateWindowEx(NULL, "Button", "C&lear messages", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, screen_width / 2 + 170, 8, 120, 28, hWnd, reinterpret_cast<HMENU>(ID_CLEARMESSAGESCREENBUTTON), app_handles.hInstance, nullptr);
 
   app_handles.hwnd_configure_server_settings_button = CreateWindowEx(NULL, "Button", "Configure settings", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, screen_width / 2 + 310, 8, 130, 28, hWnd, reinterpret_cast<HMENU>(ID_BUTTON_CONFIGURE_SERVER_SETTINGS), app_handles.hInstance, nullptr);
 
@@ -9262,7 +9285,6 @@ void initiate_sending_rcon_status_command_now()
 
 void prepare_players_data_for_display(game_server &gs, const bool is_log_status_table)
 {
-
   char buffer[256];
   size_t longest_name_length{ 32 };
   size_t longest_country_length{ 32 };
@@ -9937,16 +9959,16 @@ void display_banned_cities(const std::set<std::string> &banned_cities)
   if (banned_cities.empty()) {
     oss << "\n^3You haven't banned any ^1cities ^3yet.\n";
   } else {
-    oss << "\n^5Banned cities are:\n";
+    oss << format("\n^5There {} ^1{} ^5banned {}:\n", banned_cities.size() != 1 ? "are" : "is", banned_cities.size(), banned_cities.size() != 1 ? "cities" : "city");
 
     for (const auto &banned_city : banned_cities) {
       oss << "^1" << banned_city << '\n';
     }
   }
 
-  oss << (main_app.get_is_automatic_city_kick_enabled() ? "\n^5The ^1automatic city ban ^5feature is ^2currently enabled^5.\n" : "\n^5The ^1automatic city ban ^5feature is ^1currently disabled^5.\n");
+  oss << (main_app.get_is_automatic_city_kick_enabled() ? "\n^5The ^1automatic city ban ^5feature is ^2currently enabled^5.\n\n" : "\n^5The ^1automatic city ban ^5feature is ^1currently disabled^5.\n\n");
   const string information{ oss.str() };
-  print_colored_text(app_handles.hwnd_re_messages_data, information.c_str());
+  print_colored_text(app_handles.hwnd_re_messages_data, information.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::no, true);
 }
 
 void display_banned_countries(const std::set<std::string> &banned_countries)
@@ -9955,17 +9977,17 @@ void display_banned_countries(const std::set<std::string> &banned_countries)
   if (banned_countries.empty()) {
     oss << "\n^3You haven't banned any ^1countries ^3yet.\n";
   } else {
-    oss << "\n^5Banned countries are:\n";
+    oss << format("\n^5There {} ^1{} ^5banned {}:\n", banned_countries.size() != 1 ? "are" : "is", banned_countries.size(), banned_countries.size() != 1 ? "countries" : "country");
 
     for (const auto &banned_country : banned_countries) {
       oss << "^1" << banned_country << '\n';
     }
   }
 
-  oss << (main_app.get_is_automatic_country_kick_enabled() ? "\n^5The ^1automatic country ban ^5feature is ^2currently enabled^5.\n" : "\n^5The ^1automatic country ban ^5feature is ^1currently disabled^5.\n");
+  oss << (main_app.get_is_automatic_country_kick_enabled() ? "\n^5The ^1automatic country ban ^5feature is ^2currently enabled^5.\n\n" : "\n^5The ^1automatic country ban ^5feature is ^1currently disabled^5.\n\n");
 
   const string information{ oss.str() };
-  print_colored_text(app_handles.hwnd_re_messages_data, information.c_str());
+  print_colored_text(app_handles.hwnd_re_messages_data, information.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::no, true);
 }
 
 time_t get_current_time_stamp()
@@ -10094,11 +10116,12 @@ std::string get_wide_ip_address_range_for_specified_ip_address(const std::string
 
 void check_if_admins_are_online_and_get_admins_player_names(const std::vector<player> &players, size_t no_of_online_players)
 {
+  unsigned long guid_key{};
   no_of_online_players = std::min(no_of_online_players, players.size());
   for (auto &u : main_app.get_users()) {
     u->is_online = false;
     for (size_t i{}; i < no_of_online_players; ++i) {
-      if (!u->ip_address.empty() && len(players[i].ip_address) >= 7 && u->ip_address == players[i].ip_address) {
+      if (check_ip_address_validity(u->ip_address, guid_key) && u->ip_address == players[i].ip_address) {
         u->is_online = true;
         u->player_name = players[i].player_name;
         break;
@@ -10204,9 +10227,10 @@ bool validate_admin_and_show_missing_admin_privileges_message(const bool is_show
 
 void removed_disallowed_character_in_string(std::string &input)
 {
+  // const string disallowed_chars{ "\\/-[]\"'{|}%:;=+\b\f\n\r\t " };
   string_view disallowed_chars{ "\\", len("\\") };
   const std::unordered_set<char> disallowed_characters(cbegin(disallowed_chars), cend(disallowed_chars));
-  string cleaned_input{};
+  string cleaned_input;
   for (const char ch : input) {
     if (!disallowed_characters.contains(ch))
       cleaned_input.push_back(ch);
@@ -10216,6 +10240,7 @@ void removed_disallowed_character_in_string(std::string &input)
 
 std::string remove_disallowed_character_in_string(const std::string &input)
 {
+  // const string disallowed_chars{ "\\/-[]\"'{|}%:;=+\b\f\n\r\t " };
   string_view disallowed_chars{ "\\[]:", len("\\[]:") };
   const std::unordered_set<char> disallowed_characters(cbegin(disallowed_chars), cend(disallowed_chars));
   string cleaned_input;
@@ -10224,6 +10249,20 @@ std::string remove_disallowed_character_in_string(const std::string &input)
       cleaned_input.push_back(ch);
     else
       cleaned_input.push_back('_');
+  }
+
+  return cleaned_input;
+}
+
+std::string remove_disallowed_characters_in_ip_address(const std::string &ip_address)
+{
+  // const string disallowed_chars{ "\\/-[]\"'{|}%:;=+\b\f\n\r\t " };
+  string_view disallowed_chars{ ".\\[]:", len(".\\[]:") };
+  const std::unordered_set<char> disallowed_characters(cbegin(disallowed_chars), cend(disallowed_chars));
+  string cleaned_input;
+  for (const char ch : ip_address) {
+    if (!disallowed_characters.contains(ch))
+      cleaned_input.push_back(ch);
   }
 
   return cleaned_input;
@@ -10289,8 +10328,6 @@ bool run_executable(const char *file_path_for_executable)
 
 void restart_tinyrcon_client()
 {
-  // const string tinyrcon_exe_file_path{ main_app.get_current_working_directory() + "TinyRcon.exe" };
-
   if (run_executable(main_app.get_auto_update_manager().get_self_full_path().c_str())) {
     is_terminate_program.store(true);
     PostQuitMessage(0);
@@ -10628,7 +10665,7 @@ std::string find_version_of_installed_cod2_game()
 // }
 //
 // bool check_if_cod2_v1_2_game_patch_files_are_missing_and_download_them()
-//{
+// {
 //   if (!check_if_file_path_exists(main_app.get_cod2mp_exe_path().c_str())) {
 //     find_call_of_duty_2_installation_path(true);
 //   }
@@ -10736,7 +10773,6 @@ std::string find_version_of_installed_cod2_game()
 void view_game_servers(HWND grid)
 {
   display_game_servers_data_in_servers_grid(grid);
-  // UpdateWindow(grid);
 }
 
 void refresh_game_servers_data(HWND hgrid)

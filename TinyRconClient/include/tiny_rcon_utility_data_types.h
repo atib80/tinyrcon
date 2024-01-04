@@ -110,6 +110,13 @@ struct command_t
 enum class message_type_t { send,
   receive };
 
+// struct print_message_t
+//{
+//   explicit print_message_t(HWND control, std::string message) : control_{ control }, message_{ std::move(message) } {}
+//   HWND control_;
+//   std::string message_;
+// };
+
 struct message_t
 {
   explicit message_t(std::string message_command, std::string message_data, const bool is_show_in_messages = true) : command{ std::move(message_command) }, data{ std::move(message_data) }, is_show_in_messages{ is_show_in_messages } {}

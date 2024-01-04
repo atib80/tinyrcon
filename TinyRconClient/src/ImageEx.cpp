@@ -460,6 +460,8 @@ void ImageEx::ThreadAnimation()
 // N T ALMOND       29012002	1.0			Origin
 //
 ////////////////////////////////////////////////////////////////////////////////
+extern const HBRUSH black_brush;
+
 bool ImageEx::DrawFrameGIF()
 {
 
@@ -473,6 +475,8 @@ bool ImageEx::DrawFrameGIF()
   HDC hDC = GetDC(m_hWnd);
   if (hDC) {
     Graphics graphics(hDC);
+    RECT imageRect{ m_pt.X, m_pt.Y, m_pt.X + hmWidth, m_pt.Y + hmHeight };
+    FillRect(hDC, &imageRect, black_brush);
     graphics.DrawImage(this, m_pt.X, m_pt.Y, hmWidth, hmHeight);
     ReleaseDC(m_hWnd, hDC);
   }

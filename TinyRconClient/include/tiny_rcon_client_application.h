@@ -56,6 +56,7 @@ class tiny_rcon_client_application
   std::mutex command_mutex{};
   std::recursive_mutex command_queue_mutex{};
   std::recursive_mutex message_queue_mutex{};
+  // std::recursive_mutex tinyrcon_messages_queue_mutex{};
   string username{ "^3Player" };
   std::string game_server_name{
     "185.158.113.146:28995 CoD2 CTF"
@@ -193,6 +194,7 @@ class tiny_rcon_client_application
   connection_manager_for_messages cm_for_messages;
   std::queue<command_t> command_queue{};
   std::queue<message_t> message_queue{};
+  // std::queue<print_message_t> tinyrcon_messages_to_print;
 
   std::vector<std::shared_ptr<tiny_rcon_client_user>> users;
   std::unordered_map<std::string, std::shared_ptr<tiny_rcon_client_user>> name_to_user;
@@ -1457,6 +1459,26 @@ public:
     message_queue.pop();
     return next_message;
   }
+
+  /*bool is_tinyrcon_message_queue_empty()
+  {
+    std::lock_guard lg{ tinyrcon_messages_queue_mutex };
+    return tinyrcon_messages_to_print.empty();
+  }
+
+  inline void add_tinyrcon_message_to_queue(print_message_t message)
+  {
+    std::lock_guard lg{ tinyrcon_messages_queue_mutex };
+    tinyrcon_messages_to_print.emplace(std::move(message));
+  }
+
+  inline print_message_t get_tinyrcon_message_from_queue()
+  {
+    std::lock_guard lg{ tinyrcon_messages_queue_mutex };
+    auto next_message = std::move(tinyrcon_messages_to_print.front());
+    tinyrcon_messages_to_print.pop();
+    return next_message;
+  }*/
 
   const std::unordered_map<std::string, std::function<void(const std::vector<std::string> &)>> &get_command_handlers() const
   {

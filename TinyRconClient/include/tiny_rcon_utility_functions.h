@@ -84,7 +84,7 @@ void parse_banned_ip_address_ranges_file(const char *file_path, std::vector<play
 void parse_banned_cities_file(const char *file_path, std::set<std::string> &banned_cities);
 
 void parse_banned_countries_file(const char *file_path, std::set<std::string> &banned_countries);
-
+void save_tempbans_to_file(const char *file_path, const std::vector<player> &temp_banned_players);
 void save_banned_ip_entries_to_file(const char *file_path, const std::vector<player> &banned_ip_entries);
 void save_banned_ip_address_range_entries_to_file(const char *file_path, const std::vector<player> &banned_ip_address_ranges);
 void save_banned_cities_to_file(const char *file_path, const std::set<std::string> &banned_cities);
@@ -372,7 +372,8 @@ bool save_current_user_data_to_json_file(const char *json_file_path);
 bool validate_admin_and_show_missing_admin_privileges_message(const bool is_show_message_box, const is_log_message log_message = is_log_message::no, const is_log_datetime log_date_time = is_log_datetime::no);
 void removed_disallowed_character_in_string(std::string &);
 std::string remove_disallowed_character_in_string(const std::string &);
-size_t ltrim_specified_characters(char *src, const size_t buffer_len, const char *needle_chars);
+std::string remove_disallowed_characters_in_ip_address(const std::string &ip_address);
+  size_t ltrim_specified_characters(char *src, const size_t buffer_len, const char *needle_chars);
 std::string get_cleaned_user_name(const std::string &name);
 void replace_br_with_new_line(std::string &message);
 void parse_protected_entries_file(const char *file_path, std::set<std::string> &protected_entries);
