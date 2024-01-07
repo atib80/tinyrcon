@@ -3822,7 +3822,7 @@ void sort_players_data(std::vector<player> &players_data, const sort_type sort_m
     break;
 
   case sort_type::ip_asc:
-    if (main_app.get_is_connection_settings_valid()) {
+    if (main_app.get_current_game_server().get_is_connection_settings_valid()) {
       std::sort(std::begin(players_data), std::begin(players_data) + number_of_players, [](const player &pl1, const player &pl2) {
         unsigned long ip_key1{}, ip_key2{};
         if (!check_ip_address_validity(pl1.ip_address, ip_key1))
@@ -3835,7 +3835,7 @@ void sort_players_data(std::vector<player> &players_data, const sort_type sort_m
     break;
 
   case sort_type::ip_desc:
-    if (main_app.get_is_connection_settings_valid()) {
+    if (main_app.get_current_game_server().get_is_connection_settings_valid()) {
       std::sort(std::begin(players_data), std::begin(players_data) + number_of_players, [](const player &pl1, const player &pl2) {
         unsigned long ip_key1{}, ip_key2{};
         if (!check_ip_address_validity(pl1.ip_address, ip_key1))
@@ -3872,7 +3872,7 @@ void sort_players_data(std::vector<player> &players_data, const sort_type sort_m
     break;
 
   case sort_type::geo_asc:
-    if (main_app.get_is_connection_settings_valid()) {
+    if (main_app.get_current_game_server().get_is_connection_settings_valid()) {
       std::sort(std::begin(players_data), std::begin(players_data) + number_of_players, [](const player &pl1, const player &pl2) {
         char buffer1[256];
         (void)snprintf(buffer1, std::size(buffer1), "%s, %s", (len(pl1.country_name) > 0 ? pl1.country_name : pl1.region), pl1.city);
@@ -3888,7 +3888,7 @@ void sort_players_data(std::vector<player> &players_data, const sort_type sort_m
     break;
 
   case sort_type::geo_desc:
-    if (main_app.get_is_connection_settings_valid()) {
+    if (main_app.get_current_game_server().get_is_connection_settings_valid()) {
       std::sort(std::begin(players_data), std::begin(players_data) + number_of_players, [](const player &pl1, const player &pl2) {
         char buffer1[256];
         (void)snprintf(buffer1, std::size(buffer1), "%s, %s", (len(pl1.country_name) > 0 ? pl1.country_name : pl1.region), pl1.city);
@@ -8403,11 +8403,11 @@ void process_button_save_changes_click_event(HWND hwnd)
     print_colored_text(app_handles.hwnd_re_confirmation_message, msg_buffer, is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::no);
     auto [test_result, game_name] = check_if_specified_server_ip_port_and_rcon_password_are_valid(new_server_ip.c_str(), new_port, new_rcon_password.c_str());
     if (test_result) {
-      main_app.set_is_connection_settings_valid(true);
+      main_app.get_current_game_server().set_is_connection_settings_valid(true);
       set_admin_actions_buttons_active(TRUE, false);
       print_colored_text(app_handles.hwnd_re_confirmation_message, "^2Testing connection SUCCEEDED!\n", is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::no);
     } else {
-      main_app.set_is_connection_settings_valid(false);
+      main_app.get_current_game_server().set_is_connection_settings_valid(false);
       set_admin_actions_buttons_active(FALSE, false);
       print_colored_text(app_handles.hwnd_re_confirmation_message, "^1Testing connection FAILED!\n", is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::no);
     }
@@ -9264,11 +9264,11 @@ bool initialize_and_verify_server_connection_settings()
   const auto result = check_if_specified_server_ip_port_and_rcon_password_are_valid(ip.c_str(), port, rcon.c_str());
   main_app.set_game_name(result.second);
   if (result.first) {
-    main_app.set_is_connection_settings_valid(true);
+    main_app.get_current_game_server().set_is_connection_settings_valid(true);
     set_admin_actions_buttons_active(TRUE);
     print_colored_text(app_handles.hwnd_re_messages_data, "^2Initialization of ^1network settings ^2has successfully completed.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
   } else {
-    main_app.set_is_connection_settings_valid(false);
+    main_app.get_current_game_server().set_is_connection_settings_valid(false);
     set_admin_actions_buttons_active(FALSE);
     print_colored_text(app_handles.hwnd_re_messages_data, "^3Initialization of ^1network settings ^3has failed.\n^3The provided ^1rcon password ^3is incorrect.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
   }
@@ -10212,7 +10212,7 @@ void load_tinyrcon_client_user_data(const char *file_path)
 
 bool validate_admin_and_show_missing_admin_privileges_message(const bool is_show_message_box, const is_log_message log_message, const is_log_datetime log_date_time)
 {
-  if (!main_app.get_is_connection_settings_valid()) {
+  if (!main_app.get_current_game_server().get_is_connection_settings_valid()) {
     string warning_msg{ format("^7{}^3, you need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands.\n", main_app.get_username()) };
     print_colored_text(app_handles.hwnd_re_messages_data, warning_msg.c_str(), is_append_message_to_richedit_control::yes, log_message, log_date_time);
     if (is_show_message_box) {
@@ -10360,7 +10360,7 @@ bool parse_game_type_information_from_rcon_reply(const string &incoming_data_buf
       app_handles.hwnd_re_messages_data,
       std::move(ex_msg3)
     };
-    main_app.set_is_connection_settings_valid(true);
+    main_app.get_current_game_server().set_is_connection_settings_valid(true);
     first_pos += strlen(R"("g_gametype" is: ")");
     const size_t last_pos{ incoming_data_buffer.find_first_of("^7\" ", first_pos) };
     if (string::npos != last_pos && last_pos < incoming_data_buffer.length() && last_pos - first_pos <= 3) {

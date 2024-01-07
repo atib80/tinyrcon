@@ -373,7 +373,7 @@ bool validate_admin_and_show_missing_admin_privileges_message(const bool is_show
 void removed_disallowed_character_in_string(std::string &);
 std::string remove_disallowed_character_in_string(const std::string &);
 std::string remove_disallowed_characters_in_ip_address(const std::string &ip_address);
-  size_t ltrim_specified_characters(char *src, const size_t buffer_len, const char *needle_chars);
+size_t ltrim_specified_characters(char *src, const size_t buffer_len, const char *needle_chars);
 std::string get_cleaned_user_name(const std::string &name);
 void replace_br_with_new_line(std::string &message);
 void parse_protected_entries_file(const char *file_path, std::set<std::string> &protected_entries);

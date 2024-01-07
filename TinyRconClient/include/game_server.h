@@ -213,6 +213,16 @@ public:
 
   void set_hw_info(const int new_hw) { hw = new_hw; }
 
+  void set_is_connection_settings_valid(const bool new_value) noexcept
+  {
+    is_connection_settings_valid = new_value;
+  }
+
+  bool get_is_connection_settings_valid() const noexcept
+  {
+    return is_connection_settings_valid;
+  }
+
   void set_is_pure(const bool new_pure) { is_pure = new_pure; }
 
   void set_is_kill_cam_enabled(const bool new_kill_cam_enabled)
@@ -612,6 +622,7 @@ private:
   size_t maximum_number_of_warnings_for_automatic_kick{ 2 };
   uint_least16_t port{ 28995 };
   const char *country_code{};
+  bool is_connection_settings_valid{ true };
   bool is_pure{ true };
   bool is_kill_cam_enabled{ true };
   bool is_allow_anonymous_players{ true };

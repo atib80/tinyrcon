@@ -21,7 +21,7 @@ using namespace std::chrono;
 using namespace std::filesystem;
 using namespace Gdiplus;
 
-extern const string program_version{ "2.7.1.3" };
+extern const string program_version{ "2.7.1.5" };
 
 extern const std::regex ip_address_and_port_regex;
 extern const unordered_set<string> rcon_status_commands;
@@ -251,17 +251,18 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
   main_app.set_current_working_directory();
 
-  const string config_folder_path{ format("{}{}", main_app.get_current_working_directory(), "config") };
-  const string data_folder_path{ format("{}{}", main_app.get_current_working_directory(), "data") };
-  const string log_folder_path{ format("{}{}", main_app.get_current_working_directory(), "log") };
-  const string plugins_geoIP_folder_path{ format("{}{}", main_app.get_current_working_directory(), "plugins\\geoIP") };
-  const string config_file_path{ format("{}{}", main_app.get_current_working_directory(), "config\\tinyrcon.json") };
+  /*const string config_folder_path{ format("\"{}{}\"", main_app.get_current_working_directory(), "config") };
+  const string data_folder_path{ format("\"{}{}\"", main_app.get_current_working_directory(), "data") };
+  const string log_folder_path{ format("\"{}{}\"", main_app.get_current_working_directory(), "log") };
+  const string plugins_geoIP_folder_path{ format("\"{}{}\"", main_app.get_current_working_directory(), "plugins\\geoIP") };
+  const string config_file_path{ format("\"{}{}\"", main_app.get_current_working_directory(), "config\\tinyrcon.json") };*/
 
   if (!create_necessary_folders_and_files({
-        config_folder_path,
-        data_folder_path,
-        log_folder_path,
-        plugins_geoIP_folder_path,
+        "config",
+        "data",
+        "log",
+        "plugins\\geoIP",
+        "temp",
         main_app.get_tinyrcon_config_file_path(),
         main_app.get_temp_bans_file_path(),
         main_app.get_ip_bans_file_path(),
@@ -277,7 +278,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     show_error(app_handles.hwnd_main_window, "Error creating necessary program folders and files!", 0);
   }
 
-  parse_tinyrcon_tool_config_file(config_file_path.c_str());
+  parse_tinyrcon_tool_config_file(main_app.get_tinyrcon_config_file_path());
 
   rcon_status_grid_column_header_titles[0] = main_app.get_header_player_pid_color() + "Pid"s;
   rcon_status_grid_column_header_titles[1] = main_app.get_header_player_score_color() + "Score"s;
@@ -303,8 +304,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
   construct_tinyrcon_gui(app_handles.hwnd_main_window);
 
-  const string log_file_path{ format("{}{}", log_folder_path, "\\commands_history.log") };
-  main_app.open_log_file(log_file_path.c_str());
+  // const string log_file_path{ format("\"{}{}\"", log_folder_path, "\\commands_history.log") };
+  // main_app.open_log_file(log_file_path.c_str());
+  main_app.open_log_file("log\\commands_history.log");
 
   main_app.set_game_server_index(0);
   main_app.set_user_ip_address(trim(get_tiny_rcon_client_external_ip_address()));
@@ -312,14 +314,14 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
   string username{ main_app.get_username() };
   remove_all_color_codes(username);
-  const string welcome_message{ format("Welcome back, {} {}", main_app.get_is_connection_settings_valid() ? "admin" : "player", username) };
+  const string welcome_message{ format("Welcome back, {} {}", main_app.get_current_game_server().get_is_connection_settings_valid() ? "admin" : "player", username) };
   Edit_SetText(app_handles.hwnd_e_user_input, welcome_message.c_str());
 
   load_tinyrcon_client_user_data(main_app.get_user_data_file_path());
 
   const auto &me = main_app.get_user_for_name(main_app.get_username(), main_app.get_user_ip_address());
   me->ip_address = main_app.get_user_ip_address();
-  me->is_admin = main_app.get_is_connection_settings_valid();
+  me->is_admin = main_app.get_current_game_server().get_is_connection_settings_valid();
   me->is_logged_in = true;
 
   main_app.add_command_handler({ "cls", "!cls" }, [](const vector<string> &) {
@@ -3578,13 +3580,13 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       parse_banned_countries_file(main_app.get_banned_countries_file_path(), main_app.get_current_game_server().get_banned_countries_set());
       parse_banned_names_file(main_app.get_banned_names_file_path(), main_app.get_current_game_server().get_banned_names_vector(), main_app.get_current_game_server().get_banned_names_map());
 
-      me->is_admin = main_app.get_is_connection_settings_valid();
+      me->is_admin = main_app.get_current_game_server().get_is_connection_settings_valid();
 
       string rcon_reply;
       if (main_app.get_game_servers_count() != 0) {
 
         auto &gs = main_app.get_game_servers()[0];
-        if (main_app.get_is_connection_settings_valid()) {
+        if (main_app.get_current_game_server().get_is_connection_settings_valid()) {
           main_app.get_connection_manager().send_and_receive_rcon_data("status", rcon_reply, gs.get_server_ip_address().c_str(), gs.get_server_port(), gs.get_rcon_password().c_str(), gs, true, true);
         } else {
           main_app.get_connection_manager().send_and_receive_non_rcon_data("getstatus", rcon_reply, gs.get_server_ip_address().c_str(), gs.get_server_port(), gs, true, true);
@@ -3625,10 +3627,22 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
             if (game_server_index < main_app.get_rcon_game_servers_count()) {
               game_server &rcon_gs = game_servers[game_server_index];
-              main_app.get_connection_manager().send_and_receive_rcon_data("status", rcon_reply, rcon_gs.get_server_ip_address().c_str(), rcon_gs.get_server_port(), rcon_gs.get_rcon_password().c_str(), rcon_gs, true, true);
+              if (rcon_gs.get_is_connection_settings_valid()) {
+                main_app.get_connection_manager().send_and_receive_rcon_data("status", rcon_reply, rcon_gs.get_server_ip_address().c_str(), rcon_gs.get_server_port(), rcon_gs.get_rcon_password().c_str(), rcon_gs, true, true);
+              } else {
+                main_app.get_connection_manager().send_and_receive_non_rcon_data("getstatus", rcon_reply, rcon_gs.get_server_ip_address().c_str(), rcon_gs.get_server_port(), rcon_gs, true, true);
+                this_thread::sleep_for(50ms);
+                auto [status, game_name] = check_if_specified_server_ip_port_and_rcon_password_are_valid(rcon_gs.get_server_ip_address().c_str(), rcon_gs.get_server_port(), rcon_gs.get_rcon_password().c_str());
+                rcon_gs.set_is_connection_settings_valid(status);
+              }
             } else {
               game_server &rcon_gs = game_servers[0];
-              main_app.get_connection_manager().send_and_receive_rcon_data("status", rcon_reply, rcon_gs.get_server_ip_address().c_str(), rcon_gs.get_server_port(), rcon_gs.get_rcon_password().c_str(), rcon_gs, true, true);
+              if (rcon_gs.get_is_connection_settings_valid()) {
+                main_app.get_connection_manager().send_and_receive_rcon_data("status", rcon_reply, rcon_gs.get_server_ip_address().c_str(), rcon_gs.get_server_port(), rcon_gs.get_rcon_password().c_str(), rcon_gs, true, true);
+              } else {
+                auto [status, game_name] = check_if_specified_server_ip_port_and_rcon_password_are_valid(rcon_gs.get_server_ip_address().c_str(), rcon_gs.get_server_port(), rcon_gs.get_rcon_password().c_str());
+                rcon_gs.set_is_connection_settings_valid(status);
+              }
 
               if (game_server_index >= main_app.get_rcon_game_servers_count() && game_server_index < main_app.get_game_servers_count()) {
                 game_server &gs = game_servers[game_server_index];
@@ -3788,7 +3802,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         gif_image = new ImageEx("GIF", gif_image_name.c_str());
         gif_image->InitAnimation(app_handles.hwnd_main_window, Point{ 1135, screen_height - 150 });
 
-        if (main_app.get_is_connection_settings_valid()) {
+        if (main_app.get_current_game_server().get_is_connection_settings_valid()) {
 
           main_app.add_message_to_queue(message_t("request-login", format(R"({}\{}\{})", me->user_name, me->ip_address, get_current_time_stamp()), true));
 
@@ -4027,7 +4041,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     } else if (reinterpret_cast<HWND>(wParam) == app_handles.hwnd_players_grid) {
       SetFocus(app_handles.hwnd_players_grid);
       hPopupMenu = CreatePopupMenu();
-      if (main_app.get_is_connection_settings_valid() && check_if_selected_cell_indices_are_valid_for_players_grid(selected_player_row, 0)) {
+      if (main_app.get_current_game_server().get_is_connection_settings_valid() && check_if_selected_cell_indices_are_valid_for_players_grid(selected_player_row, 0)) {
         const int pid{ get_selected_players_pid_number(selected_player_row, selected_player_col) };
         if (pid != -1) {
           selected_player = get_player_data_for_pid(pid);
@@ -4081,7 +4095,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
       }
 
-      if (main_app.get_is_connection_settings_valid()) {
+      if (main_app.get_current_game_server().get_is_connection_settings_valid()) {
         if (!main_app.get_is_automatic_city_kick_enabled()) {
           InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_ENABLECITYBANBUTTON, "Enable city ban feature");
         } else {
@@ -4108,7 +4122,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_VIEWPROTECTEDCITIES, "View protected cities");
       InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_VIEWPROTECTEDCOUNTRIES, "View protected countries");
       InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_SEPARATOR, NULL, nullptr);
-      if (main_app.get_is_connection_settings_valid()) {
+      if (main_app.get_current_game_server().get_is_connection_settings_valid()) {
         InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_VIEWADMINSDATA, "View &admins' data");
         InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_SEPARATOR, NULL, nullptr);
       }
@@ -4119,7 +4133,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_SORT_PLAYERS_DATA_BY_SCORE, "Sort players' data by 'SCORE'");
         InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_SORT_PLAYERS_DATA_BY_PING, "Sort players' data by 'PING'");
         InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_SORT_PLAYERS_DATA_BY_NAME, "Sort players' data by 'PLAYER NAME'");
-        if (main_app.get_is_connection_settings_valid()) {
+        if (main_app.get_current_game_server().get_is_connection_settings_valid()) {
           InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_SORT_PLAYERS_DATA_BY_IP, "Sort players' data by 'IP ADDRESS'");
           InsertMenu(hPopupMenu, (UINT)-1, MF_BYPOSITION | MF_STRING, ID_SORT_PLAYERS_DATA_BY_GEO, "Sort players' data by 'GEOINFORMATION'");
         }
@@ -4188,7 +4202,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     if (counter % 15 == 0) {
 
-      if (!main_app.get_is_bans_synchronized() && main_app.get_is_connection_settings_valid()) {
+      if (!main_app.get_is_bans_synchronized() && main_app.get_current_game_server().get_is_connection_settings_valid()) {
 
         call_once(synchronize_bans_flag, [&]() {
           unsigned long guid_number{};
@@ -4217,7 +4231,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     if (counter % 30 == 0) {
       const auto current_ts{ get_current_time_stamp() };
-      if (main_app.get_is_connection_settings_valid()) {
+      if (main_app.get_current_game_server().get_is_connection_settings_valid()) {
         auto &me = main_app.get_user_for_name(main_app.get_username(), main_app.get_user_ip_address());
         main_app.add_message_to_queue(message_t{ "request-admindata", format("{}\\{}\\{}", me->user_name, me->ip_address, current_ts), true });
         save_current_user_data_to_json_file(main_app.get_user_data_file_path());
@@ -5031,8 +5045,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       process_user_command({ "!names", "25" });
       // is_display_banned_player_names_data_event.store(true);
       break;
-      
-case ID_VIEWADMINSDATA: {
+
+    case ID_VIEWADMINSDATA: {
       check_if_admins_are_online_and_get_admins_player_names(main_app.get_current_game_server().get_players_data(), main_app.get_current_game_server().get_number_of_players());
       display_online_admins_information();
       process_user_command({ "!admins" });

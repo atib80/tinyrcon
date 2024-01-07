@@ -41,7 +41,6 @@ class tiny_rcon_client_application
   bool is_automatic_city_kick_enabled{ false };
   bool is_automatic_country_kick_enabled{ false };
   bool is_enable_automatic_connection_flood_ip_ban{ true };
-  bool is_connection_settings_valid{ true };
   bool is_bans_synchronized{ false };
   size_t game_server_index{};
   size_t game_servers_count{};
@@ -255,16 +254,6 @@ public:
   void set_is_installed_cod2_game_steam_version(const bool new_value) noexcept
   {
     is_installed_cod2_game_steam_version = new_value;
-  }
-
-  void set_is_connection_settings_valid(const bool new_value) noexcept
-  {
-    is_connection_settings_valid = new_value;
-  }
-
-  bool get_is_connection_settings_valid() const noexcept
-  {
-    return is_connection_settings_valid;
   }
 
   void set_is_bans_synchronized(const bool new_value) noexcept
@@ -622,7 +611,7 @@ public:
     last_time_stamp = now_time_stamp;
   }
 
-  inline game_server &get_current_game_server()
+  inline game_server &get_current_game_server() noexcept
   {
     if (game_server_index >= game_servers_count)
       game_server_index = 0U;
@@ -630,51 +619,45 @@ public:
     return game_servers[game_server_index];
   }
 
-  inline std::array<game_server, max_game_servers_size> &get_game_servers() { return game_servers; }
-  // inline std::vector<game_server> &get_rcon_game_servers() { return rcon_game_servers; }
+  inline std::array<game_server, max_game_servers_size> &get_game_servers() noexcept { return game_servers; }
 
   inline std::unordered_map<std::string, std::string> &
-    get_admin_messages()
+    get_admin_messages() noexcept
   {
     return admin_messages;
   }
 
-  inline const std::string &get_program_title() const
+  inline const std::string &get_program_title() const noexcept
   {
     return program_title;
   }
 
-  inline void set_program_title(std::string new_program_title)
+  inline void set_program_title(std::string new_program_title) noexcept
   {
     program_title = std::move(new_program_title);
   }
 
-  inline const std::string &get_user_ip_address() const
+  inline const std::string &get_user_ip_address() const noexcept
   {
     return user_ip_address;
   }
 
-  inline void set_user_ip_address(std::string new_user_ip_address)
+  inline void set_user_ip_address(std::string new_user_ip_address) noexcept
   {
     user_ip_address = std::move(new_user_ip_address);
   }
 
-  /*std::unordered_set<std::string> &get_already_seen_messages()
-  {
-    return seen_inform_messages;
-  }*/
-
-  const std::unordered_map<std::string, int> &get_cod2_game_version_to_protocol()
+  const std::unordered_map<std::string, int> &get_cod2_game_version_to_protocol() noexcept
   {
     return cod2_game_version_to_protocol;
   }
 
-  std::unordered_map<std::string, std::shared_ptr<tiny_rcon_client_user>> &get_name_to_user()
+  std::unordered_map<std::string, std::shared_ptr<tiny_rcon_client_user>> &get_name_to_user() noexcept
   {
     return name_to_user;
   }
 
-  std::unordered_map<std::string, bool> &get_is_user_data_received()
+  std::unordered_map<std::string, bool> &get_is_user_data_received() noexcept
   {
     return is_user_data_received;
   }
@@ -713,7 +696,7 @@ public:
     is_user_data_received[cleaned_name] = true;
   }
 
-  std::vector<std::shared_ptr<tiny_rcon_client_user>> &get_users()
+  std::vector<std::shared_ptr<tiny_rcon_client_user>> &get_users() noexcept
   {
     return users;
   }
@@ -737,7 +720,7 @@ public:
     return name_to_user.at(cleaned_name);
   }
 
-  std::unordered_map<std::string, std::string> &get_tinyrcon_dict()
+  std::unordered_map<std::string, std::string> &get_tinyrcon_dict() noexcept
   {
     return tinyrcon_dict;
   }
@@ -897,24 +880,24 @@ public:
     return admin_messages["user_defined_unprotect_country_message"];
   }
 
-  inline const char *get_game_title()
+  inline const char *get_game_title() noexcept
   {
     if (game_names.contains(game_name))
       return game_names.at(game_name).c_str();
     return "Unknown game";
   }
 
-  bool get_is_draw_border_lines() const
+  bool get_is_draw_border_lines() const noexcept
   {
     return is_draw_border_lines;
   }
 
-  void set_is_draw_border_lines(const bool new_value)
+  void set_is_draw_border_lines(const bool new_value) noexcept
   {
     is_draw_border_lines = new_value;
   }
 
-  const std::string &get_current_working_directory() const
+  const std::string &get_current_working_directory() const noexcept
   {
     return current_working_directory;
   }
@@ -937,457 +920,457 @@ public:
       }
     }
 
-    tinyrcon_config_file_path.assign(format("{}{}", current_working_directory, tinyrcon_config_file_path));
-    user_data_file_path.assign(format("{}{}", current_working_directory, user_data_file_path));
-    temp_bans_file_path.assign(format("{}{}", current_working_directory, temp_bans_file_path));
-    ip_bans_file_path.assign(format("{}{}", current_working_directory, ip_bans_file_path));
-    ip_range_bans_file_path.assign(format("{}{}", current_working_directory, ip_range_bans_file_path));
-    banned_countries_file_path.assign(format("{}{}", current_working_directory, banned_countries_file_path));
-    banned_cities_file_path.assign(format("{}{}", current_working_directory, banned_cities_file_path));
-    banned_names_file_path.assign(format("{}{}", current_working_directory, banned_names_file_path));
-    protected_ip_addresses_file_path.assign(format("{}{}", current_working_directory, protected_ip_addresses_file_path));
-    protected_ip_address_ranges_file_path.assign(format("{}{}", current_working_directory, protected_ip_address_ranges_file_path));
-    protected_cities_file_path.assign(format("{}{}", current_working_directory, protected_cities_file_path));
-    protected_countries_file_path.assign(format("{}{}", current_working_directory, protected_countries_file_path));
+    /*tinyrcon_config_file_path.assign(format("\"{}{}\"", current_working_directory, tinyrcon_config_file_path));
+    user_data_file_path.assign(format("\"{}{}\"", current_working_directory, user_data_file_path));
+    temp_bans_file_path.assign(format("\"{}{}\"", current_working_directory, temp_bans_file_path));
+    ip_bans_file_path.assign(format("\"{}{}\"", current_working_directory, ip_bans_file_path));
+    ip_range_bans_file_path.assign(format("\"{}{}\"", current_working_directory, ip_range_bans_file_path));
+    banned_countries_file_path.assign(format("\"{}{}\"", current_working_directory, banned_countries_file_path));
+    banned_cities_file_path.assign(format("\"{}{}\"", current_working_directory, banned_cities_file_path));
+    banned_names_file_path.assign(format("\"{}{}\"", current_working_directory, banned_names_file_path));
+    protected_ip_addresses_file_path.assign(format("\"{}{}\"", current_working_directory, protected_ip_addresses_file_path));
+    protected_ip_address_ranges_file_path.assign(format("\"{}{}\"", current_working_directory, protected_ip_address_ranges_file_path));
+    protected_cities_file_path.assign(format("\"{}{}\"", current_working_directory, protected_cities_file_path));
+    protected_countries_file_path.assign(format("\"{}{}\"", current_working_directory, protected_countries_file_path));*/
   }
 
-  const char *get_tinyrcon_config_file_path() const
+  const char *get_tinyrcon_config_file_path() const noexcept
   {
     return tinyrcon_config_file_path.c_str();
   }
 
-  const char *get_user_data_file_path() const
+  const char *get_user_data_file_path() const noexcept
   {
     return user_data_file_path.c_str();
   }
 
-  const char *get_temp_bans_file_path() const
+  const char *get_temp_bans_file_path() const noexcept
   {
     return temp_bans_file_path.c_str();
   }
 
-  const char *get_ip_bans_file_path() const
+  const char *get_ip_bans_file_path() const noexcept
   {
     return ip_bans_file_path.c_str();
   }
 
-  const char *get_ip_range_bans_file_path() const
+  const char *get_ip_range_bans_file_path() const noexcept
   {
     return ip_range_bans_file_path.c_str();
   }
 
-  const char *get_banned_countries_file_path() const
+  const char *get_banned_countries_file_path() const noexcept
   {
     return banned_countries_file_path.c_str();
   }
 
-  const char *get_banned_cities_file_path() const
+  const char *get_banned_cities_file_path() const noexcept
   {
     return banned_cities_file_path.c_str();
   }
 
-  const char *get_banned_names_file_path() const
+  const char *get_banned_names_file_path() const noexcept
   {
     return banned_names_file_path.c_str();
   }
 
-  const char *get_protected_ip_addresses_file_path() const
+  const char *get_protected_ip_addresses_file_path() const noexcept
   {
     return protected_ip_addresses_file_path.c_str();
   }
 
-  const char *get_protected_ip_address_ranges_file_path() const
+  const char *get_protected_ip_address_ranges_file_path() const noexcept
   {
     return protected_ip_address_ranges_file_path.c_str();
   }
 
-  const char *get_protected_cities_file_path() const
+  const char *get_protected_cities_file_path() const noexcept
   {
     return protected_cities_file_path.c_str();
   }
 
-  const char *get_protected_countries_file_path() const
+  const char *get_protected_countries_file_path() const noexcept
   {
     return protected_countries_file_path.c_str();
   }
 
-  const std::string &get_tiny_rcon_ftp_server_username() const
+  const std::string &get_tiny_rcon_ftp_server_username() const noexcept
   {
     return tiny_rcon_ftp_server_username;
   }
 
-  void set_tiny_rcon_ftp_server_username(string new_tiny_rcon_ftp_server_username)
+  void set_tiny_rcon_ftp_server_username(string new_tiny_rcon_ftp_server_username) noexcept
   {
     tiny_rcon_ftp_server_username = std::move(new_tiny_rcon_ftp_server_username);
   }
 
-  const std::string &get_tiny_rcon_ftp_server_password() const
+  const std::string &get_tiny_rcon_ftp_server_password() const noexcept
   {
     return tiny_rcon_ftp_server_password;
   }
 
-  void set_tiny_rcon_ftp_server_password(string new_tiny_rcon_ftp_server_password)
+  void set_tiny_rcon_ftp_server_password(string new_tiny_rcon_ftp_server_password) noexcept
   {
     tiny_rcon_ftp_server_password = std::move(new_tiny_rcon_ftp_server_password);
   }
 
-  const std::string &get_tiny_rcon_server_ip_address() const
+  const std::string &get_tiny_rcon_server_ip_address() const noexcept
   {
     return tiny_rcon_server_ip_address;
   }
 
-  void set_tiny_rcon_server_ip_address(string new_tiny_rcon_server_ip_address)
+  void set_tiny_rcon_server_ip_address(string new_tiny_rcon_server_ip_address) noexcept
   {
     tiny_rcon_server_ip_address = std::move(new_tiny_rcon_server_ip_address);
   }
 
-  uint_least16_t get_tiny_rcon_server_port() const
+  uint_least16_t get_tiny_rcon_server_port() const noexcept
   {
     return tiny_rcon_server_port;
   }
 
-  void set_tiny_rcon_server_port(const int new_tiny_rcon_server_port)
+  void set_tiny_rcon_server_port(const int new_tiny_rcon_server_port) noexcept
   {
     tiny_rcon_server_port = static_cast<uint_least16_t>(new_tiny_rcon_server_port);
   }
 
-  const std::string &get_game_version_number() const
+  const std::string &get_game_version_number() const noexcept
   {
     return game_version_number;
   }
 
-  void set_game_version_number(string new_game_version_number)
+  void set_game_version_number(string new_game_version_number) noexcept
   {
     game_version_number = std::move(new_game_version_number);
   }
 
-  const std::string &get_game_version_information() const
+  const std::string &get_game_version_information() const noexcept
   {
     return game_version_information;
   }
 
-  void set_game_version_information(string new_game_version_information)
+  void set_game_version_information(string new_game_version_information) noexcept
   {
     game_version_information = std::move(new_game_version_information);
   }
 
-  const std::string &get_cod2_master_server_ip_address() const
+  const std::string &get_cod2_master_server_ip_address() const noexcept
   {
     return cod2_master_server_ip_address;
   }
 
-  void set_cod2_master_server_ip_address(string new_cod2_master_server_ip_address)
+  void set_cod2_master_server_ip_address(string new_cod2_master_server_ip_address) noexcept
   {
     cod2_master_server_ip_address = std::move(new_cod2_master_server_ip_address);
   }
 
-  uint_least16_t get_cod2_master_server_port() const
+  uint_least16_t get_cod2_master_server_port() const noexcept
   {
     return cod2_master_server_port;
   }
 
-  void set_cod2_master_server_port(const int new_cod2_master_server_port)
+  void set_cod2_master_server_port(const int new_cod2_master_server_port) noexcept
   {
     cod2_master_server_port = static_cast<uint_least16_t>(new_cod2_master_server_port);
   }
 
-  const std::string &get_ftp_download_site_ip_address() const
+  const std::string &get_ftp_download_site_ip_address() const noexcept
   {
     return ftp_download_site_ip_address;
   }
 
-  void set_ftp_download_site_ip_address(string new_ftp_download_site)
+  void set_ftp_download_site_ip_address(string new_ftp_download_site) noexcept
   {
     ftp_download_site_ip_address = std::move(new_ftp_download_site);
   }
-  const std::string &get_ftp_download_folder_path() const
+  const std::string &get_ftp_download_folder_path() const noexcept
   {
     return ftp_download_folder_path;
   }
 
-  void set_ftp_download_folder_path(string new_ftp_download_folder_path)
+  void set_ftp_download_folder_path(string new_ftp_download_folder_path) noexcept
   {
     ftp_download_folder_path = std::move(new_ftp_download_folder_path);
   }
 
-  const std::string &get_ftp_download_file_pattern() const
+  const std::string &get_ftp_download_file_pattern() const noexcept
   {
     return ftp_download_file_pattern;
   }
 
-  void set_ftp_download_file_pattern(string new_ftp_download_file_pattern)
+  void set_ftp_download_file_pattern(string new_ftp_download_file_pattern) noexcept
   {
     ftp_download_file_pattern = std::move(new_ftp_download_file_pattern);
   }
 
-  const std::string &get_plugins_geoIP_geo_dat_md5() const
+  const std::string &get_plugins_geoIP_geo_dat_md5() const noexcept
   {
     return plugins_geoIP_geo_dat_md5;
   }
 
-  void set_plugins_geoIP_geo_dat_md5(string new_plugins_geoIP_geo_dat_md5)
+  void set_plugins_geoIP_geo_dat_md5(string new_plugins_geoIP_geo_dat_md5) noexcept
   {
     plugins_geoIP_geo_dat_md5 = std::move(new_plugins_geoIP_geo_dat_md5);
   }
 
-  const string &get_current_match_info() const
+  const string &get_current_match_info() const noexcept
   {
     return current_match_info;
   }
 
-  void set_current_match_info(string new_value)
+  void set_current_match_info(string new_value) noexcept
   {
     current_match_info = std::move(new_value);
   }
 
-  const string &get_full_map_name_color() const
+  const string &get_full_map_name_color() const noexcept
   {
     return full_map_name_color;
   }
 
-  void set_full_map_name_color(string new_value)
+  void set_full_map_name_color(string new_value) noexcept
   {
     full_map_name_color = std::move(new_value);
   }
 
-  const string &get_rcon_map_name_color() const
+  const string &get_rcon_map_name_color() const noexcept
   {
     return rcon_map_name_color;
   }
 
-  void set_rcon_map_name_color(string new_value)
+  void set_rcon_map_name_color(string new_value) noexcept
   {
     rcon_map_name_color = std::move(new_value);
   }
 
-  const string &get_full_gametype_name_color() const
+  const string &get_full_gametype_name_color() const noexcept
   {
     return full_game_type_color;
   }
 
-  void set_full_gametype_color(string new_value)
+  void set_full_gametype_color(string new_value) noexcept
   {
     full_game_type_color = std::move(new_value);
   }
 
-  const string &get_rcon_gametype_name_color() const
+  const string &get_rcon_gametype_name_color() const noexcept
   {
     return rcon_game_type_color;
   }
 
-  void set_rcon_gametype_color(string new_value)
+  void set_rcon_gametype_color(string new_value) noexcept
   {
     rcon_game_type_color = std::move(new_value);
   }
 
-  const string &get_online_players_count_color() const
+  const string &get_online_players_count_color() const noexcept
   {
     return online_players_count_color;
   }
 
-  void set_online_players_count_color(string new_value)
+  void set_online_players_count_color(string new_value) noexcept
   {
     online_players_count_color = std::move(new_value);
   }
 
-  const string &get_offline_players_count_color() const
+  const string &get_offline_players_count_color() const noexcept
   {
     return offline_players_count_color;
   }
 
-  void set_offline_players_count_color(string new_value)
+  void set_offline_players_count_color(string new_value) noexcept
   {
     offline_players_count_color = std::move(new_value);
   }
 
-  const string &get_border_line_color() const
+  const string &get_border_line_color() const noexcept
   {
     return border_line_color;
   }
 
-  void set_border_line_color(string new_value)
+  void set_border_line_color(string new_value) noexcept
   {
     border_line_color = std::move(new_value);
   }
 
-  const string &get_header_player_pid_color() const
+  const string &get_header_player_pid_color() const noexcept
   {
     return header_player_pid_color;
   }
 
-  void set_header_player_pid_color(string new_value)
+  void set_header_player_pid_color(string new_value) noexcept
   {
     header_player_pid_color = std::move(new_value);
   }
 
-  const string &get_data_player_pid_color() const
+  const string &get_data_player_pid_color() const noexcept
   {
     return data_player_pid_color;
   }
 
-  void set_data_player_pid_color(string new_value)
+  void set_data_player_pid_color(string new_value) noexcept
   {
     data_player_pid_color = std::move(new_value);
   }
 
-  const string &get_header_player_score_color() const
+  const string &get_header_player_score_color() const noexcept
   {
     return header_player_score_color;
   }
 
-  void set_header_player_score_color(string new_value)
+  void set_header_player_score_color(string new_value) noexcept
   {
     header_player_score_color = std::move(new_value);
   }
 
-  const string &get_data_player_score_color() const
+  const string &get_data_player_score_color() const noexcept
   {
     return data_player_score_color;
   }
 
-  void set_data_player_score_color(string new_value)
+  void set_data_player_score_color(string new_value) noexcept
   {
     data_player_score_color = std::move(new_value);
   }
 
-  const string &get_header_player_ping_color() const
+  const string &get_header_player_ping_color() const noexcept
   {
     return header_player_ping_color;
   }
 
-  void set_header_player_ping_color(string new_value)
+  void set_header_player_ping_color(string new_value) noexcept
   {
     header_player_ping_color = std::move(new_value);
   }
 
-  const string &get_data_player_ping_color() const
+  const string &get_data_player_ping_color() const noexcept
   {
     return data_player_ping_color;
   }
 
-  void set_data_player_ping_color(string new_value)
+  void set_data_player_ping_color(string new_value) noexcept
   {
     data_player_ping_color = std::move(new_value);
   }
 
-  const string &get_header_player_name_color() const
+  const string &get_header_player_name_color() const noexcept
   {
     return header_player_name_color;
   }
 
-  void set_header_player_name_color(string new_value)
+  void set_header_player_name_color(string new_value) noexcept
   {
     header_player_name_color = std::move(new_value);
   }
 
-  const string &get_header_player_ip_color() const
+  const string &get_header_player_ip_color() const noexcept
   {
     return header_player_ip_color;
   }
 
-  void set_header_player_ip_color(string new_value)
+  void set_header_player_ip_color(string new_value) noexcept
   {
     header_player_ip_color = std::move(new_value);
   }
 
-  const string &get_data_player_ip_color() const
+  const string &get_data_player_ip_color() const noexcept
   {
     return data_player_ip_color;
   }
 
-  void set_data_player_ip_color(string new_value)
+  void set_data_player_ip_color(string new_value) noexcept
   {
     data_player_ip_color = std::move(new_value);
   }
 
-  const string &get_header_player_geoinfo_color() const
+  const string &get_header_player_geoinfo_color() const noexcept
   {
     return header_player_geoinfo_color;
   }
 
-  void set_header_player_geoinfo_color(string new_value)
+  void set_header_player_geoinfo_color(string new_value) noexcept
   {
     header_player_geoinfo_color = std::move(new_value);
   }
 
-  const string &get_data_player_geoinfo_color() const
+  const string &get_data_player_geoinfo_color() const noexcept
   {
     return data_player_geoinfo_color;
   }
 
-  void set_data_player_geoinfo_color(string new_value)
+  void set_data_player_geoinfo_color(string new_value) noexcept
   {
     data_player_geoinfo_color = std::move(new_value);
   }
 
-  const string &get_odd_player_data_lines_bg_color() const
+  const string &get_odd_player_data_lines_bg_color() const noexcept
   {
     return odd_player_data_lines_bg_color;
   }
 
-  void set_odd_player_data_lines_bg_color(string new_value)
+  void set_odd_player_data_lines_bg_color(string new_value) noexcept
   {
     odd_player_data_lines_bg_color = std::move(new_value);
   }
 
-  const string &get_even_player_data_lines_bg_color() const
+  const string &get_even_player_data_lines_bg_color() const noexcept
   {
     return even_player_data_lines_bg_color;
   }
 
-  void set_even_player_data_lines_bg_color(string new_value)
+  void set_even_player_data_lines_bg_color(string new_value) noexcept
   {
     even_player_data_lines_bg_color = std::move(new_value);
   }
 
-  const string &get_odd_player_data_lines_fg_color() const
+  const string &get_odd_player_data_lines_fg_color() const noexcept
   {
     return odd_player_data_lines_fg_color;
   }
 
-  void set_odd_player_data_lines_fg_color(string new_value)
+  void set_odd_player_data_lines_fg_color(string new_value) noexcept
   {
     odd_player_data_lines_fg_color = std::move(new_value);
   }
 
-  const string &get_even_player_data_lines_fg_color() const
+  const string &get_even_player_data_lines_fg_color() const noexcept
   {
     return even_player_data_lines_fg_color;
   }
 
-  void set_even_player_data_lines_fg_color(string new_value)
+  void set_even_player_data_lines_fg_color(string new_value) noexcept
   {
     even_player_data_lines_fg_color = std::move(new_value);
   }
 
-  inline const std::string &get_server_message() const
+  inline const std::string &get_server_message() const noexcept
   {
     return server_message;
   }
 
-  inline void set_server_message(std::string new_value)
+  inline void set_server_message(std::string new_value) noexcept
   {
     server_message = std::move(new_value);
   }
 
-  void set_check_for_banned_players_time_period(size_t new_value)
+  void set_check_for_banned_players_time_period(size_t new_value) noexcept
   {
     if (new_value < 5 || new_value > 30) new_value = 5;
 
     check_for_banned_players_time_period = new_value;
   }
 
-  size_t get_check_for_banned_players_time_period() const
+  size_t get_check_for_banned_players_time_period() const noexcept
   {
     return check_for_banned_players_time_period;
   }
 
-  unordered_map<string, size_t> &get_ip_address_frequency()
+  unordered_map<string, size_t> &get_ip_address_frequency() noexcept
   {
     return ip_address_frequency;
   }
 
-  bool open_log_file(const char *file_path)
+  bool open_log_file(const char *file_path) noexcept
   {
     if (log_file.is_open()) {
       log_file.flush();

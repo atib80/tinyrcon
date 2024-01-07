@@ -303,7 +303,7 @@ size_t connection_manager::receive_rcon_reply_from_server(
 
     const char *start{};
     if (received_reply.starts_with("Invalid password.") || received_reply.starts_with("Bad rcon")) {
-      main_app.set_is_connection_settings_valid(false);
+      main_app.get_current_game_server().set_is_connection_settings_valid(false);
       set_admin_actions_buttons_active(FALSE);
     } else {
       const auto gn = main_app.get_game_name();
@@ -313,8 +313,8 @@ size_t connection_manager::receive_rcon_reply_from_server(
 
       if (received_reply.find(rcon_status_response_needle1) != string::npos
           || (rcon_status_response_needle2 != nullptr && received_reply.find(rcon_status_response_needle2) != string::npos)) {
-        if (!main_app.get_is_connection_settings_valid()) {
-          main_app.set_is_connection_settings_valid(true);
+        if (!main_app.get_current_game_server().get_is_connection_settings_valid()) {
+          main_app.get_current_game_server().set_is_connection_settings_valid(true);
           set_admin_actions_buttons_active(TRUE);
         }
 
@@ -622,10 +622,10 @@ size_t connection_manager::receive_rcon_reply_from_server(
           update_game_server_setting(gs, std::move(property), std::move(value));
         }
       } else if (received_reply.find("map_rotate...\n\n") != string::npos) {
-        main_app.set_is_connection_settings_valid(true);
+        main_app.get_current_game_server().set_is_connection_settings_valid(true);
         print_colored_text(app_handles.hwnd_re_messages_data, received_reply.c_str());
       } else if (size_t start_pos{}; (start_pos = received_reply.find(R"("sv_mapRotationCurrent" is: ")")) != string::npos && received_reply.find(R"(default: ")") != string::npos) {
-        main_app.set_is_connection_settings_valid(true);
+        main_app.get_current_game_server().set_is_connection_settings_valid(true);
         start_pos += strlen(R"("sv_mapRotationCurrent" is: ")");
         const size_t last_pos{ received_reply.find_first_of("^7\" ", start_pos) };
         if (last_pos != string::npos) {
@@ -645,21 +645,21 @@ size_t connection_manager::receive_rcon_reply_from_server(
           }
         }
       } else if (size_t first_pos1{}; (first_pos1 = received_reply.find(R"("sv_mapRotation" is: ")")) != string::npos && received_reply.find(R"(default: ")") != string::npos) {
-        main_app.set_is_connection_settings_valid(true);
+        main_app.get_current_game_server().set_is_connection_settings_valid(true);
         first_pos1 += strlen(R"("sv_mapRotation" is: ")");
         const size_t last_pos{ received_reply.find_first_of("^7\" ", first_pos1) };
         if (last_pos != string::npos) {
           gs.set_map_rotation(received_reply.substr(first_pos1, last_pos - first_pos1));
         }
       } else if (received_reply.find("sv_hostname") != string::npos) {
-        main_app.set_is_connection_settings_valid(true);
+        main_app.get_current_game_server().set_is_connection_settings_valid(true);
         current = received_reply.c_str() + 29;
         start = last = current;
         while (*last != '^' && *(last + 1) != '7' && *(last + 2) != '"')
           ++last;
         gs.set_server_name(string(start, last));
       } else if (size_t first_pos2{}; (first_pos2 = received_reply.find(R"("mapname" is: ")")) != string::npos && received_reply.find(R"(default: ")") != string::npos) {
-        main_app.set_is_connection_settings_valid(true);
+        main_app.get_current_game_server().set_is_connection_settings_valid(true);
         first_pos2 += strlen(R"("mapname" is: ")");
         const size_t last_pos{ received_reply.find_first_of("^7\" ", first_pos2) };
         if (last_pos != string::npos) {
