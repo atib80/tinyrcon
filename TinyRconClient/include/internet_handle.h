@@ -28,7 +28,7 @@ public:
     return *this;
   }
 
-  ~internet_handle() noexcept
+  ~internet_handle()
   {
     if (nullptr != handle) {
       InternetCloseHandle(handle);
@@ -36,17 +36,17 @@ public:
     }
   }
 
-  explicit operator bool() const noexcept
+  constexpr explicit operator bool() const
   {
     return handle != nullptr;
   }
 
-  const HINTERNET &get() const noexcept
+  const HINTERNET &get() const
   {
     return handle;
   }
 
-  void set(HINTERNET &&new_handle) noexcept
+  void set(HINTERNET &&new_handle)
   {
     if (handle != nullptr)
       InternetCloseHandle(handle);
@@ -54,7 +54,7 @@ public:
   }
 
 private:
-  void close() noexcept
+  void close()
   {
     if (nullptr != handle) {
       InternetCloseHandle(handle);

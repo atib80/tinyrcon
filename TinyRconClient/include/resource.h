@@ -344,6 +344,8 @@
 #define ID_COPYGAMESERVERADDRESS 447
 #define ID_BANNAMEBUTTON 448
 #define ID_VIEWBANNEDPLAYERNAMES 449
+#define ID_VIEWREPORTEDPLAYERS 450
+#define ID_REPORTPLAYER 451
 #define IDC_STATIC                      -1
 
 // Next default values for new objects

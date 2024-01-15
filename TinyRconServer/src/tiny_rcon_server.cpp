@@ -18,7 +18,7 @@ using namespace std::string_literals;
 using namespace std::chrono;
 using namespace std::filesystem;
 
-extern const string program_version{ "1.2.0.2" };
+extern const string program_version{ "1.2.0.3" };
 
 extern std::atomic<bool> is_terminate_program;
 extern volatile std::atomic<bool> is_terminate_tinyrcon_settings_configuration_dialog_window;
@@ -249,7 +249,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     for (const auto &u : main_app.get_users()) {
       unsigned long ip_key{};
       // const string admin_name{ get_cleaned_user_name(u->user_name) };
-      if (u->user_name.find("^4W^1W") == string::npos && check_ip_address_validity(u->ip_address, ip_key)) {
+      if (/*u->user_name.find("^4W^1W") == string::npos && */ check_ip_address_validity(u->ip_address, ip_key)) {
         const string info_message{ format("^5Sent a request to ^1admin ^7{} ^5with IP address ^1{} ^5from ^1{} ^5to restart their ^5Tiny^6Rcon ^5program.\n", u->user_name, u->ip_address, u->geo_information) };
         print_colored_text(app_handles.hwnd_re_messages_data, info_message.c_str());
         main_app.get_connection_manager_for_messages().process_and_send_message("restart-tinyrcon", "^3Restarting your ^5Tiny^6Rcon ^3client program.", true, u);
@@ -275,19 +275,38 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     for (auto &part : parts) stl::helper::trim_in_place(part);
     if (parts.size() >= 2 && !parts[0].empty() && !parts[1].empty()) {
       const auto &sent_by{ main_app.get_user_for_name(parts[0], sender_ip) };
-
-      // lock_guard lg{ inform_message_mutex };
+      string cleaned_message{ parts[1] };
+      remove_all_color_codes(cleaned_message);
       auto &sent_rcon_public_messages{ main_app.get_sent_rcon_public_messages() };
       const auto current_ts{ get_current_time_stamp() };
-      if (!sent_rcon_public_messages.contains(parts[1])) {
-        sent_rcon_public_messages.insert({ parts[1], 0 });
+      if (size_t start, next; (start = cleaned_message.find("expires in ")) != string::npos && (next = cleaned_message.rfind("Date of ban:")) != string::npos) {
+        const size_t dot_pos{ cleaned_message.find('.', start + len("expires in ")) };
+        if (dot_pos != string::npos) {
+          cleaned_message.erase(begin(cleaned_message) + start + len("expires in "), begin(cleaned_message) + dot_pos);
+        }
+
+        next = cleaned_message.rfind("Date of ban:");
+        if (next != string::npos) {
+          cleaned_message.erase(begin(cleaned_message) + next + len("Date of ban:"), end(cleaned_message));
+        }
+      } else if (size_t next{}; (start = cleaned_message.find("[start date:")) != string::npos && (next = cleaned_message.find("expired on")) != string::npos) {
+        const size_t last{ cleaned_message.find(']', next + len("expired on")) };
+        if (last != string::npos) {
+          cleaned_message.erase(begin(cleaned_message) + start, begin(cleaned_message) + last + 1);
+        }
       }
 
-      if (current_ts - sent_rcon_public_messages[parts[1]] >= 5) {
+      if (!sent_rcon_public_messages.contains(cleaned_message)) {
+        sent_rcon_public_messages.emplace(cleaned_message, 0);
+      }
+
+      if (current_ts - sent_rcon_public_messages[cleaned_message] >= 5) {
         if (cleaned_data.find("automatically") != string::npos && cleaned_data.find("kicked") != string::npos) {
           ++main_app.get_tinyrcon_stats_data().get_no_of_autokicks();
+        } else if (cleaned_data.find("reported") != string::npos) {
+          ++main_app.get_tinyrcon_stats_data().get_no_of_reports();
         }
-        sent_rcon_public_messages[parts[1]] = current_ts;
+        sent_rcon_public_messages[cleaned_message] = current_ts;
         main_app.get_connection_manager_for_messages().process_and_send_message("inform-message", std::format("accept\\{}", cleaned_data), true, sent_by);
       } else {
         main_app.get_connection_manager_for_messages().process_and_send_message("inform-message", std::format("deny\\{}", cleaned_data), true, sent_by);
@@ -582,6 +601,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     }
   });
 
+  main_app.add_message_handler("query-response", [](const string &, const time_t, const string &, bool, const string &) {
+    /*print_colored_text(app_handles.hwnd_re_messages_data, format("Received query request from ^5Tiny^6Rcon ^7user {} (IP: {})\nMessage contents: '^5{}^7'\n", user, sender_ip, data).c_str());*/
+  });
 
   main_app.add_message_handler("request-admindata", [](const string &user, const time_t timestamp, const string &data, bool is_print_in_messages, const string &sender_ip) {
     auto &user_data = main_app.get_user_for_name(user, sender_ip);

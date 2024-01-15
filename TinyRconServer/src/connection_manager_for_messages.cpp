@@ -59,7 +59,6 @@ bool connection_manager_for_messages::wait_for_and_process_response_message()
     return false;
   }
 
-
   string message(incoming_data_buffer, incoming_data_buffer + noOfReceivedBytes);
   // trim_in_place(message);
 
@@ -82,11 +81,46 @@ bool connection_manager_for_messages::wait_for_and_process_response_message()
       return false;
     }
 
+    const string message_handler_name{ parts[0] };
+    const string sender{ std::move(parts[1]) };
+    const time_t timestamp{ stoll(parts[3]) };
+    const bool is_show_in_messages{ parts[4] == "true" };
+
+    if (message_handler_name == "query-request") {
+      print_colored_text(app_handles.hwnd_re_messages_data, format("Received query request from ^5Tiny^6Rcon ^7user {} (IP: {})\nMessage contents: '^5{}^7'\n", sender, sender_ip, message_contents).c_str());
+
+      if (size_t start{}; (start = message_contents.find("is_user_admin?")) != string::npos) {
+        const string username{ trim(message_contents.substr(start + strlen("is_user_admin?"))) };
+        const string response{ format("{}={}", message_contents, main_app.is_user_admin(username) ? "yes" : "no") };
+        auto user = make_shared<tiny_rcon_client_user>();
+        user->user_name = sender;
+        user->ip_address = sender_ip;
+        user->remote_endpoint = remote_endpoint;
+        process_and_send_message("query-response", response, true, user);
+      }
+      return true;
+    }
+
+    if (message_handler_name == "request-welcome-message") {
+      auto parts = stl::helper::str_split(message_contents, "\\", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::no);
+      for (auto &part : parts) stl::helper::trim_in_place(part);
+      if (parts.size() >= 3) {
+        auto user = make_shared<tiny_rcon_client_user>();
+        user->user_name = parts[0];
+        user->ip_address = sender_ip;
+        user->remote_endpoint = remote_endpoint;
+        process_and_send_message("receive-welcome-message", main_app.get_welcome_message(parts[0]), true, user);
+      }
+      return true;
+    }
+
+    if (message_handler_name == "inc-number-of-reports") {
+      ++main_app.get_tinyrcon_stats_data().get_no_of_reports();
+      print_colored_text(app_handles.hwnd_re_messages_data, format("^5Number of received reports: ^1{}\n", main_app.get_tinyrcon_stats_data().get_no_of_reports()).c_str());
+      return true;
+    }
+
     if (main_app.get_game_server().get_rcon_password() == parts[2]) {
-      const string message_handler_name{ std::move(parts[0]) };
-      const string sender{ std::move(parts[1]) };
-      const time_t timestamp{ stoll(parts[3]) };
-      const bool is_show_in_messages{ parts[4] == "true" };
       const auto &user = main_app.get_user_for_name(sender, sender_ip);
       user->ip_address = std::move(sender_ip);
       user->remote_endpoint = std::move(remote_endpoint);
@@ -107,6 +141,7 @@ bool connection_manager_for_messages::wait_for_and_process_response_message()
       message_handler(sender, timestamp, message_contents, is_show_in_messages, user->ip_address);
       return true;
     }
+
     const string unathorized_message_received{ format("^3Received an unauthorized message!\n^7{} ^3(IP address: '^1{}^3' and rcon_password: '^1{}^3') sent the following command: '^1{}^3'\nContents of message:\n'^1{}^3'\n", parts[1], sender_ip, parts[2], parts[0], message_contents) };
     print_colored_text(app_handles.hwnd_re_messages_data, unathorized_message_received.c_str());
 

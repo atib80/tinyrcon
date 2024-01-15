@@ -3131,7 +3131,7 @@ static void Grid_OnSetFocus(HWND hwnd, HWND hwndOldFocus)
 /// @param fRedraw If TRUE this control should be redrawn immediately.
 ///
 /// @returns VOID.
-void Grid_OnSetFont(HWND hwnd, HFONT hfont, BOOL fRedraw) 
+void Grid_OnSetFont(HWND hwnd, HFONT hfont, BOOL fRedraw)
 {
   g_lpInst->hfont = hfont;
   if (!g_lpInst->hcolumnheadingfont) {

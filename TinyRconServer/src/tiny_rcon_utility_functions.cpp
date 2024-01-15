@@ -2844,7 +2844,7 @@ void remove_all_color_codes(std::string &msg)
     if (string::npos == start)
       break;
 
-    if (start + 4 <= msg.length() && msg[start + 1] == '^' && (msg[start + 2] >= '0' && msg[start + 2] <= '9') && (msg[start + 3] >= '0' && msg[start + 3] <= '9') && msg[start + 2] == msg[start + 3]) {
+    if (start + 4 <= msg.length() && msg[start + 1] == '^' && (msg[start + 2] >= '0' && msg[start + 2] <= '9') && (msg[start + 3] >= '0' && msg[start + 3] <= '9') /*&& msg[start + 2] == msg[start + 3]*/) {
       msg.erase(start, 4);
     } else if (start + 2 <= msg.length() && (msg[start + 1] >= '0' && msg[start + 1] <= '9')) {
       msg.erase(start, 2);
@@ -5189,6 +5189,13 @@ bool load_tinyrcon_statistics_data(const char *file_path)
   bool found_missing_config_setting{};
   auto &tas = main_app.get_tinyrcon_stats_data();
 
+  if (json_resource["reports"].exists()) {
+    tas.get_no_of_reports() = json_resource["reports"].as<int>();
+  } else {
+    found_missing_config_setting = true;
+    tas.get_no_of_reports() = 0;
+  }
+
   if (json_resource["warnings"].exists()) {
     tas.get_no_of_warnings() = json_resource["warnings"].as<int>();
   } else {
@@ -5336,7 +5343,8 @@ bool save_tinyrcon_statistics_data(const char *file_path)
   config_file << "\"protected_cities\": " << main_app.get_tinyrcon_stats_data().get_no_of_protected_cities() << ",\n";
   config_file << "\"protected_countries\": " << main_app.get_tinyrcon_stats_data().get_no_of_protected_countries() << ",\n";
   config_file << "\"map_restarts\": " << main_app.get_tinyrcon_stats_data().get_no_of_map_restarts() << ",\n";
-  config_file << "\"map_changes\": " << main_app.get_tinyrcon_stats_data().get_no_of_map_changes() << "\n";
+  config_file << "\"map_changes\": " << main_app.get_tinyrcon_stats_data().get_no_of_map_changes() << ",\n";
+  config_file << "\"reports\": " << main_app.get_tinyrcon_stats_data().get_no_of_reports() << "\n";
   config_file << "}" << flush;
   return true;
 }

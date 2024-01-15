@@ -14,6 +14,7 @@ extern tiny_rcon_client_application main_app;
 extern tiny_rcon_handles app_handles;
 extern const size_t max_players_grid_rows;
 extern string previous_map;
+extern volatile std::atomic<bool> is_display_geoinformation_data_for_players;
 
 static const std::regex player_ip_address_regex{ R"((\d+\.\d+\.\d+\.\d+:(-?\d+)\s*(-?\d+)\s*(\d+)))" };
 static const std::regex bot_ip_address_regex{ R"((\d{5,}\.\d{5,}):(-?\d+)\s*(-?\d+)\s*(\d+))" };
@@ -564,13 +565,19 @@ size_t connection_manager::receive_rcon_reply_from_server(
               while (is_decimal_digit(player_line[i])) --i;
               while (is_ws(player_line[i])) --i;
 
-              player_name.assign(player_line.c_str() + pn_start, player_line.c_str() + i);
-              auto pn_end = player_name.find_last_of("^7");
-              if (string::npos != pn_end)
+              player_name.assign(player_line.c_str() + pn_start, player_line.c_str() + i + 1);
+              const auto pn_end = player_name.find_last_of("^7");
+              if (string::npos != pn_end) {
+                const bool is_delete_carrot{ player_name[pn_end] == '7' };
                 player_name.erase(cbegin(player_name) + pn_end, cend(player_name));
-              if (const size_t pn_len{ player_name.length() }; (pn_len >= 1) && (player_name[pn_len - 1] == '^' || player_name[pn_len - 1] == '7')) {
-                player_name.pop_back();
+                if (is_delete_carrot && player_name.length() >= 1 && player_name.back() == '^') {
+                  player_name.pop_back();
+                }
               }
+              trim_in_place(player_name);
+              /*if (const size_t pn_len{ player_name.length() }; (pn_len >= 1) && (player_name[pn_len - 1] == '^' || player_name[pn_len - 1] == '7')) {
+                player_name.pop_back();
+              }*/
             }
 
             players_data[pl_index].pid = player_pid;
@@ -678,6 +685,122 @@ size_t connection_manager::receive_rcon_reply_from_server(
     }
   }
   return noOfAllReceivedBytes;
+}
+
+size_t connection_manager::process_rcon_status_messages(game_server &gs, const std::string &received_reply) const
+{
+  if (received_reply.length() > 0) {
+
+    main_app.get_connection_manager().get_last_rcon_status_received() = get_current_time_stamp();
+
+    auto lines = str_split(received_reply, "\n", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::yes);
+    if (lines.empty()) return 0U;
+    auto parts = str_split(lines[0], "\n", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::no);
+    if (parts.size() >= 2) {
+      for (auto &&part : parts) {
+        trim_in_place(part);
+      }
+      if (!parts[0].empty()) gs.set_current_map(std::move(parts[0]));
+      if (!parts[1].empty()) gs.set_current_game_type(std::move(parts[1]));
+    }
+
+    const bool is_process_geoinformation{ is_display_geoinformation_data_for_players.load() };
+    auto &players_data = gs.get_players_data();
+    int number_of_online_players{};
+    int number_of_offline_players{};
+    size_t pl_index{};
+    if (lines.size() > 1U) {
+      for (size_t i{ 1 }; i < lines.size(); ++i) {
+        auto &&line = lines[i];
+        trim_in_place(line);
+        size_t start_pos{}, next;
+        next = line.find('\\', start_pos);
+        if (string::npos == next) continue;
+        const string player_pid_str{ trim(line.substr(start_pos, next - start_pos)) };
+
+        int player_pid{};
+        if (!is_valid_decimal_whole_number(player_pid_str, player_pid)) {
+          player_pid = pl_index;
+        }
+
+        start_pos = next + 1;
+        next = line.find('\\', start_pos);
+        if (string::npos == next) continue;
+        const string player_score_str{ trim(line.substr(start_pos, next - start_pos)) };
+
+        int player_score{};
+        if (!is_valid_decimal_whole_number(player_score_str, player_score)) {
+          player_score = 0;
+        }
+
+        players_data[pl_index].pid = player_pid;
+        players_data[pl_index].score = player_score;
+
+        start_pos = next + 1;
+        next = line.find('\\', start_pos);
+        if (string::npos == next) continue;
+        const string player_ping{ trim(line.substr(start_pos, next - start_pos)) };
+
+        size_t no_of_chars_to_copy{ std::min<size_t>(std::size(players_data[pl_index].ping) - 1, player_ping.length()) };
+        strncpy_s(players_data[pl_index].ping, std::size(players_data[pl_index].ping), player_ping.c_str(), no_of_chars_to_copy);
+        players_data[pl_index].ping[no_of_chars_to_copy] = '\0';
+
+        if (player_ping == "999" || player_ping == "-1" || player_ping == "CNCT" || player_ping == "ZMBI") {
+          ++number_of_offline_players;
+        } else {
+          ++number_of_online_players;
+        }
+
+        start_pos = next + 1;
+        next = line.find('\\', start_pos);
+        if (string::npos == next) continue;
+        const string player_guid{ trim(line.substr(start_pos, next - start_pos)) };
+
+        no_of_chars_to_copy = std::min<size_t>(std::size(players_data[pl_index].guid_key) - 1, player_guid.length());
+        strncpy_s(players_data[pl_index].guid_key, std::size(players_data[pl_index].guid_key), player_guid.c_str(), no_of_chars_to_copy);
+        players_data[pl_index].guid_key[no_of_chars_to_copy] = '\0';
+
+        start_pos = next + 1;
+        next = line.rfind("^7");
+        if (string::npos == next) continue;
+        const string player_name{ trim(line.substr(start_pos, next - start_pos)) };
+
+        no_of_chars_to_copy = std::min<size_t>(std::size(players_data[pl_index].player_name) - 1, player_name.length());
+        strncpy_s(players_data[pl_index].player_name, std::size(players_data[pl_index].player_name), player_name.c_str(), no_of_chars_to_copy);
+        players_data[pl_index].player_name[no_of_chars_to_copy] = '\0';
+
+        start_pos = next + 2;
+        next = line.find('\\', start_pos);
+        const string player_geo{ string::npos == next || !is_process_geoinformation ? "Unknown"s : trim(line.substr(start_pos, next - start_pos)) };
+
+        no_of_chars_to_copy = std::min<size_t>(std::size(players_data[pl_index].geo_information) - 1, player_geo.length());
+        strncpy_s(players_data[pl_index].geo_information, std::size(players_data[pl_index].geo_information), player_geo.c_str(), no_of_chars_to_copy);
+        players_data[pl_index].geo_information[no_of_chars_to_copy] = '\0';
+
+        start_pos = next + 1;
+        next = line.find('\\', start_pos);
+        if (string::npos == next) next = line.length();
+        const string player_country_code{ !is_process_geoinformation ? "Unknown"s : trim(line.substr(start_pos, next - start_pos)) };
+
+        no_of_chars_to_copy = std::min<size_t>(std::size(players_data[pl_index].geo_country_code) - 1, player_country_code.length());
+        strncpy_s(players_data[pl_index].geo_country_code, std::size(players_data[pl_index].geo_country_code), player_country_code.c_str(), no_of_chars_to_copy);
+        players_data[pl_index].geo_country_code[no_of_chars_to_copy] = '\0';
+
+        ++pl_index;
+      }
+
+      gs.set_number_of_players(pl_index);
+      gs.set_number_of_online_players(number_of_online_players);
+      gs.set_number_of_offline_players(number_of_offline_players);
+      ++rcon_status_sent_counter;
+      const bool log_players_data{ rcon_status_sent_counter % 60 == 0 };
+      if (60 == rcon_status_sent_counter)
+        rcon_status_sent_counter = 0;
+      prepare_players_data_for_display_for_regular_users(gs, log_players_data);
+    }
+  }
+
+  return received_reply.length();
 }
 
 

@@ -9,6 +9,7 @@ struct tiny_rcon_client_user
   bool is_logged_in{};
   bool is_online{};
   size_t no_of_logins{};
+  size_t no_of_reports{};
   size_t no_of_warnings{};
   size_t no_of_kicks{};
   size_t no_of_tempbans{};
@@ -33,5 +34,6 @@ struct tiny_rcon_client_user
   std::string player_name;
   std::string ip_address;
   std::string geo_information;
+  std::string geo_country_code;
   asio::ip::udp::endpoint sender_endpoint;
 };

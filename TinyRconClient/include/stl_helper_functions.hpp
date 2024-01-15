@@ -1275,7 +1275,9 @@ bool ltrim_in_place(
   if (first_char_pos == std::cend(src)) {
     src.clear();
     return true;
-  } else if (std::cbegin(src) != first_char_pos) {
+  } 
+  
+  if (std::cbegin(src) != first_char_pos) {
     src.erase(std::cbegin(src), first_char_pos);
     return true;
   }

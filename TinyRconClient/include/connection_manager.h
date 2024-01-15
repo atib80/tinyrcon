@@ -35,18 +35,23 @@ public:
 
   size_t receive_rcon_reply_from_server(const char *remote_ip, const uint_least16_t remote_port, game_server &gs, std::string &reply_buffer, const bool is_process_reply = true) const;
 
+  size_t process_rcon_status_messages(game_server &gs, const std::string &rcon_status_data) const;
+
   size_t receive_non_rcon_reply_from_server(const char *remote_ip, const uint_least16_t remote_port, game_server &gs, std::string &reply_buffer, const bool is_process_reply = true) const;
 
   void send_and_receive_rcon_data(const char *command_to_send, std::string &reply_buffer, const char *remote_ip, const uint_least16_t remote_port, const char *rcon_password, game_server &gs, const bool is_wait_for_reply = true, const bool is_process_reply = true) const;
   void send_and_receive_non_rcon_data(const char *command_to_send, std::string &reply_buffer, const char *remote_ip, const uint_least16_t remote_port, game_server &gs, const bool is_wait_for_reply = true, const bool is_process_reply = true) const;
 
-  inline std::vector<geoip_data> &get_geoip_data()  { return geoip_db; }
+  inline std::vector<geoip_data> &get_geoip_data() { return geoip_db; }
+
+  inline time_t &get_last_rcon_status_received() { return last_rcon_status_received; }
 
 private:
-  inline static const std::string unknown_rcon_password{ "abc123" };
+  time_t last_rcon_status_received{};
   inline static std::size_t number_of_sent_non_rcon_commands{};
   inline static std::size_t number_of_sent_rcon_commands{};
   inline static std::size_t rcon_status_sent_counter{};
+  inline static const std::string unknown_rcon_password{ "abc123" };
   std::vector<geoip_data> geoip_db;
   io_service udp_service_for_rcon_commands;
   io_service udp_service_for_non_rcon_commands;

@@ -17,6 +17,7 @@
 
 class tinyrcon_activities_stats
 {
+  size_t no_of_reports{};
   size_t no_of_warnings{};
   size_t no_of_autokicks{};
   size_t no_of_kicks{};
@@ -45,6 +46,12 @@ public:
   {
     start_time = new_start_time;
   }
+
+  size_t &get_no_of_reports() noexcept
+  {
+    return no_of_reports;
+  }
+
   size_t &get_no_of_warnings() noexcept
   {
     return no_of_warnings;
@@ -344,12 +351,8 @@ public:
   std::shared_ptr<tiny_rcon_client_user> &get_user_for_name(const std::string &name, const string &ip_address)
   {
     string cleaned_name{ get_cleaned_user_name(name) };
-    player pd{};
-    convert_guid_key_to_country_name(cm_for_messages.get_geoip_data(), ip_address, pd);
-
-    /*if (name.find("Admin") != string::npos) {
-      cleaned_name += std::format("_{}", pd.country_name);
-    }*/
+    // player pd{};
+    // convert_guid_key_to_country_name(cm_for_messages.get_geoip_data(), ip_address, pd);
 
     if (!name_to_user.contains(cleaned_name)) {
       users.emplace_back(std::make_shared<tiny_rcon_client_user>());
@@ -358,6 +361,21 @@ public:
     }
 
     return name_to_user.at(cleaned_name);
+  }
+
+  bool is_user_admin(const std::string &name) const noexcept
+  {
+    string cleaned_name{ get_cleaned_user_name(name) };
+    // unsigned long guid_key{};
+    // if (check_ip_address_validity(ip_address, guid_key)) {
+      // player pd{};
+      // convert_guid_key_to_country_name(cm_for_messages.get_geoip_data(), ip_address, pd);
+      // if (cleaned_name == "admin") {
+      //   cleaned_name += std::format("_{}", pd.country_name);
+      // }
+    // }
+
+    return name_to_user.contains(cleaned_name);
   }
 
   std::unordered_map<std::string, std::string> &get_tinyrcon_dict()
@@ -835,6 +853,7 @@ public:
 
   std::string get_welcome_message(const std::string &user_name)
   {
+    const size_t no_of_reports = tinyrcon_stats_data.get_no_of_reports();
     const size_t no_of_warnings = tinyrcon_stats_data.get_no_of_warnings();
     const size_t no_of_autokicks = tinyrcon_stats_data.get_no_of_autokicks();
     const size_t no_of_kicks = tinyrcon_stats_data.get_no_of_kicks();
@@ -854,12 +873,13 @@ public:
 
     std::ostringstream oss;
     oss << std::format("^5\n\n^5Hi, welcome back, ^1admin ^7{}\n", user_name);
-    oss << std::format("^5Number of logged ^1auto-kicks ^5so far is ^3{}.\n", no_of_autokicks);
+    oss << std::format("^5Number of registered ^1auto-kicks: ^3{}\n", no_of_autokicks);
+    oss << std::format("^5Number of received ^1reports: ^3{}\n", no_of_reports);
     oss << std::format("^5Admins have so far...\n   ^1warned ^3{} ^5{},\n   ^1kicked ^3{} ^5{},\n   ^1temporarily banned ^3{} ^5{},\n", no_of_warnings, no_of_warnings != 1 ? "players" : "player", no_of_kicks, no_of_kicks != 1 ? "players" : "player", no_of_tempbans, no_of_tempbans != 1 ? "players" : "player");
     oss << std::format("   ^1permanently banned GUID {} ^5of ^3{} ^5{},\n   ^1banned IP {} ^5of ^3{} ^5{},\n   ^1banned IP address range(s) ^5of ^3{} ^5{},\n   ^1banned ^3{} ^1player {}^5,\n", no_of_guid_bans != 1 ? "keys" : "key", no_of_guid_bans, no_of_guid_bans != 1 ? "players" : "player", no_of_ip_bans != 1 ? "addresses" : "address", no_of_ip_bans, no_of_ip_bans != 1 ? "players" : "player", no_of_ip_address_range_bans, no_of_ip_address_range_bans != 1 ? "players" : "player", no_of_name_bans, no_of_name_bans != 1 ? "names" : "name");
     oss << std::format("   ^1banned {} ^5of ^3{} ^5{},\n   ^1banned {} ^5of ^3{} ^5{},\n   ^1protected IP {} ^5of ^3{} ^5{},\n", no_of_city_bans != 1 ? "cities" : "city", no_of_city_bans, no_of_city_bans != 1 ? "players" : "player", no_of_country_bans != 1 ? "countries" : "country", no_of_country_bans, no_of_country_bans != 1 ? "players" : "player", no_of_protected_ip_addresses != 1 ? "addresses" : "address", no_of_protected_ip_addresses, no_of_protected_ip_addresses != 1 ? "players" : "player");
     oss << std::format("   ^1protected IP address {} ^5of ^3{} ^5{},\n   ^1protected {} ^5of ^3{} ^5{},\n^1protected {} ^5of ^3{} ^5{},\n", no_of_protected_ip_address_ranges != 1 ? "ranges" : "range", no_of_protected_ip_address_ranges, no_of_protected_ip_address_ranges != 1 ? "players" : "player", no_of_protected_cities != 1 ? "cities" : "city", no_of_protected_cities, no_of_protected_cities != 1 ? "players" : "player", no_of_protected_countries != 1 ? "countries" : "country", no_of_protected_countries, no_of_protected_countries != 1 ? "players" : "player");
-    oss << std::format("^5Admins executed ^3{} ^1map restarts ^5and ^3{} ^1map changes^5.\n^7", no_of_map_restarts, no_of_map_changes);
+    oss << std::format("^5Admins executed ^3{} ^1map restarts ^5and ^3{} ^1map changes^5.\n\n^7", no_of_map_restarts, no_of_map_changes);
     oss << "^5Tiny^6Rcon ^5server wishes you a ^1Merry Christmas ^5and a ^1Happy New Year^5!\n\n";
     return oss.str();
   }

@@ -108,7 +108,7 @@ std::pair<bool, player> remove_temp_banned_ip_address(const std::string &ip_addr
 std::pair<bool, player> remove_permanently_banned_ip_address(std::string &ip_address, std::string &message, const bool is_report_public_message = true);
 
 size_t print_colored_text(HWND re_control, const char *text, const is_append_message_to_richedit_control = is_append_message_to_richedit_control::yes, const is_log_message = is_log_message::yes, const is_log_datetime = is_log_datetime::yes, const bool is_prevent_auto_vertical_scrolling = false, const bool is_remove_color_codes_for_log_message = true);
-
+size_t print_message(HWND re_control, const std::string &text, const is_log_message log_to_file = is_log_message::yes, const is_log_datetime is_log_current_date_time = is_log_datetime::yes, const bool is_remove_color_codes_for_log_message = true);
 size_t print_colored_text_to_grid_cell(HDC hdc, RECT &rect, const char *text, DWORD formatting_style);
 
 bool get_user_input();
@@ -127,6 +127,7 @@ bool check_if_user_provided_pid_is_valid(const std::string &);
 
 void remove_all_color_codes(char *msg);
 void remove_all_color_codes(std::string &);
+std::string remove_ip_addresses(const std::string &src, const char *replacement = "hidden");
 
 void check_for_warned_players();
 
@@ -150,7 +151,7 @@ void process_rcon_command(const std::vector<std::string> &);
 
 volatile bool should_program_terminate(const std::string & = "");
 
-void sort_players_data(std::vector<player> &, const sort_type sort_method);
+void sort_players_data(std::vector<player> &, sort_type sort_method);
 
 void display_banned_ip_address_ranges(const size_t number_of_last_bans_to_display = std::string::npos, const bool is_save_data_to_log_file = false);
 
@@ -159,6 +160,8 @@ void display_permanently_banned_ip_addresses(const size_t number_of_last_bans_to
 void display_temporarily_banned_ip_addresses(const size_t number_of_last_bans_to_display = std::string::npos, const bool is_save_data_to_log_file = false);
 
 void display_banned_player_names(const char *title, const size_t number_of_last_bans_to_display = std::string::npos, const bool is_save_data_to_log_file = false);
+
+void display_reported_players(const size_t number_of_last_reports_to_display = std::string::npos, const bool is_save_data_to_log_file = false);
 
 void display_admins_data(const std::vector<std::shared_ptr<tiny_rcon_client_user>> &users, const char *title);
 
@@ -333,6 +336,7 @@ bool initialize_and_verify_server_connection_settings();
 void initiate_sending_rcon_status_command_now();
 
 void prepare_players_data_for_display(game_server &gs, const bool is_log_status_table = false);
+void prepare_players_data_for_display_for_regular_users(game_server &gs, const bool is_log_status_table = false);
 void prepare_players_data_for_display_of_getstatus_response(game_server &gs, const bool is_log_status_table = false);
 
 size_t get_file_size_in_bytes(const char *);
@@ -395,3 +399,7 @@ std::string get_server_address_for_connect_command(const int selected_server_row
 std::string find_version_of_installed_cod2_game();
 bool add_permanently_banned_player_name(player &pd, std::vector<player> &banned_players_names_vector, std::unordered_map<std::string, player> &banned_players_names_map);
 bool remove_permanently_banned_player_name(player &pd, std::vector<player> &banned_names_vector, std::unordered_map<std::string, player> &banned_names_map);
+std::shared_ptr<tiny_rcon_client_user> &get_user_for_specified_username_and_ip_address();
+void load_reported_players_to_file(const char *file_path, std::vector<player> &reported_players);
+void save_reported_players_to_file(const char *file_path, const std::vector<player> &reported_players);
+std::pair<bool, player> remove_reported_player(std::string &ip_address, std::string &message, const bool is_report_public_message);

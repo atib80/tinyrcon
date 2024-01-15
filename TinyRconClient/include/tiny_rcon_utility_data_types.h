@@ -110,12 +110,15 @@ struct command_t
 enum class message_type_t { send,
   receive };
 
-// struct print_message_t
-//{
-//   explicit print_message_t(HWND control, std::string message) : control_{ control }, message_{ std::move(message) } {}
-//   HWND control_;
-//   std::string message_;
-// };
+struct print_message_t
+{
+  explicit print_message_t(std::string message, is_log_message log_to_file, is_log_datetime is_log_current_date_time, bool is_remove_color_codes_for_log_message) : message_{ std::move(message) }, log_to_file_{ log_to_file }, is_log_current_date_time_{ is_log_current_date_time }, is_remove_color_codes_for_log_message_{ is_remove_color_codes_for_log_message } {}
+  // HWND& control_;
+  std::string message_;
+  is_log_message log_to_file_;
+  is_log_datetime is_log_current_date_time_;
+  bool is_remove_color_codes_for_log_message_;
+};
 
 struct message_t
 {

@@ -24,16 +24,16 @@
 
 #pragma once
 
-#include <stdlib.h>
+#include <cstdlib>
 #include <string>
 #include <vector>
+#include <unordered_set>
 #include <unordered_map>
 #include <utility>
 #include <iostream>
 #include <limits>
 #include <climits>
 #include <fstream>
-
 
 static char const *RSJobjectbrackets = "{}";
 static char const *RSJarraybrackets = "[]";
@@ -78,23 +78,73 @@ enum StrTrimDir { STRTRIM_L = 1,
   STRTRIM_R = 2,
   STRTRIM_LR = 3 };
 
+inline bool ltrim_in_place(
+  std::string &src,
+  const char *chars_to_trim = " \t\n\f\v\r")
+{
+  const size_t src_len{ src.length() };
+
+  if (0U == src_len)
+    return false;
+
+  const std::unordered_set<char> trimmed_chars(
+    chars_to_trim, chars_to_trim + strlen(chars_to_trim));
+
+  const auto first_char_pos{ std::find_if(
+    std::cbegin(src), std::cend(src), [&trimmed_chars](const auto ch) {
+      return trimmed_chars.find(ch) == std::cend(trimmed_chars);
+    }) };
+
+  if (first_char_pos == std::cend(src)) {
+    src.clear();
+    return true;
+  }
+
+  if (std::cbegin(src) != first_char_pos) {
+    src.erase(std::cbegin(src), first_char_pos);
+    return true;
+  }
+
+  return false;
+}
+
+inline bool rtrim_in_place(
+  std::string &src,
+  const char *chars_to_trim = " \t\n\f\v\r")
+{
+  const size_t src_len{ src.length() };
+
+  if (0U == src_len)
+    return false;
+
+  const std::unordered_set<char> trimmed_chars(
+    chars_to_trim, chars_to_trim + strlen(chars_to_trim));
+
+  const auto last_char_pos =
+    std::find_if(std::crbegin(src), std::crend(src), [&trimmed_chars](const auto ch) {
+      return trimmed_chars.find(ch) == std::cend(trimmed_chars);
+    }).base();
+
+  if (std::cend(src) == last_char_pos)
+    return false;
+
+  src.erase(last_char_pos, std::cend(src));
+  return true;
+}
+
 inline std::string strtrim(std::string str, std::string chars = " \t\n\r", size_t max_count = std::string::npos, StrTrimDir dirs = STRTRIM_LR)
 {
-  if (str.empty()) return str;
+  if (str.empty())
+    return str;
+
   if (std::string::npos == max_count) max_count = str.length();
 
   if (dirs & STRTRIM_L) {// left trim
-    size_t p{};
-    for (; p < max_count; ++p)
-      if (chars.find(str[p]) == std::string::npos) break;
-    str.erase(0, p);// const_str::l_erase(p)
+    ltrim_in_place(str, chars.c_str());
   }
 
   if (dirs & STRTRIM_R) {// right trim
-    size_t q, strlenm1 = str.length() - 1;
-    for (q = 0; q < max_count; ++q)
-      if (chars.find(str[strlenm1 - q]) == std::string::npos) break;
-    str.erase(str.length() - q, q);// const_str::r_erase(q)
+    rtrim_in_place(str, chars.c_str());
   }
 
   return str;
