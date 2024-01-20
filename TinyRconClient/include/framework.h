@@ -11,13 +11,8 @@
 #define ASIO_STANDALONE
 // Windows Header Files
 #include <Windows.h>
-// C RunTime Header Files
 #include <memory.h>
-#include <tchar.h>
-#include <cstdio>
-#include <cstdlib>
 #include <windowsx.h>
-// C++ header files
 #include <condition_variable>
 #include <cstring>
 #include <format>
@@ -32,91 +27,91 @@
 #include "json_parser.hpp"
 #include "stack_trace_element.h"
 
-//#define ASSERT _ASSERTE
+// #define ASSERT _ASSERTE
 //
-//#ifdef _DEBUG
-//#undef VERIFY
-//#define VERIFY ASSERT
-//#else
-//#define VERIFY(expression) (expression)
-//#endif
+// #ifdef _DEBUG
+// #undef VERIFY
+// #define VERIFY ASSERT
+// #else
+// #define VERIFY(expression) (expression)
+// #endif
 //
-//struct LastException
+// struct last_exception
 //{
-//  DWORD result;
+//   DWORD result;
 //
-//  LastException() : result{ GetLastError() } {}
-//};
+//   last_exception() : result{ GetLastError() } {}
+// };
 //
-//struct ManualResetEvent
+// struct manual_reset_event
 //{
-//  HANDLE m_handle;
+//   HANDLE m_handle;
 //
-//  ManualResetEvent()
-//  {
-//    m_handle = CreateEvent(nullptr,
-//      true,
-//      false,
-//      nullptr);
+//   manual_reset_event()
+//   {
+//     m_handle = CreateEvent(nullptr,
+//       true,
+//       false,
+//       nullptr);
 //
-//    if (!m_handle) {
-//      throw LastException();
-//    }
-//  }
+//     if (!m_handle) {
+//       throw last_exception();
+//     }
+//   }
 //
-//  ~ManualResetEvent()
-//  {
-//    VERIFY(CloseHandle(m_handle));
-//  }
-//};
+//   ~manual_reset_event()
+//   {
+//     VERIFY(CloseHandle(m_handle));
+//   }
+// };
 //
-//#ifdef _DEBUG
-//inline auto Trace(char const *format, ...) -> void
+// #ifdef _DEBUG
+// inline auto Trace(char const *format, ...) -> void
 //{
-//  va_list args;
-//  va_start(args, format);
+//   va_list args;
+//   va_start(args, format);
 //
-//  char buffer[512];
+//   char buffer[512];
 //
-//  ASSERT(-1 != _vsnprintf_s(buffer, _countof(buffer) - 1, format, args));
+//   ASSERT(-1 != _vsnprintf_s(buffer, _countof(buffer) - 1, format, args));
 //
-//  va_end(args);
+//   va_end(args);
 //
-//  OutputDebugString(buffer);
-//}
+//   OutputDebugString(buffer);
+// }
 //
-//struct Tracer
+// struct Tracer
 //{
-//  char const *m_filename;
-//  unsigned m_line;
+//   char const *m_filename;
+//   unsigned m_line;
 //
-//  Tracer(char const *filename, unsigned const line) : m_filename{ filename },
-//                                                      m_line{ line }
-//  {
-//  }
+//   Tracer(char const *filename, unsigned const line) : m_filename{ filename },
+//                                                       m_line{ line }
+//   {
+//   }
 //
-//  template<typename... Args>
-//  auto operator()(char const *format, Args... args) const -> void
-//  {
-//    char buffer[512];
+//   template<typename... Args>
+//   auto operator()(char const *format, Args... args) const -> void
+//   {
+//     char buffer[512];
 //
-//    auto count = sprintf_s(buffer,
-//      "%S(%d): ",
-//      m_filename,
-//      m_line);
+//     auto count = sprintf_s(buffer,
+//       "%S(%d): ",
+//       m_filename,
+//       m_line);
 //
-//    ASSERT(-1 != count);
+//     ASSERT(-1 != count);
 //
-//    ASSERT(-1 != _snprintf_s(buffer + count, _countof(buffer) - count, _countof(buffer) - count - 1, format, args...));
+//     ASSERT(-1 != _snprintf_s(buffer + count, _countof(buffer) - count, _countof(buffer) - count - 1, format, args...));
 //
-//    OutputDebugStringA(buffer);
-//  }
-//};
+//     OutputDebugStringA(buffer);
+//   }
+// };
 //
-//#endif
+// #endif
 //
-//#ifdef _DEBUG
-//#define TRACE Tracer(__FILE__, __LINE__)
-//#else
-//#define TRACE __noop
-//#endif
+// #ifdef _DEBUG
+// #define TRACE Tracer(__FILE__, __LINE__)
+// #else
+// #define TRACE __noop
+// #endif

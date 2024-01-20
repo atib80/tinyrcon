@@ -151,6 +151,39 @@ class tiny_rcon_server_application
   string iw3mp_exe_path;
   string cod5mp_exe_path;
   string command_line_info;
+
+  std::map<std::string, std::pair<std::string, std::string>> available_rcon_to_full_map_names{
+    { "mp_breakout", { "Villers-Bocage, France", "Villers-Bocage, France" } },
+    { "mp_brecourt", { "Brecourt, France", "Brecourt, France" } },
+    { "mp_burgundy", { "Burgundy, France", "Burgundy, France" } },
+    { "mp_carentan", { "Carentan, France", "Carentan, France" } },
+    { "mp_dawnville", { "St. Mere Eglise, France", "St. Mere Eglise, France" } },
+    { "mp_decoy", { "El Alamein, Egypt", "El Alamein, Egypt" } },
+    { "mp_downtown", { "Moscow, Russia", "Moscow, Russia" } },
+    { "mp_farmhouse", { "Beltot, France", "Beltot, France" } },
+    { "mp_leningrad", { "Leningrad, Russia", "Leningrad, Russia" } },
+    { "mp_matmata", { "Matmata, Tunisia", "Matmata, Tunisia" } },
+    { "mp_railyard", { "Stalingrad, Russia", "Stalingrad, Russia" } },
+    { "mp_toujane", { "Toujane, Tunisia", "Toujane, Tunisia" } },
+    { "mp_trainstation", { "Caen, France", "Caen, France" } }
+  };
+
+  std::map<std::string, std::string> available_full_map_to_rcon_map_names{
+    { "Villers-Bocage, France", "mp_breakout" },
+    { "Brecourt, France", "mp_brecourt" },
+    { "Burgundy, France", "mp_burgundy" },
+    { "Carentan, France", "mp_carentan" },
+    { "St. Mere Eglise, France", "mp_dawnville" },
+    { "El Alamein, Egypt", "mp_decoy" },
+    { "Moscow, Russia", "mp_downtown" },
+    { "Beltot, France", "mp_farmhouse" },
+    { "Leningrad, Russia", "mp_leningrad" },
+    { "Matmata, Tunisia", "mp_matmata" },
+    { "Stalingrad, Russia", "mp_railyard" },
+    { "Toujane, Tunisia", "mp_toujane" },
+    { "Caen, France", "mp_trainstation" },
+  };
+
   std::unordered_map<std::string, std::string> admin_messages{
     { "user_defined_warn_msg", "^7{PLAYERNAME} ^1you have been warned by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}" },
     { "user_defined_kick_msg", "^7{PLAYERNAME} ^1you are being kicked by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}" },
@@ -368,11 +401,11 @@ public:
     string cleaned_name{ get_cleaned_user_name(name) };
     // unsigned long guid_key{};
     // if (check_ip_address_validity(ip_address, guid_key)) {
-      // player pd{};
-      // convert_guid_key_to_country_name(cm_for_messages.get_geoip_data(), ip_address, pd);
-      // if (cleaned_name == "admin") {
-      //   cleaned_name += std::format("_{}", pd.country_name);
-      // }
+    // player pd{};
+    // convert_guid_key_to_country_name(cm_for_messages.get_geoip_data(), ip_address, pd);
+    // if (cleaned_name == "admin") {
+    //   cleaned_name += std::format("_{}", pd.country_name);
+    // }
     // }
 
     return name_to_user.contains(cleaned_name);
@@ -694,6 +727,16 @@ public:
   void set_plugins_geoIP_geo_dat_md5(string new_plugins_geoIP_geo_dat_md5)
   {
     plugins_geoIP_geo_dat_md5 = std::move(new_plugins_geoIP_geo_dat_md5);
+  }
+
+  auto &get_available_rcon_to_full_map_names() noexcept
+  {
+    return available_rcon_to_full_map_names;
+  }
+
+  auto &get_available_full_map_to_rcon_map_names() noexcept
+  {
+    return available_full_map_to_rcon_map_names;
   }
 
   bool open_log_file(const char *file_path)

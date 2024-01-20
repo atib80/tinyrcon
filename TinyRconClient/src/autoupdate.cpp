@@ -21,6 +21,8 @@ extern PROCESS_INFORMATION pr_info;
 using namespace std;
 
 #define SELF_REMOVE_STRING TEXT("cmd.exe /C ping 1.1.1.1 -n 1 -w 3000 > nul & del /f /q \"%s\"")
+#define SELF_RENAME_STRING TEXT("cmd.exe /C ping 1.1.1.1 -n 1 -w 3000 > nul & MOVE /Y \"%s\" \"%s\"")
+
 
 class MyCallback : public IBindStatusCallback
 {
@@ -133,6 +135,19 @@ public:
   }
 };
 
+void rename_myself(const char *src_file_path, const char *dst_file_path)
+{
+  char file_path[MAX_PATH];
+  char command_to_run[2 * MAX_PATH];
+  STARTUPINFO si{};
+  PROCESS_INFORMATION pi{};
+  GetModuleFileNameA(nullptr, file_path, MAX_PATH);
+  snprintf(command_to_run, 2 * MAX_PATH, SELF_RENAME_STRING, src_file_path, dst_file_path);
+  CreateProcessA(nullptr, command_to_run, nullptr, nullptr, FALSE, CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi);
+  CloseHandle(pi.hThread);
+  CloseHandle(pi.hProcess);
+}
+
 void delete_me()
 {
   char file_path[MAX_PATH];
@@ -147,13 +162,7 @@ void delete_me()
 }
 
 
-std::string get_file_name_from_path(const std::string &file_path)
-{
-  const auto slash_pos{ file_path.rfind('\\') };
-  return file_path.substr(slash_pos + 1);
-}
-
-bool auto_update_manager::get_file_version(const string &exe_file, version_data &ver, unsigned long &version_number) const
+bool auto_update_manager::get_file_version(const string &exe_file, version_data &ver, unsigned long &version_number /*, const bool is_print_information*/) const
 {
   unique_ptr<BYTE[]> lp_version_info_buffer{};
 
@@ -180,8 +189,11 @@ bool auto_update_manager::get_file_version(const string &exe_file, version_data 
       version_number += ver.revision;
       version_number *= 100;
       version_number += ver.sub_revision;
-      snprintf(message_buffer, std::size(message_buffer), "^2Current version of ^5Tiny^6Rcon ^2is ^5%d.%d.%d.%d\n", ver.major, ver.minor, ver.revision, ver.sub_revision);
-      print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      /*if (is_print_information) {
+        snprintf(message_buffer, std::size(message_buffer), "^2Current version of ^5Tiny^6Rcon ^2is ^5%d.%d.%d.%d\n", ver.major, ver.minor, ver.revision, ver.sub_revision);
+        print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        main_app.get_connection_manager_for_messages().process_and_send_message("tinyrcon-info", format("{}\\{}\\{}", main_app.get_username(), main_app.get_user_ip_address(), message_buffer), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      }*/
       return true;
     }
   } catch (exception &) {
@@ -211,7 +223,7 @@ void auto_update_manager::set_self_full_path(string path)
 {
   self_full_path = std::move(path);
 }
-const string &auto_update_manager::get_self_file_name() const
+const string &auto_update_manager::get_self_file_name() const noexcept
 {
   return self_file_name;
 }
@@ -261,7 +273,7 @@ bool auto_update_manager::download_file(const char *download_url, const char *do
 
 void auto_update_manager::check_for_updates()
 {
-  char exe_file_path[MAX_PATH];
+  char exe_file_path[MAX_PATH]{};
 
   if (GetModuleFileNameA(nullptr, exe_file_path, MAX_PATH)) {
 
@@ -273,7 +285,7 @@ void auto_update_manager::check_for_updates()
 
   version_data ver{};
   unsigned long version_number{};
-  if (get_file_version(exe_file_path, ver, version_number)) {
+  if (get_file_version(get_self_full_path(), ver, version_number)) {
     current_version_number = version_number;
   }
 
@@ -366,23 +378,24 @@ void auto_update_manager::check_for_updates()
         const string new_geo_dat_file_name{ available_file_names[0] };
         const string new_geo_dat_file_md5{ new_geo_dat_file_name.substr(4, new_geo_dat_file_name.length() - 7) };
         const string current_geo_dat_file_md5 = [&]() {
-          if (main_app.get_plugins_geoIP_geo_dat_md5() != new_geo_dat_file_md5) {
-            const string geo_dat_file_path{ main_app.get_current_working_directory() + "plugins\\geoIP\\geo.dat" };
-            ifstream geo_dat_file(geo_dat_file_path.c_str(), std::ios::binary | std::ios::in);
+          const string geo_dat_file_path{ main_app.get_current_working_directory() + "plugins\\geoIP\\geo.dat" };
 
-            if (!geo_dat_file)
-              return string{};
+          if (!check_if_file_path_exists(geo_dat_file_path.c_str())) return string{};
 
-            geo_dat_file.seekg(0, std::ios::end);
-            const size_t length{ static_cast<size_t>(geo_dat_file.tellg()) };
-            geo_dat_file.seekg(0, std::ios::beg);
+          // geo_dat_file.seekg(0, std::ios::end);
+          // const size_t length{ static_cast<size_t>(geo_dat_file.tellg()) };
+          // geo_dat_file.seekg(0, std::ios::beg);
+          const size_t length(get_file_size_in_bytes(geo_dat_file_path.c_str()));
+          if (length == 0) return string{};
 
-            unique_ptr<char[]> file_data{ make_unique<char[]>(length) };
-            geo_dat_file.read(file_data.get(), length);
+          ifstream geo_dat_file(geo_dat_file_path.c_str(), std::ios::binary | std::ios::in);
+          if (!geo_dat_file)
+            return string{};
 
-            main_app.set_plugins_geoIP_geo_dat_md5(md5(file_data.get(), length));
-          }
+          unique_ptr<char[]> file_data{ make_unique<char[]>(length) };
+          geo_dat_file.read(file_data.get(), length);
 
+          main_app.set_plugins_geoIP_geo_dat_md5(md5(file_data.get(), length));
           return main_app.get_plugins_geoIP_geo_dat_md5();
         }();
 
@@ -439,6 +452,9 @@ void auto_update_manager::check_for_updates()
               DeleteFile(new_geo_dat_7zip_file_path.c_str());
               snprintf(message_buffer, std::size(message_buffer), "^2Finished extracting downloaded ^5%s ^2geoIP database file\n to ^5plugins/geoIP/geo.dat\n", new_geo_dat_file_name.c_str());
               print_colored_text(app_handles.hwnd_re_messages_data, message_buffer, is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+              /*if (check_if_file_path_exists("plugins\\geoIP\\geo.data")) {
+                import_geoip_data(main_app.get_connection_manager().get_geoip_data(), "plugins\\geoIP\\geo.data");
+              }*/
 
             } else {
               snprintf(message_buffer, std::size(message_buffer), "^3Failed to extract downloaded ^5%s ^3geoIP database file\n to ^5plugins/geoIP/geo.dat!\n^1Error: ^5%s\n", new_geo_dat_file_name.c_str(), message.c_str());
@@ -477,6 +493,7 @@ void auto_update_manager::replace_temporary_version()
       // while (!CopyFileA(copy_file_path.c_str(), deleted_file_path.c_str(), FALSE)) {
       Sleep(20);
     }
+
     if (run_executable(deleted_file_path.c_str())) {
       if (pr_info.hProcess != nullptr)
         CloseHandle(pr_info.hProcess);

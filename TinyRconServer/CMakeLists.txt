@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.22)
+# cmake_minimum_required(VERSION 3.22)
 project(tinyrconserver)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -37,7 +37,7 @@ set(BOOST_ENABLE_CMAKE ON)
 #)
 # FetchContent_MakeAvailable(Boost)
 
-set(src_files src/simple_grid.cpp src/tiny_rcon_utility_functions.cpp src/connection_manager_for_classes.cpp src/tiny_rcon_server.cpp)
+set(src_files src/simple_grid.cpp src/tiny_rcon_utility_functions.cpp src/connection_manager_for_messages.cpp src/tiny_rcon_server.cpp)
 
 add_executable(tinyrconserver ${src_files})
 

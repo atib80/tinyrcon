@@ -18,7 +18,7 @@ struct player
   char ping[5]{};
   char geo_country_code[8];
   time_t banned_start_time{};
-  time_t ban_duration_in_hours{ 24 }; 
+  time_t ban_duration_in_hours{ 24 };
   char player_name[33]{};
   char guid_key[33]{};
   char banned_date_time[33]{};

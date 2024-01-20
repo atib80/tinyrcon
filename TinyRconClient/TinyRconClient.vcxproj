@@ -118,6 +118,7 @@
       <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)deps\bit7z\include\;$(SolutionDir)deps\asio-1.26.0\include</AdditionalIncludeDirectories>
       <FloatingPointModel>Fast</FloatingPointModel>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
+      <AdditionalOptions>/Zc:preprocessor %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -148,6 +149,7 @@
       <FloatingPointModel>Fast</FloatingPointModel>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <LanguageStandard_C>Default</LanguageStandard_C>
+      <AdditionalOptions>/Zc:preprocessor %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -174,6 +176,7 @@
       <EnableModules>true</EnableModules>
       <AdditionalIncludeDirectories>include;$(SolutionDir)deps\asio-1.26.0\include;</AdditionalIncludeDirectories>
       <FloatingPointModel>Fast</FloatingPointModel>
+      <AdditionalOptions>/Zc:preprocessor %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -194,6 +197,7 @@
       <EnableModules>true</EnableModules>
       <AdditionalIncludeDirectories>include;$(SolutionDir)deps\asio-1.26.0\include;$(ProjectDir)include</AdditionalIncludeDirectories>
       <FloatingPointModel>Fast</FloatingPointModel>
+      <AdditionalOptions>/Zc:preprocessor %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -209,7 +213,7 @@
     <ClInclude Include="include\detail\stl_helper_functions_impl.hpp" />
     <ClInclude Include="include\framework.h" />
     <ClInclude Include="include\game_server.h" />
-    <ClInclude Include="include\ImageEx.h" />
+    <ClInclude Include="include\image.h" />
     <ClInclude Include="include\internet_handle.h" />
     <ClInclude Include="include\json_parser.hpp" />
     <ClInclude Include="include\md5.h" />
@@ -232,7 +236,7 @@
     <ClCompile Include="src\connection_manager.cpp" />
     <ClCompile Include="src\connection_manager_for_messages.cpp" />
     <ClCompile Include="src\connection_manager_for_rcon_messages.cpp" />
-    <ClCompile Include="src\ImageEx.cpp" />
+    <ClCompile Include="src\image.cpp" />
     <ClCompile Include="src\md5.cpp" />
     <ClCompile Include="src\simple_grid.cpp" />
     <ClCompile Include="src\tiny_rcon_client.cpp" />

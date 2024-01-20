@@ -170,12 +170,12 @@ public:
     return online_and_max_players;
   }
 
-  void set_country_code(const char *new_country_code) 
+  void set_country_code(const char *new_country_code)
   {
     country_code = new_country_code;
   }
 
-  const char *get_country_code() const 
+  const char *get_country_code() const
   {
     return country_code;
   }
@@ -213,12 +213,12 @@ public:
 
   void set_hw_info(const int new_hw) { hw = new_hw; }
 
-  void set_is_connection_settings_valid(const bool new_value) 
+  void set_is_connection_settings_valid(const bool new_value)
   {
     is_connection_settings_valid = new_value;
   }
 
-  bool get_is_connection_settings_valid() const 
+  bool get_is_connection_settings_valid() const
   {
     return is_connection_settings_valid;
   }

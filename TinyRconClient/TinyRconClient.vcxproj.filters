@@ -75,7 +75,7 @@
     <ClInclude Include="include\tiny_rcon_utility_data_types.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\ImageEx.h">
+    <ClInclude Include="include\image.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\connection_manager_for_rcon_messages.h">
@@ -107,7 +107,7 @@
     <ClCompile Include="include\connection_manager_for_messages.h">
       <Filter>Header Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\ImageEx.cpp">
+    <ClCompile Include="src\image.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\connection_manager_for_rcon_messages.cpp">

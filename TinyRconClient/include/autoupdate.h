@@ -71,14 +71,14 @@ public:
   auto_update_manager() = default;
   ~auto_update_manager() = default;
 
-  bool get_file_version(const std::string &exe_file, version_data &ver, unsigned long &version_number) const;
+  bool get_file_version(const std::string &exe_file, version_data &ver, unsigned long &version_number /*, const bool is_print_information = true*/) const;
   const std::string &get_self_full_path() const;
   void replace_temporary_version();
   void downloaded_latest_version_of_program() const;
   void set_self_current_working_directory(std::string cwd);
   const std::string &get_self_current_working_directory() const;
   void set_self_full_path(std::string path);
-  const std::string &get_self_file_name() const;
+  const std::string &get_self_file_name() const noexcept;
   void set_self_file_name(std::string file_name);
   std::vector<std::string> get_file_name_matches_for_specified_file_pattern(internet_handle &internet_connect_handle, const char *relative_path, const char *file_pattern) const;
   bool download_file(const char *url, const char *downloaded_file_path) const;

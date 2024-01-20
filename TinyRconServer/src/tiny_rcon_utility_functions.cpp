@@ -5456,3 +5456,87 @@ bool remove_permanently_banned_player_name(player &pd, std::vector<player> &bann
 
   return true;
 }
+
+std::string get_file_name_from_path(const std::string &file_path)
+{
+  const auto slash_pos{ file_path.rfind('\\') };
+  return file_path.substr(slash_pos + 1);
+}
+
+bool load_available_map_names(const char *map_names_file_path)
+{
+  string property_key, property_value;
+  ifstream input_file{ map_names_file_path };
+  if (!input_file) {
+    const size_t buffer_size{ 1024 };
+    char buffer[buffer_size];
+    strerror_s(buffer, buffer_size, static_cast<int>(GetLastError()));
+    string errorMessage{
+      "^3Couldn't open file at specified path ^1("s + map_names_file_path + ")^3! "s + buffer
+    };
+    print_colored_text(app_handles.hwnd_re_messages_data, errorMessage.c_str());
+    ofstream bannedIPsFileToWrite{ map_names_file_path };
+    if (!bannedIPsFileToWrite) {
+      strerror_s(buffer, buffer_size, static_cast<int>(GetLastError()));
+      errorMessage.assign(format("^3Couldn't create file at ^1{}^3!\nError: ^1{}", map_names_file_path, buffer));
+      print_colored_text(app_handles.hwnd_re_messages_data, errorMessage.c_str());
+    }
+
+    return false;
+  }
+
+  string readData;
+  while (getline(input_file, readData)) {
+    stl::helper::trim_in_place(readData);
+    if (!readData.empty() && (readData.starts_with("//") || '#' == readData[0])) continue;
+    vector<string> parts = stl::helper::str_split(readData, "\\", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::yes);
+    if (parts.size() < 3)
+      continue;
+    for (auto &part : parts)
+      stl::helper::trim_in_place(part);
+
+    main_app.get_available_rcon_to_full_map_names()[parts[0]] = make_pair(parts[1], parts[2]);
+    main_app.get_available_full_map_to_rcon_map_names()[parts[1]] = parts[0];
+  }
+
+  return true;
+}
+
+void send_user_available_map_names(const std::shared_ptr<tiny_rcon_client_user> &user)
+{
+  const auto &available_maps = main_app.get_available_rcon_to_full_map_names();
+  if (!available_maps.empty()) {
+    ostringstream oss;
+    for (const auto &[rcon_name, full_name] : available_maps) {
+      if (!is_stock_cod2_map(rcon_name)) {
+        oss << format("{}\\{}\\{}\n", rcon_name, full_name.first, full_name.second);
+      }
+    }
+    const string message{ oss.str() };
+    if (!message.empty()) {
+      main_app.add_message_to_queue(message_t("receive-mapnames", oss.str(), user, true));
+    }
+  }
+}
+
+bool is_stock_cod2_map(const std::string &mapname)
+{
+  static const std::unordered_set<std::string> stock_maps{
+    "mp_breakout",
+    "mp_brecourt",
+    "mp_burgundy",
+    "mp_carentan",
+    "mp_dawnville",
+    "mp_decoy",
+    "mp_downtown",
+    "mp_farmhouse",
+    "mp_leningrad",
+    "mp_matmata",
+    "mp_railyard",
+    "mp_toujane",
+    "mp_trainstation"
+  };
+  string cleaned_map_name{ stl::helper::trim(mapname) };
+  to_lower_case_in_place(cleaned_map_name);
+  return stock_maps.contains(cleaned_map_name);
+}

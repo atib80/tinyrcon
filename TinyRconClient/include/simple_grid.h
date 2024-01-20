@@ -1053,7 +1053,7 @@ typedef struct tagNMSGFOCUS
 
 ATOM InitSimpleGrid(HINSTANCE hInstance);
 HWND New_SimpleGrid(HWND hParent, DWORD dwID);
-void Grid_OnSetFont(HWND hwnd, HFONT hfont, BOOL fRedraw) ;
+void Grid_OnSetFont(HWND hwnd, HFONT hfont, BOOL fRedraw);
 VOID ShowHscroll(HWND);
 // VOID SetHomeRow(HWND hwnd, int col, int row);
 int findLongestTextWidthInColumn(HWND hwnd, const int col, const int start_row, const int last_row, const int min_col_width = 160, const int max_col_width = 330);

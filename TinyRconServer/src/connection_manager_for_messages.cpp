@@ -120,6 +120,15 @@ bool connection_manager_for_messages::wait_for_and_process_response_message()
       return true;
     }
 
+    if (message_handler_name == "request-mapnames") {
+      auto user = make_shared<tiny_rcon_client_user>();
+      user->user_name = sender;
+      user->ip_address = sender_ip;
+      user->remote_endpoint = remote_endpoint;
+      send_user_available_map_names(user);
+      return true;
+    }
+
     if (main_app.get_game_server().get_rcon_password() == parts[2]) {
       const auto &user = main_app.get_user_for_name(sender, sender_ip);
       user->ip_address = std::move(sender_ip);

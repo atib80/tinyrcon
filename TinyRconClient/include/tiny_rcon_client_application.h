@@ -10,6 +10,7 @@
 #include <random>
 #include <string>
 #include <set>
+#include <map>
 #include <unordered_map>
 #include <vector>
 #include "connection_manager.h"
@@ -28,10 +29,16 @@ using std::string;
 
 extern tiny_rcon_handles app_handles;
 
+extern const DWORD cod1_steam_appid;
+extern const DWORD cod2_steam_appid;
+extern const DWORD cod4_steam_appid;
+extern const DWORD cod5_steam_appid;
 
 class tiny_rcon_client_application
 {
   bool is_log_file_open{};
+  // bool is_config_file_copied{};
+  bool is_custom_map_names_message_received{};
   bool is_draw_border_lines{ true };
   bool is_disable_automatic_kick_messages{ false };
   bool is_use_original_admin_messages{ true };
@@ -46,6 +53,7 @@ class tiny_rcon_client_application
   size_t game_server_index{};
   size_t game_servers_count{};
   size_t rcon_game_servers_count{};
+  static constexpr size_t max_game_servers_size{ 4096 };
   std::atomic<uint64_t> previous_downloaded_data_in_bytes{ 0ULL };
   std::atomic<uint64_t> previous_uploaded_data_in_bytes{ 0ULL };
   std::atomic<uint64_t> next_downloaded_data_in_bytes{ 0ULL };
@@ -128,6 +136,15 @@ class tiny_rcon_client_application
   size_t check_for_banned_players_time_period{ 5u };
 
   uint_least16_t cod2_master_server_port{ 20710 };
+  std::queue<command_t> command_queue{};
+  std::queue<message_t> message_queue{};
+  std::queue<message_t> remote_message_queue{};
+  std::queue<print_message_t> tinyrcon_messages_to_print;
+
+  std::vector<std::shared_ptr<tiny_rcon_client_user>> users;
+  std::vector<std::shared_ptr<tiny_rcon_client_user>> players;
+  std::vector<player> reported_players;
+
   map<string, string> server_settings;
   std::unordered_map<string, size_t> ip_address_frequency;
   std::unordered_map<std::string, std::string> admin_messages{
@@ -194,19 +211,36 @@ class tiny_rcon_client_application
     { "1.3", 118 }
   };
 
-  auto_update_manager au;
-
-  connection_manager rcon_connection_manager;
-  connection_manager_for_messages cm_for_messages;
-  connection_manager_for_rcon_messages cm_for_rcon_messages;
-  std::queue<command_t> command_queue{};
-  std::queue<message_t> message_queue{};
-  std::queue<message_t> remote_message_queue{};
-  std::queue<print_message_t> tinyrcon_messages_to_print;
-
-  std::vector<std::shared_ptr<tiny_rcon_client_user>> users;
-  std::vector<std::shared_ptr<tiny_rcon_client_user>> players;
-  std::vector<player> reported_players;
+  std::map<std::string, std::pair<std::string, std::string>> available_rcon_to_full_map_names{
+    { "mp_breakout", { "Villers-Bocage, France", "Villers-Bocage, France" } },
+    { "mp_brecourt", { "Brecourt, France", "Brecourt, France" } },
+    { "mp_burgundy", { "Burgundy, France", "Burgundy, France" } },
+    { "mp_carentan", { "Carentan, France", "Carentan, France" } },
+    { "mp_dawnville", { "St. Mere Eglise, France", "St. Mere Eglise, France" } },
+    { "mp_decoy", { "El Alamein, Egypt", "El Alamein, Egypt" } },
+    { "mp_downtown", { "Moscow, Russia", "Moscow, Russia" } },
+    { "mp_farmhouse", { "Beltot, France", "Beltot, France" } },
+    { "mp_leningrad", { "Leningrad, Russia", "Leningrad, Russia" } },
+    { "mp_matmata", { "Matmata, Tunisia", "Matmata, Tunisia" } },
+    { "mp_railyard", { "Stalingrad, Russia", "Stalingrad, Russia" } },
+    { "mp_toujane", { "Toujane, Tunisia", "Toujane, Tunisia" } },
+    { "mp_trainstation", { "Caen, France", "Caen, France" } }
+  };
+  std::map<std::string, std::string> available_full_map_to_rcon_map_names{
+    { "Villers-Bocage, France", "mp_breakout" },
+    { "Brecourt, France", "mp_brecourt" },
+    { "Burgundy, France", "mp_burgundy" },
+    { "Carentan, France", "mp_carentan" },
+    { "St. Mere Eglise, France", "mp_dawnville" },
+    { "El Alamein, Egypt", "mp_decoy" },
+    { "Moscow, Russia", "mp_downtown" },
+    { "Beltot, France", "mp_farmhouse" },
+    { "Leningrad, Russia", "mp_leningrad" },
+    { "Matmata, Tunisia", "mp_matmata" },
+    { "Stalingrad, Russia", "mp_railyard" },
+    { "Toujane, Tunisia", "mp_toujane" },
+    { "Caen, France", "mp_trainstation" },
+  };
   std::unordered_map<std::string, std::shared_ptr<tiny_rcon_client_user>> name_to_user;
   std::unordered_map<std::string, std::shared_ptr<tiny_rcon_client_user>> player_to_user;
   std::unordered_map<std::string, bool> is_user_data_received;
@@ -221,7 +255,11 @@ class tiny_rcon_client_application
   std::unordered_map<std::string, std::function<void(const std::string &, const time_t, const std::string &, const bool)>> message_handlers;
   std::unordered_map<std::string, std::function<void(const std::string &, const time_t, const std::string &, const bool)>> remote_message_handlers;
 
-  static constexpr size_t max_game_servers_size{ 4096 };
+  auto_update_manager au;
+  connection_manager rcon_connection_manager;
+  connection_manager_for_messages cm_for_messages;
+  connection_manager_for_rcon_messages cm_for_rcon_messages;
+
   std::array<game_server, max_game_servers_size> game_servers;
 
 public:
@@ -372,9 +410,10 @@ public:
 
   inline const string &get_codmp_exe_path()
   {
-    if (!check_if_file_path_exists(codmp_exe_path.c_str())) {
-      codmp_exe_path = find_call_of_duty_1_installation_path(false);
-    }
+    /*if (!check_if_cod1_multiplayer_game_launch_command_is_correct(codmp_exe_path)) {
+      codmp_exe_path.clear();
+    }*/
+
     return codmp_exe_path;
   }
 
@@ -385,9 +424,10 @@ public:
 
   inline const string &get_cod2mp_exe_path()
   {
-    if (!check_if_file_path_exists(cod2mp_s_exe_path.c_str())) {
-      cod2mp_s_exe_path = find_call_of_duty_2_installation_path(false);
-    }
+    /*if (!check_if_cod2_multiplayer_game_launch_command_is_correct(cod2mp_s_exe_path)) {
+      cod2mp_s_exe_path.clear();
+    }*/
+
     return cod2mp_s_exe_path;
   }
 
@@ -398,9 +438,10 @@ public:
 
   inline const string &get_iw3mp_exe_path()
   {
-    if (!check_if_file_path_exists(iw3mp_exe_path.c_str())) {
-      iw3mp_exe_path = find_call_of_duty_4_installation_path(false);
-    }
+    /*if (!check_if_cod4_multiplayer_game_launch_command_is_correct(iw3mp_exe_path)) {
+      iw3mp_exe_path.clear();
+    }*/
+
     return iw3mp_exe_path;
   }
 
@@ -411,9 +452,10 @@ public:
 
   inline const string &get_cod5mp_exe_path()
   {
-    if (!check_if_file_path_exists(cod5mp_exe_path.c_str())) {
-      cod5mp_exe_path = find_call_of_duty_5_installation_path(false);
-    }
+    /*if (!check_if_cod5_multiplayer_game_launch_command_is_correct(cod5mp_exe_path)) {
+      cod5mp_exe_path.clear();
+    }*/
+
     return cod5mp_exe_path;
   }
 
@@ -670,15 +712,25 @@ public:
     return cod2_game_version_to_protocol;
   }
 
-  std::unordered_map<std::string, std::shared_ptr<tiny_rcon_client_user>> &get_name_to_user()
+  std::map<std::string, std::pair<std::string, std::string>> &get_available_rcon_to_full_map_names() noexcept
   {
-    return name_to_user;
+    return available_rcon_to_full_map_names;
   }
 
-  std::unordered_map<std::string, bool> &get_is_user_data_received()
+  std::map<std::string, std::string> &get_available_full_map_to_rcon_map_names() noexcept
+  {
+    return available_full_map_to_rcon_map_names;
+  }
+
+  /*std::unordered_map<std::string, std::shared_ptr<tiny_rcon_client_user>> &get_name_to_user()
+  {
+    return name_to_user;
+  }*/
+
+  /*std::unordered_map<std::string, bool> &get_is_user_data_received()
   {
     return is_user_data_received;
-  }
+  }*/
 
   // bool get_is_user_data_received_for_user(const std::string &name)
   //{
@@ -923,6 +975,26 @@ public:
     if (game_names.contains(game_name))
       return game_names.at(game_name).c_str();
     return "Unknown game";
+  }
+
+  /* bool get_is_config_file_copied() const noexcept
+   {
+     return is_config_file_copied;
+   }
+
+   void set_is_config_file_copied(const bool new_value) noexcept
+   {
+     is_config_file_copied = new_value;
+   }*/
+
+  bool get_is_custom_map_names_message_received() const noexcept
+  {
+    return is_custom_map_names_message_received;
+  }
+
+  void set_is_custom_map_names_message_received(const bool new_value) noexcept
+  {
+    is_custom_map_names_message_received = new_value;
   }
 
   bool get_is_draw_border_lines() const

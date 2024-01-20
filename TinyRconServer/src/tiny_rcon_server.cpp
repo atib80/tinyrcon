@@ -181,6 +181,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   const string log_folder_path{ format("{}{}", main_app.get_current_working_directory(), "log") };
   const string plugins_geoIP_folder_path{ format("{}{}", main_app.get_current_working_directory(), "plugins\\geoIP") };
   const string config_file_path{ format("{}{}", main_app.get_current_working_directory(), "config\\tinyrcon.json") };
+  const string custom_map_names_file_path{ format("{}{}", main_app.get_current_working_directory(), "data\\custom_map_names.txt") };
 
   if (!create_necessary_folders_and_files({
         config_folder_path,
@@ -188,6 +189,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         log_folder_path,
         plugins_geoIP_folder_path,
         main_app.get_tinyrcon_config_file_path(),
+        custom_map_names_file_path.c_str(),
         main_app.get_temp_bans_file_path(),
         main_app.get_ip_bans_file_path(),
         main_app.get_ip_range_bans_file_path(),
@@ -209,6 +211,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   }
 
   parse_tinyrcon_tool_config_file(main_app.get_tinyrcon_config_file_path());
+  load_available_map_names(custom_map_names_file_path.c_str());
 
   main_app.add_command_handler({ "cls", "!cls" }, [](const vector<string> &) {
     Edit_SetText(app_handles.hwnd_re_messages_data, "");
@@ -344,6 +347,11 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         }
       }
     }
+  });
+
+  main_app.add_message_handler("tinyrcon-info", [](const string &user, const time_t, const string &data, bool, const string &sender_ip) {
+    print_colored_text(app_handles.hwnd_re_messages_data, format("^5Received message from ^7{} (^5IP address: ^1{}^5):\n", user, sender_ip).c_str());
+    print_colored_text(app_handles.hwnd_re_messages_data, data.c_str());
   });
 
   main_app.add_message_handler("heartbeat", [](const string &user, const time_t timestamp, const string &data, bool, const string &sender_ip) {
@@ -1279,7 +1287,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       ++main_app.get_tinyrcon_stats_data().get_no_of_kicks();
       save_tiny_rcon_users_data_to_json_file(main_app.get_users_data_file_path());
       display_users_data_in_users_table(app_handles.hwnd_users_table);
-      const string msg{ format("^7{} ^3has ^1kicked ^3player ^7{} ^3[^5IP address ^1{} ^3| ^5geoinfo: ^1{}, {}\n^5Date/time of kick: ^1{} ^3| ^5Reason of kick: ^1{} ^3| ^5Kicked by: ^7{}\n", kicked_player.banned_by_user_name, kicked_player.player_name, kicked_player.ip_address, kicked_player.country_name, kicked_player.city, kicked_player.banned_date_time, kicked_player.reason, kicked_player.banned_by_user_name) };
+      const string msg{ format("^7{} ^3has ^1kicked ^3player ^7{} ^3[^5IP address ^1{} ^3| ^5geoinfo: ^1{}, {}\n^5Date/time of kick: ^1{} ^3| ^5Reason of kick: ^1{} ^3| ^5Kicked by: ^7{}\n", user, kicked_player.player_name, kicked_player.ip_address, kicked_player.country_name, kicked_player.city, kicked_player.banned_date_time, kicked_player.reason, kicked_player.banned_by_user_name) };
       print_colored_text(app_handles.hwnd_re_messages_data, msg.c_str());
       for (const auto &u : main_app.get_users()) {
         unsigned long ip_key{};
@@ -1341,11 +1349,12 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       temp_banned_player_data.ban_duration_in_hours = stoll(parts[4]);
       temp_banned_player_data.reason = std::move(parts[5]);
       temp_banned_player_data.banned_by_user_name = parts.size() >= 7 ? parts[6] : user;
+      const string removed_by{ parts.size() >= 8 ? parts[7] : user };
       convert_guid_key_to_country_name(
         main_app.get_connection_manager_for_messages().get_geoip_data(),
         temp_banned_player_data.ip_address,
         temp_banned_player_data);
-      const string msg{ format("^7{} ^5has removed temporarily banned ^1IP address {}\n ^5for ^3player name: ^7{} ^5| ^3geoinfo: ^1{}, {} ^5| ^3Date/time of ban: ^1{}\n^3Ban duration: ^1{} hours ^5| ^3Reason of ban: ^1{} ^5| ^3Banned by: ^7{}\n", user, temp_banned_player_data.ip_address, temp_banned_player_data.player_name, temp_banned_player_data.country_name, temp_banned_player_data.city, temp_banned_player_data.banned_date_time, temp_banned_player_data.ban_duration_in_hours, temp_banned_player_data.reason, temp_banned_player_data.banned_by_user_name) };
+      const string msg{ format("^7{} ^5has removed temporarily banned ^1IP address {}\n ^5for ^3player name: ^7{} ^5| ^3geoinfo: ^1{}, {} ^5| ^3Date/time of ban: ^1{}\n^3Ban duration: ^1{} hours ^5| ^3Reason of ban: ^1{} ^5| ^3Banned by: ^7{}\n", removed_by, temp_banned_player_data.ip_address, temp_banned_player_data.player_name, temp_banned_player_data.country_name, temp_banned_player_data.city, temp_banned_player_data.banned_date_time, temp_banned_player_data.ban_duration_in_hours, temp_banned_player_data.reason, temp_banned_player_data.banned_by_user_name) };
       print_colored_text(app_handles.hwnd_re_messages_data, msg.c_str());
       auto &user_data = main_app.get_user_for_name(user, sender_ip);
       string message_about_removal;
@@ -1383,7 +1392,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       ++main_app.get_tinyrcon_stats_data().get_no_of_guid_bans();
       save_tiny_rcon_users_data_to_json_file(main_app.get_users_data_file_path());
       display_users_data_in_users_table(app_handles.hwnd_users_table);
-      const string msg{ format("^7{} ^5has banned the ^1GUID key ^5of player:\n^3Name: ^7{} ^5| ^3IP address: ^1{} ^5| ^3GUID: ^1{} ^5| ^3geoinfo: ^1{}, {} ^5| ^3Date/time of ban: ^1{}\n^3Reason of ban: ^1{} ^5| ^3Banned by: ^7{}\n", pd.banned_by_user_name, pd.player_name, pd.ip_address, pd.guid_key, pd.country_name, pd.city, pd.banned_date_time, pd.reason, pd.banned_by_user_name) };
+      const string msg{ format("^7{} ^5has banned the ^1GUID key ^5of player:\n^3Name: ^7{} ^5| ^3IP address: ^1{} ^5| ^3GUID: ^1{} ^5| ^3geoinfo: ^1{}, {} ^5| ^3Date/time of ban: ^1{}\n^3Reason of ban: ^1{} ^5| ^3Banned by: ^7{}\n", user, pd.player_name, pd.ip_address, pd.guid_key, pd.country_name, pd.city, pd.banned_date_time, pd.reason, pd.banned_by_user_name) };
       print_colored_text(app_handles.hwnd_re_messages_data, msg.c_str());
       for (const auto &u : main_app.get_users()) {
         unsigned long ip_key{};
@@ -1408,7 +1417,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       strcpy_s(pd.banned_date_time, std::size(pd.banned_date_time), parts[3].c_str());
       pd.banned_start_time = get_number_of_seconds_from_date_and_time_string(pd.banned_date_time);
       pd.reason = remove_disallowed_character_in_string(parts[4]);
-      pd.banned_by_user_name = (parts.size() >= 6) ? parts[5] : "^1Admin";
+      pd.banned_by_user_name = (parts.size() >= 6) ? parts[5] : user;
       convert_guid_key_to_country_name(
         main_app.get_connection_manager_for_messages().get_geoip_data(),
         pd.ip_address,
@@ -1420,7 +1429,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       save_tiny_rcon_users_data_to_json_file(main_app.get_users_data_file_path());
       display_users_data_in_users_table(app_handles.hwnd_users_table);
 
-      const string msg{ format("^7{} ^5has banned ^1player name: ^7{}\n^3IP address: ^1{} ^5| ^3geoinfo: ^1{}, {} ^5| ^3Date/time of ban: ^1{}\n^3Reason of ban: ^1{} ^5| ^3Banned by: ^7{}\n", pd.banned_by_user_name, pd.player_name, pd.ip_address, pd.country_name, pd.city, pd.banned_date_time, pd.reason, pd.banned_by_user_name) };
+      const string msg{ format("^7{} ^5has banned ^1player name: ^7{}\n^3IP address: ^1{} ^5| ^3geoinfo: ^1{}, {} ^5| ^3Date/time of ban: ^1{}\n^3Reason of ban: ^1{} ^5| ^3Banned by: ^7{}\n", user, pd.player_name, pd.ip_address, pd.country_name, pd.city, pd.banned_date_time, pd.reason, pd.banned_by_user_name) };
       print_colored_text(app_handles.hwnd_re_messages_data, msg.c_str());
       add_permanently_banned_player_name(pd, main_app.get_game_server().get_banned_names_vector(), main_app.get_game_server().get_banned_names_map());
       for (const auto &u : main_app.get_users()) {
@@ -1446,7 +1455,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       strcpy_s(pd.banned_date_time, std::size(pd.banned_date_time), parts[3].c_str());
       pd.banned_start_time = get_number_of_seconds_from_date_and_time_string(pd.banned_date_time);
       pd.reason = remove_disallowed_character_in_string(parts[4]);
-      pd.banned_by_user_name = (parts.size() >= 6) ? std::move(parts[5]) : "^1Admin";
+      pd.banned_by_user_name = (parts.size() >= 6) ? std::move(parts[5]) : user;
+      const string removed_by{ parts.size() >= 7 ? parts[6] : user };
       convert_guid_key_to_country_name(
         main_app.get_connection_manager_for_messages().get_geoip_data(),
         pd.ip_address,
@@ -1454,7 +1464,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
       auto &user_data = main_app.get_user_for_name(user, sender_ip);
 
-      const string msg{ format("^7{} ^5has removed ^1banned player name ^7{}\n^3IP address: ^1{} ^5| ^3geoinfo: ^1{}, {} ^5| ^3Date/time of ban: ^1{}\n^3Reason of ban: ^1{} ^5| ^3Banned by: ^7{}\n", user, pd.player_name, pd.ip_address, pd.country_name, pd.city, pd.banned_date_time, pd.reason, pd.banned_by_user_name) };
+      const string msg{ format("^7{} ^5has removed ^1banned player name ^7{}\n^3IP address: ^1{} ^5| ^3geoinfo: ^1{}, {} ^5| ^3Date/time of ban: ^1{}\n^3Reason of ban: ^1{} ^5| ^3Banned by: ^7{}\n", removed_by, pd.player_name, pd.ip_address, pd.country_name, pd.city, pd.banned_date_time, pd.reason, pd.banned_by_user_name) };
       print_colored_text(app_handles.hwnd_re_messages_data, msg.c_str());
       remove_permanently_banned_player_name(pd, main_app.get_game_server().get_banned_names_vector(), main_app.get_game_server().get_banned_names_map());
 
@@ -1491,7 +1501,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       ++main_app.get_tinyrcon_stats_data().get_no_of_ip_bans();
       save_tiny_rcon_users_data_to_json_file(main_app.get_users_data_file_path());
       display_users_data_in_users_table(app_handles.hwnd_users_table);
-      const string msg{ format("^7{} ^3has permanently banned ^1IP address ^3of player ^7{}.\n^3IP address: ^1{} ^5| ^3geoinfo: ^1{}, {} ^5| ^3Date/time of GUID ban: ^1{}\n^3Reason of ban: ^1{} ^5| ^3Banned by: ^7{}\n", pd.banned_by_user_name, pd.player_name, pd.ip_address, pd.country_name, pd.city, pd.banned_date_time, pd.reason, pd.banned_by_user_name) };
+      const string msg{ format("^7{} ^3has permanently banned ^1IP address ^3of player ^7{}.\n^3IP address: ^1{} ^5| ^3geoinfo: ^1{}, {} ^5| ^3Date/time of GUID ban: ^1{}\n^3Reason of ban: ^1{} ^5| ^3Banned by: ^7{}\n", user, pd.player_name, pd.ip_address, pd.country_name, pd.city, pd.banned_date_time, pd.reason, pd.banned_by_user_name) };
       print_colored_text(app_handles.hwnd_re_messages_data, msg.c_str());
       add_permanently_banned_ip_address(pd, main_app.get_game_server().get_banned_ip_addresses_vector(), main_app.get_game_server().get_banned_ip_addresses_map());
       for (const auto &u : main_app.get_users()) {
@@ -1519,12 +1529,13 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       pd.banned_start_time = get_number_of_seconds_from_date_and_time_string(pd.banned_date_time);
       pd.reason = std::move(parts[4]);
       pd.banned_by_user_name = (parts.size() >= 6) ? parts[5] : user;
+      const string removed_by{ parts.size() >= 7 ? parts[6] : user };
       convert_guid_key_to_country_name(
         main_app.get_connection_manager_for_messages().get_geoip_data(),
         pd.ip_address,
         pd);
 
-      const string msg{ format("^7{} ^5has removed ^1banned IP address {}\n ^5for ^3player name: ^7{} ^5| ^3geoinfo: ^1{}, {} ^5| ^3Date/time of ban: ^1{}\n^3Reason of ban: ^1{} ^5| ^3Banned by: ^7{}\n", user, pd.ip_address, pd.player_name, pd.country_name, pd.city, pd.banned_date_time, pd.reason, pd.banned_by_user_name) };
+      const string msg{ format("^7{} ^5has removed ^1banned IP address {}\n ^5for ^3player name: ^7{} ^5| ^3geoinfo: ^1{}, {} ^5| ^3Date/time of ban: ^1{}\n^3Reason of ban: ^1{} ^5| ^3Banned by: ^7{}\n", removed_by, pd.ip_address, pd.player_name, pd.country_name, pd.city, pd.banned_date_time, pd.reason, pd.banned_by_user_name) };
       string ip_address{ pd.ip_address };
       print_colored_text(app_handles.hwnd_re_messages_data, msg.c_str());
       auto &user_data = main_app.get_user_for_name(user, sender_ip);
@@ -1552,7 +1563,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       strcpy_s(pd.banned_date_time, std::size(pd.banned_date_time), parts[3].c_str());
       pd.banned_start_time = get_number_of_seconds_from_date_and_time_string(pd.banned_date_time);
       pd.reason = std::move(parts[4]);
-      pd.banned_by_user_name = (parts.size() >= 6) ? parts[5] : "^1Admin";
+      pd.banned_by_user_name = (parts.size() >= 6) ? parts[5] : user;
       convert_guid_key_to_country_name(
         main_app.get_connection_manager_for_messages().get_geoip_data(),
         pd.ip_address,
@@ -1562,7 +1573,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       ++main_app.get_tinyrcon_stats_data().get_no_of_ip_address_range_bans();
       save_tiny_rcon_users_data_to_json_file(main_app.get_users_data_file_path());
       display_users_data_in_users_table(app_handles.hwnd_users_table);
-      const string msg{ format("^7{} ^5has banned ^1IP address range:\n^5[^3Player name: ^7{} ^5| ^3IP address range: ^1{} ^5| ^3geoinfo: ^1{}, {} ^5| ^3Date/time of ban: ^1{}\n^3Reason of ban: ^1{} ^5| ^3Banned by: ^7{}^5]\n", pd.banned_by_user_name, pd.player_name, pd.ip_address, pd.country_name, pd.city, pd.banned_date_time, pd.reason, pd.banned_by_user_name) };
+      const string msg{ format("^7{} ^5has banned ^1IP address range:\n^5[^3Player name: ^7{} ^5| ^3IP address range: ^1{} ^5| ^3geoinfo: ^1{}, {} ^5| ^3Date/time of ban: ^1{}\n^3Reason of ban: ^1{} ^5| ^3Banned by: ^7{}^5]\n", user, pd.player_name, pd.ip_address, pd.country_name, pd.city, pd.banned_date_time, pd.reason, pd.banned_by_user_name) };
       print_colored_text(app_handles.hwnd_re_messages_data, msg.c_str());
       add_permanently_banned_ip_address_range(pd, main_app.get_game_server().get_banned_ip_address_ranges_vector(), main_app.get_game_server().get_banned_ip_address_ranges_map());
       for (const auto &u : main_app.get_users()) {
@@ -1587,13 +1598,14 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       strcpy_s(pd.banned_date_time, std::size(pd.banned_date_time), parts[3].c_str());
       pd.banned_start_time = get_number_of_seconds_from_date_and_time_string(pd.banned_date_time);
       pd.reason = std::move(parts[4]);
-      pd.banned_by_user_name = parts.size() >= 6 ? std::move(parts[5]) : "^1Admin";
+      pd.banned_by_user_name = parts.size() >= 6 ? std::move(parts[5]) : user;
+      const string removed_by{ parts.size() >= 7 ? parts[6] : user };
       convert_guid_key_to_country_name(
         main_app.get_connection_manager_for_messages().get_geoip_data(),
         pd.ip_address,
         pd);
 
-      const string msg{ format("^7{} ^5has removed previously ^1banned IP address range:\n^5[^3Player name: ^7{} ^5| ^3IP range: ^1{} ^5| ^3geoinfo: ^1{}, {} ^5| ^3Date/time of ban: ^1{}\n^3Reason of ban: ^1{} ^5| ^3Banned by: ^7{}^5]\n", pd.banned_by_user_name, pd.player_name, pd.ip_address, pd.country_name, pd.city, pd.banned_date_time, pd.reason, pd.banned_by_user_name) };
+      const string msg{ format("^7{} ^5has removed previously ^1banned IP address range:\n^5[^3Player name: ^7{} ^5| ^3IP range: ^1{} ^5| ^3geoinfo: ^1{}, {} ^5| ^3Date/time of ban: ^1{}\n^3Reason of ban: ^1{} ^5| ^3Banned by: ^7{}^5]\n", removed_by, pd.player_name, pd.ip_address, pd.country_name, pd.city, pd.banned_date_time, pd.reason, pd.banned_by_user_name) };
       print_colored_text(app_handles.hwnd_re_messages_data, msg.c_str());
       string ip_address{ pd.ip_address };
       auto &user_data = main_app.get_user_for_name(user, sender_ip);

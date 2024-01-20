@@ -254,3 +254,7 @@ bool save_tinyrcon_statistics_data(const char *file_path);
 void parse_banned_names_file(const char *file_path, std::vector<player> &banned_names_vector, std::unordered_map<std::string, player> &banned_names_map, const bool is_skip_removed_check = false);
 bool add_permanently_banned_player_name(player &pd, std::vector<player> &banned_players_names_vector, std::unordered_map<std::string, player> &banned_players_names_map);
 bool remove_permanently_banned_player_name(player &pd, std::vector<player> &banned_names_vector, std::unordered_map<std::string, player> &banned_names_map);
+std::string get_file_name_from_path(const std::string &file_path);
+bool load_available_map_names(const char *map_names_file_path);
+void send_user_available_map_names(const std::shared_ptr<tiny_rcon_client_user> &);
+bool is_stock_cod2_map(const std::string &mapname);

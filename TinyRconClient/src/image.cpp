@@ -2,7 +2,7 @@
 //
 //////////////////////////////////////////////////////////////////////
 
-#include "ImageEx.h"
+#include "image.h"
 #include <process.h>
 #include "tiny_rcon_client_application.h"
 

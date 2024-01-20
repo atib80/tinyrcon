@@ -8,7 +8,8 @@
 
 #undef max
 
-bool create_necessary_folders_and_files(const std::vector<std::string> &folder_file_paths);
+std::pair<bool, std::string> create_necessary_file_path(const std::string &file_);
+std::pair<bool, std::string> create_necessary_folders_and_files(const std::vector<std::string> &folder_file_paths);
 void set_rich_edit_control_colors(HWND richEditCtrl, const COLORREF fg_color, const COLORREF bg_color = color::black, const char *font_face_name = "Consolas");
 CHARFORMAT get_char_fmt(HWND hwnd, DWORD range = SCF_SELECTION);
 void set_char_fmt(HWND hwnd, const CHARFORMAT2 &cf, DWORD range = SCF_SELECTION);
@@ -151,7 +152,7 @@ void process_rcon_command(const std::vector<std::string> &);
 
 volatile bool should_program_terminate(const std::string & = "");
 
-void sort_players_data(std::vector<player> &, sort_type sort_method);
+void sort_players_data(std::vector<player> &, const sort_type sort_method);
 
 void display_banned_ip_address_ranges(const size_t number_of_last_bans_to_display = std::string::npos, const bool is_save_data_to_log_file = false);
 
@@ -234,6 +235,7 @@ void csay(HWND control, const char *szoveg, Args... args)
 }
 
 bool remove_dir_path_sep_char(char *);
+void replace_backward_slash_with_forward_slash(std::string &);
 void replace_forward_slash_with_backward_slash(std::string &);
 
 const char *find_call_of_duty_1_installation_path(const bool is_show_browse_folder_dialog = true);
@@ -257,6 +259,10 @@ const char *BrowseFolder(const char *, const char *);
 bool connect_to_the_game_server(const std::string &, const game_name_t, const bool, const bool = true);
 
 bool check_if_file_path_exists(const char *);
+bool check_if_cod1_multiplayer_game_launch_command_is_correct(const std::string &);
+bool check_if_cod2_multiplayer_game_launch_command_is_correct(const std::string &);
+bool check_if_cod4_multiplayer_game_launch_command_is_correct(const std::string &);
+bool check_if_cod5_multiplayer_game_launch_command_is_correct(const std::string &);
 
 bool delete_temporary_game_file();
 
@@ -386,7 +392,7 @@ void display_protected_entries(const char *table_title, const std::set<std::stri
 bool check_if_player_is_protected(const player &online_player, const char *admin_command, std::string &message);
 void get_first_valid_ip_address_from_ip_address_range(std::string ip_range, player &pd);
 bool run_executable(const char *file_path_for_executable);
-void restart_tinyrcon_client();
+void restart_tinyrcon_client(const char *file_path_to_tinyrcon_exe, const std::string &file_path_to_temporary_tinyrcon_exe = std::string{}, const std::string &file_path_to_old_tinyrcon_exe = std::string{});
 size_t get_random_number();
 bool parse_game_type_information_from_rcon_reply(const std::string &rcon_reply, game_server &gs);
 void view_game_servers(HWND grid);
@@ -403,3 +409,8 @@ std::shared_ptr<tiny_rcon_client_user> &get_user_for_specified_username_and_ip_a
 void load_reported_players_to_file(const char *file_path, std::vector<player> &reported_players);
 void save_reported_players_to_file(const char *file_path, const std::vector<player> &reported_players);
 std::pair<bool, player> remove_reported_player(std::string &ip_address, std::string &message, const bool is_report_public_message);
+
+bool copy_tinyrcon_files_from_source_to_destination_path(const std::string &dest_path, const std::string &src_exe_file_name);
+struct version_data;
+void check_version_number_and_file_path_information(version_data &dest_version);
+std::string get_file_name_from_path(const std::string &file_path);
