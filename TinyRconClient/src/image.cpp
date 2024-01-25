@@ -3,9 +3,10 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "image.h"
-#include <process.h>
-#include "tiny_rcon_client_application.h"
 
+#include <process.h>
+
+#include "tiny_rcon_client_application.h"
 
 #ifdef _DEBUG
 #undef THIS_FILE
@@ -37,18 +38,17 @@ extern tiny_rcon_client_application main_app;
 ////////////////////////////////////////////////////////////////////////////////
 ImageEx::ImageEx(const char *sResourceType, const char *sResource)
 {
-  Initialize();
+    Initialize();
 
-  if (Load(sResourceType, sResource)) {
+    if (Load(sResourceType, sResource))
+    {
+        nativeImage = nullptr;
 
-    nativeImage = nullptr;
+        lastResult = DllExports::GdipLoadImageFromStreamICM(m_pStream, &nativeImage);
 
-    lastResult = DllExports::GdipLoadImageFromStreamICM(m_pStream, &nativeImage);
-
-    TestForAnimatedGIF();
-  }
+        TestForAnimatedGIF();
+    }
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -68,13 +68,12 @@ ImageEx::ImageEx(const char *sResourceType, const char *sResource)
 ////////////////////////////////////////////////////////////////////////////////
 ImageEx::ImageEx(const WCHAR *filename, BOOL useEmbeddedColorManagement) : Image(filename, useEmbeddedColorManagement)
 {
-  Initialize();
+    Initialize();
 
-  m_bIsInitialized = true;
+    m_bIsInitialized = true;
 
-  TestForAnimatedGIF();
+    TestForAnimatedGIF();
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -94,7 +93,7 @@ ImageEx::ImageEx(const WCHAR *filename, BOOL useEmbeddedColorManagement) : Image
 ////////////////////////////////////////////////////////////////////////////////
 ImageEx::~ImageEx()
 {
-  Destroy();
+    Destroy();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -115,32 +114,34 @@ ImageEx::~ImageEx()
 ////////////////////////////////////////////////////////////////////////////////
 bool ImageEx::InitAnimation(HWND hWnd, Point pt)
 {
+    m_hWnd = hWnd;
+    m_pt = pt;
 
-  m_hWnd = hWnd;
-  m_pt = pt;
+    if (!m_bIsInitialized)
+    {
+        print_colored_text(app_handles.hwnd_re_messages_data, "^3GIF not initialized!\n");
+        return false;
+    };
 
-  if (!m_bIsInitialized) {
-    print_colored_text(app_handles.hwnd_re_messages_data, "^3GIF not initialized!\n");
-    return false;
-  };
+    if (IsAnimatedGIF())
+    {
+        if (m_hThread == nullptr)
+        {
+            unsigned int nTID = 0;
 
-  if (IsAnimatedGIF()) {
-    if (m_hThread == nullptr) {
+            m_hThread = (HANDLE)_beginthreadex(nullptr, 0, _ThreadAnimationProc, this, CREATE_SUSPENDED, &nTID);
 
-      unsigned int nTID = 0;
+            if (!m_hThread)
+            {
+                print_colored_text(app_handles.hwnd_re_messages_data, "^3Could not launch a GIF animation thread!\n");
+                return true;
+            }
 
-      m_hThread = (HANDLE)_beginthreadex(nullptr, 0, _ThreadAnimationProc, this, CREATE_SUSPENDED, &nTID);
-
-      if (!m_hThread) {
-        print_colored_text(app_handles.hwnd_re_messages_data, "^3Could not launch a GIF animation thread!\n");
-        return true;
-      }
-
-      ResumeThread(m_hThread);
+            ResumeThread(m_hThread);
+        }
     }
-  }
 
-  return false;
+    return false;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -161,22 +162,22 @@ bool ImageEx::InitAnimation(HWND hWnd, Point pt)
 ////////////////////////////////////////////////////////////////////////////////
 bool ImageEx::LoadFromBuffer(BYTE *pBuff, int nSize)
 {
-  bool bResult = false;
+    bool bResult = false;
 
-  HGLOBAL hGlobal = GlobalAlloc(GMEM_MOVEABLE, nSize);
-  if (hGlobal) {
-    void *pData = GlobalLock(hGlobal);
-    if (pData)
-      memcpy(pData, pBuff, nSize);
+    HGLOBAL hGlobal = GlobalAlloc(GMEM_MOVEABLE, nSize);
+    if (hGlobal)
+    {
+        void *pData = GlobalLock(hGlobal);
+        if (pData)
+            memcpy(pData, pBuff, nSize);
 
-    GlobalUnlock(hGlobal);
+        GlobalUnlock(hGlobal);
 
-    if (CreateStreamOnHGlobal(hGlobal, TRUE, &m_pStream) == S_OK)
-      bResult = true;
-  }
+        if (CreateStreamOnHGlobal(hGlobal, TRUE, &m_pStream) == S_OK)
+            bResult = true;
+    }
 
-
-  return bResult;
+    return bResult;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -197,49 +198,54 @@ bool ImageEx::LoadFromBuffer(BYTE *pBuff, int nSize)
 ////////////////////////////////////////////////////////////////////////////////
 bool ImageEx::GetResource(LPCTSTR lpName, LPCTSTR lpType, void *pResource, int &nBufSize)
 {
-  HRSRC hResInfo;
-  HANDLE hRes;
-  LPSTR lpRes = nullptr;
-  // int nLen = 0;
-  bool bResult = false;
+    HRSRC hResInfo;
+    HANDLE hRes;
+    LPSTR lpRes = nullptr;
+    // int nLen = 0;
+    bool bResult = false;
 
-  // Find the resource
+    // Find the resource
 
-  hResInfo = FindResource(m_hInst, lpName, lpType);
-  if (hResInfo == nullptr) {
-    // DWORD dwErr = GetLastError();
-    return false;
-  }
-
-  // Load the resource
-  hRes = LoadResource(m_hInst, hResInfo);
-
-  if (hRes == nullptr)
-    return false;
-
-  // Lock the resource
-  lpRes = (char *)LockResource(hRes);
-
-  if (lpRes != nullptr) {
-    if (pResource == nullptr) {
-      nBufSize = SizeofResource(m_hInst, hResInfo);
-      bResult = true;
-    } else {
-      if (nBufSize >= (int)SizeofResource(m_hInst, hResInfo)) {
-        memcpy(pResource, lpRes, nBufSize);
-        bResult = true;
-      }
+    hResInfo = FindResource(m_hInst, lpName, lpType);
+    if (hResInfo == nullptr)
+    {
+        // DWORD dwErr = GetLastError();
+        return false;
     }
 
-    UnlockResource(hRes);
-  }
+    // Load the resource
+    hRes = LoadResource(m_hInst, hResInfo);
 
-  // Free the resource
-  FreeResource(hRes);
+    if (hRes == nullptr)
+        return false;
 
-  return bResult;
+    // Lock the resource
+    lpRes = (char *)LockResource(hRes);
+
+    if (lpRes != nullptr)
+    {
+        if (pResource == nullptr)
+        {
+            nBufSize = SizeofResource(m_hInst, hResInfo);
+            bResult = true;
+        }
+        else
+        {
+            if (nBufSize >= (int)SizeofResource(m_hInst, hResInfo))
+            {
+                memcpy(pResource, lpRes, nBufSize);
+                bResult = true;
+            }
+        }
+
+        UnlockResource(hRes);
+    }
+
+    // Free the resource
+    FreeResource(hRes);
+
+    return bResult;
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -259,32 +265,32 @@ bool ImageEx::GetResource(LPCTSTR lpName, LPCTSTR lpType, void *pResource, int &
 ////////////////////////////////////////////////////////////////////////////////
 bool ImageEx::Load(CString sResourceType, CString sResource)
 {
-  bool bResult = false;
+    bool bResult = false;
 
+    BYTE *pBuff = nullptr;
+    int nSize = 0;
+    if (GetResource(sResource.GetBuffer(0), sResourceType.GetBuffer(0), pBuff, nSize))
+    {
+        if (nSize > 0)
+        {
+            pBuff = new BYTE[nSize];
 
-  BYTE *pBuff = nullptr;
-  int nSize = 0;
-  if (GetResource(sResource.GetBuffer(0), sResourceType.GetBuffer(0), pBuff, nSize)) {
-    if (nSize > 0) {
-      pBuff = new BYTE[nSize];
+            if (GetResource(sResource, sResourceType.GetBuffer(0), pBuff, nSize))
+            {
+                if (LoadFromBuffer(pBuff, nSize))
+                {
+                    bResult = true;
+                }
+            }
 
-      if (GetResource(sResource, sResourceType.GetBuffer(0), pBuff, nSize)) {
-        if (LoadFromBuffer(pBuff, nSize)) {
-
-          bResult = true;
+            delete[] pBuff;
         }
-      }
-
-      delete[] pBuff;
     }
-  }
 
+    m_bIsInitialized = bResult;
 
-  m_bIsInitialized = bResult;
-
-  return bResult;
+    return bResult;
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -304,9 +310,8 @@ bool ImageEx::Load(CString sResourceType, CString sResource)
 ////////////////////////////////////////////////////////////////////////////////
 std::pair<UINT, UINT> ImageEx::GetSize()
 {
-  return std::make_pair(GetWidth(), GetHeight());
+    return std::make_pair(GetWidth(), GetHeight());
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -326,30 +331,29 @@ std::pair<UINT, UINT> ImageEx::GetSize()
 ////////////////////////////////////////////////////////////////////////////////
 bool ImageEx::TestForAnimatedGIF()
 {
-  UINT count = 0;
-  count = GetFrameDimensionsCount();
-  auto *pDimensionIDs = new GUID[count];
+    UINT count = 0;
+    count = GetFrameDimensionsCount();
+    auto *pDimensionIDs = new GUID[count];
 
-  // Get the list of frame dimensions from the Image object.
-  GetFrameDimensionsList(pDimensionIDs, count);
+    // Get the list of frame dimensions from the Image object.
+    GetFrameDimensionsList(pDimensionIDs, count);
 
-  // Get the number of frames in the first dimension.
-  m_nFrameCount = GetFrameCount(&pDimensionIDs[0]);
+    // Get the number of frames in the first dimension.
+    m_nFrameCount = GetFrameCount(&pDimensionIDs[0]);
 
-  // Assume that the image has a property item of type PropertyItemEquipMake.
-  // Get the size of that property item.
-  int nSize = GetPropertyItemSize(PropertyTagFrameDelay);
+    // Assume that the image has a property item of type PropertyItemEquipMake.
+    // Get the size of that property item.
+    int nSize = GetPropertyItemSize(PropertyTagFrameDelay);
 
-  // Allocate a buffer to receive the property item.
-  m_pPropertyItem = (PropertyItem *)malloc(nSize);
+    // Allocate a buffer to receive the property item.
+    m_pPropertyItem = (PropertyItem *)malloc(nSize);
 
-  GetPropertyItem(PropertyTagFrameDelay, nSize, m_pPropertyItem);
+    GetPropertyItem(PropertyTagFrameDelay, nSize, m_pPropertyItem);
 
-  delete pDimensionIDs;
+    delete pDimensionIDs;
 
-  return m_nFrameCount > 1;
+    return m_nFrameCount > 1;
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -369,29 +373,27 @@ bool ImageEx::TestForAnimatedGIF()
 ////////////////////////////////////////////////////////////////////////////////
 void ImageEx::Initialize()
 {
-  m_pStream = nullptr;
-  m_nFramePosition = 0;
-  m_nFrameCount = 0;
-  m_pStream = nullptr;
-  lastResult = InvalidParameter;
-  m_hThread = nullptr;
-  m_bIsInitialized = false;
-  m_pPropertyItem = nullptr;
+    m_pStream = nullptr;
+    m_nFramePosition = 0;
+    m_nFrameCount = 0;
+    m_pStream = nullptr;
+    lastResult = InvalidParameter;
+    m_hThread = nullptr;
+    m_bIsInitialized = false;
+    m_pPropertyItem = nullptr;
 
 #ifdef INDIGO_CTRL_PROJECT
-  m_hInst = _Module.GetResourceInstance();
+    m_hInst = _Module.GetResourceInstance();
 #else
-  m_hInst = AfxGetResourceHandle();
+    m_hInst = AfxGetResourceHandle();
 #endif
 
+    m_bPause = false;
 
-  m_bPause = false;
+    m_hExitEvent = CreateEvent(nullptr, TRUE, FALSE, nullptr);
 
-  m_hExitEvent = CreateEvent(nullptr, TRUE, FALSE, nullptr);
-
-  m_hPause = CreateEvent(nullptr, TRUE, TRUE, nullptr);
+    m_hPause = CreateEvent(nullptr, TRUE, TRUE, nullptr);
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -411,11 +413,11 @@ void ImageEx::Initialize()
 ////////////////////////////////////////////////////////////////////////////////
 UINT WINAPI ImageEx::_ThreadAnimationProc(LPVOID pParam)
 {
-  ASSERT(pParam);
-  auto *pImage = reinterpret_cast<ImageEx *>(pParam);
-  pImage->ThreadAnimation();
+    ASSERT(pParam);
+    auto *pImage = reinterpret_cast<ImageEx *>(pParam);
+    pImage->ThreadAnimation();
 
-  return 0;
+    return 0;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -436,12 +438,13 @@ UINT WINAPI ImageEx::_ThreadAnimationProc(LPVOID pParam)
 ////////////////////////////////////////////////////////////////////////////////
 void ImageEx::ThreadAnimation()
 {
-  m_nFramePosition = 0;
+    m_nFramePosition = 0;
 
-  bool bExit = false;
-  while (bExit == false) {
-    bExit = DrawFrameGIF();
-  }
+    bool bExit = false;
+    while (bExit == false)
+    {
+        bExit = DrawFrameGIF();
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -464,36 +467,34 @@ extern const HBRUSH black_brush;
 
 bool ImageEx::DrawFrameGIF()
 {
+    ::WaitForSingleObject(m_hPause, INFINITE);
 
-  ::WaitForSingleObject(m_hPause, INFINITE);
+    GUID pageGuid = FrameDimensionTime;
 
-  GUID pageGuid = FrameDimensionTime;
+    long hmWidth = GetWidth();
+    long hmHeight = GetHeight();
 
-  long hmWidth = GetWidth();
-  long hmHeight = GetHeight();
+    HDC hDC = GetDC(m_hWnd);
+    if (hDC)
+    {
+        Graphics graphics(hDC);
+        RECT imageRect{m_pt.X, m_pt.Y, m_pt.X + hmWidth, m_pt.Y + hmHeight};
+        FillRect(hDC, &imageRect, black_brush);
+        graphics.DrawImage(this, m_pt.X, m_pt.Y, hmWidth, hmHeight);
+        ReleaseDC(m_hWnd, hDC);
+    }
 
-  HDC hDC = GetDC(m_hWnd);
-  if (hDC) {
-    Graphics graphics(hDC);
-    RECT imageRect{ m_pt.X, m_pt.Y, m_pt.X + hmWidth, m_pt.Y + hmHeight };
-    FillRect(hDC, &imageRect, black_brush);
-    graphics.DrawImage(this, m_pt.X, m_pt.Y, hmWidth, hmHeight);
-    ReleaseDC(m_hWnd, hDC);
-  }
+    SelectActiveFrame(&pageGuid, m_nFramePosition++);
 
-  SelectActiveFrame(&pageGuid, m_nFramePosition++);
+    if (m_nFramePosition == m_nFrameCount)
+        m_nFramePosition = 0;
 
-  if (m_nFramePosition == m_nFrameCount)
-    m_nFramePosition = 0;
+    long lPause = ((long *)m_pPropertyItem->value)[m_nFramePosition] * 10;
 
+    DWORD dwErr = WaitForSingleObject(m_hExitEvent, lPause);
 
-  long lPause = ((long *)m_pPropertyItem->value)[m_nFramePosition] * 10;
-
-  DWORD dwErr = WaitForSingleObject(m_hExitEvent, lPause);
-
-  return dwErr == WAIT_OBJECT_0;
+    return dwErr == WAIT_OBJECT_0;
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -513,44 +514,46 @@ bool ImageEx::DrawFrameGIF()
 ////////////////////////////////////////////////////////////////////////////////
 void ImageEx::SetPause(bool bPause)
 {
-  if (!IsAnimatedGIF())
-    return;
+    if (!IsAnimatedGIF())
+        return;
 
-  if (bPause && !m_bPause) {
-    ::ResetEvent(m_hPause);
-  } else {
-
-    if (m_bPause && !bPause) {
-      ::SetEvent(m_hPause);
+    if (bPause && !m_bPause)
+    {
+        ::ResetEvent(m_hPause);
     }
-  }
+    else
+    {
+        if (m_bPause && !bPause)
+        {
+            ::SetEvent(m_hPause);
+        }
+    }
 
-  m_bPause = bPause;
+    m_bPause = bPause;
 }
-
 
 void ImageEx::Destroy()
 {
+    if (m_hThread)
+    {
+        // If pause unpause
+        SetPause(false);
 
-  if (m_hThread) {
-    // If pause unpause
-    SetPause(false);
+        SetEvent(m_hExitEvent);
+        WaitForSingleObject(m_hThread, INFINITE);
+    }
 
-    SetEvent(m_hExitEvent);
-    WaitForSingleObject(m_hThread, INFINITE);
-  }
+    CloseHandle(m_hThread);
+    CloseHandle(m_hExitEvent);
+    CloseHandle(m_hPause);
 
-  CloseHandle(m_hThread);
-  CloseHandle(m_hExitEvent);
-  CloseHandle(m_hPause);
+    free(m_pPropertyItem);
 
-  free(m_pPropertyItem);
+    m_pPropertyItem = nullptr;
+    m_hThread = nullptr;
+    m_hExitEvent = nullptr;
+    m_hPause = nullptr;
 
-  m_pPropertyItem = nullptr;
-  m_hThread = nullptr;
-  m_hExitEvent = nullptr;
-  m_hPause = nullptr;
-
-  if (m_pStream)
-    m_pStream->Release();
+    if (m_pStream)
+        m_pStream->Release();
 }

@@ -60,14 +60,22 @@ bool connection_manager_for_messages::wait_for_and_process_response_message()
   }
 
   string message(incoming_data_buffer, incoming_data_buffer + noOfReceivedBytes);
-  // trim_in_place(message);
 
   string sender_ip{ remote_endpoint.address().to_v4().to_string() };
+  string geo_information;
+  player pd{};
+  unsigned long guid{};
+  const bool is_sender_ip_address_valid{ check_ip_address_validity(sender_ip, guid) };
+  if (is_sender_ip_address_valid) {
+    pd.ip_address = sender_ip;
+    convert_guid_key_to_country_name(main_app.get_connection_manager_for_messages().get_geoip_data(), pd.ip_address, pd);
+    geo_information = format("{}, {}", pd.country_name, pd.city);
+  }
 
   if (noOfReceivedBytes > 0 && '{' != message.front() && '}' != message.back()) {
     auto parts = stl::helper::str_split(message, "\\", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::no);
     if (parts.size() < 6) {
-      const string incorrectly_formatted_message_received{ format("^3Received an incorrectly formatted message from ^1IP address ({})^3!\n^3Contents of the message:'^1{}^3'\n", sender_ip, message) };
+      const string incorrectly_formatted_message_received{ format("^3Received an incorrectly formatted message from IP address: ^1{} ^5| ^3geoinfo: ^1{}\n^3Contents of message: ^1'{}'\n", sender_ip, geo_information, message) };
       print_colored_text(app_handles.hwnd_re_messages_data, incorrectly_formatted_message_received.c_str());
       return false;
     }
@@ -76,18 +84,19 @@ bool connection_manager_for_messages::wait_for_and_process_response_message()
 
     int64_t number{};
     if (!is_valid_decimal_whole_number(parts[3], number) || (parts[4] != "true" && parts[4] != "false")) {
-      const string incorrectly_formatted_message_received{ format("^3Received an incorrectly formatted message!\n^7{} ^3(IP address: '^1{}^3' and rcon_password: '^1{}^3') sent the following command: '^1{}^3'\nContents of message:\n'^1{}^3'\n", parts[1], sender_ip, parts[2], parts[0], message_contents) };
+      const string incorrectly_formatted_message_received{ format("^3Received an incorrectly formatted message!\n^7{} ^3(IP address: ^1{} ^5| ^3geoinfo: ^1{} ^5| ^3rcon_password: ^1{}^3) sent the following command: ^1'{}'\nContents of message: ^1'{}'\n", parts[1], sender_ip, geo_information, parts[2], parts[0], message_contents) };
       print_colored_text(app_handles.hwnd_re_messages_data, incorrectly_formatted_message_received.c_str());
       return false;
     }
 
     const string message_handler_name{ parts[0] };
-    const string sender{ std::move(parts[1]) };
+    const string sender{ parts[1] };
     const time_t timestamp{ stoll(parts[3]) };
     const bool is_show_in_messages{ parts[4] == "true" };
 
     if (message_handler_name == "query-request") {
-      print_colored_text(app_handles.hwnd_re_messages_data, format("Received query request from ^5Tiny^6Rcon ^7user {} (IP: {})\nMessage contents: '^5{}^7'\n", sender, sender_ip, message_contents).c_str());
+      const string information{ format("Received 'query-request' user {} (IP: {} geoinfo: {})\nMessage contents: '{}'\n", sender, sender_ip, geo_information, message_contents) };
+      log_message(information, is_log_datetime::yes);
 
       if (size_t start{}; (start = message_contents.find("is_user_admin?")) != string::npos) {
         const string username{ trim(message_contents.substr(start + strlen("is_user_admin?"))) };
@@ -102,6 +111,8 @@ bool connection_manager_for_messages::wait_for_and_process_response_message()
     }
 
     if (message_handler_name == "request-welcome-message") {
+      const string information{ format("Received 'request-welcome-message' from user {} (IP: {} geoinfo: {})\nMessage contents: '{}'\n", sender, sender_ip, geo_information, message_contents) };
+      log_message(information, is_log_datetime::yes);
       auto parts = stl::helper::str_split(message_contents, "\\", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::no);
       for (auto &part : parts) stl::helper::trim_in_place(part);
       if (parts.size() >= 3) {
@@ -115,12 +126,16 @@ bool connection_manager_for_messages::wait_for_and_process_response_message()
     }
 
     if (message_handler_name == "inc-number-of-reports") {
+      const string information{ format("Received 'inc-number-of-reports' from user {} (IP: {} geoinfo: {})\nMessage contents: '{}'\n", sender, sender_ip, geo_information, message_contents) };
+      log_message(information, is_log_datetime::yes);
       ++main_app.get_tinyrcon_stats_data().get_no_of_reports();
       print_colored_text(app_handles.hwnd_re_messages_data, format("^5Number of received reports: ^1{}\n", main_app.get_tinyrcon_stats_data().get_no_of_reports()).c_str());
       return true;
     }
 
     if (message_handler_name == "request-mapnames") {
+      const string information{ format("Received 'request-mapnames' from user {} (IP: {} geoinfo: {})\nMessage contents: '{}'\n", sender, sender_ip, geo_information, message_contents) };
+      log_message(information, is_log_datetime::yes);
       auto user = make_shared<tiny_rcon_client_user>();
       user->user_name = sender;
       user->ip_address = sender_ip;
@@ -131,31 +146,24 @@ bool connection_manager_for_messages::wait_for_and_process_response_message()
 
     if (main_app.get_game_server().get_rcon_password() == parts[2]) {
       const auto &user = main_app.get_user_for_name(sender, sender_ip);
-      user->ip_address = std::move(sender_ip);
-      user->remote_endpoint = std::move(remote_endpoint);
-      unsigned long guid{};
-      if (check_ip_address_validity(user->ip_address, guid)) {
-        player pd{};
-        strcpy_s(pd.player_name, std::size(pd.player_name), sender.c_str());
-        pd.ip_address = user->ip_address;
-        convert_guid_key_to_country_name(main_app.get_connection_manager_for_messages().get_geoip_data(), user->ip_address, pd);
-        user->geo_information = format("{}, {}", pd.country_name, pd.city);
-        user->country_code = pd.country_code;
-      } else {
-        user->ip_address = "n/a";
-        user->geo_information = "Unknown, Unknown";
-        user->country_code = "xy";
-      }
+      user->ip_address = sender_ip;
+      user->remote_endpoint = remote_endpoint;
+      strcpy_s(pd.player_name, std::size(pd.player_name), sender.c_str());
+      // pd.ip_address = user->ip_address;
+      user->geo_information = geo_information;
+      user->country_code = pd.country_code;      
       const auto &message_handler = main_app.get_message_handler(message_handler_name);
       message_handler(sender, timestamp, message_contents, is_show_in_messages, user->ip_address);
+      const string information{ format("^5Received ^1'{}' ^5from authorized user ^7{} ^5(^3IP: ^1{} ^5| ^3geoinfo: ^1{}^5)\n^5Contents of message: ^1'{}'\n", message_handler_name, sender, sender_ip, geo_information, message_contents) };
+      print_colored_text(app_handles.hwnd_re_messages_data, information.c_str());
       return true;
     }
 
-    const string unathorized_message_received{ format("^3Received an unauthorized message!\n^7{} ^3(IP address: '^1{}^3' and rcon_password: '^1{}^3') sent the following command: '^1{}^3'\nContents of message:\n'^1{}^3'\n", parts[1], sender_ip, parts[2], parts[0], message_contents) };
+    const string unathorized_message_received{ format("^3Received an unauthorized message!\n^7{} ^5(^3IP: ^1{} ^5| ^3rcon: ^1{} ^5| ^3geoinfo: ^1{}^5) sent the following command: ^1'{}'\n^5Contents of message: ^1'{}'\n", sender, sender_ip, parts[2], geo_information, message_handler_name, message_contents) };
     print_colored_text(app_handles.hwnd_re_messages_data, unathorized_message_received.c_str());
 
   } else {
-    const string incorrectly_formatted_message_received{ format("^3Received an incorrectly formatted message from ^1IP address ({})^3!\n^3Contents of the message:'^1{}^3'\n", sender_ip, message) };
+    const string incorrectly_formatted_message_received{ format("^3Received an incorrectly formatted message from ^3IP: ^1{} ^5| ^3geoinfo: ^1{}\n^5Contents of message: ^1'{}'\n", sender_ip, geo_information, message) };
     print_colored_text(app_handles.hwnd_re_messages_data, incorrectly_formatted_message_received.c_str());
   }
 

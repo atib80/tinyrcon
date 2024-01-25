@@ -17,6 +17,11 @@
 #include <bitextractor.hpp>
 #include <bitexception.hpp>
 #include <bittypes.hpp>
+#include "winnls.h"
+#include "shobjidl.h"
+#include "objbase.h"
+#include "objidl.h"
+#include "shlguid.h"
 #include "stack_trace_element.h"
 
 // Call of duty steam appid: 2620
@@ -56,10 +61,11 @@ using stl::helper::trim_in_place;
 
 extern tiny_rcon_client_application main_app;
 extern tiny_rcon_handles app_handles;
+extern shared_ptr<tiny_rcon_client_user> me;
 
 extern const char *prompt_message;
 extern const char *refresh_players_data_fmt_str;
-extern PROCESS_INFORMATION pr_info;
+// extern PROCESS_INFORMATION pr_info;
 extern sort_type type_of_sort;
 
 extern WNDCLASSEX wcex_confirmation_dialog, wcex_configuration_dialog;
@@ -88,6 +94,7 @@ extern volatile std::atomic<bool> is_refreshing_game_servers_data_event;
 extern volatile std::atomic<bool> is_display_geoinformation_data_for_players;
 extern std::atomic<int> admin_choice;
 extern std::string admin_reason;
+
 
 // std::mutex print_data_mutex;
 // std::mutex log_data_mutex;
@@ -984,13 +991,13 @@ bool write_tiny_rcon_json_settings_to_file(
               << R"("username": ")" << main_app.get_username() << "\",\n";
   config_file << "\"check_for_banned_players_time_interval\": " << main_app.get_check_for_banned_players_time_period()
               << ",\n";
-  config_file << R"("game_server_name": ")" << main_app.get_game_servers()[0].get_server_name() << "\",\n";
+  /*config_file << R"("game_server_name": ")" << main_app.get_game_servers()[0].get_server_name() << "\",\n";
   config_file << R"("rcon_server_ip_address": ")" << main_app.get_game_servers()[0].get_server_ip_address()
               << "\",\n";
   config_file << "\"rcon_port\": " << main_app.get_game_servers()[0].get_server_port() << ",\n";
   config_file << R"("rcon_password": ")" << main_app.get_game_servers()[0].get_rcon_password() << "\",\n";
   config_file << R"("private_slot_password": ")" << main_app.get_game_servers()[0].get_private_slot_password()
-              << "\",\n";
+              << "\",\n";*/
   config_file << R"("rcon_game_servers": [)" << '\n';
   for (size_t i{}; i < main_app.get_rcon_game_servers_count(); ++i) {
     auto &gs = main_app.get_game_servers()[i];
@@ -1438,7 +1445,6 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
     main_app.set_rcon_game_servers_count(1);
     main_app.set_game_servers_count(1);
   }
-
 
   if (json_resource["check_for_banned_players_time_interval"].exists()) {
     main_app.set_check_for_banned_players_time_period(
@@ -4174,7 +4180,7 @@ void sort_players_data(std::vector<player> &players_data, const sort_type sort_m
     break;
 
   case sort_type::ip_asc:
-    if (main_app.get_current_game_server().get_is_connection_settings_valid()) {
+    if (me->is_admin) {
       std::sort(std::begin(players_data), std::begin(players_data) + number_of_players, [](const player &pl1, const player &pl2) {
         unsigned long ip_key1{}, ip_key2{};
         if (!check_ip_address_validity(pl1.ip_address, ip_key1))
@@ -4187,7 +4193,7 @@ void sort_players_data(std::vector<player> &players_data, const sort_type sort_m
     break;
 
   case sort_type::ip_desc:
-    if (main_app.get_current_game_server().get_is_connection_settings_valid()) {
+    if (me->is_admin) {
       std::sort(std::begin(players_data), std::begin(players_data) + number_of_players, [](const player &pl1, const player &pl2) {
         unsigned long ip_key1{}, ip_key2{};
         if (!check_ip_address_validity(pl1.ip_address, ip_key1))
@@ -4344,12 +4350,12 @@ void display_temporarily_banned_ip_addresses(const size_t number_of_last_bans_to
       ++no;
       const char *next_color{ is_first_color ? "^3" : "^5" };
       oss << "^5| " << next_color << left << setw(5) << no << " ^5| " << next_color << left << setw(15)
-          << (main_app.get_current_game_server().get_is_connection_settings_valid() ? bp.ip_address : "hidden")
+          << (me->is_admin ? bp.ip_address : "hidden")
           << " ^5| ^7";
       if (is_save_data_to_log_file) {
         log << "| " << left << setw(5) << no << " | " << left << setw(15)
-            << (main_app.get_current_game_server().get_is_connection_settings_valid() ? bp.ip_address
-                                                                                      : "hidden")
+            << (me->is_admin ? bp.ip_address
+                             : "hidden")
             << " | ";
       }
       stl::helper::trim_in_place(bp.player_name);
@@ -4850,12 +4856,12 @@ void display_reported_players(const size_t number_of_last_reports_to_display, co
       }
 
       oss << " ^5| " << next_color << left << setw(15)
-          << (main_app.get_current_game_server().get_is_connection_settings_valid() ? bp.ip_address : "hidden")
+          << (me->is_admin ? bp.ip_address : "hidden")
           << " ^5| ";
       if (is_save_data_to_log_file) {
         log << " | " << left << setw(15)
-            << (main_app.get_current_game_server().get_is_connection_settings_valid() ? bp.ip_address
-                                                                                      : "hidden")
+            << (me->is_admin ? bp.ip_address
+                             : "hidden")
             << " | ";
       }
 
@@ -5007,12 +5013,12 @@ void display_permanently_banned_ip_addresses(const size_t number_of_last_bans_to
       ++no;
       const char *next_color{ is_first_color ? "^3" : "^5" };
       oss << "^5| " << next_color << left << setw(5) << no << " ^5| " << next_color << left << setw(15)
-          << (main_app.get_current_game_server().get_is_connection_settings_valid() ? bp.ip_address : "hidden")
+          << (me->is_admin ? bp.ip_address : "hidden")
           << " ^5| ^7";
       if (is_save_data_to_log_file) {
         log << "| " << left << setw(5) << no << " | " << left << setw(15)
-            << (main_app.get_current_game_server().get_is_connection_settings_valid() ? bp.ip_address
-                                                                                      : "hidden")
+            << (me->is_admin ? bp.ip_address
+                             : "hidden")
             << " | ";
       }
       stl::helper::trim_in_place(bp.player_name);
@@ -5374,7 +5380,7 @@ void display_admins_data(const std::vector<std::shared_ptr<tiny_rcon_client_user
       oss << text_element{ user->is_online ? "yes" : "no", 11, user->is_online ? "^2" : "^1" };
 
       oss << " ^5| ";
-      if (main_app.get_current_game_server().get_is_connection_settings_valid()) {
+      if (me->is_admin) {
         oss << text_element{ user->ip_address.c_str(), 16, next_color };
       } else {
         oss << text_element{ "hidden", 16, next_color };
@@ -6041,7 +6047,7 @@ std::string get_player_information(const int pid, const bool is_every_property_o
   for (size_t i{}; i < main_app.get_current_game_server().get_number_of_players(); ++i) {
     if (pid == players_data[i].pid) {
       const auto &p = players_data[i];
-      (void)snprintf(buffer, std::size(buffer), "^3Player name: ^7%s %s ^3PID: ^1%d %s ^3GUID: ^1%s %s ^3Score: ^1%d %s ^3Ping: ^1%s\n ^3IP: ^1%s %s ^3Country, city: ^1%s", p.player_name, (is_every_property_on_new_line ? "\n" : "^5|"), p.pid, (is_every_property_on_new_line ? "\n" : "^5|"), (main_app.get_current_game_server().get_is_connection_settings_valid() ? p.guid_key : "hidden"), (is_every_property_on_new_line ? "\n" : "^5|"), p.score, (is_every_property_on_new_line ? "\n" : "^5|"), p.ping, (main_app.get_current_game_server().get_is_connection_settings_valid() ? p.ip_address.c_str() : "hidden"), (is_every_property_on_new_line ? "\n" : "^5|"), (main_app.get_current_game_server().get_is_connection_settings_valid() ? format("{}, {}", p.country_name, p.city).c_str() : p.geo_information));
+      (void)snprintf(buffer, std::size(buffer), "^3Player name: ^7%s %s ^3PID: ^1%d %s ^3GUID: ^1%s %s ^3Score: ^1%d %s ^3Ping: ^1%s\n ^3IP: ^1%s %s ^3Country, city: ^1%s", p.player_name, (is_every_property_on_new_line ? "\n" : "^5|"), p.pid, (is_every_property_on_new_line ? "\n" : "^5|"), (me->is_admin ? p.guid_key : "hidden"), (is_every_property_on_new_line ? "\n" : "^5|"), p.score, (is_every_property_on_new_line ? "\n" : "^5|"), p.ping, (me->is_admin ? p.ip_address.c_str() : "hidden"), (is_every_property_on_new_line ? "\n" : "^5|"), (me->is_admin ? format("{}, {}", p.country_name, p.city).c_str() : p.geo_information));
       string result{ buffer };
       if (main_app.get_current_game_server().get_banned_ip_addresses_map().contains(p.ip_address) || main_app.get_current_game_server().get_temp_banned_ip_addresses_map().contains(p.ip_address) || !p.banned_by_user_name.empty()) {
         result += is_every_property_on_new_line ? "\n" : " ^5|";
@@ -6071,7 +6077,7 @@ std::string get_player_information_for_player(player &p)
     convert_guid_key_to_country_name(main_app.get_connection_manager().get_geoip_data(), p.ip_address, p);
   }
 
-  (void)snprintf(buffer, std::size(buffer), "^3Player name: ^7%s ^5| ^3PID: ^1%d ^5| ^3Score: ^1%d ^5| ^3Ping: ^1%s\n ^3GUID: ^1%s ^5| ^3IP: ^1%s ^5| ^3Country, city: ^1%s, %s", p.player_name, p.pid, p.score, p.ping, (main_app.get_current_game_server().get_is_connection_settings_valid() ? p.guid_key : "hidden"), (main_app.get_current_game_server().get_is_connection_settings_valid() ? p.ip_address.c_str() : "hidden"), p.country_name, p.city);
+  (void)snprintf(buffer, std::size(buffer), "^3Player name: ^7%s ^5| ^3PID: ^1%d ^5| ^3Score: ^1%d ^5| ^3Ping: ^1%s\n ^3GUID: ^1%s ^5| ^3IP: ^1%s ^5| ^3Country, city: ^1%s, %s", p.player_name, p.pid, p.score, p.ping, (me->is_admin ? p.guid_key : "hidden"), (me->is_admin ? p.ip_address.c_str() : "hidden"), p.country_name, p.city);
   string result{ buffer };
 
   if (main_app.get_current_game_server().get_banned_ip_addresses_map().contains(p.ip_address) || main_app.get_current_game_server().get_temp_banned_ip_addresses_map().contains(p.ip_address) || !p.banned_by_user_name.empty()) {
@@ -6373,7 +6379,7 @@ const char *find_call_of_duty_1_installation_path(const bool is_show_browse_fold
 
             if (check_if_file_path_exists(cod_mp_exe_path1.c_str()) || check_if_file_path_exists(cod_mp_exe_path2.c_str())) {
               if (check_if_file_path_exists(cod_mp_exe_path1.c_str())) {
-                // (void)snprintf(exe_file_path, max_path_length, "\"%s\" -applaunch %ld", steam_exe_path.c_str(), cod2_steam_appid);
+                // (void)snprintf(exe_file_path, max_path_length, "\"%s\" -applaunch %ld", steam_exe_path.c_str(), cod1_steam_appid);
                 (void)snprintf(exe_file_path, max_path_length, "%s", cod_mp_exe_path1.c_str());
               } else if (check_if_file_path_exists(cod_mp_exe_path2.c_str())) {
                 (void)snprintf(exe_file_path, max_path_length, "%s", cod_mp_exe_path2.c_str());
@@ -7632,6 +7638,7 @@ bool connect_to_the_game_server(const std::string &server_ip_port_address, const
     STARTUPINFO process_startup_info{};
     process_startup_info.cb = sizeof(STARTUPINFO);
     process_startup_info.dwFlags = STARTF_FORCEOFFFEEDBACK;
+    PROCESS_INFORMATION pr_info{};
 
     if (!CreateProcess(
           nullptr,
@@ -7650,6 +7657,16 @@ bool connect_to_the_game_server(const std::string &server_ip_port_address, const
       print_colored_text(app_handles.hwnd_re_messages_data, error_message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
       return false;
     }
+
+    if (process_startup_info.hStdError)
+      CloseHandle(process_startup_info.hStdError);
+    if (process_startup_info.hStdInput)
+      CloseHandle(process_startup_info.hStdInput);
+    if (process_startup_info.hStdOutput)
+      CloseHandle(process_startup_info.hStdOutput);
+    CloseHandle(pr_info.hThread);
+    CloseHandle(pr_info.hProcess);
+
   } else {
 
     ostringstream oss;
@@ -7662,6 +7679,7 @@ bool connect_to_the_game_server(const std::string &server_ip_port_address, const
     STARTUPINFO process_startup_info{};
     process_startup_info.cb = sizeof(STARTUPINFO);
     process_startup_info.dwFlags = STARTF_FORCEOFFFEEDBACK;
+    PROCESS_INFORMATION pr_info{};
 
     if (!CreateProcess(
           nullptr,
@@ -7680,6 +7698,15 @@ bool connect_to_the_game_server(const std::string &server_ip_port_address, const
       print_colored_text(app_handles.hwnd_re_messages_data, error_message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
       return false;
     }
+
+    if (process_startup_info.hStdError)
+      CloseHandle(process_startup_info.hStdError);
+    if (process_startup_info.hStdInput)
+      CloseHandle(process_startup_info.hStdInput);
+    if (process_startup_info.hStdOutput)
+      CloseHandle(process_startup_info.hStdOutput);
+    CloseHandle(pr_info.hThread);
+    CloseHandle(pr_info.hProcess);
   }
 
   initiate_sending_rcon_status_command_now();
@@ -8880,20 +8907,21 @@ void clear_players_data_in_players_grid(HWND
   const size_t last_row,
   const size_t cols)
 {
-  for (
-    size_t i{ start_row };
-    i < last_row;
-    ++i) {
-    for (
-      size_t j{};
-      j < cols;
-      ++j) {
+  for (size_t i{ start_row }; i < last_row; ++i) {
+    for (size_t j{}; j < cols; ++j) {
       if (6 == j) {
         display_country_flag(hgrid, i, 6, "xy");
       } else {
         PutCell(hgrid, i, j, "");
       }
     }
+    displayed_players_data[i].pid[0] = '\0';
+    displayed_players_data[i].score[0] = '\0';
+    displayed_players_data[i].ping[0] = '\0';
+    displayed_players_data[i].player_name[0] = '\0';
+    displayed_players_data[i].ip_address[0] = '\0';
+    displayed_players_data[i].geo_info[0] = '\0';
+    displayed_players_data[i].country_code = "xy";
   }
 }
 
@@ -8931,15 +8959,7 @@ void clear_servers_data_in_servers_grid(HWND
 void display_players_data_in_players_grid(HWND
     hgrid)
 {
-  if (main_app.
-
-      get_current_game_server()
-
-        .
-
-      get_is_connection_settings_valid()
-
-  ) {
+  if (me->is_admin) {
     display_online_admins_information();
 
   } else {
@@ -11053,126 +11073,133 @@ void prepare_players_data_for_display(game_server &gs, const bool is_log_status_
   check_for_temp_banned_ip_addresses();
   check_for_banned_ip_addresses();
   check_for_warned_players();
-  check_if_admins_are_online_and_get_admins_player_names(players, number_of_players);
 
-  if (number_of_players > 0) {
-    sort_players_data(players, type_of_sort);
-    if (!players.empty()) {
-      longest_name_length =
-        std::max(longest_name_length, find_longest_player_name_length(players, false, number_of_players));
-      longest_country_length =
-        std::max(longest_country_length,
-          find_longest_player_country_city_info_length(players, number_of_players));
+  // const auto &game_servers = main_app.get_game_servers();
+  const auto &current_game_server = main_app.get_current_game_server();
+
+  if (current_game_server.get_server_ip_address() == gs.get_server_ip_address() && current_game_server.get_server_port() == gs.get_server_port()) {
+
+    check_if_admins_are_online_and_get_admins_player_names(players, number_of_players);
+
+    if (number_of_players > 0) {
+      sort_players_data(players, type_of_sort);
+      if (!players.empty()) {
+        longest_name_length =
+          std::max(longest_name_length, find_longest_player_name_length(players, false, number_of_players));
+        longest_country_length =
+          std::max(longest_country_length,
+            find_longest_player_country_city_info_length(players, number_of_players));
+      }
     }
-  }
 
-  ostringstream log;
-  g_re_match_information_contents = prepare_current_match_information();
-  string match_information{ g_re_match_information_contents };
+    ostringstream log;
+    g_re_match_information_contents = prepare_current_match_information();
+    string match_information{ g_re_match_information_contents };
 
 
-  if (is_log_status_table) {
-    string admins_information{ online_admins_information };
-    remove_all_color_codes(admins_information);
-    remove_all_color_codes(match_information);
-    log << admins_information << '\n';
-    log << match_information;
-  }
-
-  const auto &pd = main_app.get_data_player_pid_color();
-  const auto &sd = main_app.get_data_player_score_color();
-  const auto &pgd = main_app.get_data_player_ping_color();
-  const auto &ipd = main_app.get_data_player_ip_color();
-  const auto &gd = main_app.get_data_player_geoinfo_color();
-
-  const string decoration_line(46 + longest_name_length + longest_country_length, '=');
-  if (is_log_status_table) {
-    log << string{ "\n"s + decoration_line + "\n"s };
-    log << "|";
-    log << right << setw(3) << "Pid"
-        << " | "
-        << setw(6) << "Score"
-        << " | "
-        << setw(4) << "Ping"
-        << " | "
-        << left << setw(longest_name_length)
-        << "Player name"
-        << " | "
-        << left << setw(16) << "IP address"
-        << " | "
-        << left << setw(longest_country_length)
-        << "Country, region, city"
-        << "|";
-    log << string{ "\n"s + decoration_line + "\n"s };
-  }
-  if (0 == number_of_players) {
     if (is_log_status_table) {
-      string server_message{ main_app.get_server_message() };
-      remove_all_color_codes(server_message);
-      log << server_message;
-      const size_t printed_chars_count = get_number_of_characters_without_color_codes(
-        main_app.get_server_message().c_str());
-      const string filler{
-        string(decoration_line.length() - 1 - printed_chars_count, ' ') + "|\n"s
-      };
-      log << filler;
+      string admins_information{ online_admins_information };
+      remove_all_color_codes(admins_information);
+      remove_all_color_codes(match_information);
+      log << admins_information << '\n';
+      log << match_information;
     }
-  } else {
 
-    for (size_t i{}; i < number_of_players; ++i) {
+    const auto &pd = main_app.get_data_player_pid_color();
+    const auto &sd = main_app.get_data_player_score_color();
+    const auto &pgd = main_app.get_data_player_ping_color();
+    const auto &ipd = main_app.get_data_player_ip_color();
+    const auto &gd = main_app.get_data_player_geoinfo_color();
 
-      const player &p{ players[i] };
-
-      if (main_app.get_game_server_index() < main_app.get_rcon_game_servers_count()) {
-
-        snprintf(buffer, std::size(buffer), "%s%d", pd.c_str(), p.pid);
-        strcpy_s(displayed_players_data[i].pid, std::size(displayed_players_data[i].pid), buffer);
-
-        snprintf(buffer, std::size(buffer), "%s%d", sd.c_str(), p.score);
-        strcpy_s(displayed_players_data[i].score, std::size(displayed_players_data[i].score), buffer);
-
-        snprintf(buffer, std::size(buffer), "%s%s", pgd.c_str(), p.ping);
-        strcpy_s(displayed_players_data[i].ping, std::size(displayed_players_data[i].ping), buffer);
-
-        strcpy_s(displayed_players_data[i].player_name, std::size(displayed_players_data[i].player_name), p.player_name);
-
-        snprintf(buffer, std::size(buffer), "%s%s", ipd.c_str(), p.ip_address.c_str());
-        const size_t no_of_chars_to_copy{ std::min<size_t>(19, len(buffer)) };
-        strncpy_s(displayed_players_data[i].ip_address, std::size(displayed_players_data[i].ip_address), buffer, no_of_chars_to_copy);
-
-        snprintf(buffer, std::size(buffer), "%s%s, %s", gd.c_str(), (strlen(p.country_name) != 0 ? p.country_name : p.region), p.city);
-        strcpy_s(displayed_players_data[i].geo_info, std::size(displayed_players_data[i].geo_info), buffer);
-        displayed_players_data[i].country_code = p.country_code;
-      }
-
+    const string decoration_line(46 + longest_name_length + longest_country_length, '=');
+    if (is_log_status_table) {
+      log << string{ "\n"s + decoration_line + "\n"s };
+      log << "|";
+      log << right << setw(3) << "Pid"
+          << " | "
+          << setw(6) << "Score"
+          << " | "
+          << setw(4) << "Ping"
+          << " | "
+          << left << setw(longest_name_length)
+          << "Player name"
+          << " | "
+          << left << setw(16) << "IP address"
+          << " | "
+          << left << setw(longest_country_length)
+          << "Country, region, city"
+          << "|";
+      log << string{ "\n"s + decoration_line + "\n"s };
+    }
+    if (0 == number_of_players) {
       if (is_log_status_table) {
-        log << "|";
-        log << right << setw(3) << p.pid << " | " << setw(6)
-            << p.score << " | "
-            << setw(4) << p.ping << " | ";
-        string name{ p.player_name };
-        remove_all_color_codes(name);
-        const size_t printed_name_char_count{ name.length() };
-        log << name;
-        if (printed_name_char_count < longest_name_length) {
-          log << string(longest_name_length - printed_name_char_count, ' ');
+        string server_message{ main_app.get_server_message() };
+        remove_all_color_codes(server_message);
+        log << server_message;
+        const size_t printed_chars_count = get_number_of_characters_without_color_codes(
+          main_app.get_server_message().c_str());
+        const string filler{
+          string(decoration_line.length() - 1 - printed_chars_count, ' ') + "|\n"s
+        };
+        log << filler;
+      }
+    } else {
+
+      for (size_t i{}; i < number_of_players; ++i) {
+
+        const player &p{ players[i] };
+
+        if (main_app.get_game_server_index() < main_app.get_rcon_game_servers_count()) {
+
+          snprintf(buffer, std::size(buffer), "%s%d", pd.c_str(), p.pid);
+          strcpy_s(displayed_players_data[i].pid, std::size(displayed_players_data[i].pid), buffer);
+
+          snprintf(buffer, std::size(buffer), "%s%d", sd.c_str(), p.score);
+          strcpy_s(displayed_players_data[i].score, std::size(displayed_players_data[i].score), buffer);
+
+          snprintf(buffer, std::size(buffer), "%s%s", pgd.c_str(), p.ping);
+          strcpy_s(displayed_players_data[i].ping, std::size(displayed_players_data[i].ping), buffer);
+
+          strcpy_s(displayed_players_data[i].player_name, std::size(displayed_players_data[i].player_name), p.player_name);
+
+          snprintf(buffer, std::size(buffer), "%s%s", ipd.c_str(), p.ip_address.c_str());
+          const size_t no_of_chars_to_copy{ std::min<size_t>(19, len(buffer)) };
+          strncpy_s(displayed_players_data[i].ip_address, std::size(displayed_players_data[i].ip_address), buffer, no_of_chars_to_copy);
+
+          snprintf(buffer, std::size(buffer), "%s%s, %s", gd.c_str(), (strlen(p.country_name) != 0 ? p.country_name : p.region), p.city);
+          strcpy_s(displayed_players_data[i].geo_info, std::size(displayed_players_data[i].geo_info), buffer);
+          displayed_players_data[i].country_code = p.country_code;
         }
-        log << " | ";
-        snprintf(buffer, std::size(buffer), "%s, %s", (strlen(p.country_name) != 0 ? p.country_name : p.region), p.city);
-        log << left << setw(16) << p.ip_address << " | " << left
-            << setw(longest_country_length) << buffer
-            << "|" << '\n';
+
+        if (is_log_status_table) {
+          log << "|";
+          log << right << setw(3) << p.pid << " | " << setw(6)
+              << p.score << " | "
+              << setw(4) << p.ping << " | ";
+          string name{ p.player_name };
+          remove_all_color_codes(name);
+          const size_t printed_name_char_count{ name.length() };
+          log << name;
+          if (printed_name_char_count < longest_name_length) {
+            log << string(longest_name_length - printed_name_char_count, ' ');
+          }
+          log << " | ";
+          snprintf(buffer, std::size(buffer), "%s, %s", (strlen(p.country_name) != 0 ? p.country_name : p.region), p.city);
+          log << left << setw(16) << p.ip_address << " | " << left
+              << setw(longest_country_length) << buffer
+              << "|" << '\n';
+        }
       }
     }
-  }
 
-  if (main_app.get_game_server_index() < main_app.get_rcon_game_servers_count()) {
-    is_refreshed_players_data_ready_event.store(true);
-  }
+    if (main_app.get_game_server_index() < main_app.get_rcon_game_servers_count()) {
+      is_refreshed_players_data_ready_event.store(true);
+    }
 
-  if (is_log_status_table) {
-    log << string{ decoration_line + "\n"s };
-    log_message(log.str(), is_log_datetime::yes);
+    if (is_log_status_table) {
+      log << string{ decoration_line + "\n"s };
+      log_message(log.str(), is_log_datetime::yes);
+    }
   }
 }
 
@@ -12049,9 +12076,10 @@ void check_if_admins_are_online_and_get_admins_player_names(const std::vector<pl
   unsigned long guid_key{};
   no_of_online_players = std::min(no_of_online_players, players.size());
   for (auto &u : main_app.get_users()) {
+    if (!check_ip_address_validity(u->ip_address, guid_key)) continue;
     u->is_online = false;
     for (size_t i{}; i < no_of_online_players; ++i) {
-      if (check_ip_address_validity(u->ip_address, guid_key) && u->ip_address == players[i].ip_address) {
+      if (u->ip_address == players[i].ip_address) {
         u->is_online = true;
         u->player_name = players[i].player_name;
         break;
@@ -12074,12 +12102,12 @@ bool save_current_user_data_to_json_file(const char *file_path)
     return false;
   }
 
-  auto me = shared_ptr<tiny_rcon_client_user>{};
-  if (main_app.get_current_game_server().get_is_connection_settings_valid()) {
+  /*auto me = shared_ptr<tiny_rcon_client_user>{};
+  if (me->is_admin) {
     me = main_app.get_user_for_name(main_app.get_username());
   } else {
     me = main_app.get_player_for_name(main_app.get_username(), main_app.get_user_ip_address());
-  }
+  }*/
 
   const string user_name{ remove_disallowed_character_in_string(me->user_name) };
   config_file << format(R"({}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{})", user_name, (me->is_admin ? "true" : "false"), (me->is_logged_in ? "true" : "false"), (me->is_online ? "true" : "false"), me->ip_address, me->geo_information, me->last_login_time_stamp, me->last_logout_time_stamp, me->no_of_logins, me->no_of_warnings, me->no_of_kicks, me->no_of_tempbans, me->no_of_guidbans, me->no_of_ipbans, me->no_of_iprangebans, me->no_of_citybans, me->no_of_countrybans, me->no_of_namebans, me->no_of_reports);
@@ -12125,11 +12153,9 @@ void load_tinyrcon_client_user_data(const char *file_path)
   string ip_address = check_ip_address_validity(main_app.get_user_ip_address(), guid) ? main_app.get_user_ip_address()
                                                                                       : (parts.size() >= 5 ? parts[4]
                                                                                                            : "n/a");
-  shared_ptr<tiny_rcon_client_user> u{
-    main_app.get_current_game_server().get_is_connection_settings_valid() ? main_app.get_user_for_name(username)
-                                                                          : main_app.get_player_for_name(
-                                                                            username, main_app.get_user_ip_address())
-  };
+  shared_ptr<tiny_rcon_client_user> u{ main_app.get_current_game_server().get_is_connection_settings_valid() ? main_app.get_user_for_name(username)
+                                                                                                             : main_app.get_player_for_name(
+                                                                                                               username, main_app.get_user_ip_address()) };
   u->is_admin = main_app.get_current_game_server().get_is_connection_settings_valid();
   u->user_name = std::move(username);
   u->is_logged_in = is_logged_in;
@@ -12187,7 +12213,7 @@ bool validate_admin_and_show_missing_admin_privileges_message(const bool is_show
   const is_log_message log_message,
   const is_log_datetime log_date_time)
 {
-  if (!main_app.get_current_game_server().get_is_connection_settings_valid()) {
+  if (!me->is_admin) {
     string warning_msg{
       format("^7{}^3, you need to have the correct ^1rcon password ^3to be able to execute ^1admin-level ^3commands.\n",
         main_app.get_username())
@@ -12296,6 +12322,12 @@ bool run_executable(const char *file_path_for_executable)
   StartupInfo.cb = sizeof(StartupInfo);
 
   if (CreateProcessA(file_path_for_executable, nullptr, nullptr, nullptr, FALSE, 0, nullptr, nullptr, &StartupInfo, &ProcessInfo)) {
+    if (StartupInfo.hStdError)
+      CloseHandle(StartupInfo.hStdError);
+    if (StartupInfo.hStdInput)
+      CloseHandle(StartupInfo.hStdInput);
+    if (StartupInfo.hStdOutput)
+      CloseHandle(StartupInfo.hStdOutput);
     CloseHandle(ProcessInfo.hThread);
     CloseHandle(ProcessInfo.hProcess);
     return true;
@@ -12315,14 +12347,14 @@ void restart_tinyrcon_client(const char *file_path_to_tinyrcon_exe, const string
     PostQuitMessage(0);
     CloseWindow(app_handles.hwnd_main_window);
     DestroyWindow(app_handles.hwnd_main_window);
-    if (pr_info.hProcess != nullptr) {
-      CloseHandle(pr_info.hProcess);
-      pr_info.hProcess = nullptr;
-    }
-    if (pr_info.hThread != nullptr) {
-      CloseHandle(pr_info.hThread);
-      pr_info.hThread = nullptr;
-    }
+    /* if (pr_info.hProcess != nullptr) {
+       CloseHandle(pr_info.hProcess);
+       pr_info.hProcess = nullptr;
+     }
+     if (pr_info.hThread != nullptr) {
+       CloseHandle(pr_info.hThread);
+       pr_info.hThread = nullptr;
+     }*/
     ExitProcess(0);
   }
 }
@@ -12358,6 +12390,93 @@ bool parse_game_type_information_from_rcon_reply(const string &incoming_data_buf
   }
 
   return false;
+}
+
+std::string find_users_player_name_for_installed_cod2_game(const std::shared_ptr<tiny_rcon_client_user> &user)
+{
+  const string player_name{ "^7Unknown Soldier" };
+
+  if (user->is_admin) {
+    unsigned long guid_key{};
+    const auto &user_ip_address = main_app.get_user_ip_address();
+    if (!user_ip_address.empty() && check_ip_address_validity(user_ip_address, guid_key)) {
+      const auto &players_data = main_app.get_current_game_server().get_players_data();
+      for (size_t i{}; i < main_app.get_current_game_server().get_number_of_players(); ++i) {
+        if (players_data[i].ip_address == user_ip_address)
+          return players_data[i].player_name;
+      }
+    }
+  }
+
+  if (!main_app.get_cod2mp_exe_path().empty()) {
+    string cod2_game_folder{ main_app.get_cod2mp_exe_path() };
+    cod2_game_folder.erase(cbegin(cod2_game_folder) + cod2_game_folder.find_last_of("\\/"), cend(cod2_game_folder));
+    string current_path{ cod2_game_folder + "\\main\\players\\active.txt" };
+    if (check_if_file_path_exists(current_path.c_str())) {
+      ifstream input_file1{ current_path };
+      if (string line1; input_file1 && getline(input_file1, line1)) {
+        const string user_name_folder{ stl::helper::trim(line1) };
+        input_file1.close();
+
+        const string player_config_mp_file_path_in_just_server{ format("{}\\just_server\\players\\{}\\config_mp.cfg", cod2_game_folder, user_name_folder) };
+
+        if (check_if_file_path_exists(player_config_mp_file_path_in_just_server.c_str())) {
+
+          ifstream input_file2(player_config_mp_file_path_in_just_server, std::ios::in);
+          if (input_file2) {
+
+            for (string line2; getline(input_file2, line2);) {
+              trim_in_place(line2);
+              const size_t start_pos1{ line2.find("seta name") };
+              if (string::npos != start_pos1) {
+                input_file2.close();
+                string name{ trim(line2.substr(start_pos1 + len("seta name") + 1)) };
+                strip_leading_and_trailing_quotes(name);
+                return name;
+              }
+
+              const size_t start_pos2{ line2.find("set name") };
+              if (string::npos != start_pos2) {
+                input_file2.close();
+                string name{ trim(line2.substr(start_pos1 + len("set name") + 1)) };
+                strip_leading_and_trailing_quotes(name);
+                return name;
+              }
+            }
+          }
+
+          const string player_config_mp_file_path_in_main{ format("{}\\main\\players\\{}\\config_mp.cfg", cod2_game_folder, user_name_folder) };
+
+          if (check_if_file_path_exists(player_config_mp_file_path_in_main.c_str())) {
+            ifstream input_file3(player_config_mp_file_path_in_main, std::ios::in);
+            if (input_file3) {
+
+              for (string line3; getline(input_file3, line3);) {
+                trim_in_place(line3);
+                const size_t start_pos1{ line3.find("seta name") };
+                if (string::npos != start_pos1) {
+                  input_file3.close();
+                  string name{ trim(line3.substr(start_pos1 + len("seta name") + 1)) };
+                  strip_leading_and_trailing_quotes(name);
+                  return name;
+                }
+
+                const size_t start_pos2{ line3.find("set name") };
+                if (string::npos != start_pos2) {
+                  input_file3.close();
+                  string name{ trim(line3.substr(start_pos1 + len("set name") + 1)) };
+                  strip_leading_and_trailing_quotes(name);
+                  return name;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return player_name;
 }
 
 std::string find_version_of_installed_cod2_game()
@@ -12786,33 +12905,9 @@ void refresh_game_servers_data(HWND
     auto &gs = main_app.get_game_servers()[i];
     if (
       parse_getinfo_response_for_specified_game_server(gs, number_of_online_players, number_of_max_players) || parse_getstatus_response_for_specified_game_server(gs)) {
-      snprintf(buffer, std::size(buffer), "^2%d/^1%d", gs.
-
-                                                       get_number_of_players(),
-        gs
-
-          .
-
-        get_max_number_of_players()
-
-      );
+      snprintf(buffer, std::size(buffer), "^2%d/^1%d", gs.get_number_of_players(), gs.get_max_number_of_players());
       player p{};
-      convert_guid_key_to_country_name(main_app
-                                         .
-
-                                       get_connection_manager()
-
-                                         .
-
-                                       get_geoip_data(),
-        gs
-
-          .
-
-        get_server_ip_address(),
-        p
-
-      );
+      convert_guid_key_to_country_name(main_app.get_connection_manager().get_geoip_data(), gs.get_server_ip_address(), p);
       gs.set_server_pid(format("^4{}", i + 1));
       gs.set_game_server_address(format("{}:{}", gs.get_server_ip_address(), gs.get_server_port()));
       gs.set_online_and_max_players(buffer);
@@ -13184,13 +13279,13 @@ std::string get_server_address_for_connect_command(const int selected_row_index)
   return {};
 }
 
-std::shared_ptr<tiny_rcon_client_user> &get_user_for_specified_username_and_ip_address()
-{
-  return main_app.get_current_game_server().get_is_connection_settings_valid() ? main_app.get_user_for_name(
-           main_app.get_username())
-                                                                               : main_app.get_player_for_name(main_app.get_username(),
-                                                                                 main_app.get_user_ip_address());
-}
+// std::shared_ptr<tiny_rcon_client_user> &get_user_for_specified_username_and_ip_address()
+//{
+//   return me->is_admin ? main_app.get_user_for_name(
+//            main_app.get_username())
+//                       : main_app.get_player_for_name(main_app.get_username(),
+//                         main_app.get_user_ip_address());
+// }
 
 void load_reported_players_to_file(const char *file_path, std::vector<player> &reported_players)
 {
@@ -13389,6 +13484,7 @@ void check_version_number_and_file_path_information(version_data &dest_version)
     "data",
     "log",
     "temp",
+    "tools",
     "plugins\\geoIP",
     "config\\tinyrcon.json",
     main_app.get_user_data_file_path(),
@@ -13411,6 +13507,7 @@ void check_version_number_and_file_path_information(version_data &dest_version)
     format("{}data", dest_path),
     format("{}log", dest_path),
     format("{}temp", dest_path),
+    format("{}tools", dest_path),
     format("{}plugins\\geoIP", dest_path),
     dest_config_file_path,
     format("{}{}", dest_path, main_app.get_user_data_file_path()),
@@ -13495,4 +13592,172 @@ std::string get_file_name_from_path(const std::string &file_path)
 {
   const auto slash_pos{ file_path.rfind('\\') };
   return file_path.substr(slash_pos + 1);
+}
+
+void execute_at_exit()
+{
+  const string player_name{ find_users_player_name_for_installed_cod2_game(me) };
+
+  const auto current_ts{ get_current_time_stamp() };
+  if (me->is_admin) {
+    main_app.get_connection_manager_for_messages().process_and_send_message("request-logout",
+      format("{}\\{}\\{}\\{}\\{}", me->user_name, me->ip_address, current_ts, player_name, main_app.get_game_version_number()),
+      true,
+      main_app.get_tiny_rcon_server_ip_address(),
+      main_app.get_tiny_rcon_server_port(),
+      false);
+  } else {
+    main_app.get_connection_manager_for_rcon_messages().process_and_send_message("request-logout-player",
+      format("{}\\{}\\{}\\{}\\{}", me->user_name, me->ip_address, current_ts, player_name, main_app.get_game_version_number()),
+      true,
+      main_app.get_tiny_rcon_server_ip_address_for_players(),
+      main_app.get_tiny_rcon_server_port_for_players(),
+      false);
+  }
+  me->is_logged_in = false;
+  me->last_logout_time_stamp = current_ts;
+  save_current_user_data_to_json_file(main_app.get_user_data_file_path());
+
+  save_reported_players_to_file(main_app.get_reported_players_file_path(), main_app.get_reported_players());
+
+  save_protected_entries_file(main_app.get_protected_ip_addresses_file_path(), main_app.get_current_game_server().get_protected_ip_addresses());
+  save_protected_entries_file(main_app.get_protected_ip_address_ranges_file_path(), main_app.get_current_game_server().get_protected_ip_address_ranges());
+  save_protected_entries_file(main_app.get_protected_cities_file_path(), main_app.get_current_game_server().get_protected_cities());
+  save_protected_entries_file(main_app.get_protected_countries_file_path(), main_app.get_current_game_server().get_protected_countries());
+}
+
+bool check_if_exists_and_download_missing_custom_map_files_downloader(/*const char* downloader_program_file_path*/)
+{
+  static constexpr size_t buffer_length{ 1024u };
+  static char user_profile_folder[buffer_length]{};
+  static char command_line[buffer_length]{};
+
+  if (!SHGetSpecialFolderPath(NULL, user_profile_folder, CSIDL_PROFILE, FALSE)) {
+    char *dir_path{};
+    size_t buffer_count{};
+    const auto error_number = _dupenv_s(&dir_path, &buffer_count, "USERPROFILE");
+    if (error_number) return false;
+    // char *user_folder_path = getenv("USERPROFILE");
+    if (!dir_path || len(dir_path) == 0)
+      return false;
+    strcpy_s(user_profile_folder, std::size(user_profile_folder), dir_path);
+    free(dir_path);
+  }
+
+  string desktop_dir_path{ user_profile_folder };
+  string tinyrcon_dir_path{ main_app.get_current_working_directory() };
+
+  replace_forward_slash_with_backward_slash(desktop_dir_path);
+  if (!desktop_dir_path.empty() && ('\\' == desktop_dir_path.back() || '/' == desktop_dir_path.back())) desktop_dir_path.pop_back();
+  desktop_dir_path.push_back('\\');
+  desktop_dir_path.append("Desktop\\CTF_custom_maps_auto_downloader.lnk");
+
+  const string downloader_program_file_path{ format("{}CTF_custom_maps_auto_downloader.exe", tinyrcon_dir_path) };
+
+  if (!check_if_file_path_exists(downloader_program_file_path.c_str())) {
+
+    if (!main_app.get_auto_update_manager().download_file("ftp://85.222.189.119/tinyrcon/CTF_custom_maps_auto_downloader.exe", downloader_program_file_path.c_str())) {
+      const string warning_message{ "^3Could not download CTF game server's custom maps auto downloader from\n ^5ftp://85.222.189.119/tinyrcon/CTF_custom_maps_auto_downloader.exe\n"s };
+      print_colored_text(app_handles.hwnd_re_messages_data, warning_message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      return false;
+    }
+
+    (void)snprintf(command_line, std::size(command_line), "\"%s\" /NP", downloader_program_file_path.c_str());
+    STARTUPINFO process_startup_info{};
+    process_startup_info.cb = sizeof(STARTUPINFO);
+    process_startup_info.dwFlags = STARTF_FORCEOFFFEEDBACK;
+    PROCESS_INFORMATION pr_info{};
+
+    if (!CreateProcess(
+          nullptr,
+          command_line,
+          nullptr,// Process handle not inheritable
+          nullptr,// Thread handle not inheritable
+          FALSE,// Set handle inheritance to FALSE
+          NORMAL_PRIORITY_CLASS | CREATE_NEW_CONSOLE,// creation flags
+          nullptr,// Use parent's environment block
+          tinyrcon_dir_path.c_str(),// Use parent's starting directory
+          &process_startup_info,// Pointer to STARTUPINFO structure
+          &pr_info)) {
+      char buffer[512]{};
+      strerror_s(buffer, 512, GetLastError());
+      const string error_message{ "^3Launching CTF game server's custom maps auto downloader failed: ^1"s + buffer + "\n"s };
+      print_colored_text(app_handles.hwnd_re_messages_data, error_message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+      return false;
+    }
+
+    if (process_startup_info.hStdError)
+      CloseHandle(process_startup_info.hStdError);
+    if (process_startup_info.hStdInput)
+      CloseHandle(process_startup_info.hStdInput);
+    if (process_startup_info.hStdOutput)
+      CloseHandle(process_startup_info.hStdOutput);
+    CloseHandle(pr_info.hThread);
+    CloseHandle(pr_info.hProcess);
+
+    if (!check_if_file_path_exists(desktop_dir_path.c_str())) {
+      CreateLink(downloader_program_file_path.c_str(), desktop_dir_path.c_str(), "CTF game server's custom map auto-downloader");
+      const char value[]{ "~ RUNASADMIN" };
+      RegSetKeyValueA(HKEY_CURRENT_USER,
+        R"(SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers)",
+        downloader_program_file_path.c_str(),
+        REG_SZ,
+        "~ RUNASADMIN",
+        sizeof(value));
+    }
+  }
+
+  return true;
+}
+
+// CreateLink - Uses the Shell's IShellLink and IPersistFile interfaces
+//              to create and store a shortcut to the specified object.
+//
+// Returns the result of calling the member functions of the interfaces.
+//
+// Parameters:
+// lpszPathObj  - Address of a buffer that contains the path of the object,
+//                including the file name.
+// lpszPathLink - Address of a buffer that contains the path where the
+//                Shell link is to be stored, including the file name.
+// lpszDesc     - Address of a buffer that contains a description of the
+//                Shell link, stored in the Comment field of the link
+//                properties.
+
+HRESULT CreateLink(const char *lpszPathObj, const char *lpszPathLink, const char *lpszDesc)
+{
+  HRESULT hres;
+  IShellLink *psl;
+
+  // Get a pointer to the IShellLink interface. It is assumed that CoInitialize
+  // has already been called.
+  hres = CoCreateInstance(CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, IID_IShellLink, (LPVOID *)&psl);
+  if (SUCCEEDED(hres)) {
+    IPersistFile *ppf;
+
+    // Set the path to the shortcut target and add the description.
+    psl->SetPath(lpszPathObj);
+    psl->SetDescription(lpszDesc);
+
+
+    // Query IShellLink for the IPersistFile interface, used for saving the
+    // shortcut in persistent storage.
+    hres = psl->QueryInterface(IID_IPersistFile, (LPVOID *)&ppf);
+
+    if (SUCCEEDED(hres)) {
+      WCHAR wsz[MAX_PATH];
+
+      // Ensure that the string is Unicode.
+      MultiByteToWideChar(CP_ACP, 0, lpszPathLink, -1, wsz, MAX_PATH);
+
+      // Add code here to check return value from MultiByteWideChar
+      // for success.
+
+      // Save the link by calling IPersistFile::Save.
+      hres = ppf->Save(wsz, TRUE);
+      ppf->Release();
+    }
+    psl->Release();
+  }
+  return hres;
 }

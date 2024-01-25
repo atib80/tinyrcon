@@ -68,6 +68,7 @@ class tiny_rcon_client_application
   std::recursive_mutex remote_message_queue_mutex{};
   std::recursive_mutex tinyrcon_messages_queue_mutex{};
   string username{ "^3Player" };
+  string player_name{ "^7Unknown Soldier" };
   std::string game_server_name{
     "185.158.113.146:28995 CoD2 CTF"
   };
@@ -396,6 +397,17 @@ public:
   {
     remove_disallowed_character_in_string(new_value);
     username = std::move(new_value);
+  }
+
+  inline void set_player_name(string new_value)
+  {
+    remove_disallowed_character_in_string(new_value);
+    player_name = std::move(new_value);
+  }
+
+    inline const string &get_player_name() const
+  {
+    return player_name;
   }
 
   inline const string &get_game_server_name() const

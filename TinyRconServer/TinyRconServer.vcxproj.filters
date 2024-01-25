@@ -864,7 +864,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include=".clang-format" />
     <None Include=".clang-tidy" />
     <None Include=".cmake-format.yaml" />
     <None Include=".gitignore" />

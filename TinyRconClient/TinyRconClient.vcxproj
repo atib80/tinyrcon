@@ -246,7 +246,6 @@
     <ResourceCompile Include="TinyRconClient.rc" />
   </ItemGroup>
   <ItemGroup>
-    <None Include=".clang-format" />
     <None Include=".clang-tidy" />
     <None Include=".cmake-format.yaml" />
   </ItemGroup>

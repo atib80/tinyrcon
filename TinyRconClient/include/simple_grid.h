@@ -44,6 +44,9 @@
 #ifndef SIMPLEGRID_H
 #define SIMPLEGRID_H
 
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+
 #define WC_SIMPLEGRIDA "SimpleGridCtl"
 #define WC_SIMPLEGRIDW L"SimpleGridCtl"
 

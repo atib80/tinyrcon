@@ -21,7 +21,7 @@ using namespace std::chrono;
 using namespace std::filesystem;
 using namespace Gdiplus;
 
-extern const string program_version{ "2.7.2.6" };
+extern const string program_version{ "2.7.3.2" };
 
 extern const std::regex ip_address_and_port_regex;
 extern const unordered_set<string> rcon_status_commands;
@@ -35,7 +35,7 @@ extern string online_admins_information;
 tiny_rcon_client_application main_app;
 sort_type type_of_sort{ sort_type::geo_asc };
 
-PROCESS_INFORMATION pr_info{};
+// PROCESS_INFORMATION pr_info{};
 
 volatile atomic<size_t> atomic_counter{ 0U };
 volatile std::atomic<bool> is_refresh_players_data_event{ false };
@@ -234,7 +234,7 @@ static std::random_device rd{};
 static std::mt19937 gen(rd());
 static std::uniform_int_distribution<> random_number_distribution(1, 44);
 ImageEx *gif_image{};
-auto me = shared_ptr<tiny_rcon_client_user>{};
+shared_ptr<tiny_rcon_client_user> me{};
 
 int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   _In_opt_ HINSTANCE,
@@ -270,6 +270,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         "log",
         "plugins\\geoIP",
         "temp",
+        "tools",
         main_app.get_tinyrcon_config_file_path(),
         main_app.get_user_data_file_path(),
         main_app.get_temp_bans_file_path(),
@@ -358,14 +359,14 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
           print_message(app_handles.hwnd_re_messages_data, error_message.c_str());
         }
 
-        Sleep(25);
+        Sleep(20);
       }
     }
   };
 
   print_messages_thread.detach();
 
-  main_app.set_game_server_index(0);
+  main_app.set_game_server_index(0U);
   main_app.set_user_ip_address(trim(get_tiny_rcon_client_external_ip_address()));
   initialize_and_verify_server_connection_settings();
 
@@ -2674,11 +2675,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     main_app.get_connection_manager().send_and_receive_rcon_data(command.c_str(), reply, main_app.get_current_game_server().get_server_ip_address().c_str(), main_app.get_current_game_server().get_server_port(), main_app.get_current_game_server().get_rcon_password().c_str(), main_app.get_current_game_server(), true);
   });
 
-  main_app.add_message_handler("request-login", [](const string &, const time_t, const string &, bool is_print_in_messages) {
-    if (is_print_in_messages) {
-      const string message{ format("^7{} ^7has sent a ^1login request ^7to ^5Tiny^6Rcon ^7server.", main_app.get_username()) };
-      print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
-    }
+  main_app.add_message_handler("request-login", [](const string &, const time_t, const string &, bool) {
+    const string message{ format("^7{} ^7has sent a ^1login request ^7to ^5Tiny^6Rcon ^7server.", main_app.get_username()) };
+    print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
   });
 
   main_app.add_message_handler("confirm-login", [](const string &, const time_t, const string &data, bool) {
@@ -2694,7 +2693,13 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       current_user->last_login_time_stamp = get_current_time_stamp();
       current_user->is_logged_in = true;
       save_current_user_data_to_json_file(main_app.get_user_data_file_path());
-      const string message{ format("^7{} ^2has ^1logged in ^2to ^5Tiny^6Rcon ^2server.\n^2Number of logins: ^1{}", current_user->user_name, current_user->no_of_logins) };
+      string message{ format("^7{} ^2has ^1logged in ^2to ^5Tiny^6Rcon ^2server.\n^2Number of logins: ^1{}\n", current_user->user_name, current_user->no_of_logins) };
+      if (parts.size() >= 4) {
+        message += format("^2Player name: ^7{}\n", parts[3]);
+      }
+      if (parts.size() >= 5) {
+        message += format("^2Game's version number: ^1{}\n", parts[4]);
+      }
       print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
       main_app.add_message_to_queue(message_t("request-mapnames", format(R"({}\{}\{})", current_user->user_name, current_user->ip_address, get_current_time_stamp()), true));
     }
@@ -2780,6 +2785,14 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     }
   });
 
+  main_app.add_remote_message_handler("inform-login-player", [](const string &, const time_t, const string &message, bool) {
+    print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
+  });
+
+  main_app.add_remote_message_handler("inform-logout-player", [](const string &, const time_t, const string &message, bool) {
+    print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
+  });
+
   main_app.add_message_handler("inform-login", [](const string &, const time_t, const string &message, bool) {
     print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
   });
@@ -2801,11 +2814,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
   });
 
-  main_app.add_remote_message_handler("request-login-player", [](const string &, const time_t, const string &, bool is_print_in_messages) {
-    if (is_print_in_messages) {
-      const string message{ format("^3Player ^7{} ^3has sent a ^1login request ^3to ^5Tiny^6Rcon ^3server.", main_app.get_username()) };
-      print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
-    }
+  main_app.add_remote_message_handler("request-login-player", [](const string &, const time_t, const string &message, bool) {
+    print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
   });
 
   main_app.add_remote_message_handler("confirm-login-player", [](const string &, const time_t, const string &data, bool) {
@@ -2823,7 +2833,13 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       current_user->is_admin = false;
       current_user->is_logged_in = true;
       save_current_user_data_to_json_file(main_app.get_user_data_file_path());
-      const string message{ format("^2Player {} ^2has ^1logged in ^2to ^5Tiny^6Rcon ^2server.\n^2Number of logins: ^1{}", current_user->user_name, current_user->no_of_logins) };
+      string message{ format("^2Player {} ^2has ^1logged in ^2to ^5Tiny^6Rcon ^2server.\n^2Number of logins: ^1{}", current_user->user_name, current_user->no_of_logins) };
+      if (parts.size() >= 4) {
+        message += format("^2Player name: ^7{}\n", parts[3]);
+      }
+      if (parts.size() >= 5) {
+        message += format("^2Game's version number: ^1{}\n", parts[4]);
+      }
       print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
       main_app.add_remote_message_to_queue(message_t{ "request-admindata-player", format("{}\\{}\\{}", current_user->user_name, current_user->ip_address, ts), true });
       const string user_details{ format("{}\\{}\\{}", current_user->user_name, current_user->ip_address, ts) };
@@ -2915,7 +2931,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     unordered_map<string, player> last_tempbans_map;
     parse_tempbans_data_file("last_tempbans.txt", last_tempbans_vector, last_tempbans_map);
     DeleteFileA("last_tempbans.txt");
-    print_colored_text(app_handles.hwnd_re_messages_data, format("^5Received last ^1{} temporary bans ^5from Tiny^6Rcon ^5server.", last_tempbans_map.size()).c_str());
+    // print_colored_text(app_handles.hwnd_re_messages_data, format("^5Received last ^1{} temporary bans ^5from Tiny^6Rcon ^5server.", last_tempbans_map.size()).c_str());
     for (auto &&last_tempban : last_tempbans_vector) {
       unsigned long guid_number{};
       if (!check_ip_address_validity(last_tempban.ip_address, guid_number) || main_app.get_current_game_server().get_temp_banned_ip_addresses_map().contains(last_tempban.ip_address))
@@ -2932,8 +2948,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     save_tempbans_to_file(main_app.get_temp_bans_file_path(), main_app.get_current_game_server().get_temp_banned_ip_addresses_vector());
     operation_completed_flag[0] = 1;
     if (6 == std::accumulate(operation_completed_flag, operation_completed_flag + 6, 0)) {
-      const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
-      print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
+      /*const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
+      print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());*/
       main_app.set_is_bans_synchronized(true);
     }
   });
@@ -2949,7 +2965,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     unordered_map<string, player> last_ipaddressbans_map;
     parse_banned_ip_addresses_file("last_ipaddressbans.txt", last_ipaddressbans_vector, last_ipaddressbans_map);
     DeleteFileA("last_ipaddressbans.txt");
-    print_colored_text(app_handles.hwnd_re_messages_data, format("^5Received last ^1{} IP address bans ^5from Tiny^6Rcon ^5server.", last_ipaddressbans_map.size()).c_str());
+    // print_colored_text(app_handles.hwnd_re_messages_data, format("^5Received last ^1{} IP address bans ^5from Tiny^6Rcon ^5server.", last_ipaddressbans_map.size()).c_str());
     for (auto &&last_ipaddressban : last_ipaddressbans_vector) {
       unsigned long guid_number{};
       if (!check_ip_address_validity(last_ipaddressban.ip_address, guid_number) || main_app.get_current_game_server().get_banned_ip_addresses_map().contains(last_ipaddressban.ip_address))
@@ -2966,8 +2982,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     save_banned_ip_entries_to_file(main_app.get_ip_bans_file_path(), main_app.get_current_game_server().get_banned_ip_addresses_vector());
     operation_completed_flag[1] = 1;
     if (6 == std::accumulate(operation_completed_flag, operation_completed_flag + 6, 0)) {
-      const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
-      print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
+      /*const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
+      print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());*/
       main_app.set_is_bans_synchronized(true);
     }
   });
@@ -2983,7 +2999,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     unordered_map<string, player> last_ipaddressrangebans_map;
     parse_banned_ip_address_ranges_file("last_ipaddressrangebans.txt", last_ipaddressrangebans_vector, last_ipaddressrangebans_map);
     DeleteFileA("last_ipaddressrangebans.txt");
-    print_colored_text(app_handles.hwnd_re_messages_data, format("^5Received last ^1{} IP address range bans ^5from Tiny^6Rcon ^5server.", last_ipaddressrangebans_map.size()).c_str());
+    // print_colored_text(app_handles.hwnd_re_messages_data, format("^5Received last ^1{} IP address range bans ^5from Tiny^6Rcon ^5server.", last_ipaddressrangebans_map.size()).c_str());
     for (auto &&last_ipaddressrangeban : last_ipaddressrangebans_vector) {
 
       if (!last_ipaddressrangeban.ip_address.ends_with(".*.*") && !last_ipaddressrangeban.ip_address.ends_with(".*")) continue;
@@ -3002,8 +3018,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     save_banned_ip_address_range_entries_to_file(main_app.get_ip_range_bans_file_path(), main_app.get_current_game_server().get_banned_ip_address_ranges_vector());
     operation_completed_flag[2] = 1;
     if (6 == std::accumulate(operation_completed_flag, operation_completed_flag + 6, 0)) {
-      const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
-      print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
+      /*const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
+      print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());*/
       main_app.set_is_bans_synchronized(true);
     }
   });
@@ -3019,7 +3035,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     unordered_map<string, player> last_namebans_map;
     parse_banned_names_file("last_namebans.txt", last_namebans_vector, last_namebans_map);
     DeleteFileA("last_namebans.txt");
-    print_colored_text(app_handles.hwnd_re_messages_data, format("^5Received ^1{} banned player names ^5from Tiny^6Rcon ^5server.", last_namebans_map.size()).c_str());
+    // print_colored_text(app_handles.hwnd_re_messages_data, format("^5Received ^1{} banned player names ^5from Tiny^6Rcon ^5server.", last_namebans_map.size()).c_str());
     for (auto &&last_nameban : last_namebans_vector) {
 
       if (len(last_nameban.player_name) == 0 || main_app.get_current_game_server().get_banned_names_map().contains(last_nameban.player_name))
@@ -3039,8 +3055,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     save_banned_ip_entries_to_file(main_app.get_banned_names_file_path(), main_app.get_current_game_server().get_banned_names_vector());
     operation_completed_flag[5] = 1;
     if (6 == std::accumulate(operation_completed_flag, operation_completed_flag + 6, 0)) {
-      const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
-      print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
+      /*const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
+      print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());*/
       main_app.set_is_bans_synchronized(true);
     }
   });
@@ -3055,7 +3071,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     set<string> last_citybans_set;
     parse_banned_cities_file("last_citybans.txt", last_citybans_set);
     DeleteFileA("last_citybans.txt");
-    print_colored_text(app_handles.hwnd_re_messages_data, format("^5Received ^1{} banned cities ^5from Tiny^6Rcon ^5server.", last_citybans_set.size()).c_str());
+    // print_colored_text(app_handles.hwnd_re_messages_data, format("^5Received ^1{} banned cities ^5from Tiny^6Rcon ^5server.", last_citybans_set.size()).c_str());
     for (auto &&last_cityban : last_citybans_set) {
       if (main_app.get_current_game_server().get_banned_cities_set().contains(last_cityban)) continue;
       main_app.get_current_game_server().get_banned_cities_set().emplace(last_cityban);
@@ -3064,8 +3080,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     save_banned_cities_to_file(main_app.get_banned_cities_file_path(), main_app.get_current_game_server().get_banned_cities_set());
     operation_completed_flag[3] = 1;
     if (6 == std::accumulate(operation_completed_flag, operation_completed_flag + 6, 0)) {
-      const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
-      print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
+      /*const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
+      print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());*/
       main_app.set_is_bans_synchronized(true);
     }
   });
@@ -3080,7 +3096,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     set<string> last_countrybans_set;
     parse_banned_countries_file("last_countrybans.txt", last_countrybans_set);
     DeleteFileA("last_countrybans.txt");
-    print_colored_text(app_handles.hwnd_re_messages_data, format("^5Received ^1{} banned countries ^5from Tiny^6Rcon ^5server.", last_countrybans_set.size()).c_str());
+    // print_colored_text(app_handles.hwnd_re_messages_data, format("^5Received ^1{} banned countries ^5from Tiny^6Rcon ^5server.", last_countrybans_set.size()).c_str());
 
 
     for (auto &&last_countryban : last_countrybans_set) {
@@ -3091,8 +3107,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     save_banned_countries_to_file(main_app.get_banned_countries_file_path(), main_app.get_current_game_server().get_banned_countries_set());
     operation_completed_flag[4] = 1;
     if (6 == std::accumulate(operation_completed_flag, operation_completed_flag + 6, 0)) {
-      const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
-      print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
+      /*const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
+      print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());*/
       main_app.set_is_bans_synchronized(true);
     }
   });
@@ -3121,7 +3137,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
   // request-citybans-player
   main_app.add_remote_message_handler("request-citybans-player", [](const string &, const time_t, const string &, bool) {
-    print_colored_text(app_handles.hwnd_re_messages_data, "^5Requesting last ^1100 city bans ^5from Tiny^6Rcon ^5server...");
+    // print_colored_text(app_handles.hwnd_re_messages_data, "^5Requesting last ^1100 city bans ^5from Tiny^6Rcon ^5server...");
   });
 
   // request-countrybans-player
@@ -3140,7 +3156,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     unordered_map<string, player> last_tempbans_map;
     parse_tempbans_data_file("last_tempbans.txt", last_tempbans_vector, last_tempbans_map);
     DeleteFileA("last_tempbans.txt");
-    print_colored_text(app_handles.hwnd_re_messages_data, format("^5Received last ^1{} temporary bans ^5from Tiny^6Rcon ^5server.", last_tempbans_map.size()).c_str());
+    // print_colored_text(app_handles.hwnd_re_messages_data, format("^5Received last ^1{} temporary bans ^5from Tiny^6Rcon ^5server.", last_tempbans_map.size()).c_str());
     for (auto &&last_tempban : last_tempbans_vector) {
       unsigned long guid_number{};
       if (!check_ip_address_validity(last_tempban.ip_address, guid_number) || main_app.get_current_game_server().get_temp_banned_ip_addresses_map().contains(last_tempban.ip_address))
@@ -3157,8 +3173,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     // save_tempbans_to_file(main_app.get_temp_bans_file_path(), main_app.get_current_game_server().get_temp_banned_ip_addresses_vector());
     operation_completed_flag[0] = 1;
     if (6 == std::accumulate(operation_completed_flag, operation_completed_flag + 6, 0)) {
-      const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
-      print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
+      // const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
+      // print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
       main_app.set_is_bans_synchronized(true);
     }
   });
@@ -3174,7 +3190,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     unordered_map<string, player> last_ipaddressbans_map;
     parse_banned_ip_addresses_file("last_ipaddressbans.txt", last_ipaddressbans_vector, last_ipaddressbans_map);
     DeleteFileA("last_ipaddressbans.txt");
-    print_colored_text(app_handles.hwnd_re_messages_data, format("^5Received last ^1{} IP address bans ^5from Tiny^6Rcon ^5server.", last_ipaddressbans_map.size()).c_str());
+    // print_colored_text(app_handles.hwnd_re_messages_data, format("^5Received last ^1{} IP address bans ^5from Tiny^6Rcon ^5server.", last_ipaddressbans_map.size()).c_str());
     for (auto &&last_ipaddressban : last_ipaddressbans_vector) {
       unsigned long guid_number{};
       if (!check_ip_address_validity(last_ipaddressban.ip_address, guid_number) || main_app.get_current_game_server().get_banned_ip_addresses_map().contains(last_ipaddressban.ip_address))
@@ -3191,8 +3207,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     // save_banned_ip_entries_to_file(main_app.get_ip_bans_file_path(), main_app.get_current_game_server().get_banned_ip_addresses_vector());
     operation_completed_flag[1] = 1;
     if (6 == std::accumulate(operation_completed_flag, operation_completed_flag + 6, 0)) {
-      const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
-      print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
+      /*const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
+      print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());*/
       main_app.set_is_bans_synchronized(true);
     }
   });
@@ -3208,7 +3224,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     unordered_map<string, player> last_ipaddressrangebans_map;
     parse_banned_ip_address_ranges_file("last_ipaddressrangebans.txt", last_ipaddressrangebans_vector, last_ipaddressrangebans_map);
     DeleteFileA("last_ipaddressrangebans.txt");
-    print_colored_text(app_handles.hwnd_re_messages_data, format("^5Received last ^1{} IP address range bans ^5from Tiny^6Rcon ^5server.", last_ipaddressrangebans_map.size()).c_str());
+    // print_colored_text(app_handles.hwnd_re_messages_data, format("^5Received last ^1{} IP address range bans ^5from Tiny^6Rcon ^5server.", last_ipaddressrangebans_map.size()).c_str());
     for (auto &&last_ipaddressrangeban : last_ipaddressrangebans_vector) {
 
       if (!last_ipaddressrangeban.ip_address.ends_with(".*.*") && !last_ipaddressrangeban.ip_address.ends_with(".*")) continue;
@@ -3227,8 +3243,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     // save_banned_ip_address_range_entries_to_file(main_app.get_ip_range_bans_file_path(), main_app.get_current_game_server().get_banned_ip_address_ranges_vector());
     operation_completed_flag[2] = 1;
     if (6 == std::accumulate(operation_completed_flag, operation_completed_flag + 6, 0)) {
-      const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
-      print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
+      // const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
+      // print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
       main_app.set_is_bans_synchronized(true);
     }
   });
@@ -3244,7 +3260,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     unordered_map<string, player> last_namebans_map;
     parse_banned_names_file("last_namebans.txt", last_namebans_vector, last_namebans_map);
     DeleteFileA("last_namebans.txt");
-    print_colored_text(app_handles.hwnd_re_messages_data, format("^5Received ^1{} banned player names ^5from Tiny^6Rcon ^5server.", last_namebans_map.size()).c_str());
+    // print_colored_text(app_handles.hwnd_re_messages_data, format("^5Received ^1{} banned player names ^5from Tiny^6Rcon ^5server.", last_namebans_map.size()).c_str());
     for (auto &&last_nameban : last_namebans_vector) {
 
       if (len(last_nameban.player_name) == 0 || main_app.get_current_game_server().get_banned_names_map().contains(last_nameban.player_name))
@@ -3264,8 +3280,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     // save_banned_ip_entries_to_file(main_app.get_banned_names_file_path(), main_app.get_current_game_server().get_banned_names_vector());
     operation_completed_flag[5] = 1;
     if (6 == std::accumulate(operation_completed_flag, operation_completed_flag + 6, 0)) {
-      const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
-      print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
+      // const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
+      // print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
       main_app.set_is_bans_synchronized(true);
     }
   });
@@ -3280,7 +3296,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     set<string> last_citybans_set;
     parse_banned_cities_file("last_citybans.txt", last_citybans_set);
     DeleteFileA("last_citybans.txt");
-    print_colored_text(app_handles.hwnd_re_messages_data, format("^5Received ^1{} banned cities ^5from Tiny^6Rcon ^5server.", last_citybans_set.size()).c_str());
+    // print_colored_text(app_handles.hwnd_re_messages_data, format("^5Received ^1{} banned cities ^5from Tiny^6Rcon ^5server.", last_citybans_set.size()).c_str());
     for (auto &&last_cityban : last_citybans_set) {
       if (main_app.get_current_game_server().get_banned_cities_set().contains(last_cityban)) continue;
       main_app.get_current_game_server().get_banned_cities_set().emplace(last_cityban);
@@ -3289,8 +3305,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     // save_banned_cities_to_file(main_app.get_banned_cities_file_path(), main_app.get_current_game_server().get_banned_cities_set());
     operation_completed_flag[3] = 1;
     if (6 == std::accumulate(operation_completed_flag, operation_completed_flag + 6, 0)) {
-      const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
-      print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
+      // const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
+      // print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
       main_app.set_is_bans_synchronized(true);
     }
   });
@@ -3305,7 +3321,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     set<string> last_countrybans_set;
     parse_banned_countries_file("last_countrybans.txt", last_countrybans_set);
     DeleteFileA("last_countrybans.txt");
-    print_colored_text(app_handles.hwnd_re_messages_data, format("^5Received ^1{} banned countries ^5from Tiny^6Rcon ^5server.", last_countrybans_set.size()).c_str());
+    // print_colored_text(app_handles.hwnd_re_messages_data, format("^5Received ^1{} banned countries ^5from Tiny^6Rcon ^5server.", last_countrybans_set.size()).c_str());
 
 
     for (auto &&last_countryban : last_countrybans_set) {
@@ -3316,8 +3332,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     // save_banned_countries_to_file(main_app.get_banned_countries_file_path(), main_app.get_current_game_server().get_banned_countries_set());
     operation_completed_flag[4] = 1;
     if (6 == std::accumulate(operation_completed_flag, operation_completed_flag + 6, 0)) {
-      const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
-      print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
+      // const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
+      // print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
       main_app.set_is_bans_synchronized(true);
     }
   });
@@ -3464,10 +3480,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     const string file_name_key{ data.substr(0, first_digit_pos) };
     if (files_to_compress.contains(file_name_key)) {
 
-      if (upload_file_to_ftp_server(main_app.get_tiny_rcon_server_ip_address().c_str(), main_app.get_tiny_rcon_ftp_server_username().c_str(), main_app.get_tiny_rcon_ftp_server_password().c_str(), files_to_compress.at(file_name_key).c_str(), data.c_str())) {
-        const string message{ format("^2Sent ^7{}^2's ^1{}.txt file ^2to Tiny^6Rcon ^5server ^2for updating.", main_app.get_username(), file_name_key) };
-        print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
-      }
+      upload_file_to_ftp_server(main_app.get_tiny_rcon_server_ip_address().c_str(), main_app.get_tiny_rcon_ftp_server_username().c_str(), main_app.get_tiny_rcon_ftp_server_password().c_str(), files_to_compress.at(file_name_key).c_str(), data.c_str());
+      // const string message{ format("^2Sent ^7{}^2's ^1{}.txt file ^2to Tiny^6Rcon ^5server ^2for updating.", main_app.get_username(), file_name_key) };
+      // print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
     }
   });
 
@@ -3564,8 +3579,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
           operation_completed_flag[5] = 1;
         }
         if (6 == std::accumulate(operation_completed_flag, operation_completed_flag + 6, 0)) {
-          const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
-          print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
+          // const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
+          // print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
           main_app.set_is_bans_synchronized(true);
         }
       }
@@ -4315,8 +4330,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       parse_banned_countries_file(main_app.get_banned_countries_file_path(), main_app.get_current_game_server().get_banned_countries_set());
       parse_banned_names_file(main_app.get_banned_names_file_path(), main_app.get_current_game_server().get_banned_names_vector(), main_app.get_current_game_server().get_banned_names_map());
 
-      // me->is_admin = main_app.get_current_game_server().get_is_connection_settings_valid();
-
       string rcon_reply;
       if (main_app.get_game_servers_count() != 0) {
 
@@ -4328,14 +4341,21 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         }
       }
 
-      const string game_version_number{ "1.0" };
+      string game_version_number{ "1.0" };
+
+      if (!main_app.get_cod2mp_exe_path().empty() && check_if_file_path_exists(main_app.get_cod2mp_exe_path().c_str())) {
+        game_version_number = find_version_of_installed_cod2_game();
+        main_app.set_player_name(find_users_player_name_for_installed_cod2_game(me));
+      }
       main_app.get_current_game_server().set_game_version_number(game_version_number);
       main_app.set_game_version_number(game_version_number);
 
       display_tempbanned_players_remaining_time_period();
       is_main_window_constructed = true;
       auto &game_servers = main_app.get_game_servers();
-      main_app.set_game_server_index(0);
+      main_app.set_game_server_index(0U);
+
+      check_if_exists_and_download_missing_custom_map_files_downloader();
 
       while (true) {
         try {
@@ -4361,15 +4381,17 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
             }
 
             if (game_server_index < main_app.get_rcon_game_servers_count()) {
-              game_server &rcon_gs = game_servers[game_server_index];
               if (me->is_admin) {
-                main_app.get_connection_manager().send_and_receive_rcon_data("status", rcon_reply, rcon_gs.get_server_ip_address().c_str(), rcon_gs.get_server_port(), rcon_gs.get_rcon_password().c_str(), rcon_gs, true, true);
+                for (size_t i{}; i < main_app.get_rcon_game_servers_count(); ++i) {
+                  game_server &rcon_gs = game_servers[i];
+                  main_app.get_connection_manager().send_and_receive_rcon_data("status", rcon_reply, rcon_gs.get_server_ip_address().c_str(), rcon_gs.get_server_port(), rcon_gs.get_rcon_password().c_str(), rcon_gs, true, true);
+                }
               } else {
+                game_server &rcon_gs = game_servers[game_server_index];
                 const auto current_ts = get_current_time_stamp();
                 const auto time_elapsed_in_sec{ current_ts - main_app.get_connection_manager().get_last_rcon_status_received() };
                 if (time_elapsed_in_sec >= 10) {
                   main_app.get_connection_manager_for_rcon_messages().process_and_send_message("rcon-heartbeat-player", format("{}\\{}", main_app.get_username(), current_ts), true, main_app.get_tiny_rcon_server_ip_address_for_players(), main_app.get_tiny_rcon_server_port_for_players(), false);
-                  // main_app.get_connection_manager_for_rcon_messages().process_and_send_message("rcon-command-player", "rcon status", true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
                   main_app.get_connection_manager().send_and_receive_non_rcon_data("getstatus", rcon_reply, rcon_gs.get_server_ip_address().c_str(), rcon_gs.get_server_port(), rcon_gs, true, true);
                 }
                 /*this_thread::sleep_for(50ms);
@@ -4377,9 +4399,11 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
                 rcon_gs.set_is_connection_settings_valid(status);*/
               }
             } else {
-              game_server &rcon_gs = game_servers[0];
               if (me->is_admin) {
-                main_app.get_connection_manager().send_and_receive_rcon_data("status", rcon_reply, rcon_gs.get_server_ip_address().c_str(), rcon_gs.get_server_port(), rcon_gs.get_rcon_password().c_str(), rcon_gs, true, true);
+                for (size_t i{}; i < main_app.get_rcon_game_servers_count(); ++i) {
+                  game_server &rcon_gs = game_servers[i];
+                  main_app.get_connection_manager().send_and_receive_rcon_data("status", rcon_reply, rcon_gs.get_server_ip_address().c_str(), rcon_gs.get_server_port(), rcon_gs.get_rcon_password().c_str(), rcon_gs, true, true);
+                }
               } /*else {
                 auto [status, game_name] = check_if_specified_server_ip_port_and_rcon_password_are_valid(rcon_gs.get_server_ip_address().c_str(), rcon_gs.get_server_port(), rcon_gs.get_rcon_password().c_str());
                 rcon_gs.set_is_connection_settings_valid(status);
@@ -4438,7 +4462,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
           print_colored_text(app_handles.hwnd_re_messages_data, error_message.c_str());
         }
 
-        Sleep(25);
+        Sleep(20);
       }
     }
   };
@@ -4473,10 +4497,12 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
           const string error_message{ format("^3A generic error was caught in the remote_messaging_thread!\n^1Exception: {}", buffer) };
           print_colored_text(app_handles.hwnd_re_messages_data, error_message.c_str());
         }
-        Sleep(25);
+        Sleep(20);
       }
     }
   };
+
+  remote_messaging_thread.detach();
 
   SetTimer(app_handles.hwnd_main_window, ID_TIMER, 1000, nullptr);
   MSG win32_msg{};
@@ -4538,6 +4564,15 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         char command_to_run[256];
         strcpy_s(command_to_run, std::size(command_to_run), "cmd.exe /C ping -n 1 -4 cod2master.activision.com > resolved_hostname.log");
         CreateProcessA(nullptr, command_to_run, nullptr, nullptr, FALSE, CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi);
+        if (si.hStdError != NULL) {
+          CloseHandle(si.hStdError);
+        }
+        if (si.hStdInput != NULL) {
+          CloseHandle(si.hStdInput);
+        }
+        if (si.hStdOutput != NULL) {
+          CloseHandle(si.hStdOutput);
+        }
         CloseHandle(pi.hThread);
         CloseHandle(pi.hProcess);
 
@@ -4581,14 +4616,14 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
         if (me->is_admin) {
 
-          main_app.add_message_to_queue(message_t("request-login", format(R"({}\{}\{})", me->user_name, me->ip_address, get_current_time_stamp()), true));
+          main_app.add_message_to_queue(message_t("request-login", format(R"({}\{}\{}\{}\{})", me->user_name, me->ip_address, get_current_time_stamp(), main_app.get_player_name(), main_app.get_game_version_number()), true));
 
           if (main_app.get_is_ftp_server_online()) {
 
             unsigned long guid_number{};
 
             const string compressed_bans_file_name{ format("bans_{}_{}.7z", get_random_number(), check_ip_address_validity(main_app.get_user_ip_address(), guid_number) ? remove_disallowed_characters_in_ip_address(main_app.get_user_ip_address()) : to_string(get_random_number())) };
-
+            std::fill(operation_completed_flag, operation_completed_flag + 6, 0);
             main_app.add_message_to_queue(message_t{ "upload-bans-compressed", compressed_bans_file_name, true });
           }
 
@@ -4600,9 +4635,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
         } else {
 
-          main_app.add_remote_message_to_queue(message_t("request-login-player", format(R"({}\{}\{})", me->user_name, me->ip_address, get_current_time_stamp()), true));
+          main_app.add_remote_message_to_queue(message_t("request-login-player", format(R"({}\{}\{}\{}\{})", me->user_name, me->ip_address, get_current_time_stamp(), main_app.get_player_name(), main_app.get_game_version_number()), true));
         }
-
 
         main_app.get_connection_manager_for_messages().process_and_send_message("query-request", format("is_user_admin?{}", me->user_name), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
         // main_app.add_message_to_queue(message_t("request-mapnames", format(R"({}\{}\{})", me->user_name, me->ip_address, get_current_time_stamp()), true));
@@ -4618,10 +4652,24 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       }
     }
 
-    is_terminate_program.store(true);
+    /*const string player_name{ find_users_player_name_for_installed_cod2_game(me) };
 
     const auto current_ts{ get_current_time_stamp() };
-    main_app.get_connection_manager_for_messages().process_and_send_message("request-logout", format("{}\\{}\\{}", me->user_name, me->ip_address, current_ts), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+    if (me->is_admin) {
+      main_app.get_connection_manager_for_messages().process_and_send_message("request-logout",
+        format("{}\\{}\\{}\\{}\\{}", me->user_name, me->ip_address, current_ts, player_name, main_app.get_game_version_number()),
+        true,
+        main_app.get_tiny_rcon_server_ip_address(),
+        main_app.get_tiny_rcon_server_port(),
+        false);
+    } else {
+      main_app.get_connection_manager_for_rcon_messages().process_and_send_message("request-logout-player",
+        format("{}\\{}\\{}\\{}\\{}", me->user_name, me->ip_address, current_ts, player_name, main_app.get_game_version_number()),
+        true,
+        main_app.get_tiny_rcon_server_ip_address(),
+        main_app.get_tiny_rcon_server_port(),
+        false);
+    }
     me->is_logged_in = false;
     me->last_logout_time_stamp = current_ts;
     save_current_user_data_to_json_file(main_app.get_user_data_file_path());
@@ -4631,14 +4679,12 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     save_protected_entries_file(main_app.get_protected_ip_addresses_file_path(), main_app.get_current_game_server().get_protected_ip_addresses());
     save_protected_entries_file(main_app.get_protected_ip_address_ranges_file_path(), main_app.get_current_game_server().get_protected_ip_address_ranges());
     save_protected_entries_file(main_app.get_protected_cities_file_path(), main_app.get_current_game_server().get_protected_cities());
-    save_protected_entries_file(main_app.get_protected_countries_file_path(), main_app.get_current_game_server().get_protected_countries());
+    save_protected_entries_file(main_app.get_protected_countries_file_path(), main_app.get_current_game_server().get_protected_countries());*/
 
     is_terminate_program.store(true);
 
-    if (pr_info.hProcess != nullptr)
-      CloseHandle(pr_info.hProcess);
-    if (pr_info.hThread != nullptr)
-      CloseHandle(pr_info.hThread);
+    // if (pr_info.hProcess != nullptr) CloseHandle(pr_info.hProcess);
+    // if (pr_info.hThread != nullptr) CloseHandle(pr_info.hThread);
 
     log_message("Exiting TinyRcon program.", is_log_datetime::yes);
 
@@ -5008,6 +5054,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         call_once(synchronize_bans_flag, [&]() {
           unsigned long guid_number{};
           // const auto &me = main_app.get_user_for_name(main_app.get_username());
+          std::fill(operation_completed_flag, operation_completed_flag + 6, 0);
 
           const string data_for_tempbans{ format("tempbans{}_{}.txt", get_random_number(), check_ip_address_validity(me->ip_address, guid_number) ? remove_disallowed_characters_in_ip_address(me->ip_address) : to_string(get_random_number())) };
           main_app.add_message_to_queue(message_t{ "upload-bans", data_for_tempbans, true });
@@ -5033,11 +5080,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     if (counter % 30 == 0) {
       const auto current_ts{ get_current_time_stamp() };
       if (me->is_admin) {
-        // const auto &me = main_app.get_user_for_name(main_app.get_username());
         main_app.add_message_to_queue(message_t{ "request-admindata", format("{}\\{}\\{}", me->user_name, me->ip_address, current_ts), true });
         save_current_user_data_to_json_file(main_app.get_user_data_file_path());
 
         if (!main_app.get_is_bans_synchronized()) {
+          std::fill(operation_completed_flag, operation_completed_flag + 6, 0);
           const string user_details{ format("{}\\{}\\{}", me->user_name, me->ip_address, get_current_time_stamp()) };
           main_app.add_message_to_queue(message_t{ "request-tempbans", user_details, true });
           main_app.add_message_to_queue(message_t{ "request-ipaddressbans", user_details, true });
@@ -5065,6 +5112,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     if (counter % 120 == 0) {
       counter = 0;
+      main_app.get_connection_manager_for_messages().process_and_send_message("query-request", format("is_user_admin?{}", me->user_name), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
 
       if (gif_image) {
         gif_image->Destroy();
@@ -5261,7 +5309,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         selected_server_col = col_index;
       }
 
-      main_app.set_game_server_index(selected_server_row);
+      if (static_cast<size_t>(selected_server_row) != main_app.get_game_server_index()) {
+        main_app.set_game_server_index(selected_server_row);
+        initialize_elements_of_container_to_specified_value(main_app.get_current_game_server().get_players_data(), player{}, 0);
+        clear_players_data_in_players_grid(app_handles.hwnd_players_grid, 0, max_players_grid_rows, 7);
+      }
     }
 
     auto some_item = (LPNMHDR)lParam;
@@ -5437,7 +5489,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     } break;
 
     case ID_QUITBUTTON:
-      is_terminate_program.store(true);
+      execute_at_exit();
+      // is_terminate_program.store(true);
       PostQuitMessage(0);
       break;
 
@@ -5778,7 +5831,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     case ID_RCONVIEWBUTTON: {
       selected_server_row = 0;
-      main_app.set_game_server_index(0);
+      if (main_app.get_game_server_index() != static_cast<size_t>(selected_server_row)) {
+        main_app.set_game_server_index(selected_server_row);
+        initialize_elements_of_container_to_specified_value(main_app.get_current_game_server().get_players_data(), player{}, 0);
+        clear_players_data_in_players_grid(app_handles.hwnd_players_grid, 0, max_players_grid_rows, 7);
+      }
       is_display_players_data.store(true);
       ShowWindow(app_handles.hwnd_servers_grid, SW_HIDE);
       ShowWindow(app_handles.hwnd_players_grid, SW_SHOWNORMAL);
@@ -5957,6 +6014,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         show_error(app_handles.hwnd_main_window, "Failed to construct and show TinyRcon configuration dialog!", 0);
       }
       if (is_terminate_program.load()) {
+        execute_at_exit();
         PostQuitMessage(0);
       }
       break;
@@ -6041,7 +6099,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       return 0;
     break;
   case WM_CLOSE:
-    is_terminate_program.store(true);
+    // is_terminate_program.store(true);
+    execute_at_exit();
     DestroyWindow(hWnd);
     return 0;
 
@@ -6559,6 +6618,7 @@ LRESULT CALLBACK WndProcForConfigurationDialog(HWND hWnd, UINT message, WPARAM w
     case ID_BUTTON_CONFIGURATION_EXIT_TINYRCON: {
       EnableWindow(app_handles.hwnd_main_window, TRUE);
       SetFocus(app_handles.hwnd_players_grid);
+      // execute_at_exit();
       DestroyWindow(app_handles.hwnd_configuration_dialog);
       is_terminate_program.store(true);
     } break;

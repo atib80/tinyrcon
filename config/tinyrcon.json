@@ -1,11 +1,6 @@
 {
 "username": "^3Player",
 "check_for_banned_players_time_interval": 5,
-"game_server_name": "CoD2 ^2CTF ^7RU^4SS^1IA",
-"rcon_server_ip_address": "185.158.113.146",
-"rcon_port": 28995,
-"rcon_password": "abc123",
-"private_slot_password": "abc123",
 "rcon_game_servers": [
 {
 "game_server_name": "CoD2 ^2CTF ^7RU^4SS^1IA",

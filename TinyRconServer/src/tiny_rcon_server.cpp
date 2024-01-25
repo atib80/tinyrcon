@@ -18,7 +18,7 @@ using namespace std::string_literals;
 using namespace std::chrono;
 using namespace std::filesystem;
 
-extern const string program_version{ "1.2.0.3" };
+extern const string program_version{ "1.2.0.4" };
 
 extern std::atomic<bool> is_terminate_program;
 extern volatile std::atomic<bool> is_terminate_tinyrcon_settings_configuration_dialog_window;
@@ -384,11 +384,12 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       display_users_data_in_users_table(app_handles.hwnd_users_table);
       main_app.add_message_to_queue(message_t("confirm-login", format("{}\\{}\\{}", current_user->user_name, current_user->ip_address, current_user->no_of_logins), current_user, true));
       main_app.get_connection_manager_for_messages().process_and_send_message("receive-welcome-message", main_app.get_welcome_message(current_user->user_name), true, current_user);
-      // main_app.get_connection_manager_for_messages().process_and_send_message("private-message", format("^5Tiny^6Rcon ^5server\\{}\\{}", current_user->user_name, main_app.get_welcome_message(current_user->user_name)), true, current_user);
-      string message{ format("^7{} ^2has logged in to ^5Tiny^6Rcon ^5server.\n^2Number of logins: ^1{}", current_user->user_name, current_user->no_of_logins) };
+      string message{ format("^7{} ^2has logged in to ^5Tiny^6Rcon ^5server.\n^2Number of logins: ^1{}\n", current_user->user_name, current_user->no_of_logins) };
       if (parts.size() >= 4) {
-        message.push_back('\n');
-        message += parts[3];
+        message += format("^2Player name: ^7{}\n", parts[3]);
+      }
+      if (parts.size() >= 5) {
+        message += format("^2Game's version number: ^1{}\n", parts[4]);
       }
       for (const auto &u : main_app.get_users()) {
         unsigned long ip_key{};

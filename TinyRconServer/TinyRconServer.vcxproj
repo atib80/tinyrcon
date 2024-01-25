@@ -446,7 +446,6 @@
     <ClCompile Include="src\tiny_rcon_utility_functions.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include=".clang-format" />
     <None Include=".clang-tidy" />
     <None Include=".cmake-format.yaml" />
     <None Include=".gitignore" />
