@@ -21,7 +21,7 @@ using namespace std::chrono;
 using namespace std::filesystem;
 using namespace Gdiplus;
 
-extern const string program_version{ "2.7.3.2" };
+extern const string program_version{ "2.7.3.4" };
 
 extern const std::regex ip_address_and_port_regex;
 extern const unordered_set<string> rcon_status_commands;
@@ -302,10 +302,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
   char exe_file_path[MAX_PATH]{};
   GetModuleFileNameA(nullptr, exe_file_path, MAX_PATH);
-  version_data dest_version{};
-  unsigned long version_number{};
-  main_app.get_auto_update_manager().get_file_version(exe_file_path, dest_version, version_number);
-  check_version_number_and_file_path_information(dest_version);
+
+ // check_version_number_and_file_path_information(dest_version);
 
   rcon_status_grid_column_header_titles[0] = main_app.get_header_player_pid_color() + "Pid"s;
   rcon_status_grid_column_header_titles[1] = main_app.get_header_player_score_color() + "Score"s;
@@ -4291,11 +4289,14 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       ShowWindow(app_handles.hwnd_main_window, SW_MAXIMIZE);
       UpdateWindow(app_handles.hwnd_main_window);
 
+      version_data dest_version{};
+      unsigned long version_number{};
+      main_app.get_auto_update_manager().get_file_version(exe_file_path, dest_version, version_number);
       const string version_information{ format("^2Current version of ^5Tiny^6Rcon ^2is ^5{}.{}.{}.{}\n", dest_version.major, dest_version.minor, dest_version.revision, dest_version.sub_revision) };
       print_colored_text(app_handles.hwnd_re_messages_data, version_information.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
       main_app.get_connection_manager_for_messages().process_and_send_message("tinyrcon-info", format("{}\\{}\\{}", main_app.get_username(), main_app.get_user_ip_address(), version_information), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
-
-      main_app.get_auto_update_manager().check_for_updates();
+    
+      main_app.get_auto_update_manager().check_for_updates(exe_file_path);
 
       print_colored_text(app_handles.hwnd_re_messages_data, "^3Started importing geological data from ^1'geo.dat' ^3file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
       // const string geo_dat_file_path{ main_app.get_current_working_directory() + "plugins\\geoIP\\IP2LOCATION-LITE-DB3.CSV" };

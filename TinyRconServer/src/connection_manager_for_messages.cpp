@@ -95,7 +95,7 @@ bool connection_manager_for_messages::wait_for_and_process_response_message()
     const bool is_show_in_messages{ parts[4] == "true" };
 
     if (message_handler_name == "query-request") {
-      const string information{ format("Received 'query-request' user {} (IP: {} geoinfo: {})\nMessage contents: '{}'\n", sender, sender_ip, geo_information, message_contents) };
+      const string information{ format("Received query-request from user {} (IP: {} geoinfo: {})\nMessage contents: {}\n", sender, sender_ip, geo_information, message_contents) };
       log_message(information, is_log_datetime::yes);
 
       if (size_t start{}; (start = message_contents.find("is_user_admin?")) != string::npos) {
@@ -111,8 +111,9 @@ bool connection_manager_for_messages::wait_for_and_process_response_message()
     }
 
     if (message_handler_name == "request-welcome-message") {
-      const string information{ format("Received 'request-welcome-message' from user {} (IP: {} geoinfo: {})\nMessage contents: '{}'\n", sender, sender_ip, geo_information, message_contents) };
-      log_message(information, is_log_datetime::yes);
+      const string information{ format("^5Received ^1request-welcome-message ^5from user ^7{} ^5(^3IP: ^1{} ^3geoinfo: ^1{}^5)\n^3Message contents: ^5{}\n", sender, sender_ip, geo_information, message_contents) };
+      // log_message(information, is_log_datetime::yes);
+      print_colored_text(app_handles.hwnd_re_messages_data, information.c_str());
       auto parts = stl::helper::str_split(message_contents, "\\", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::no);
       for (auto &part : parts) stl::helper::trim_in_place(part);
       if (parts.size() >= 3) {
@@ -126,16 +127,18 @@ bool connection_manager_for_messages::wait_for_and_process_response_message()
     }
 
     if (message_handler_name == "inc-number-of-reports") {
-      const string information{ format("Received 'inc-number-of-reports' from user {} (IP: {} geoinfo: {})\nMessage contents: '{}'\n", sender, sender_ip, geo_information, message_contents) };
-      log_message(information, is_log_datetime::yes);
+      const string information{ format("^5Received ^1inc-number-of-reports ^5from user ^7{} ^5(^3IP: ^1{} ^3geoinfo: ^1{}^5)\n^3Message contents: ^5{}\n", sender, sender_ip, geo_information, message_contents) };
+      print_colored_text(app_handles.hwnd_re_messages_data, information.c_str());
+      // log_message(information, is_log_datetime::yes);
       ++main_app.get_tinyrcon_stats_data().get_no_of_reports();
       print_colored_text(app_handles.hwnd_re_messages_data, format("^5Number of received reports: ^1{}\n", main_app.get_tinyrcon_stats_data().get_no_of_reports()).c_str());
       return true;
     }
 
     if (message_handler_name == "request-mapnames") {
-      const string information{ format("Received 'request-mapnames' from user {} (IP: {} geoinfo: {})\nMessage contents: '{}'\n", sender, sender_ip, geo_information, message_contents) };
-      log_message(information, is_log_datetime::yes);
+      const string information{ format("^5Received ^1request-mapnames ^5from user ^7{} ^5(^3IP: ^1{} ^3geoinfo: ^1{}^5)\n^3Message contents: ^5{}\n", sender, sender_ip, geo_information, message_contents) };
+      print_colored_text(app_handles.hwnd_re_messages_data, information.c_str());
+      // log_message(information, is_log_datetime::yes);
       auto user = make_shared<tiny_rcon_client_user>();
       user->user_name = sender;
       user->ip_address = sender_ip;
@@ -151,11 +154,12 @@ bool connection_manager_for_messages::wait_for_and_process_response_message()
       strcpy_s(pd.player_name, std::size(pd.player_name), sender.c_str());
       // pd.ip_address = user->ip_address;
       user->geo_information = geo_information;
-      user->country_code = pd.country_code;      
+      user->country_code = pd.country_code;
       const auto &message_handler = main_app.get_message_handler(message_handler_name);
       message_handler(sender, timestamp, message_contents, is_show_in_messages, user->ip_address);
       const string information{ format("^5Received ^1'{}' ^5from authorized user ^7{} ^5(^3IP: ^1{} ^5| ^3geoinfo: ^1{}^5)\n^5Contents of message: ^1'{}'\n", message_handler_name, sender, sender_ip, geo_information, message_contents) };
-      print_colored_text(app_handles.hwnd_re_messages_data, information.c_str());
+      log_message(information, is_log_datetime::yes);
+      // print_colored_text(app_handles.hwnd_re_messages_data, information.c_str());
       return true;
     }
 

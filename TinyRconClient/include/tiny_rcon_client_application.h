@@ -476,7 +476,6 @@ public:
     cod5mp_exe_path = std::move(new_value);
   }
 
-
   inline void set_command_line_info(string new_value)
   {
     command_line_info = std::move(new_value);

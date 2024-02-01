@@ -82,7 +82,7 @@ public:
   void set_self_file_name(std::string file_name);
   std::vector<std::string> get_file_name_matches_for_specified_file_pattern(internet_handle &internet_connect_handle, const char *relative_path, const char *file_pattern) const;
   bool download_file(const char *url, const char *downloaded_file_path) const;
-  void check_for_updates();
+  void check_for_updates(const char *exe_file_path);
 
 private:
   mutable unsigned long current_version_number{};

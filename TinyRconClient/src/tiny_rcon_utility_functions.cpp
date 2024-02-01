@@ -12347,14 +12347,6 @@ void restart_tinyrcon_client(const char *file_path_to_tinyrcon_exe, const string
     PostQuitMessage(0);
     CloseWindow(app_handles.hwnd_main_window);
     DestroyWindow(app_handles.hwnd_main_window);
-    /* if (pr_info.hProcess != nullptr) {
-       CloseHandle(pr_info.hProcess);
-       pr_info.hProcess = nullptr;
-     }
-     if (pr_info.hThread != nullptr) {
-       CloseHandle(pr_info.hThread);
-       pr_info.hThread = nullptr;
-     }*/
     ExitProcess(0);
   }
 }
@@ -13427,7 +13419,8 @@ bool copy_tinyrcon_files_from_source_to_destination_path(const std::string &dest
     "data\\user.txt",
     "log\\commands_history.log",
     "plugins\\geoIP\\geo.dat",
-    "7za.dll"
+    "7za.dll",
+    "TinyRcon.exe"
   };
 
   for (auto &&file_path : files_to_copy) {
@@ -13694,17 +13687,17 @@ bool check_if_exists_and_download_missing_custom_map_files_downloader(/*const ch
       CloseHandle(process_startup_info.hStdOutput);
     CloseHandle(pr_info.hThread);
     CloseHandle(pr_info.hProcess);
+  }
 
-    if (!check_if_file_path_exists(desktop_dir_path.c_str())) {
-      CreateLink(downloader_program_file_path.c_str(), desktop_dir_path.c_str(), "CTF game server's custom map auto-downloader");
-      const char value[]{ "~ RUNASADMIN" };
-      RegSetKeyValueA(HKEY_CURRENT_USER,
-        R"(SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers)",
-        downloader_program_file_path.c_str(),
-        REG_SZ,
-        "~ RUNASADMIN",
-        sizeof(value));
-    }
+  if (!check_if_file_path_exists(desktop_dir_path.c_str())) {
+    CreateLink(downloader_program_file_path.c_str(), desktop_dir_path.c_str(), "CTF game server's custom map auto-downloader");
+    const char value[]{ "~ RUNASADMIN" };
+    RegSetKeyValueA(HKEY_CURRENT_USER,
+      R"(SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers)",
+      downloader_program_file_path.c_str(),
+      REG_SZ,
+      "~ RUNASADMIN",
+      sizeof(value));
   }
 
   return true;
