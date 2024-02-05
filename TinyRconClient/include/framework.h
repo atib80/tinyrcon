@@ -3,8 +3,8 @@
 //
 
 #pragma once
-#define _CRTDBG_MAP_ALLOC
-#include <crtdbg.h>
+// #define _CRTDBG_MAP_ALLOC
+// #include <crtdbg.h>
 #include "../targetver.h"
 #define WIN32_LEAN_AND_MEAN
 #define _CRT_SECURE_NO_WARNINGS

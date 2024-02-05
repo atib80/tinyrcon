@@ -95,10 +95,6 @@ extern volatile std::atomic<bool> is_display_geoinformation_data_for_players;
 extern std::atomic<int> admin_choice;
 extern std::string admin_reason;
 
-
-// std::mutex print_data_mutex;
-// std::mutex log_data_mutex;
-
 extern volatile atomic<size_t> atomic_counter;
 
 bool sort_by_pid_asc{ true };
@@ -8334,177 +8330,75 @@ void display_tempbanned_players_remaining_time_period()
   }
 }
 
-void construct_tinyrcon_gui(HWND
-    hWnd)
+void construct_tinyrcon_gui(HWND hWnd)
 {
   if (app_handles.hwnd_online_admins_information != nullptr) {
-    ShowWindow(app_handles
-                 .hwnd_online_admins_information,
-      SW_HIDE);
-    DestroyWindow(app_handles
-                    .hwnd_online_admins_information);
+    ShowWindow(app_handles.hwnd_online_admins_information, SW_HIDE);
+    DestroyWindow(app_handles.hwnd_online_admins_information);
   }
 
   app_handles.hwnd_online_admins_information = CreateWindowEx(0, RICHEDIT_CLASS, nullptr, WS_VISIBLE | WS_CHILD | ES_LEFT | ES_READONLY, 10, 13, screen_width / 2 + 150, 25, hWnd, nullptr, app_handles.hInstance, nullptr);
   if (!app_handles.hwnd_online_admins_information)
     FatalAppExit(0, "Couldn't create 'app_handles.hwnd_online_admins_information' richedit control!");
 
-  assert(app_handles
-           .hwnd_online_admins_information
-         != nullptr);
-  SendMessage(app_handles
-                .hwnd_online_admins_information,
-    EM_SETBKGNDCOLOR,
-    NULL,
-    color::black);
-  scroll_to_beginning(app_handles
-                        .hwnd_online_admins_information);
-  set_rich_edit_control_colors(app_handles
-                                 .hwnd_online_admins_information,
-    color::white,
-    color::black,
-    "Lucida Console");
-  print_colored_text(app_handles
-                       .hwnd_online_admins_information,
-    "^2Online admins:",
-    is_append_message_to_richedit_control::yes,
-    is_log_message::no,
-    is_log_datetime::no);
-  SendMessage(app_handles
-                .hwnd_online_admins_information,
-    EM_SETSEL,
-    0,
-    -1);
-  SendMessage(app_handles
-                .hwnd_online_admins_information,
-    EM_SETFONTSIZE,
-    (WPARAM)2,
-    (LPARAM)NULL);
+  assert(app_handles.hwnd_online_admins_information != nullptr);
+  SendMessage(app_handles.hwnd_online_admins_information, EM_SETBKGNDCOLOR, NULL, color::black);
+  scroll_to_beginning(app_handles.hwnd_online_admins_information);
+  set_rich_edit_control_colors(app_handles.hwnd_online_admins_information, color::white, color::black, "Lucida Console");
+  print_colored_text(app_handles.hwnd_online_admins_information, "^2Online admins:", is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::no);
+  SendMessage(app_handles.hwnd_online_admins_information, EM_SETSEL, 0, -1);
+  SendMessage(app_handles.hwnd_online_admins_information, EM_SETFONTSIZE, (WPARAM)2, (LPARAM)NULL);
 
   if (app_handles.hwnd_match_information != nullptr) {
-    ShowWindow(app_handles
-                 .hwnd_match_information,
-      SW_HIDE);
-    DestroyWindow(app_handles
-                    .hwnd_match_information);
+    ShowWindow(app_handles.hwnd_match_information, SW_HIDE);
+    DestroyWindow(app_handles.hwnd_match_information);
   }
 
   app_handles.hwnd_match_information = CreateWindowEx(0, RICHEDIT_CLASS, nullptr, WS_VISIBLE | WS_CHILD | ES_LEFT | ES_READONLY, 10, 50, screen_width / 2 + 150, 30, hWnd, nullptr, app_handles.hInstance, nullptr);
   if (!app_handles.hwnd_match_information)
     FatalAppExit(0, "Couldn't create 'app_handles.hwnd_match_information' richedit control!");
 
-  assert(app_handles
-           .hwnd_match_information
-         != nullptr);
-  SendMessage(app_handles
-                .hwnd_match_information,
-    EM_SETBKGNDCOLOR,
-    NULL,
-    color::black);
-  scroll_to_beginning(app_handles
-                        .hwnd_match_information);
-  set_rich_edit_control_colors(app_handles
-                                 .hwnd_match_information,
-    color::white,
-    color::black,
-    "Lucida Console");
-  if (g_re_match_information_contents.
-
-      empty()
-
-  )
-    Edit_SetText(app_handles
-                   .hwnd_match_information,
-      "");
+  assert(app_handles.hwnd_match_information != nullptr);
+  SendMessage(app_handles.hwnd_match_information, EM_SETBKGNDCOLOR, NULL, color::black);
+  scroll_to_beginning(app_handles.hwnd_match_information);
+  set_rich_edit_control_colors(app_handles.hwnd_match_information, color::white, color::black, "Lucida Console");
+  if (g_re_match_information_contents.empty())
+    Edit_SetText(app_handles.hwnd_match_information, "");
   else
-    print_colored_text(app_handles
-                         .hwnd_match_information,
-      g_re_match_information_contents.
-
-      c_str(),
-      is_append_message_to_richedit_control::yes,
-      is_log_message::no,
-      is_log_datetime::no
-
-    );
+    print_colored_text(app_handles.hwnd_match_information, g_re_match_information_contents.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::no);
 
   if (app_handles.hwnd_re_messages_data != nullptr) {
-    ShowWindow(app_handles
-                 .hwnd_re_messages_data,
-      SW_HIDE);
-    DestroyWindow(app_handles
-                    .hwnd_re_messages_data);
+    ShowWindow(app_handles.hwnd_re_messages_data, SW_HIDE);
+    DestroyWindow(app_handles.hwnd_re_messages_data);
   }
 
-  app_handles.hwnd_re_messages_data = CreateWindowEx(0, RICHEDIT_CLASS, nullptr, WS_BORDER | WS_VISIBLE | WS_CHILD | WS_VSCROLL | WS_HSCROLL | ES_MULTILINE | ES_LEFT /*| ES_AUTOVSCROLL*/ | ES_NOHIDESEL | ES_READONLY, screen_width / 2 + 170, 80, screen_width / 2 - 190, screen_height / 2 - 60, hWnd, reinterpret_cast<HMENU>(ID_BANNEDEDIT), app_handles.hInstance, nullptr);
+  app_handles.hwnd_re_messages_data = CreateWindowEx(0, RICHEDIT_CLASS, nullptr, WS_BORDER | WS_VISIBLE | WS_CHILD | WS_VSCROLL | WS_HSCROLL | ES_MULTILINE | ES_LEFT /*| ES_AUTOVSCROLL*/ | ES_NOHIDESEL | ES_READONLY, screen_width / 2 + 170, 80, screen_width / 2 - 190, screen_height / 2 - 120, hWnd, reinterpret_cast<HMENU>(ID_BANNEDEDIT), app_handles.hInstance, nullptr);
   if (!app_handles.hwnd_re_messages_data)
     FatalAppExit(0, "Couldn't create 'g_banned_players_data' richedit control!");
 
   if (app_handles.hwnd_re_messages_data != nullptr) {
-    SendMessage(app_handles
-                  .hwnd_re_messages_data,
-      EM_SETBKGNDCOLOR,
-      NULL,
-      color::black);
-    scroll_to_beginning(app_handles
-                          .hwnd_re_messages_data);
-    set_rich_edit_control_colors(app_handles
-                                   .hwnd_re_messages_data,
-      color::white,
-      color::black,
-      "Lucida Console");
-    if (g_message_data_contents.
-
-        empty()
-
-    )
-      Edit_SetText(app_handles
-                     .hwnd_re_messages_data,
-        "");
+    SendMessage(app_handles.hwnd_re_messages_data, EM_SETBKGNDCOLOR, NULL, color::black);
+    scroll_to_beginning(app_handles.hwnd_re_messages_data);
+    set_rich_edit_control_colors(app_handles.hwnd_re_messages_data, color::white, color::black, "Lucida Console");
+    if (g_message_data_contents.empty())
+      Edit_SetText(app_handles.hwnd_re_messages_data, "");
     else
-      print_colored_text(app_handles
-                           .hwnd_re_messages_data,
-        g_message_data_contents.
-
-        c_str(),
-        is_append_message_to_richedit_control::yes,
-        is_log_message::yes,
-        is_log_datetime::yes
-
-      );
+      print_colored_text(app_handles.hwnd_re_messages_data, g_message_data_contents.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
   }
 
   if (app_handles.hwnd_re_help_data != nullptr) {
-    ShowWindow(app_handles
-                 .hwnd_re_help_data,
-      SW_HIDE);
-    DestroyWindow(app_handles
-                    .hwnd_re_help_data);
+    ShowWindow(app_handles.hwnd_re_help_data, SW_HIDE);
+    DestroyWindow(app_handles.hwnd_re_help_data);
   }
 
-  app_handles.hwnd_re_help_data = CreateWindowEx(0, RICHEDIT_CLASS, nullptr, WS_BORDER | WS_VISIBLE | WS_CHILD | WS_VSCROLL | WS_HSCROLL | ES_MULTILINE | ES_LEFT | ES_AUTOVSCROLL | ES_READONLY, screen_width / 2 + 170, screen_height / 2 + 60, screen_width - 20 - (screen_width / 2 + 170), screen_height - 120 - (screen_height / 2 + 100), hWnd, nullptr, app_handles.hInstance, nullptr);
+  app_handles.hwnd_re_help_data = CreateWindowEx(0, RICHEDIT_CLASS, nullptr, WS_BORDER | WS_VISIBLE | WS_CHILD | WS_VSCROLL | WS_HSCROLL | ES_MULTILINE | ES_LEFT | ES_AUTOVSCROLL | ES_READONLY, screen_width / 2 + 170, screen_height / 2, screen_width - 20 - (screen_width / 2 + 170), screen_height - 120 - (screen_height / 2 + 100), hWnd, nullptr, app_handles.hInstance, nullptr);
   if (!app_handles.hwnd_re_help_data)
     FatalAppExit(0, "Couldn't create 'g_re_help' richedit control!");
   if (app_handles.hwnd_re_help_data != nullptr) {
-    SendMessage(app_handles
-                  .hwnd_re_help_data,
-      EM_SETBKGNDCOLOR,
-      NULL,
-      color::black);
-    scroll_to_beginning(app_handles
-                          .hwnd_re_help_data);
-    set_rich_edit_control_colors(app_handles
-                                   .hwnd_re_help_data,
-      color::white,
-      color::black,
-      "Lucida Console");
-    print_colored_text(app_handles
-                         .hwnd_re_help_data,
-      user_help_message,
-      is_append_message_to_richedit_control::yes,
-      is_log_message::no,
-      is_log_datetime::no,
-      true);
+    SendMessage(app_handles.hwnd_re_help_data, EM_SETBKGNDCOLOR, NULL, color::black);
+    scroll_to_beginning(app_handles.hwnd_re_help_data);
+    set_rich_edit_control_colors(app_handles.hwnd_re_help_data, color::white, color::black, "Lucida Console");
+    print_colored_text(app_handles.hwnd_re_help_data, user_help_message, is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::no, true);
   }
 
   app_handles.hwnd_e_user_input = CreateWindowEx(0, "Edit", nullptr, WS_GROUP | WS_TABSTOP | WS_CHILD | WS_VISIBLE | WS_BORDER | ES_LEFT | ES_AUTOHSCROLL, 125, screen_height - 70, 305, 20, hWnd, reinterpret_cast<HMENU>(ID_USEREDIT), app_handles.hInstance, nullptr);
@@ -8521,19 +8415,17 @@ void construct_tinyrcon_gui(HWND
 
   app_handles.hwnd_button_view_ipbans = CreateWindowEx(NULL, "Button", "View IP bans", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 650, screen_height - 118, 140, 30, hWnd, reinterpret_cast<HMENU>(ID_VIEWIPBANSBUTTON), app_handles.hInstance, nullptr);
 
-  app_handles.hwnd_button_view_adminsdata = CreateWindowEx(NULL, "Button", "View admins' data", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 810, screen_height - 118, 150, 30, hWnd, reinterpret_cast<HMENU>(ID_VIEWADMINSDATA), app_handles.hInstance, nullptr);
+  app_handles.hwnd_button_view_adminsdata = CreateWindowEx(NULL, "Button", "View admins' data", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, screen_width / 2 + 170, screen_height - 175, 150, 25, hWnd, reinterpret_cast<HMENU>(ID_VIEWADMINSDATA), app_handles.hInstance, nullptr);
 
-  // 413
-  app_handles.hwnd_connect_button = CreateWindowEx(NULL, "Button", "Join server", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 650, screen_height - 77, 140, 30, hWnd, reinterpret_cast<HMENU>(ID_CONNECTBUTTON), app_handles.hInstance, nullptr);
+  app_handles.hwnd_connect_button = CreateWindowEx(NULL, "Button", "Join server", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 450, screen_height - 77, 180, 30, hWnd, reinterpret_cast<HMENU>(ID_CONNECTBUTTON), app_handles.hInstance, nullptr);
 
-  app_handles.hwnd_connect_private_slot_button = CreateWindowEx(NULL, "Button", "Join server (private slot)", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 450, screen_height - 77, 180, 30, hWnd, reinterpret_cast<HMENU>(ID_CONNECTPRIVATESLOTBUTTON), app_handles.hInstance, nullptr);
+  // app_handles.hwnd_connect_private_slot_button = CreateWindowEx(NULL, "Button", "Join server (private slot)", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 450, screen_height - 77, 180, 30, hWnd, reinterpret_cast<HMENU>(ID_CONNECTPRIVATESLOTBUTTON), app_handles.hInstance, nullptr);
 
-  // 790
-  app_handles.hwnd_say_button = CreateWindowEx(NULL, "Button", "Send public message", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 810, screen_height - 77, 150, 30, hWnd, reinterpret_cast<HMENU>(ID_SAY_BUTTON), app_handles.hInstance, nullptr);
+  app_handles.hwnd_say_button = CreateWindowEx(NULL, "Button", "Send public message", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, screen_width / 2 + 170, screen_height - 140, 150, 25, hWnd, reinterpret_cast<HMENU>(ID_SAY_BUTTON), app_handles.hInstance, nullptr);
 
-  app_handles.hwnd_tell_button = CreateWindowEx(NULL, "Button", "Send private message", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 980, screen_height - 77, 140, 30, hWnd, reinterpret_cast<HMENU>(ID_TELL_BUTTON), app_handles.hInstance, nullptr);
+  app_handles.hwnd_tell_button = CreateWindowEx(NULL, "Button", "Send private message", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, screen_width / 2 + 170, screen_height - 105, 150, 25, hWnd, reinterpret_cast<HMENU>(ID_TELL_BUTTON), app_handles.hInstance, nullptr);
 
-  app_handles.hwnd_quit_button = CreateWindowEx(NULL, "Button", "E&xit", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, screen_width - 100, screen_height - 102, 70, 28, hWnd, reinterpret_cast<HMENU>(ID_QUITBUTTON), app_handles.hInstance, nullptr);
+  app_handles.hwnd_quit_button = CreateWindowEx(NULL, "Button", "E&xit", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, screen_width - 90, screen_height - 90, 70, 28, hWnd, reinterpret_cast<HMENU>(ID_QUITBUTTON), app_handles.hInstance, nullptr);
 
   app_handles.hwnd_clear_messages_button = CreateWindowEx(NULL, "Button", "C&lear messages", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, screen_width / 2 + 170, 8, 120, 28, hWnd, reinterpret_cast<HMENU>(ID_CLEARMESSAGESCREENBUTTON), app_handles.hInstance, nullptr);
 
@@ -8547,175 +8439,76 @@ void construct_tinyrcon_gui(HWND
 
   app_handles.hwnd_button_game_servers_list_view = CreateWindowEx(NULL, "Button", "Show servers", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, screen_width / 2 + 460, 45, 140, 28, hWnd, reinterpret_cast<HMENU>(ID_SHOWSERVERSBUTTON), app_handles.hInstance, nullptr);
 
-  app_handles.hwnd_button_refresh_game_servers = CreateWindowEx(NULL, "Button", "Refresh servers", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, screen_width / 2 + 620, 45, 120, 28, hWnd, reinterpret_cast<HMENU>(ID_REFRESHSERVERSBUTTON), app_handles.hInstance, nullptr);
+  /*app_handles.hwnd_button_refresh_game_servers = CreateWindowEx(NULL, "Button", "Refresh servers", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, screen_width / 2 + 620, 45, 120, 28, hWnd, reinterpret_cast<HMENU>(ID_REFRESHSERVERSBUTTON), app_handles.hInstance, nullptr);*/
 
-  app_handles.hwnd_combo_box_sortmode = CreateWindowEx(NULL, "Combobox", nullptr, WS_GROUP | WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL | WS_HSCROLL, screen_width - 470, screen_height - 140, 260, 210, hWnd, reinterpret_cast<HMENU>(ID_COMBOBOX_SORTMODE), app_handles.hInstance, nullptr);
+  app_handles.hwnd_combo_box_sortmode = CreateWindowEx(NULL, "Combobox", nullptr, WS_GROUP | WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL | WS_HSCROLL, screen_width - 470, screen_height - 210, 260, 210, hWnd, reinterpret_cast<HMENU>(ID_COMBOBOX_SORTMODE), app_handles.hInstance, nullptr);
 
-  SetWindowSubclass(app_handles
-                      .hwnd_combo_box_sortmode,
-    ComboProc,
-    0,
-    0);
+  SetWindowSubclass(app_handles.hwnd_combo_box_sortmode, ComboProc, 0, 0);
 
-  app_handles.hwnd_combo_box_map = CreateWindowEx(NULL, "Combobox", nullptr, WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | CBS_SORT | WS_VSCROLL | WS_HSCROLL, screen_width / 2 + 210, screen_height / 2 + 30, 150, 200, hWnd, reinterpret_cast<HMENU>(ID_COMBOBOX_MAP), app_handles.hInstance, nullptr);
+  app_handles.hwnd_combo_box_map = CreateWindowEx(NULL, "Combobox", nullptr, WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | CBS_SORT | WS_VSCROLL | WS_HSCROLL, screen_width / 2 + 210, screen_height / 2 - 30, 150, 200, hWnd, reinterpret_cast<HMENU>(ID_COMBOBOX_MAP), app_handles.hInstance, nullptr);
 
-  SetWindowSubclass(app_handles
-                      .hwnd_combo_box_map,
-    ComboProc,
-    0,
-    0);
+  SetWindowSubclass(app_handles.hwnd_combo_box_map, ComboProc, 0, 0);
 
-  app_handles.hwnd_combo_box_gametype = CreateWindowEx(NULL, "Combobox", nullptr, WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | CBS_SORT | WS_VSCROLL | WS_HSCROLL, screen_width / 2 + 460, screen_height / 2 + 30, 60, 130, hWnd, reinterpret_cast<HMENU>(ID_COMBOBOX_GAMETYPE), app_handles.hInstance, nullptr);
+  app_handles.hwnd_combo_box_gametype = CreateWindowEx(NULL, "Combobox", nullptr, WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | CBS_SORT | WS_VSCROLL | WS_HSCROLL, screen_width / 2 + 460, screen_height / 2 - 30, 60, 130, hWnd, reinterpret_cast<HMENU>(ID_COMBOBOX_GAMETYPE), app_handles.hInstance, nullptr);
 
-  SetWindowSubclass(app_handles
-                      .hwnd_combo_box_gametype,
-    ComboProc,
-    0,
-    0);
+  SetWindowSubclass(app_handles.hwnd_combo_box_gametype, ComboProc, 0, 0);
 
-  app_handles.hwnd_button_load = CreateWindowEx(NULL, "Button", "Load map", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, screen_width / 2 + 540, screen_height / 2 + 28, 80, 25, hWnd, reinterpret_cast<HMENU>(ID_LOADBUTTON), app_handles.hInstance, nullptr);
+  app_handles.hwnd_button_load = CreateWindowEx(NULL, "Button", "Load map", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, screen_width / 2 + 540, screen_height / 2 - 33, 80, 25, hWnd, reinterpret_cast<HMENU>(ID_LOADBUTTON), app_handles.hInstance, nullptr);
 
   if (app_handles.hwnd_upload_speed_info != nullptr) {
-    ShowWindow(app_handles
-                 .hwnd_upload_speed_info,
-      SW_HIDE);
-    DestroyWindow(app_handles
-                    .hwnd_upload_speed_info);
+    ShowWindow(app_handles.hwnd_upload_speed_info, SW_HIDE);
+    DestroyWindow(app_handles.hwnd_upload_speed_info);
   }
 
-  app_handles.hwnd_upload_speed_info = CreateWindowEx(0, RICHEDIT_CLASS, nullptr, WS_VISIBLE | WS_CHILD | ES_RIGHT | ES_READONLY, screen_width - 640, screen_height - 60, 630, 30, hWnd, nullptr, app_handles.hInstance, nullptr);
+  app_handles.hwnd_upload_speed_info = CreateWindowEx(0, RICHEDIT_CLASS, nullptr, WS_VISIBLE | WS_CHILD | ES_RIGHT | ES_READONLY, screen_width - 640, screen_height - 50, 630, 30, hWnd, nullptr, app_handles.hInstance, nullptr);
   if (!app_handles.hwnd_match_information)
     FatalAppExit(0, "Couldn't create 'app_handles.hwnd_upload_speed_info' richedit control!");
 
-  assert(app_handles
-           .hwnd_upload_speed_info
-         != nullptr);
-  SendMessage(app_handles
-                .hwnd_upload_speed_info,
-    EM_SETBKGNDCOLOR,
-    NULL,
-    color::black);
-  scroll_to_beginning(app_handles
-                        .hwnd_upload_speed_info);
-  set_rich_edit_control_colors(app_handles
-                                 .hwnd_upload_speed_info,
-    color::white,
-    color::black,
-    "Lucida Console");
-  print_colored_text(app_handles
-                       .hwnd_upload_speed_info,
-    "^3Initializing and configuring ^5Tiny^6Rcon^3...",
-    is_append_message_to_richedit_control::yes,
-    is_log_message::no,
-    is_log_datetime::no);
+  assert(app_handles.hwnd_upload_speed_info != nullptr);
+  SendMessage(app_handles.hwnd_upload_speed_info, EM_SETBKGNDCOLOR, NULL, color::black);
+  scroll_to_beginning(app_handles.hwnd_upload_speed_info);
+  set_rich_edit_control_colors(app_handles.hwnd_upload_speed_info, color::white, color::black, "Lucida Console");
+  print_colored_text(app_handles.hwnd_upload_speed_info, "^3Initializing and configuring ^5Tiny^6Rcon^3...", is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::no);
 
-  app_handles.hwnd_progress_bar = CreateWindowEx(0, PROGRESS_CLASS, nullptr, WS_CHILD | WS_VISIBLE | PBS_MARQUEE | PBS_SMOOTH, screen_width - 200, screen_height - 140, 170, 23, hWnd, nullptr, app_handles.hInstance, nullptr);
+  app_handles.hwnd_progress_bar = CreateWindowEx(0, PROGRESS_CLASS, nullptr, WS_CHILD | WS_VISIBLE | PBS_MARQUEE | PBS_SMOOTH, screen_width - 190, screen_height - 210, 170, 23, hWnd, nullptr, app_handles.hInstance, nullptr);
 
   hImageList = ImageList_Create(32, 24, ILC_COLOR32, flag_name_index.size(), 1);
-  for (
-    size_t i{};
-    i < flag_name_index.
-
-        size();
-
-    ++i) {
+  for (size_t i{}; i < flag_name_index.size(); ++i) {
     auto hbmp = static_cast<HBITMAP>(LoadImage(app_handles.hInstance, MAKEINTRESOURCE(151 + i), IMAGE_BITMAP, 32, 24, LR_CREATEDIBSECTION | LR_DEFAULTSIZE));
     ImageList_Add(hImageList, hbmp, nullptr);
   }
 
   if (app_handles.hwnd_servers_grid) {
-    DestroyWindow(app_handles
-                    .hwnd_servers_grid);
+    DestroyWindow(app_handles.hwnd_servers_grid);
   }
 
   app_handles.hwnd_servers_grid = CreateWindowExA(WS_EX_CLIENTEDGE, WC_SIMPLEGRIDA, "", /*WS_VISIBLE |*/ WS_CHILD, 10, 85, screen_width / 2 + 135, screen_height - 195, hWnd, reinterpret_cast<HMENU>(502), app_handles.hInstance, nullptr);
-  initialize_servers_grid(app_handles
-                            .hwnd_servers_grid,
-    8,
-    max_servers_grid_rows);
-  ShowWindow(app_handles
-               .hwnd_servers_grid,
-    SW_HIDE);
-
-  // EnableWindow(app_handles.hwnd_servers_grid, FALSE);
+  initialize_servers_grid(app_handles.hwnd_servers_grid, 8, max_servers_grid_rows);
+  ShowWindow(app_handles.hwnd_servers_grid, SW_HIDE);
 
   if (app_handles.hwnd_players_grid) {
-    DestroyWindow(app_handles
-                    .hwnd_players_grid);
+    DestroyWindow(app_handles.hwnd_players_grid);
   }
 
   app_handles.hwnd_players_grid = CreateWindowExA(WS_EX_CLIENTEDGE, WC_SIMPLEGRIDA, "", WS_VISIBLE | WS_CHILD, 10, 85, screen_width / 2 + 135, screen_height - 195, hWnd, reinterpret_cast<HMENU>(501), app_handles.hInstance, nullptr);
 
-  initialize_players_grid(app_handles
-                            .hwnd_players_grid,
-    7,
-    max_players_grid_rows,
-    true);
+  initialize_players_grid(app_handles.hwnd_players_grid, 7, max_players_grid_rows, true);
 
-  /*const auto &full_map_names_to_rcon_names = get_full_map_names_to_rcon_map_names_for_specified_game_name(main_app.get_game_name());
-    for (const auto &[long_map_name, short_map_name] : full_map_names_to_rcon_names) {
-      SendMessage(app_handles.hwnd_combo_box_map, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(long_map_name.c_str()));
-    }*/
-
-  for (const auto &[rcon_map_name, full_map_name] : main_app.
-
-                                                    get_available_rcon_to_full_map_names()
-
-  ) {
-    ComboBox_AddString(app_handles
-                         .hwnd_combo_box_map,
-      full_map_name.first.
-
-      c_str()
-
-    );
+  for (const auto &[rcon_map_name, full_map_name] : main_app.get_available_rcon_to_full_map_names()) {
+    ComboBox_AddString(app_handles.hwnd_combo_box_map, full_map_name.first.c_str());
   }
-  if (main_app.
-
-      get_available_rcon_to_full_map_names()
-
-        .contains("mp_toujane")) {
-    SendMessage(app_handles
-                  .hwnd_combo_box_map,
-      CB_SELECTSTRING,
-      static_cast<WPARAM>(-1),
-      reinterpret_cast<LPARAM>(main_app
-                                 .
-
-                               get_available_rcon_to_full_map_names()
-
-                                 .at("mp_toujane")
-                                 .first.
-
-                               c_str()
-
-          ));
+  if (main_app.get_available_rcon_to_full_map_names().contains("mp_toujane")) {
+    SendMessage(app_handles.hwnd_combo_box_map, CB_SELECTSTRING, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>(main_app.get_available_rcon_to_full_map_names().at("mp_toujane").first.c_str()));
   }
 
-  const auto &full_gametype_names = get_rcon_gametype_names_to_full_gametype_names_for_specified_game_name(
-    main_app.get_game_name());
+  const auto &full_gametype_names = get_rcon_gametype_names_to_full_gametype_names_for_specified_game_name(main_app.get_game_name());
   for (const auto &[short_gametype_name, long_gametype_name] : full_gametype_names) {
-    SendMessage(app_handles
-                  .hwnd_combo_box_gametype,
-      CB_ADDSTRING,
-      0,
-      reinterpret_cast<LPARAM>(short_gametype_name
-                                 .
-
-                               c_str()
-
-          ));
+    SendMessage(app_handles.hwnd_combo_box_gametype, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(short_gametype_name.c_str()));
   }
 
   set_available_sort_methods(true);
 
-  // const auto &rcon_map_names_to_full_map_names = get_rcon_map_names_to_full_map_names_for_specified_game_name(main_app.get_game_name());
-  // SendMessage(app_handles.hwnd_combo_box_map, CB_SELECTSTRING, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>(rcon_map_names_to_full_map_names.at("mp_toujane").c_str()));
-  SendMessage(app_handles
-                .hwnd_combo_box_gametype,
-    CB_SELECTSTRING,
-    static_cast<WPARAM>(-1),
-    reinterpret_cast<LPARAM>("ctf"));
+  SendMessage(app_handles.hwnd_combo_box_gametype, CB_SELECTSTRING, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>("ctf"));
 }
 
 void PutCell(HWND

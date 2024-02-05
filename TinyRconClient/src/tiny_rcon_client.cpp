@@ -8,9 +8,10 @@
 name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \
 processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
-#pragma comment(lib, "gdiplus.lib")
 #include <gdiplus.h>
 #include "image.h"
+
+#pragma comment(lib, "gdiplus.lib")
 #pragma comment(lib, "comctl32.lib")
 #pragma comment(lib, "uxtheme.lib")
 
@@ -21,7 +22,7 @@ using namespace std::chrono;
 using namespace std::filesystem;
 using namespace Gdiplus;
 
-extern const string program_version{ "2.7.3.4" };
+extern const string program_version{ "2.7.3.5" };
 
 extern const std::regex ip_address_and_port_regex;
 extern const unordered_set<string> rcon_status_commands;
@@ -34,8 +35,6 @@ extern string online_admins_information;
 
 tiny_rcon_client_application main_app;
 sort_type type_of_sort{ sort_type::geo_asc };
-
-// PROCESS_INFORMATION pr_info{};
 
 volatile atomic<size_t> atomic_counter{ 0U };
 volatile std::atomic<bool> is_refresh_players_data_event{ false };
@@ -241,7 +240,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   _In_ LPSTR,
   _In_ int nCmdShow)
 {
-  _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+  // _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 
   InitCommonControls();
   LoadLibrary("Riched20.dll");
@@ -259,10 +258,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   main_app.set_current_working_directory();
 
   const string config_file_path{ format("{}{}", main_app.get_current_working_directory(), main_app.get_tinyrcon_config_file_path()) };
-  /*const string data_folder_path{ format("\"{}{}\"", main_app.get_current_working_directory(), "data") };
-  const string log_folder_path{ format("\"{}{}\"", main_app.get_current_working_directory(), "log") };
-  const string plugins_geoIP_folder_path{ format("\"{}{}\"", main_app.get_current_working_directory(), "plugins\\geoIP") };
-  const string config_file_path{ format("\"{}{}\"", main_app.get_current_working_directory(), "config\\tinyrcon.json") };*/
 
   if (auto [status, file_path] = create_necessary_folders_and_files({ "C:\\Games\\TinyRcon",
         "config",
@@ -303,8 +298,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   char exe_file_path[MAX_PATH]{};
   GetModuleFileNameA(nullptr, exe_file_path, MAX_PATH);
 
- // check_version_number_and_file_path_information(dest_version);
-
   rcon_status_grid_column_header_titles[0] = main_app.get_header_player_pid_color() + "Pid"s;
   rcon_status_grid_column_header_titles[1] = main_app.get_header_player_score_color() + "Score"s;
   rcon_status_grid_column_header_titles[2] = main_app.get_header_player_ping_color() + "Ping"s;
@@ -329,8 +322,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
   construct_tinyrcon_gui(app_handles.hwnd_main_window);
 
-  // const string log_file_path{ format("\"{}{}\"", log_folder_path, "\\commands_history.log") };
-  // main_app.open_log_file(log_file_path.c_str());
   main_app.open_log_file("log\\commands_history.log");
 
   std::thread print_messages_thread{
@@ -2910,7 +2901,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
   // request-citybans
   main_app.add_message_handler("request-citybans", [](const string &, const time_t, const string &, bool) {
-    print_colored_text(app_handles.hwnd_re_messages_data, "^5Requesting last ^1100 city bans ^5from Tiny^6Rcon ^5server...");
+    // print_colored_text(app_handles.hwnd_re_messages_data, "^5Requesting last ^1100 city bans ^5from Tiny^6Rcon ^5server...");
   });
 
   // request-countrybans
@@ -4295,7 +4286,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       const string version_information{ format("^2Current version of ^5Tiny^6Rcon ^2is ^5{}.{}.{}.{}\n", dest_version.major, dest_version.minor, dest_version.revision, dest_version.sub_revision) };
       print_colored_text(app_handles.hwnd_re_messages_data, version_information.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
       main_app.get_connection_manager_for_messages().process_and_send_message("tinyrcon-info", format("{}\\{}\\{}", main_app.get_username(), main_app.get_user_ip_address(), version_information), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
-    
+
       main_app.get_auto_update_manager().check_for_updates(exe_file_path);
 
       print_colored_text(app_handles.hwnd_re_messages_data, "^3Started importing geological data from ^1'geo.dat' ^3file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
@@ -4613,7 +4604,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
         const string gif_image_name{ format("gif{}", random_number_distribution(gen)) };
         gif_image = new ImageEx("GIF", gif_image_name.c_str());
-        gif_image->InitAnimation(app_handles.hwnd_main_window, Point{ 1135, screen_height - 150 });
+        gif_image->InitAnimation(app_handles.hwnd_main_window, Point{ screen_width / 2 + 340, screen_height - 180 });
 
         if (me->is_admin) {
 
@@ -4707,7 +4698,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     UnregisterClass(wcex_confirmation_dialog.lpszClassName, app_handles.hInstance);
     UnregisterClass(wcex_configuration_dialog.lpszClassName, app_handles.hInstance);
     if (gif_image) {
-      gif_image->Destroy();
       delete gif_image;
       gif_image = nullptr;
     }
@@ -5116,14 +5106,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       main_app.get_connection_manager_for_messages().process_and_send_message("query-request", format("is_user_admin?{}", me->user_name), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
 
       if (gif_image) {
-        gif_image->Destroy();
         delete gif_image;
         gif_image = nullptr;
       }
 
       const string gif_image_name{ format("gif{}", random_number_distribution(gen)) };
       gif_image = new ImageEx("GIF", gif_image_name.c_str());
-      gif_image->InitAnimation(app_handles.hwnd_main_window, Point{ 1135, screen_height - 150 });
+      gif_image->InitAnimation(app_handles.hwnd_main_window, Point{ screen_width / 2 + 340, screen_height - 180 });
     }
 
     if (5U == atomic_counter.load()) {
@@ -6063,11 +6052,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     SetTextColor(hdcMem, color::red);
 
     RECT bounding_rectangle = {
-      screen_width / 2 + 170, screen_height / 2 + 33, screen_width / 2 + 210, screen_height / 2 + 53
+      screen_width / 2 + 170, screen_height / 2 - 28, screen_width / 2 + 210, screen_height / 2 - 8
     };
     DrawText(hdcMem, "Map:", -1, &bounding_rectangle, DT_SINGLELINE | DT_TOP | DT_LEFT);
 
-    bounding_rectangle = { screen_width / 2 + 370, screen_height / 2 + 33, screen_width / 2 + 450, screen_height / 2 + 53 };
+    bounding_rectangle = { screen_width / 2 + 370, screen_height / 2 - 28, screen_width / 2 + 450, screen_height / 2 - 8 };
     DrawText(hdcMem, "Gametype:", -1, &bounding_rectangle, DT_SINGLELINE | DT_TOP | DT_LEFT);
 
     bounding_rectangle = {

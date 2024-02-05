@@ -92,5 +92,5 @@
 "ftp_download_site_ip_address": "85.222.189.119",
 "ftp_download_folder_path": "tinyrcon",
 "ftp_download_file_pattern": "^_U_TinyRcon[\._-]?v?(\d{1,2}\.\d{1,2}\.\d{1,2}\.\d{1,2})\.exe$",
-"plugins_geoIP_geo_dat_md5": "1779a28086d316265bb4547784cf1503"
+"plugins_geoIP_geo_dat_md5": "7d5c1dba6855f8a07df877f80dd171f8"
 }
