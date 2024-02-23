@@ -95,17 +95,24 @@ bool connection_manager_for_messages::wait_for_and_process_response_message()
     const bool is_show_in_messages{ parts[4] == "true" };
 
     if (message_handler_name == "query-request") {
-      const string information{ format("Received query-request from user {} (IP: {} geoinfo: {})\nMessage contents: {}\n", sender, sender_ip, geo_information, message_contents) };
-      log_message(information, is_log_datetime::yes);
+      // const string information{ format("Received query-request from user {} (IP: {} geoinfo: {})\nMessage contents: {}\n", sender, sender_ip, geo_information, message_contents) };
+      // print_colored_text(app_handles.hwnd_re_messages_data, information.c_str());
 
       if (size_t start{}; (start = message_contents.find("is_user_admin?")) != string::npos) {
-        const string username{ trim(message_contents.substr(start + strlen("is_user_admin?"))) };
-        const string response{ format("{}={}", message_contents, main_app.is_user_admin(username) ? "yes" : "no") };
-        auto user = make_shared<tiny_rcon_client_user>();
-        user->user_name = sender;
-        user->ip_address = sender_ip;
-        user->remote_endpoint = remote_endpoint;
-        process_and_send_message("query-response", response, true, user);
+        const size_t sep_pos{ message_contents.rfind('\\') };
+        const size_t user_name_start{ start + strlen("is_user_admin?") };
+        if (sep_pos != string::npos) {
+          const string username{ trim(message_contents.substr(user_name_start, sep_pos - user_name_start)) };
+          const string password{ trim(message_contents.substr(sep_pos + 1)) };
+          const string response{ format("{}={}", message_contents, main_app.is_user_admin(username, password) ? "yes" : "no") };          
+          auto user = make_shared<tiny_rcon_client_user>();
+          user->user_name = sender;
+          user->ip_address = sender_ip;
+          user->remote_endpoint = remote_endpoint;
+          process_and_send_message("query-response", response, true, user);
+          // const string information2{ format("Sent query-response to user {} (IP: {} geoinfo: {})\nMessage contents: {}\n", sender, sender_ip, geo_information, response) };
+          // print_colored_text(app_handles.hwnd_re_messages_data, information2.c_str());
+        }
       }
       return true;
     }

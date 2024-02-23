@@ -22,7 +22,7 @@ using namespace std::chrono;
 using namespace std::filesystem;
 using namespace Gdiplus;
 
-extern const string program_version{ "2.7.3.5" };
+extern const string program_version{ "2.7.3.7" };
 
 extern const std::regex ip_address_and_port_regex;
 extern const unordered_set<string> rcon_status_commands;
@@ -361,7 +361,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
   string username{ main_app.get_username() };
   remove_all_color_codes(username);
-  const string welcome_message{ format("Welcome back, {} {}", main_app.get_current_game_server().get_is_connection_settings_valid() ? "admin" : "player", username) };
+  const string welcome_message{ format("Welcome back, {}", username) };
   Edit_SetText(app_handles.hwnd_e_user_input, welcome_message.c_str());
 
   load_tinyrcon_client_user_data(main_app.get_user_data_file_path());
@@ -3330,17 +3330,15 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
   main_app.add_message_handler("query-response", [](const string &, const time_t, const string &data, bool) {
     // print_colored_text(app_handles.hwnd_re_messages_data, format("Received query response from ^5Tiny^6Rcon ^5server!\nMessage contents: '^5{}^7'\n", data).c_str());
-
-    static constexpr const char *needle{ "is_user_admin?" };
-    static constexpr size_t needle_len{ len(needle) };
-
-    if (size_t start{}, end; ((start = data.find(needle)) != string::npos) && ((end = data.rfind('=')) != string::npos)) {
-      const string username{ trim(data.substr(start + needle_len, end - (start + needle_len))) };
-      const string reply{ trim(data.substr(data.find('=', start + needle_len) + 1)) };
-      if (me->user_name == username) {
-        me->is_admin = (reply == "yes");
-      }
+    // static constexpr const char *needle{ "is_user_admin?" };
+    // static constexpr size_t needle_len{ len(needle) };
+    /*if (size_t start{}, end; ((start = data.find(needle)) != string::npos) && ((end = data.rfind('=')) != string::npos)) {
+      const string username{ trim(data.substr(start + needle_len, end - (start + needle_len))) };*/
+    const string reply{ trim(data.substr(data.rfind('=') + 1)) };
+    if (data.find(me->user_name) != string::npos && data.find(main_app.get_game_servers()[0].get_rcon_password()) != string::npos && reply == "yes") {
+      me->is_admin = true;
     }
+    // }
   });
 
   main_app.add_message_handler("request-admindata", [](const string &, const time_t, const string &, bool) {
@@ -4326,11 +4324,11 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       if (main_app.get_game_servers_count() != 0) {
 
         auto &gs = main_app.get_game_servers()[0];
-        if (me->is_admin) {
-          main_app.get_connection_manager().send_and_receive_rcon_data("status", rcon_reply, gs.get_server_ip_address().c_str(), gs.get_server_port(), gs.get_rcon_password().c_str(), gs, true, true);
-        } else {
+        // if (me->is_admin) {
+        main_app.get_connection_manager().send_and_receive_rcon_data("status", rcon_reply, gs.get_server_ip_address().c_str(), gs.get_server_port(), gs.get_rcon_password().c_str(), gs, true, true);
+        /*} else {
           main_app.get_connection_manager().send_and_receive_non_rcon_data("getstatus", rcon_reply, gs.get_server_ip_address().c_str(), gs.get_server_port(), gs, true, true);
-        }
+        }*/
       }
 
       string game_version_number{ "1.0" };
@@ -4630,7 +4628,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
           main_app.add_remote_message_to_queue(message_t("request-login-player", format(R"({}\{}\{}\{}\{})", me->user_name, me->ip_address, get_current_time_stamp(), main_app.get_player_name(), main_app.get_game_version_number()), true));
         }
 
-        main_app.get_connection_manager_for_messages().process_and_send_message("query-request", format("is_user_admin?{}", me->user_name), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+        main_app.get_connection_manager_for_messages().process_and_send_message("query-request", format("is_user_admin?{}\\{}", me->user_name, main_app.get_game_servers()[0].get_rcon_password()), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
         // main_app.add_message_to_queue(message_t("request-mapnames", format(R"({}\{}\{})", me->user_name, me->ip_address, get_current_time_stamp()), true));
 
         PostMessage(app_handles.hwnd_progress_bar, PBM_SETMARQUEE, (WPARAM)FALSE, (LPARAM)0);
@@ -4789,7 +4787,7 @@ bool initialize_main_app(HINSTANCE hInstance, const int)
   // SystemParametersInfoA(SPI_GETWORKAREA, 0, &desktop_work_area, 0);
   // AdjustWindowRectEx(&desktop_work_area, WS_OVERLAPPEDWINDOW /*| WS_HSCROLL | WS_VSCROLL*/, FALSE, 0);
 
-  app_handles.hwnd_main_window = CreateWindowExA(WS_EX_OVERLAPPEDWINDOW, wcex.lpszClassName, "TinyRcon client", WS_OVERLAPPEDWINDOW /*| WS_CLIPCHILDREN | WS_CLIPSIBLINGS*/ /*| WS_HSCROLL | WS_VSCROLL*/, 0, 0, client_rect.right - client_rect.left, client_rect.bottom - client_rect.top, nullptr, nullptr, hInstance, nullptr);
+  app_handles.hwnd_main_window = CreateWindowExA(WS_EX_OVERLAPPEDWINDOW, wcex.lpszClassName, "TinyRcon client", WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN /*| WS_HSCROLL | WS_VSCROLL*/, 0, 0, client_rect.right - client_rect.left, client_rect.bottom - client_rect.top, nullptr, nullptr, hInstance, nullptr);
 
   // app_handles.hwnd_main_window = CreateWindowEx(0, wcex.lpszClassName, "TinyRcon client", WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME /*WS_OVERLAPPEDWINDOW | WS_HSCROLL | WS_VSCROLL*/, 0, 0, client_rect.right - client_rect.left, client_rect.bottom - client_rect.top, nullptr, nullptr, hInstance, nullptr);
 
@@ -5101,9 +5099,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       }
     }
 
+    if (counter % 60 == 0) {
+      const auto &rcon_game_server = main_app.get_game_servers()[0];
+      main_app.get_connection_manager_for_messages().process_and_send_message("query-request", format("is_user_admin?{}\\{}", me->user_name, rcon_game_server.get_rcon_password()), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      const auto status = check_if_specified_server_ip_port_and_rcon_password_are_valid(rcon_game_server.get_server_ip_address().c_str(), rcon_game_server.get_server_port(), rcon_game_server.get_rcon_password().c_str());
+      me->is_admin = status.first;
+    }
+
     if (counter % 120 == 0) {
       counter = 0;
-      main_app.get_connection_manager_for_messages().process_and_send_message("query-request", format("is_user_admin?{}", me->user_name), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
 
       if (gif_image) {
         delete gif_image;

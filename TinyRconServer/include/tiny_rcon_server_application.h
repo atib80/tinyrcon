@@ -396,7 +396,7 @@ public:
     return name_to_user.at(cleaned_name);
   }
 
-  bool is_user_admin(const std::string &name) const noexcept
+  bool is_user_admin(const std::string &name, const std::string& password) const noexcept
   {
     string cleaned_name{ get_cleaned_user_name(name) };
     // unsigned long guid_key{};
@@ -408,7 +408,7 @@ public:
     // }
     // }
 
-    return name_to_user.contains(cleaned_name);
+    return name_to_user.contains(cleaned_name) && server.get_rcon_password() == password;
   }
 
   std::unordered_map<std::string, std::string> &get_tinyrcon_dict()

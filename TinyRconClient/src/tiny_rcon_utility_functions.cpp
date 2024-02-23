@@ -17,11 +17,11 @@
 #include <bitextractor.hpp>
 #include <bitexception.hpp>
 #include <bittypes.hpp>
-#include "winnls.h"
-#include "shobjidl.h"
-#include "objbase.h"
-#include "objidl.h"
-#include "shlguid.h"
+// #include "winnls.h"
+// #include "shobjidl.h"
+// #include "objbase.h"
+// #include "objidl.h"
+// #include "shlguid.h"
 #include "stack_trace_element.h"
 
 // Call of duty steam appid: 2620
@@ -9226,7 +9226,7 @@ bool show_user_confirmation_dialog(const char *msg, const char *title, const cha
   app_handles.hwnd_confirmation_dialog = CreateWindowEx(WS_EX_OVERLAPPEDWINDOW,
     wcex_confirmation_dialog.lpszClassName,
     title,
-    WS_OVERLAPPEDWINDOW /*& ~WS_MAXIMIZEBOX & ~WS_THICKFRAME & WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX*/,
+    WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN /*& ~WS_MAXIMIZEBOX & ~WS_THICKFRAME & WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX*/,
     0,
     0,
     600,
@@ -9488,7 +9488,7 @@ std::pair<bool, game_name_t>
   string reply;
   main_app.get_connection_manager().send_and_receive_rcon_data("version", reply, ip_address, port_number, rcon_password, main_app.get_current_game_server(), true);
 
-  if (reply.find("Invalid password.") != string::npos || reply.find("rconpassword") != string::npos || reply.find("Bad rcon") != string::npos) {
+  if (str_contains(reply, "Invalid password.", 0u, true) || str_contains(reply, "rconpassword", 0u, true) || str_contains(reply, "Bad rcon", 0u, true)) {
     main_app.get_connection_manager().send_and_receive_non_rcon_data("getstatus", reply, ip_address, port_number, main_app.get_current_game_server(), true);
     const string &gn{ main_app.get_current_game_server().get_game_name() };
     return { false, game_name_to_game_name_t.contains(gn) ? game_name_to_game_name_t.at(gn) : game_name_t::unknown };
@@ -9503,7 +9503,7 @@ std::pair<bool, game_name_t>
   if (stl::helper::str_contains(reply, "CoD5", 0, true))
     return { true, game_name_t::cod5 };
 
-  return { false, game_name_t::unknown };
+  return { true, game_name_t::unknown };
 }
 
 bool show_and_process_tinyrcon_configuration_panel(const char *title)
@@ -9515,7 +9515,7 @@ bool show_and_process_tinyrcon_configuration_panel(const char *title)
   app_handles.hwnd_configuration_dialog = CreateWindowEx(WS_EX_OVERLAPPEDWINDOW,
     wcex_configuration_dialog.lpszClassName,
     title,
-    WS_OVERLAPPEDWINDOW /*& ~WS_MAXIMIZEBOX & ~WS_THICKFRAME & WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX*/,
+    WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN /*& ~WS_MAXIMIZEBOX & ~WS_THICKFRAME & WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX*/,
     0,
     0,
     920,
@@ -11615,13 +11615,13 @@ void print_message_about_corrected_player_name(HWND re_hwnd, const char *truncat
 
 void set_admin_actions_buttons_active(const BOOL is_enable, const bool is_reset_to_default_sort_mode)
 {
-  EnableWindow(app_handles.hwnd_button_warn, is_enable);
-  EnableWindow(app_handles.hwnd_button_kick, is_enable);
-  EnableWindow(app_handles.hwnd_button_tempban, is_enable);
-  EnableWindow(app_handles.hwnd_button_ipban, is_enable);
+  // EnableWindow(app_handles.hwnd_button_warn, is_enable);
+  // EnableWindow(app_handles.hwnd_button_kick, is_enable);
+  // EnableWindow(app_handles.hwnd_button_tempban, is_enable);
+  // EnableWindow(app_handles.hwnd_button_ipban, is_enable);
   // EnableWindow(app_handles.hwnd_say_button, is_enable);
   // EnableWindow(app_handles.hwnd_tell_button, is_enable);
-  EnableWindow(app_handles.hwnd_button_load, is_enable);
+  // EnableWindow(app_handles.hwnd_button_load, is_enable);
   set_available_sort_methods(is_enable, is_reset_to_default_sort_mode);
 }
 
