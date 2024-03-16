@@ -215,7 +215,6 @@
     <ClInclude Include="include\detail\stl_helper_functions_impl.hpp" />
     <ClInclude Include="include\framework.h" />
     <ClInclude Include="include\game_server.h" />
-    <ClInclude Include="include\image.h" />
     <ClInclude Include="include\internet_handle.h" />
     <ClInclude Include="include\json_parser.hpp" />
     <ClInclude Include="include\md5.h" />
@@ -238,7 +237,6 @@
     <ClCompile Include="src\connection_manager.cpp" />
     <ClCompile Include="src\connection_manager_for_messages.cpp" />
     <ClCompile Include="src\connection_manager_for_rcon_messages.cpp" />
-    <ClCompile Include="src\image.cpp" />
     <ClCompile Include="src\md5.cpp" />
     <ClCompile Include="src\simple_grid.cpp" />
     <ClCompile Include="src\tiny_rcon_client.cpp" />
@@ -282,6 +280,7 @@
     <Image Include="data\images\flags\bg.bmp" />
     <Image Include="data\images\flags\bh.bmp" />
     <Image Include="data\images\flags\bi.bmp" />
+    <Image Include="data\images\flags\bitmap1.bmp" />
     <Image Include="data\images\flags\bj.bmp" />
     <Image Include="data\images\flags\bl.bmp" />
     <Image Include="data\images\flags\bm.bmp" />
@@ -513,6 +512,30 @@
     <Image Include="data\images\flags\za.bmp" />
     <Image Include="data\images\flags\zm.bmp" />
     <Image Include="data\images\flags\zw.bmp" />
+    <Image Include="data\images\mp_breakout.bmp" />
+    <Image Include="data\images\mp_brecourt.bmp" />
+    <Image Include="data\images\mp_burgundy.bmp" />
+    <Image Include="data\images\mp_carentan.bmp" />
+    <Image Include="data\images\mp_dawnville.bmp" />
+    <Image Include="data\images\mp_decoy.bmp" />
+    <Image Include="data\images\mp_depot.bmp" />
+    <Image Include="data\images\mp_downtown.bmp" />
+    <Image Include="data\images\mp_farmhouse.bmp" />
+    <Image Include="data\images\mp_harbor.bmp" />
+    <Image Include="data\images\mp_leningrad.bmp" />
+    <Image Include="data\images\mp_matmata.bmp" />
+    <Image Include="data\images\mp_naout.bmp" />
+    <Image Include="data\images\mp_railyard.bmp" />
+    <Image Include="data\images\mp_rhine.bmp" />
+    <Image Include="data\images\mp_rouen.bmp" />
+    <Image Include="data\images\mp_saint_lo.bmp" />
+    <Image Include="data\images\mp_shipment.bmp" />
+    <Image Include="data\images\mp_tigertown.bmp" />
+    <Image Include="data\images\mp_tobruk.bmp" />
+    <Image Include="data\images\mp_toujane.bmp" />
+    <Image Include="data\images\mp_trainstation.bmp" />
+    <Image Include="data\images\mp_tripoli.bmp" />
+    <Image Include="data\images\nomap.bmp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

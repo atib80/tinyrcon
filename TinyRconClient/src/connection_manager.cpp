@@ -281,12 +281,12 @@ size_t connection_manager::receive_rcon_reply_from_server(const char *remote_ip,
                                                           game_server &gs, std::string &received_reply,
                                                           const bool) const
 {
-	static constexpr const char *start_needle_to_search_for{"print\n"};	
-    static constexpr const size_t start_needle_to_search_for_len{len("print\n")};	
     char incoming_data_buffer[receive_buffer_size];
     size_t noOfReceivedBytes{}, noOfAllReceivedBytes{};
-	
+
     received_reply.clear();
+    const char *start_needle_to_search_for{"print\n"};
+    const auto start_needle_to_search_for_len{len("print\n")};
 
     while (true)
     {
@@ -301,14 +301,14 @@ size_t connection_manager::receive_rcon_reply_from_server(const char *remote_ip,
             break;
 
         incoming_data_buffer[noOfReceivedBytes] = '\0';
-		
-		if (noOfReceivedBytes > 0U)
+
+        main_app.add_to_next_downloaded_data_in_bytes(noOfReceivedBytes);
+
+        if (remote_endpoint != ip::udp::endpoint{} && expected_remote_endpoint != remote_endpoint)
+            continue;
+
+        if (noOfReceivedBytes > 0U)
         {
-
-			main_app.add_to_next_downloaded_data_in_bytes(noOfReceivedBytes);
-
-			if (expected_remote_endpoint != remote_endpoint) continue;
-        
             const size_t start_needle_pos = stl::helper::str_index_of(incoming_data_buffer, start_needle_to_search_for);
             if (start_needle_pos != string::npos)
             {

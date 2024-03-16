@@ -16,13 +16,13 @@ struct player
   const char *city{ "Unknown" };
   size_t warned_times{};
   char ping[5]{};
-  char geo_country_code[8];
+  char geo_country_code[8]{};
   time_t banned_start_time{};
   time_t ban_duration_in_hours{ 24 };
   char player_name[33]{};
   char guid_key[33]{};
   char banned_date_time[33]{};
-  char geo_information[128];
+  char geo_information[128]{};
   std::string ip_address;
   std::string reason;
   std::string banned_by_user_name;

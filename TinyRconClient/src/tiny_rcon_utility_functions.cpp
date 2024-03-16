@@ -17,11 +17,6 @@
 #include <bitextractor.hpp>
 #include <bitexception.hpp>
 #include <bittypes.hpp>
-// #include "winnls.h"
-// #include "shobjidl.h"
-// #include "objbase.h"
-// #include "objidl.h"
-// #include "shlguid.h"
 #include "stack_trace_element.h"
 
 // Call of duty steam appid: 2620
@@ -96,6 +91,8 @@ extern std::atomic<int> admin_choice;
 extern std::string admin_reason;
 
 extern volatile atomic<size_t> atomic_counter;
+
+extern HBITMAP g_hBitMap;
 
 bool sort_by_pid_asc{ true };
 bool sort_by_score_asc{ false };
@@ -3407,10 +3404,13 @@ void display_online_admins_information()
 
   oss << "^2Online admins: ";
 
+  unordered_set<string> already_seen_ip_addresses;
+
   if (!main_app.get_users().empty()) {
 
     for (auto &u : main_app.get_users()) {
-      if (u->is_online) {
+      if (u->is_online && !u->ip_address.empty() && !already_seen_ip_addresses.contains(u->ip_address)) {
+        already_seen_ip_addresses.emplace(u->ip_address);
         oss << format("^7{} ^3(^7{}^3), ", u->user_name, u->player_name);
       }
     }
@@ -13546,4 +13546,57 @@ HRESULT CreateLink(const char *lpszPathObj, const char *lpszPathLink, const char
     psl->Release();
   }
   return hres;
+}
+
+const std::string &get_current_map_image_name(const std::string &current_rcon_map_map)
+{
+  const static string unknown_rcon_map_name_image{ "IDR_NOMAP" };
+  const string rcon_map_name_index{ stl::helper::to_lower_case(stl::helper::trim(current_rcon_map_map)) };
+
+  static const std::unordered_map<std::string, std::string> rcon_map_name_to_image_name{
+    { "mp_burgundy", "IDR_MP_BURGUNDY" },
+    { "mp_carentan", "IDR_MP_CARENTAN" },
+    { "mp_dawnville", "IDR_MP_DAWNVILLE" },
+    { "mp_breakout", "IDR_MP_BREAKOUT" },
+    { "mp_brecourt", "IDR_MP_BRECOURT" },
+    { "mp_burgundy", "IDR_MP_BURGUNDY" },
+    { "mp_carentan", "IDR_MP_CARENTAN" },
+    { "mp_dawnville", "IDR_MP_DAWNVILLE" },
+    { "mp_decoy", "IDR_MP_DECOY" },
+    { "mp_downtown", "IDR_MP_DOWNTOWN" },
+    { "mp_farmhouse", "IDR_MP_FARMHOUSE" },
+    { "mp_leningrad", "IDR_MP_LENINGRAD" },
+    { "mp_matmata", "IDR_MP_MATMATA" },
+    { "mp_railyard", "IDR_MP_RAILYARD" },
+    { "mp_toujane", "IDR_MP_TOUJANE" },
+    { "mp_depot", "IDR_MP_DEPOT" },
+    { "german_town", "IDR_GERMAN_TOWN" },
+    { "mp_harbor", "IDR_MP_HARBOR" },
+    { "mp_naout", "IDR_MP_NAOUT" },
+    { "mp_rhine", "IDR_MP_RHINE" },
+    { "mp_rouen", "IDR_MP_ROUEN" },
+    { "mp_saint_lo", "IDR_MP_SAINT_LO" },
+    { "mp_shipment", "IDR_MP_SHIPMENT" },
+    { "mp_tigertown", "IDR_MP_TIGERTOWN" },
+    { "mp_tobruk", "IDR_MP_TOBRUK" },
+    { "mp_tripoli", "IDR_MP_TRIPOLI" }
+  };
+
+  if (rcon_map_name_to_image_name.contains(rcon_map_name_index))
+    return rcon_map_name_to_image_name.at(rcon_map_name_index);
+  return unknown_rcon_map_name_image;
+}
+
+void load_current_map_image(const std::string &rcon_map_name)
+{
+  static string current_rcon_map_name{"n/a"};
+
+  if (rcon_map_name != current_rcon_map_name) {
+    current_rcon_map_name = rcon_map_name;
+    const string &current_map_image_name = get_current_map_image_name(current_rcon_map_name);
+    if (g_hBitMap != NULL) 
+        DeleteBitmap(g_hBitMap);
+    g_hBitMap = LoadBitmapA(GetModuleHandle(NULL), current_map_image_name.c_str());
+    InvalidateRect(app_handles.hwnd_main_window, nullptr, FALSE);  
+  }
 }

@@ -223,7 +223,7 @@ class tiny_rcon_server_application
   std::queue<message_t> message_queue{};
 
   std::vector<std::shared_ptr<tiny_rcon_client_user>> users;
-  std::unordered_map<std::string, std::shared_ptr<tiny_rcon_client_user>> name_to_user;
+  std::map<std::string, std::shared_ptr<tiny_rcon_client_user>> name_to_user;
 
   std::unordered_map<std::string, std::string> tinyrcon_dict{
     { "{ADMINNAME}", username },
@@ -371,7 +371,7 @@ public:
     program_title = std::move(new_program_title);
   }
 
-  std::unordered_map<std::string, std::shared_ptr<tiny_rcon_client_user>> &get_name_to_user()
+  std::map<std::string, std::shared_ptr<tiny_rcon_client_user>> &get_name_to_user()
   {
     return name_to_user;
   }

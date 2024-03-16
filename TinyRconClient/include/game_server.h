@@ -22,312 +22,312 @@ public:
   {
   }
 
-  [[nodiscard]] const std::string &get_game_server_address() const
+  [[nodiscard]] const std::string &get_game_server_address() const noexcept
   {
     return game_server_address;
   }
 
-  void set_game_server_address(string new_game_server_address)
+  void set_game_server_address(string new_game_server_address) noexcept
   {
     game_server_address = std::move(new_game_server_address);
   }
 
-  [[nodiscard]] const std::string &get_server_ip_address() const
+  [[nodiscard]] const std::string &get_server_ip_address() const noexcept
   {
     return ip_address;
   }
 
-  void set_server_ip_address(string new_server_ip_address)
+  void set_server_ip_address(string new_server_ip_address) noexcept
   {
     ip_address = std::move(new_server_ip_address);
   }
 
-  [[nodiscard]] uint_least16_t get_server_port() const { return port; }
+  [[nodiscard]] uint_least16_t get_server_port() const noexcept { return port; }
 
-  void set_server_port(const uint_least16_t newServerPort)
+  void set_server_port(const uint_least16_t newServerPort) noexcept
   {
     port = newServerPort;
   }
 
-  const std::string &get_server_name() const
+  const std::string &get_server_name() const noexcept
   {
     return sv_hostname;
   }
 
-  void set_server_name(string new_server_name)
+  void set_server_name(string new_server_name) noexcept
   {
     sv_hostname = std::move(new_server_name);
   }
 
-  void set_game_name(string new_game_name)
+  void set_game_name(string new_game_name) noexcept
   {
     game_name = std::move(new_game_name);
   }
 
-  [[nodiscard]] const string &get_game_name() const
+  [[nodiscard]] const string &get_game_name() const noexcept
   {
     return game_name;
   }
 
-  [[nodiscard]] const string &get_current_game_type() const
+  [[nodiscard]] const string &get_current_game_type() const noexcept
   {
     return current_game_type;
   }
 
-  void set_current_game_type(string new_current_game_type)
+  void set_current_game_type(string new_current_game_type) noexcept
   {
     current_game_type = std::move(new_current_game_type);
   }
 
-  [[nodiscard]] const string &get_current_map() const
+  [[nodiscard]] const string &get_current_map() const noexcept
   {
     return current_map;
   }
 
-  void set_current_map(string new_current_map)
+  void set_current_map(string new_current_map) noexcept
   {
     current_map = std::move(new_current_map);
   }
 
-  [[nodiscard]] const string &get_current_full_map_name() const
+  [[nodiscard]] const string &get_current_full_map_name() const noexcept
   {
     return current_full_map_name;
   }
 
-  void set_current_full_map_name(string new_current_full_map_name)
+  void set_current_full_map_name(string new_current_full_map_name) noexcept
   {
     current_full_map_name = std::move(new_current_full_map_name);
   }
 
-  void set_next_map(string new_next_map)
+  void set_next_map(string new_next_map) noexcept
   {
     next_map = std::move(new_next_map);
   }
 
-  void set_game_version_number(string new_game_version_number)
+  void set_game_version_number(string new_game_version_number) noexcept
   {
     game_version_number = std::move(new_game_version_number);
   }
 
-  const std::string &get_game_version_number() const
+  const std::string &get_game_version_number() const noexcept
   {
     return game_version_number;
   }
 
-  void set_map_rotation(string new_map_rotation)
+  void set_map_rotation(string new_map_rotation) noexcept
   {
     map_rotation = std::move(new_map_rotation);
   }
 
   void
-    set_map_rotation_current(string new_map_rotation_current)
+    set_map_rotation_current(string new_map_rotation_current) noexcept
   {
     map_rotation_current = std::move(new_map_rotation_current);
   }
 
-  void set_game_mod_name(string new_game_mod_name)
+  void set_game_mod_name(string new_game_mod_name) noexcept
   {
     game_mod_name = std::move(new_game_mod_name);
   }
 
-  void set_rcon_password(string new_rcon_password)
+  void set_rcon_password(string new_rcon_password) noexcept
   {
     rcon_password = std::move(new_rcon_password);
   }
 
-  [[nodiscard]] const string &get_rcon_password() const
+  [[nodiscard]] const string &get_rcon_password() const noexcept
   {
     return rcon_password;
   }
 
-  [[nodiscard]] const string &get_private_slot_password() const
+  [[nodiscard]] const string &get_private_slot_password() const noexcept
   {
     return private_slot_password;
   }
 
-  void set_private_slot_password(string new_private_slot_password)
+  void set_private_slot_password(string new_private_slot_password) noexcept
   {
     private_slot_password = std::move(new_private_slot_password);
   }
 
-  void set_server_pid(string new_server_pid)
+  void set_server_pid(string new_server_pid) noexcept
   {
     server_pid = std::move(new_server_pid);
   }
 
-  const std::string &get_server_pid() const
+  const std::string &get_server_pid() const noexcept
   {
     return server_pid;
   }
 
-  void set_online_and_max_players(string new_online_and_max_players)
+  void set_online_and_max_players(string new_online_and_max_players) noexcept
   {
     online_and_max_players = std::move(new_online_and_max_players);
   }
 
-  const std::string &get_online_and_max_players() const
+  const std::string &get_online_and_max_players() const noexcept
   {
     return online_and_max_players;
   }
 
-  void set_country_code(const char *new_country_code)
+  void set_country_code(const char *new_country_code) noexcept
   {
     country_code = new_country_code;
   }
 
-  const char *get_country_code() const
+  const char *get_country_code() const noexcept
   {
     return country_code;
   }
 
-  void set_max_number_of_players(const int new_max_number_of_players)
+  void set_max_number_of_players(const int new_max_number_of_players) noexcept
   {
     max_number_of_players = new_max_number_of_players;
   }
 
-  int get_max_number_of_players() const
+  int get_max_number_of_players() const noexcept
   {
     return max_number_of_players;
   }
 
   void set_current_number_of_players(
-    const int new_current_number_of_players)
+    const int new_current_number_of_players) noexcept
   {
     current_number_of_players = new_current_number_of_players;
   }
 
-  void set_min_ping(const int new_min_ping)
+  void set_min_ping(const int new_min_ping) noexcept
   {
     min_ping = new_min_ping;
   }
 
-  void set_max_ping(const int new_max_ping)
+  void set_max_ping(const int new_max_ping) noexcept
   {
     max_ping = new_max_ping;
   }
 
-  void set_protocol_info(const int new_protocol)
+  void set_protocol_info(const int new_protocol) noexcept
   {
     protocol = new_protocol;
   }
 
-  void set_hw_info(const int new_hw) { hw = new_hw; }
+  void set_hw_info(const int new_hw) noexcept { hw = new_hw; }
 
-  void set_is_connection_settings_valid(const bool new_value)
+  void set_is_connection_settings_valid(const bool new_value) noexcept
   {
     is_connection_settings_valid = new_value;
   }
 
-  bool get_is_connection_settings_valid() const
+  bool get_is_connection_settings_valid() const noexcept
   {
     return is_connection_settings_valid;
   }
 
-  void set_is_pure(const bool new_pure) { is_pure = new_pure; }
+  void set_is_pure(const bool new_pure) noexcept { is_pure = new_pure; }
 
-  void set_is_kill_cam_enabled(const bool new_kill_cam_enabled)
+  void set_is_kill_cam_enabled(const bool new_kill_cam_enabled) noexcept
   {
     is_kill_cam_enabled = new_kill_cam_enabled;
   }
 
   void set_is_allow_anonymous_players(
-    const bool new_is_allow_anonymous_players)
+    const bool new_is_allow_anonymous_players) noexcept
   {
     is_allow_anonymous_players = new_is_allow_anonymous_players;
   }
 
-  void set_is_mod_enabled(const bool new_is_mod_enabled)
+  void set_is_mod_enabled(const bool new_is_mod_enabled) noexcept
   {
     is_mod_enabled = new_is_mod_enabled;
   }
 
-  bool get_is_voice_enabled() const
+  bool get_is_voice_enabled() const noexcept
   {
     return is_voice_enabled;
   }
 
-  void set_is_voice_enabled(const bool new_is_voice_enabled)
+  void set_is_voice_enabled(const bool new_is_voice_enabled) noexcept
   {
     is_voice_enabled = new_is_voice_enabled;
   }
 
-  void set_is_anti_lag_enabled(const bool new_is_anti_lag_enabled)
+  void set_is_anti_lag_enabled(const bool new_is_anti_lag_enabled) noexcept
   {
     is_anti_lag_enabled = new_is_anti_lag_enabled;
   }
 
   void set_is_friendly_fire_enabled(
-    const bool new_is_friendly_fire_enabled)
+    const bool new_is_friendly_fire_enabled) noexcept
   {
     is_friendly_fire_enabled = new_is_friendly_fire_enabled;
   }
 
-  void set_server_short_version(string new_short_version)
+  void set_server_short_version(string new_short_version) noexcept
   {
     short_version = std::move(new_short_version);
   }
 
-  void set_is_flood_protected(const bool new_is_flood_protected)
+  void set_is_flood_protected(const bool new_is_flood_protected) noexcept
   {
     is_flood_protected = new_is_flood_protected;
   }
 
-  void set_is_console_disabled(const bool new_is_console_disabled)
+  void set_is_console_disabled(const bool new_is_console_disabled) noexcept
   {
     is_console_disabled = new_is_console_disabled;
   }
 
   void set_is_password_protected(
-    const bool new_is_password_protected)
+    const bool new_is_password_protected) noexcept
   {
-    is_password_protected = new_is_password_protected;
+    this->is_password_protected = new_is_password_protected;
   }
 
-  void set_max_server_rate(const int new_server_max_rate)
+  void set_max_server_rate(const int new_server_max_rate) noexcept
   {
     max_server_rate = new_server_max_rate;
   }
 
-  int get_max_private_clients() const
+  int get_max_private_clients() const noexcept
   {
     return max_private_clients;
   }
 
-  void set_max_private_clients(const int new_max_private_clients)
+  void set_max_private_clients(const int new_max_private_clients) noexcept
   {
     max_private_clients = new_max_private_clients;
   }
 
 
-  size_t get_minimum_number_of_connections_from_same_ip_for_automatic_ban() const
+  size_t get_minimum_number_of_connections_from_same_ip_for_automatic_ban() const noexcept
   {
     return minimum_number_of_connections_from_same_ip_for_automatic_ban;
   }
 
-  void set_minimum_number_of_connections_from_same_ip_for_automatic_ban(size_t new_value)
+  void set_minimum_number_of_connections_from_same_ip_for_automatic_ban(size_t new_value) noexcept
   {
     new_value = std::max<size_t>(5, new_value);
     minimum_number_of_connections_from_same_ip_for_automatic_ban = new_value;
   }
 
-  size_t get_maximum_number_of_warnings_for_automatic_kick() const
+  size_t get_maximum_number_of_warnings_for_automatic_kick() const noexcept
   {
     return maximum_number_of_warnings_for_automatic_kick;
   }
 
-  void set_maximum_number_of_warnings_for_automatic_kick(size_t new_value)
+  void set_maximum_number_of_warnings_for_automatic_kick(size_t new_value) noexcept
   {
     if (!(new_value >= 1 && new_value <= 5))
       new_value = 3;
     maximum_number_of_warnings_for_automatic_kick = new_value;
   }
 
-  std::vector<player> &get_players_data()
+  std::vector<player> &get_players_data() noexcept
   {
     return players_data;
   }
 
-  player &get_player_data(const int pid)
+  player &get_player_data(const int pid) noexcept
   {
     static player default_player_data{};
 
@@ -339,7 +339,7 @@ public:
     return default_player_data;
   }
 
-  vector<player> &get_temp_banned_ip_addresses_vector()
+  vector<player> &get_temp_banned_ip_addresses_vector() noexcept
   {
     return temp_banned_ip_addresses_vector;
   }
@@ -359,17 +359,17 @@ public:
     return false;
   }
 
-  vector<player> &get_banned_names_vector()
+  vector<player> &get_banned_names_vector() noexcept
   {
     return banned_names_vector;
   }
 
-  unordered_map<string, player> &get_banned_names_map()
+  unordered_map<string, player> &get_banned_names_map() noexcept
   {
     return banned_names_map;
   }
 
-  vector<player> &get_banned_ip_addresses_vector()
+  vector<player> &get_banned_ip_addresses_vector() noexcept
   {
     return banned_ip_addresses_vector;
   }
@@ -407,17 +407,17 @@ public:
     return false;
   }
 
-  unordered_map<int, player> &get_warned_players_data()
+  unordered_map<int, player> &get_warned_players_data() noexcept
   {
     return warned_players_data;
   }
 
-  void set_warned_players_data(unordered_map<int, player> new_warned_players_data)
+  void set_warned_players_data(unordered_map<int, player> new_warned_players_data) noexcept
   {
     warned_players_data = std::move(new_warned_players_data);
   }
 
-  unordered_map<string, player> &get_temp_banned_ip_addresses_map()
+  unordered_map<string, player> &get_temp_banned_ip_addresses_map() noexcept
   {
     return temp_banned_ip_addresses_map;
   }
@@ -446,7 +446,7 @@ public:
     return true;
   }
 
-  unordered_map<string, player> &get_banned_ip_addresses_map()
+  unordered_map<string, player> &get_banned_ip_addresses_map() noexcept
   {
     return banned_ip_addresses_map;
   }
@@ -474,12 +474,12 @@ public:
     return true;
   }
 
-  vector<player> &get_banned_ip_address_ranges_vector()
+  vector<player> &get_banned_ip_address_ranges_vector() noexcept
   {
     return banned_ip_address_ranges_vector;
   }
 
-  unordered_map<string, player> &get_banned_ip_address_ranges_map()
+  unordered_map<string, player> &get_banned_ip_address_ranges_map() noexcept
   {
     return banned_ip_address_ranges_map;
   }
@@ -507,62 +507,62 @@ public:
     return true;
   }
 
-  size_t get_number_of_players() const
-  {
+  size_t get_number_of_players() const noexcept
+  { 
     return number_of_players;
   }
 
-  void set_number_of_players(const size_t new_value)
+  void set_number_of_players(const size_t new_value) noexcept
   {
     number_of_players = new_value;
   }
 
-  size_t get_number_of_online_players() const
+  size_t get_number_of_online_players() const noexcept
   {
     return number_of_players_online;
   }
 
-  void set_number_of_online_players(const size_t new_value)
+  void set_number_of_online_players(const size_t new_value) noexcept
   {
     number_of_players_online = new_value;
   }
 
-  size_t get_number_of_offline_players() const
+  size_t get_number_of_offline_players() const noexcept
   {
     return number_of_players_offline;
   }
 
-  void set_number_of_offline_players(const size_t new_value)
+  void set_number_of_offline_players(const size_t new_value) noexcept
   {
     number_of_players_offline = new_value;
   }
 
-  std::set<std::string> &get_banned_cities_set()
+  std::set<std::string> &get_banned_cities_set() noexcept
   {
     return banned_cities;
   }
 
-  std::set<std::string> &get_banned_countries_set()
+  std::set<std::string> &get_banned_countries_set() noexcept
   {
     return banned_countries;
   }
 
-  std::set<string> &get_protected_ip_addresses()
+  std::set<string> &get_protected_ip_addresses() noexcept
   {
     return protected_ip_addresses_set;
   }
 
-  std::set<string> &get_protected_ip_address_ranges()
+  std::set<string> &get_protected_ip_address_ranges() noexcept
   {
     return protected_ip_address_ranges_set;
   }
 
-  std::set<string> &get_protected_cities()
+  std::set<string> &get_protected_cities() noexcept
   {
     return protected_cities_set;
   }
 
-  std::set<string> &get_protected_countries()
+  std::set<string> &get_protected_countries() noexcept
   {
     return protected_countries_set;
   }

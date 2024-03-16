@@ -4,14 +4,10 @@
 #undef min
 
 #pragma comment(linker, \
-    "\"/manifestdependency:type='win32' \
+  "\"/manifestdependency:type='win32' \
 name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \
 processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
-#include <gdiplus.h>
-#include "image.h"
-
-#pragma comment(lib, "gdiplus.lib")
 #pragma comment(lib, "comctl32.lib")
 #pragma comment(lib, "uxtheme.lib")
 
@@ -20,9 +16,8 @@ using namespace stl::helper;
 using namespace std::string_literals;
 using namespace std::chrono;
 using namespace std::filesystem;
-using namespace Gdiplus;
 
-extern const string program_version{ "2.7.3.7" };
+extern const string program_version{ "2.7.4.0" };
 
 extern const std::regex ip_address_and_port_regex;
 extern const unordered_set<string> rcon_status_commands;
@@ -232,7 +227,8 @@ char selected_re_text[8196];
 static std::random_device rd{};
 static std::mt19937 gen(rd());
 static std::uniform_int_distribution<> random_number_distribution(1, 44);
-ImageEx *gif_image{};
+// ImageEx *map_image_jpg;
+HBITMAP g_hBitMap;
 shared_ptr<tiny_rcon_client_user> me{};
 
 int APIENTRY WinMain(_In_ HINSTANCE hInstance,
@@ -246,9 +242,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   LoadLibrary("Riched20.dll");
 
   HACCEL hAccel = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDR_ACCELERATOR1));
-  GdiplusStartupInput gdiplusStartupInput{};
-  ULONG_PTR gdiplusToken{};
-  GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, nullptr);
+  // GdiplusStartupInput gdiplusStartupInput{};
+  // ULONG_PTR gdiplusToken{};
+  // GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, nullptr);
 
   register_window_classes(hInstance);
 
@@ -540,7 +536,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
           const size_t number_of_warnings_for_automatic_kick = main_app.get_current_game_server().get_maximum_number_of_warnings_for_automatic_kick();
           if (warned_players[pid].warned_times >= number_of_warnings_for_automatic_kick) {
             main_app.get_tinyrcon_dict()["{ADMINNAME}"] = main_app.get_username();
-            main_app.get_tinyrcon_dict()["{PLAYERNAME}"] = player.player_name;
+            main_app.get_tinyrcon_dict()["{PLAYERNAME}"] = warned_players[pid].player_name;
             string reason2{ remove_disallowed_character_in_string(format("^1Received {} warnings from admin: {}", main_app.get_current_game_server().get_maximum_number_of_warnings_for_automatic_kick(), main_app.get_username())) };
             stl::helper::trim_in_place(reason2);
             specify_reason_for_player_pid(pid, reason2);
@@ -3350,6 +3346,14 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     for (auto &part : parts) stl::helper::trim_in_place(part);
     if (parts.size() >= 17) {
       auto &u = main_app.get_user_for_name(parts[0]);
+      // bool is_found_another_admin_account_with_same_ip_address{};
+      // for (const auto &admin : main_app.get_users()) {
+      //  if (parts[4] == admin->ip_address && admin->is_logged_in) {
+      //    admin->is_logged_in = false;
+      //    admin->is_online = false;
+      //    // is_found_another_admin_account_with_same_ip_address = true;
+      //  }
+      //}
       // main_app.set_is_user_data_received_for_user(parts[0]);
       u->user_name = std::move(parts[0]);
       u->is_admin = parts[1] == "true";
@@ -4326,6 +4330,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         auto &gs = main_app.get_game_servers()[0];
         // if (me->is_admin) {
         main_app.get_connection_manager().send_and_receive_rcon_data("status", rcon_reply, gs.get_server_ip_address().c_str(), gs.get_server_port(), gs.get_rcon_password().c_str(), gs, true, true);
+        load_current_map_image(main_app.get_current_game_server().get_current_map());
         /*} else {
           main_app.get_connection_manager().send_and_receive_non_rcon_data("getstatus", rcon_reply, gs.get_server_ip_address().c_str(), gs.get_server_port(), gs, true, true);
         }*/
@@ -4600,9 +4605,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
         is_tinyrcon_initialized = true;
 
-        const string gif_image_name{ format("gif{}", random_number_distribution(gen)) };
-        gif_image = new ImageEx("GIF", gif_image_name.c_str());
-        gif_image->InitAnimation(app_handles.hwnd_main_window, Point{ screen_width / 2 + 340, screen_height - 180 });
+        // const string gif_image_name{ format("gif{}", random_number_distribution(gen)) };
+        // map_image_jpg = new ImageEx("GIF", gif_image_name.c_str());
+        // map_image_jpg->InitAnimation(app_handles.hwnd_main_window, Point{ screen_width / 2 + 340, screen_height - 180 });
 
         if (me->is_admin) {
 
@@ -4695,11 +4700,13 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     UnregisterClass(wcex.lpszClassName, app_handles.hInstance);
     UnregisterClass(wcex_confirmation_dialog.lpszClassName, app_handles.hInstance);
     UnregisterClass(wcex_configuration_dialog.lpszClassName, app_handles.hInstance);
-    if (gif_image) {
-      delete gif_image;
-      gif_image = nullptr;
-    }
-    GdiplusShutdown(gdiplusToken);
+    /*if (map_image_jpg) {
+      delete map_image_jpg;
+      map_image_jpg = nullptr;
+    }*/
+    if (g_hBitMap != NULL)
+      DeleteBitmap(g_hBitMap);
+    // GdiplusShutdown(gdiplusToken);
 
   } catch (std::exception &ex) {
     const string error_message{ format("^3A specific exception was caught in WinMain's thread of execution!\n^1Exception: {}", ex.what()) };
@@ -4833,6 +4840,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
   HBITMAP hbmMem;
   HANDLE hOld;
   HDC hdc;
+  BITMAP bitmap;
+  HGDIOBJ oldBitmap;
 
   static HPEN red_pen{};
   static HPEN light_blue_pen{};
@@ -5100,24 +5109,25 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     }
 
     if (counter % 60 == 0) {
+      counter = 0;
       const auto &rcon_game_server = main_app.get_game_servers()[0];
       main_app.get_connection_manager_for_messages().process_and_send_message("query-request", format("is_user_admin?{}\\{}", me->user_name, rcon_game_server.get_rcon_password()), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
       const auto status = check_if_specified_server_ip_port_and_rcon_password_are_valid(rcon_game_server.get_server_ip_address().c_str(), rcon_game_server.get_server_port(), rcon_game_server.get_rcon_password().c_str());
       me->is_admin = status.first;
     }
 
-    if (counter % 120 == 0) {
+    /*if (counter % 120 == 0) {
       counter = 0;
 
-      if (gif_image) {
-        delete gif_image;
-        gif_image = nullptr;
+      if (map_image_jpg) {
+        delete map_image_jpg;
+        map_image_jpg = nullptr;
       }
 
       const string gif_image_name{ format("gif{}", random_number_distribution(gen)) };
-      gif_image = new ImageEx("GIF", gif_image_name.c_str());
-      gif_image->InitAnimation(app_handles.hwnd_main_window, Point{ screen_width / 2 + 340, screen_height - 180 });
-    }
+      map_image_jpg = new ImageEx("GIF", gif_image_name.c_str());
+      map_image_jpg->InitAnimation(app_handles.hwnd_main_window, Point{ screen_width / 2 + 340, screen_height - 180 });
+    }*/    
 
     if (5U == atomic_counter.load()) {
 
@@ -5131,13 +5141,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     if (is_refreshed_players_data_ready_event.load()) {
       is_refreshed_players_data_ready_event.store(false);
+      load_current_map_image(main_app.get_current_game_server().get_current_map());
       if (is_display_players_data.load()) {
         display_players_data_in_players_grid(app_handles.hwnd_players_grid);
       }
     }
 
     // hdc = BeginPaint(hWnd, &ps);
-
     // SetBkMode(hdc, OPAQUE);
     // SetBkColor(hdc, color::black);
     // SetTextColor(hdc, color::red);
@@ -5148,7 +5158,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     //   130,
     //   screen_height - 55
     // };
-
     // InvalidateRect(hWnd, &bounding_rectangle, TRUE);
     // EndPaint(hWnd, &ps);
 
@@ -6077,6 +6086,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     // BitBlt(hdc, 0, 0, rcClient.right, rcClient.bottom, hdcMem, 0, 0, SRCCOPY);
     // Transfer the off-screen DC to the screen
     BitBlt(hdc, 0, 0, screen_width, screen_height, hdcMem, 0, 0, SRCCOPY);
+
+    oldBitmap = SelectObject(hdcMem, g_hBitMap);
+    GetObject(g_hBitMap, sizeof(bitmap), &bitmap);
+    BitBlt(hdc, screen_width / 2 + 340, screen_height - 180, bitmap.bmWidth, bitmap.bmHeight, hdcMem, 0, 0, SRCCOPY);
+    SelectObject(hdcMem, oldBitmap);
 
     // Free-up the off-screen DC
     SelectObject(hdcMem, hOld);

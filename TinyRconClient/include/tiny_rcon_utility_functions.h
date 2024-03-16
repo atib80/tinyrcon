@@ -418,3 +418,5 @@ std::string get_file_name_from_path(const std::string &file_path);
 void execute_at_exit();
 bool check_if_exists_and_download_missing_custom_map_files_downloader(/*const char* downloader_program_file_path*/);
 HRESULT CreateLink(const char *lpszPathObj, const char *lpszPathLink, const char *lpszDesc);
+const std::string &get_current_map_image_name(const std::string &current_map);
+void load_current_map_image(const std::string &rcon_map_name);
