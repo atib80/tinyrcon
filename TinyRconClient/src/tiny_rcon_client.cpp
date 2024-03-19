@@ -17,7 +17,7 @@ using namespace std::string_literals;
 using namespace std::chrono;
 using namespace std::filesystem;
 
-extern const string program_version{ "2.7.4.0" };
+extern const string program_version{ "2.7.4.1" };
 
 extern const std::regex ip_address_and_port_regex;
 extern const unordered_set<string> rcon_status_commands;
@@ -4340,7 +4340,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
       if (!main_app.get_cod2mp_exe_path().empty() && check_if_file_path_exists(main_app.get_cod2mp_exe_path().c_str())) {
         game_version_number = find_version_of_installed_cod2_game();
-        main_app.set_player_name(find_users_player_name_for_installed_cod2_game(me));
+        main_app.set_player_name(find_users_player_name_for_installed_cod2_game(me,
+          !main_app.get_current_game_server().get_game_mod_name().empty() ? main_app.get_current_game_server().get_game_mod_name() : "main"s));
       }
       main_app.get_current_game_server().set_game_version_number(game_version_number);
       main_app.set_game_version_number(game_version_number);
@@ -4647,39 +4648,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       }
     }
 
-    /*const string player_name{ find_users_player_name_for_installed_cod2_game(me) };
-
-    const auto current_ts{ get_current_time_stamp() };
-    if (me->is_admin) {
-      main_app.get_connection_manager_for_messages().process_and_send_message("request-logout",
-        format("{}\\{}\\{}\\{}\\{}", me->user_name, me->ip_address, current_ts, player_name, main_app.get_game_version_number()),
-        true,
-        main_app.get_tiny_rcon_server_ip_address(),
-        main_app.get_tiny_rcon_server_port(),
-        false);
-    } else {
-      main_app.get_connection_manager_for_rcon_messages().process_and_send_message("request-logout-player",
-        format("{}\\{}\\{}\\{}\\{}", me->user_name, me->ip_address, current_ts, player_name, main_app.get_game_version_number()),
-        true,
-        main_app.get_tiny_rcon_server_ip_address(),
-        main_app.get_tiny_rcon_server_port(),
-        false);
-    }
-    me->is_logged_in = false;
-    me->last_logout_time_stamp = current_ts;
-    save_current_user_data_to_json_file(main_app.get_user_data_file_path());
-
-    save_reported_players_to_file(main_app.get_reported_players_file_path(), main_app.get_reported_players());
-
-    save_protected_entries_file(main_app.get_protected_ip_addresses_file_path(), main_app.get_current_game_server().get_protected_ip_addresses());
-    save_protected_entries_file(main_app.get_protected_ip_address_ranges_file_path(), main_app.get_current_game_server().get_protected_ip_address_ranges());
-    save_protected_entries_file(main_app.get_protected_cities_file_path(), main_app.get_current_game_server().get_protected_cities());
-    save_protected_entries_file(main_app.get_protected_countries_file_path(), main_app.get_current_game_server().get_protected_countries());*/
-
     is_terminate_program.store(true);
-
-    // if (pr_info.hProcess != nullptr) CloseHandle(pr_info.hProcess);
-    // if (pr_info.hThread != nullptr) CloseHandle(pr_info.hThread);
 
     log_message("Exiting TinyRcon program.", is_log_datetime::yes);
 
@@ -5127,7 +5096,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       const string gif_image_name{ format("gif{}", random_number_distribution(gen)) };
       map_image_jpg = new ImageEx("GIF", gif_image_name.c_str());
       map_image_jpg->InitAnimation(app_handles.hwnd_main_window, Point{ screen_width / 2 + 340, screen_height - 180 });
-    }*/    
+    }*/
 
     if (5U == atomic_counter.load()) {
 

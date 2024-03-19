@@ -17,7 +17,13 @@
 #include <bitextractor.hpp>
 #include <bitexception.hpp>
 #include <bittypes.hpp>
+// #include "winnls.h"
+// #include "shobjidl.h"
+// #include "objbase.h"
+// #include "objidl.h"
+// #include "shlguid.h"
 #include "stack_trace_element.h"
+// #include "image.h"
 
 // Call of duty steam appid: 2620
 // Call of duty 2 steam appid: 2630
@@ -12177,7 +12183,7 @@ bool parse_game_type_information_from_rcon_reply(const string &incoming_data_buf
   return false;
 }
 
-std::string find_users_player_name_for_installed_cod2_game(const std::shared_ptr<tiny_rcon_client_user> &user)
+std::string find_users_player_name_for_installed_cod2_game(const std::shared_ptr<tiny_rcon_client_user> &user, const string &mod_folder_name)
 {
   const string player_name{ "^7Unknown Soldier" };
 
@@ -12203,11 +12209,11 @@ std::string find_users_player_name_for_installed_cod2_game(const std::shared_ptr
         const string user_name_folder{ stl::helper::trim(line1) };
         input_file1.close();
 
-        const string player_config_mp_file_path_in_just_server{ format("{}\\just_server\\players\\{}\\config_mp.cfg", cod2_game_folder, user_name_folder) };
+        const string player_config_mp_file_path{ format("{}\\{}\\players\\{}\\config_mp.cfg", cod2_game_folder, mod_folder_name, user_name_folder) };
 
-        if (check_if_file_path_exists(player_config_mp_file_path_in_just_server.c_str())) {
+        if (check_if_file_path_exists(player_config_mp_file_path.c_str())) {
 
-          ifstream input_file2(player_config_mp_file_path_in_just_server, std::ios::in);
+          ifstream input_file2(player_config_mp_file_path, std::ios::in);
           if (input_file2) {
 
             for (string line2; getline(input_file2, line2);) {
@@ -12666,30 +12672,17 @@ void view_game_servers(HWND
   display_game_servers_data_in_servers_grid(grid);
 }
 
-void refresh_game_servers_data(HWND
-    hgrid)
+void refresh_game_servers_data(HWND hgrid)
 {
-  if (is_refreshing_game_servers_data_event.
-
-      load()
-
-        ) return;
+  if (is_refreshing_game_servers_data_event.load()) return;
   is_refreshing_game_servers_data_event.store(true);
 
   char buffer[32];
 
-
   string number_of_online_players, number_of_max_players;
-  for (
-    size_t i{};
-    i < main_app.
-
-        get_rcon_game_servers_count();
-
-    ++i) {
+  for (size_t i{}; i < main_app.get_rcon_game_servers_count(); ++i) {
     auto &gs = main_app.get_game_servers()[i];
-    if (
-      parse_getinfo_response_for_specified_game_server(gs, number_of_online_players, number_of_max_players) || parse_getstatus_response_for_specified_game_server(gs)) {
+    if (parse_getinfo_response_for_specified_game_server(gs, number_of_online_players, number_of_max_players) || parse_getstatus_response_for_specified_game_server(gs)) {
       snprintf(buffer, std::size(buffer), "^2%d/^1%d", gs.get_number_of_players(), gs.get_max_number_of_players());
       player p{};
       convert_guid_key_to_country_name(main_app.get_connection_manager().get_geoip_data(), gs.get_server_ip_address(), p);
@@ -12698,42 +12691,16 @@ void refresh_game_servers_data(HWND
       gs.set_online_and_max_players(buffer);
       const auto &rcon_map_names_to_full_map_names = get_rcon_map_names_to_full_map_names_for_specified_game_name(
         convert_game_name_to_game_name_t(gs.get_game_name()));
-      gs.set_current_full_map_name(rcon_map_names_to_full_map_names
-                                       .contains(gs
-                                                   .
-
-                                                 get_current_map()
-
-                                           )
-                                     ? rcon_map_names_to_full_map_names.at(gs
-                                                                             .
-
-                                                                           get_current_map()
-
-                                         )
-                                     : gs.
-
-                                       get_current_map()
-
-      );
-      gs.set_country_code(p
-                            .country_code);
+      gs.set_current_full_map_name(rcon_map_names_to_full_map_names.contains(gs.get_current_map())
+                                     ? rcon_map_names_to_full_map_names.at(gs.get_current_map())
+                                     : gs.get_current_map());
+      gs.set_country_code(p.country_code);
       display_game_server_data_in_servers_grid(hgrid, i);
     }
   }
 
-  main_app.set_game_servers_count(main_app
-                                    .
-
-                                  get_rcon_game_servers_count()
-
-  );
-  clear_servers_data_in_servers_grid(hgrid, main_app.
-
-                                            get_rcon_game_servers_count(),
-    max_servers_grid_rows,
-
-    8u);
+  main_app.set_game_servers_count(main_app.get_rcon_game_servers_count());
+  clear_servers_data_in_servers_grid(hgrid, main_app.get_rcon_game_servers_count(), max_servers_grid_rows, 8u);
 
   const string game_version_number{ find_version_of_installed_cod2_game() };
   const int protocol = main_app.get_cod2_game_version_to_protocol().contains(game_version_number)
@@ -12742,108 +12709,24 @@ void refresh_game_servers_data(HWND
 
   const string getservers_command_to_send{ format("getservers {} full empty", protocol) };
   string received_reply;
-  main_app.
-
-    get_connection_manager()
-
-      .send_and_receive_non_rcon_data(getservers_command_to_send
-                                        .
-
-                                      c_str(),
-        received_reply,
-        main_app
-
-          .
-
-        get_cod2_master_server_ip_address()
-
-          .
-
-        c_str(),
-        main_app
-
-          .
-
-        get_cod2_master_server_port(),
-        main_app
-
-          .
-
-        get_current_game_server(),
-
-        true,
-        false);
-  parse_and_display_downloaded_game_servers_data(received_reply, game_version_number.
-
-                                                                 c_str(),
-
-    true);
-
+  main_app.get_connection_manager().send_and_receive_non_rcon_data(getservers_command_to_send.c_str(), received_reply, main_app.get_cod2_master_server_ip_address().c_str(), main_app.get_cod2_master_server_port(), main_app.get_current_game_server(), true, false);
+  parse_and_display_downloaded_game_servers_data(received_reply, game_version_number.c_str(), true);
   auto &game_servers = main_app.get_game_servers();
 
-  std::sort(begin(game_servers)
-              + main_app.
+  std::sort(begin(game_servers) + main_app.get_rcon_game_servers_count(), begin(game_servers) + main_app.get_game_servers_count(), [](const game_server &gs1, const game_server &gs2) {
+    return gs1.get_number_of_players() > gs2.get_number_of_players();
+  });
 
-                get_rcon_game_servers_count(),
-    begin(game_servers)
-
-      + main_app.
-
-        get_game_servers_count(),
-
-    [](
-      const game_server &gs1,
-      const game_server &gs2) {
-      return gs1.
-
-             get_number_of_players()
-
-             > gs2.
-
-               get_number_of_players();
-    });
-
-  for (
-    size_t sid{ main_app.get_rcon_game_servers_count() };
-    sid < main_app.
-
-          get_game_servers_count();
-
-    ++sid) {
-    snprintf(buffer, std::size(buffer), "^2%d/^1%d", game_servers[sid].
-
-                                                     get_number_of_players(),
-      game_servers[sid]
-
-        .
-
-      get_max_number_of_players()
-
-    );
+  for (size_t sid{ main_app.get_rcon_game_servers_count() }; sid < main_app.get_game_servers_count(); ++sid) {
+    snprintf(buffer, std::size(buffer), "^2%d/^1%d", game_servers[sid].get_number_of_players(), game_servers[sid].get_max_number_of_players());
     player p{};
-    convert_guid_key_to_country_name(main_app
-                                       .
-
-                                     get_connection_manager()
-
-                                       .
-
-                                     get_geoip_data(),
-      game_servers[sid]
-
-        .
-
-      get_server_ip_address(),
-      p
-
-    );
+    convert_guid_key_to_country_name(main_app.get_connection_manager().get_geoip_data(), game_servers[sid].get_server_ip_address(), p);
     game_servers[sid].set_server_pid(format("^4{}", sid + 1));
     game_servers[sid].set_game_server_address(format("{}:{}", game_servers[sid].get_server_ip_address(), game_servers[sid].get_server_port()));
     game_servers[sid].set_online_and_max_players(buffer);
     game_servers[sid].set_current_full_map_name(get_full_map_name(game_servers[sid].get_current_map(),
       convert_game_name_to_game_name_t(game_servers[sid].get_game_name())));
-    game_servers[sid].set_country_code(p
-                                         .country_code);
+    game_servers[sid].set_country_code(p.country_code);
     ++sid;
   }
 
@@ -12871,35 +12754,6 @@ bool parse_and_display_downloaded_game_servers_data(std::string &game_servers_da
   while (start < last) {
     const size_t next{ game_servers_data.find('\\', start) };
     if (next != string::npos && next - start != 6) {
-      /*string found_invalid_server_address;
-if (start < next) {
-  found_invalid_server_address.append(to_string(static_cast<int>(game_servers_data[start])));
-  found_invalid_server_address.push_back('.');
-}
-if (start + 1 < next) {
-  found_invalid_server_address.append(to_string(static_cast<int>(game_servers_data[start + 1])));
-  found_invalid_server_address.push_back('.');
-}
-if (start + 2 < next) {
-  found_invalid_server_address.append(to_string(static_cast<int>(game_servers_data[start + 2])));
-  found_invalid_server_address.push_back('.');
-}
-if (start + 3 < next) {
-  found_invalid_server_address.append(to_string(static_cast<int>(game_servers_data[start + 3])));
-  found_invalid_server_address.push_back(':');
-}
-int port_number{};
-if (start + 4 < next) {
-  port_number += static_cast<int>(game_servers_data[start + 4]);
-}
-if (start + 5 < next) {
-  port_number *= 256;
-  port_number += static_cast<int>(game_servers_data[start + 5]);
-}
-
-found_invalid_server_address += to_string(port_number);
-print_colored_text(app_handles.hwnd_re_messages_data, format("^3Found and skipping invalid game server address: ^1{}\n", found_invalid_server_address).c_str());*/
-
       start = next + 1;
       continue;
     }
@@ -13382,7 +13236,7 @@ std::string get_file_name_from_path(const std::string &file_path)
 
 void execute_at_exit()
 {
-  const string player_name{ find_users_player_name_for_installed_cod2_game(me) };
+  const string player_name{ find_users_player_name_for_installed_cod2_game(me, !main_app.get_current_game_server().get_game_mod_name().empty() ? main_app.get_current_game_server().get_game_mod_name() : "main"s) };
 
   const auto current_ts{ get_current_time_stamp() };
   if (me->is_admin) {
@@ -13569,6 +13423,7 @@ const std::string &get_current_map_image_name(const std::string &current_rcon_ma
     { "mp_matmata", "IDR_MP_MATMATA" },
     { "mp_railyard", "IDR_MP_RAILYARD" },
     { "mp_toujane", "IDR_MP_TOUJANE" },
+    { "mp_trainstation", "IDR_MP_TRAINSTATION" },
     { "mp_depot", "IDR_MP_DEPOT" },
     { "german_town", "IDR_GERMAN_TOWN" },
     { "mp_harbor", "IDR_MP_HARBOR" },
@@ -13589,14 +13444,14 @@ const std::string &get_current_map_image_name(const std::string &current_rcon_ma
 
 void load_current_map_image(const std::string &rcon_map_name)
 {
-  static string current_rcon_map_name{"n/a"};
+  static string current_rcon_map_name{ "n/a" };
 
   if (rcon_map_name != current_rcon_map_name) {
     current_rcon_map_name = rcon_map_name;
     const string &current_map_image_name = get_current_map_image_name(current_rcon_map_name);
-    if (g_hBitMap != NULL) 
-        DeleteBitmap(g_hBitMap);
+    if (g_hBitMap != NULL)
+      DeleteBitmap(g_hBitMap);
     g_hBitMap = LoadBitmapA(GetModuleHandle(NULL), current_map_image_name.c_str());
-    InvalidateRect(app_handles.hwnd_main_window, nullptr, FALSE);  
+    InvalidateRect(app_handles.hwnd_main_window, nullptr, FALSE);
   }
 }

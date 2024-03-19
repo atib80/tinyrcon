@@ -125,6 +125,11 @@ public:
     map_rotation_current = std::move(new_map_rotation_current);
   }
 
+  const std::string& get_game_mod_name() const noexcept
+  {
+     return game_mod_name;
+  }
+
   void set_game_mod_name(string new_game_mod_name) noexcept
   {
     game_mod_name = std::move(new_game_mod_name);

@@ -402,7 +402,7 @@ bool terminate_running_game_instance(const game_name_t game_name);
 game_name_t convert_game_name_to_game_name_t(const std::string &game_name);
 std::string wstring_to_string(const wchar_t *s, const char dfault = '?', const std::locale &loc = std::locale());
 std::string get_server_address_for_connect_command(const int selected_server_row);
-std::string find_users_player_name_for_installed_cod2_game(const std::shared_ptr<tiny_rcon_client_user> &user);
+std::string find_users_player_name_for_installed_cod2_game(const std::shared_ptr<tiny_rcon_client_user> &user, const std::string &mod_folder_name);
 std::string find_version_of_installed_cod2_game();
 bool add_permanently_banned_player_name(player &pd, std::vector<player> &banned_players_names_vector, std::unordered_map<std::string, player> &banned_players_names_map);
 bool remove_permanently_banned_player_name(player &pd, std::vector<player> &banned_names_vector, std::unordered_map<std::string, player> &banned_names_map);
