@@ -146,10 +146,6 @@ class tiny_rcon_server_application
   string game_server_name{
     "185.158.113.146:28995 CoD2 CTF"
   };
-  string codmp_exe_path;
-  string cod2mp_s_exe_path;
-  string iw3mp_exe_path;
-  string cod5mp_exe_path;
   string command_line_info;
 
   std::map<std::string, std::pair<std::string, std::string>> available_rcon_to_full_map_names{
@@ -306,46 +302,6 @@ public:
   inline void set_game_server_name(string new_value)
   {
     game_server_name = std::move(new_value);
-  }
-
-  inline const string &get_codmp_exe_path() const
-  {
-    return codmp_exe_path;
-  }
-
-  inline void set_codmp_exe_path(string new_value)
-  {
-    codmp_exe_path = std::move(new_value);
-  }
-
-  inline const string &get_cod2mp_exe_path() const
-  {
-    return cod2mp_s_exe_path;
-  }
-
-  inline void set_cod2mp_exe_path(string new_value)
-  {
-    cod2mp_s_exe_path = std::move(new_value);
-  }
-
-  inline const string &get_iw3mp_exe_path() const
-  {
-    return iw3mp_exe_path;
-  }
-
-  inline void set_iw3mp_exe_path(string new_value)
-  {
-    iw3mp_exe_path = std::move(new_value);
-  }
-
-  inline const string &get_cod5mp_exe_path() const
-  {
-    return cod5mp_exe_path;
-  }
-
-  inline void set_cod5mp_exe_path(string new_value)
-  {
-    cod5mp_exe_path = std::move(new_value);
   }
 
   inline connection_manager_for_messages &get_connection_manager_for_messages()
@@ -922,8 +878,7 @@ public:
     oss << std::format("   ^1permanently banned GUID {} ^5of ^3{} ^5{},\n   ^1banned IP {} ^5of ^3{} ^5{},\n   ^1banned IP address range(s) ^5of ^3{} ^5{},\n   ^1banned ^3{} ^1player {}^5,\n", no_of_guid_bans != 1 ? "keys" : "key", no_of_guid_bans, no_of_guid_bans != 1 ? "players" : "player", no_of_ip_bans != 1 ? "addresses" : "address", no_of_ip_bans, no_of_ip_bans != 1 ? "players" : "player", no_of_ip_address_range_bans, no_of_ip_address_range_bans != 1 ? "players" : "player", no_of_name_bans, no_of_name_bans != 1 ? "names" : "name");
     oss << std::format("   ^1banned {} ^5of ^3{} ^5{},\n   ^1banned {} ^5of ^3{} ^5{},\n   ^1protected IP {} ^5of ^3{} ^5{},\n", no_of_city_bans != 1 ? "cities" : "city", no_of_city_bans, no_of_city_bans != 1 ? "players" : "player", no_of_country_bans != 1 ? "countries" : "country", no_of_country_bans, no_of_country_bans != 1 ? "players" : "player", no_of_protected_ip_addresses != 1 ? "addresses" : "address", no_of_protected_ip_addresses, no_of_protected_ip_addresses != 1 ? "players" : "player");
     oss << std::format("   ^1protected IP address {} ^5of ^3{} ^5{},\n   ^1protected {} ^5of ^3{} ^5{},\n^1protected {} ^5of ^3{} ^5{},\n", no_of_protected_ip_address_ranges != 1 ? "ranges" : "range", no_of_protected_ip_address_ranges, no_of_protected_ip_address_ranges != 1 ? "players" : "player", no_of_protected_cities != 1 ? "cities" : "city", no_of_protected_cities, no_of_protected_cities != 1 ? "players" : "player", no_of_protected_countries != 1 ? "countries" : "country", no_of_protected_countries, no_of_protected_countries != 1 ? "players" : "player");
-    oss << std::format("^5Admins executed ^3{} ^1map restarts ^5and ^3{} ^1map changes^5.\n\n^7", no_of_map_restarts, no_of_map_changes);
-    oss << "^5Tiny^6Rcon ^5server wishes you a ^1Merry Christmas ^5and a ^1Happy New Year^5!\n\n";
+    oss << std::format("^5Admins executed ^3{} ^1map restarts ^5and ^3{} ^1map changes^5.\n\n^7", no_of_map_restarts, no_of_map_changes);    
     return oss.str();
   }
 };

@@ -19,10 +19,11 @@ struct player
   char geo_country_code[8]{};
   time_t banned_start_time{};
   time_t ban_duration_in_hours{ 24 };
-  char player_name[33]{};
+  char player_name[33]{};  
   char guid_key[33]{};
   char banned_date_time[33]{};
   char geo_information[128]{};
+  std::string player_name_index;
   std::string ip_address;
   std::string reason;
   std::string banned_by_user_name;

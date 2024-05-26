@@ -258,3 +258,5 @@ std::string get_file_name_from_path(const std::string &file_path);
 bool load_available_map_names(const char *map_names_file_path);
 void send_user_available_map_names(const std::shared_ptr<tiny_rcon_client_user> &);
 bool is_stock_cod2_map(const std::string &mapname);
+bool fix_path_strings_in_json_config_file(const std::string &config_file_path);
+std::string escape_backward_slash_characters_in_place(const std::string &line);

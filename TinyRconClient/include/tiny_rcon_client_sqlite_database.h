@@ -1,8 +1,10 @@
 #pragma once
+
 #include <format>
 #include <string>
 #include <sstream>
 #include <unordered_map>
+
 #include "sqlite3.h"
 #include "tiny_rcon_utility_data_types.h"
 

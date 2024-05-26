@@ -1,4 +1,5 @@
 #pragma once
+
 #include <memory>
 #include <string>
 #include <utility>
@@ -6,6 +7,7 @@
 #include <type_traits>
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
+
 #include "stl_helper_functions.hpp"
 #include "tiny_rcon_client_user.h"
 
@@ -112,12 +114,13 @@ enum class message_type_t { send,
 
 struct print_message_t
 {
-  explicit print_message_t(std::string message, is_log_message log_to_file, is_log_datetime is_log_current_date_time, bool is_remove_color_codes_for_log_message) : message_{ std::move(message) }, log_to_file_{ log_to_file }, is_log_current_date_time_{ is_log_current_date_time }, is_remove_color_codes_for_log_message_{ is_remove_color_codes_for_log_message } {}
-  // HWND& control_;
+  explicit print_message_t(std::string message, is_log_message log_to_file, is_log_datetime is_log_current_date_time, const bool is_remove_color_codes_for_log_message = true, const bool is_display_message_to_remote_user = true, const bool is_send_message_to_player = false) : message_{ std::move(message) }, log_to_file_{ log_to_file }, is_log_current_date_time_{ is_log_current_date_time }, is_remove_color_codes_for_log_message_{ is_remove_color_codes_for_log_message }, is_display_message_to_remote_user_{ is_display_message_to_remote_user }, is_send_message_to_player_{ is_send_message_to_player } {}
   std::string message_;
   is_log_message log_to_file_;
   is_log_datetime is_log_current_date_time_;
   bool is_remove_color_codes_for_log_message_;
+  bool is_display_message_to_remote_user_;
+  bool is_send_message_to_player_;
 };
 
 struct message_t
@@ -244,6 +247,7 @@ struct row_of_player_data_to_display
 };
 
 extern size_t get_number_of_characters_without_color_codes(const char *);
+extern size_t get_number_of_characters_printed_in_rcon_chat(const char *text);
 
 class text_element
 {
@@ -279,6 +283,21 @@ inline std::ostream &operator<<(std::ostream &os, const text_element &te)
 template<typename T>
 concept string_convertible = requires(const T &value) {
   {
-    (to_string(value) || value.to_string())
+    to_string(value)
   } -> std::convertible_to<std::string>;
+} || requires(const T &value) {
+  {
+    value.to_string()
+  } -> std::convertible_to<std::string>;
+};
+
+struct player_stats
+{
+  char player_name[36]{};
+  char index_name[36]{};
+  char ip_address[16]{};
+  time_t first_seen{};
+  time_t last_seen{};
+  int64_t score{};
+  uint64_t time_spent_on_server_in_seconds{};
 };

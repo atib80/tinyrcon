@@ -1,11 +1,8 @@
 #include "tiny_rcon_client_sqlite_database.h"
-
-#include <tiny_rcon_utility_functions.h>
-
+#include "tiny_rcon_utility_functions.h"
 #include "player.h"
 
 extern tiny_rcon_handles app_handles;
-// extern tiny_rcon_client_application main_app;
 
 using namespace std;
 

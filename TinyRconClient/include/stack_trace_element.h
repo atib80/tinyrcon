@@ -1,8 +1,9 @@
 #pragma once
 
-#include "tiny_rcon_utility_functions.h"
 #include <stdexcept>
 #include <string>
+
+extern size_t print_colored_text(HWND re_control, const char *text, const is_append_message_to_richedit_control, const is_log_message, is_log_datetime, const bool is_prevent_auto_vertical_scrolling, const bool is_remove_color_codes_for_log_message);
 
 struct stack_trace_element
 {

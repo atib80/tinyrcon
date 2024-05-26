@@ -113,8 +113,8 @@
       <Optimization>Disabled</Optimization>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <EnableModules>false</EnableModules>
-      <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <EnableModules>true</EnableModules>
+      <LanguageStandard_C>Default</LanguageStandard_C>
       <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)deps\bit7z\include\;$(SolutionDir)deps\asio-1.26.0\include</AdditionalIncludeDirectories>
       <FloatingPointModel>Fast</FloatingPointModel>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
@@ -144,11 +144,11 @@
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <ExceptionHandling>Sync</ExceptionHandling>
       <StringPooling>true</StringPooling>
-      <EnableModules>false</EnableModules>
+      <EnableModules>true</EnableModules>
       <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)deps\bit7z\include\;$(SolutionDir)deps\asio-1.26.0\include</AdditionalIncludeDirectories>
       <FloatingPointModel>Fast</FloatingPointModel>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
-      <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <LanguageStandard_C>Default</LanguageStandard_C>
       <AdditionalOptions>/Zc:preprocessor %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -177,7 +177,7 @@
       <AdditionalIncludeDirectories>include;$(SolutionDir)deps\asio-1.26.0\include;</AdditionalIncludeDirectories>
       <FloatingPointModel>Fast</FloatingPointModel>
       <AdditionalOptions>/Zc:preprocessor %(AdditionalOptions)</AdditionalOptions>
-      <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <LanguageStandard_C>Default</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -199,7 +199,7 @@
       <AdditionalIncludeDirectories>include;$(SolutionDir)deps\asio-1.26.0\include;$(ProjectDir)include</AdditionalIncludeDirectories>
       <FloatingPointModel>Fast</FloatingPointModel>
       <AdditionalOptions>/Zc:preprocessor %(AdditionalOptions)</AdditionalOptions>
-      <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <LanguageStandard_C>Default</LanguageStandard_C>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -209,6 +209,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="include\bitmap_image_handler.h" />
     <ClInclude Include="include\autoupdate.h" />
     <ClInclude Include="include\connection_manager.h" />
     <ClInclude Include="include\connection_manager_for_rcon_messages.h" />
@@ -218,9 +219,55 @@
     <ClInclude Include="include\internet_handle.h" />
     <ClInclude Include="include\json_parser.hpp" />
     <ClInclude Include="include\md5.h" />
+    <ClInclude Include="include\nlohmann\adl_serializer.hpp" />
+    <ClInclude Include="include\nlohmann\byte_container_with_subtype.hpp" />
+    <ClInclude Include="include\nlohmann\detail\abi_macros.hpp" />
+    <ClInclude Include="include\nlohmann\detail\conversions\from_json.hpp" />
+    <ClInclude Include="include\nlohmann\detail\conversions\to_chars.hpp" />
+    <ClInclude Include="include\nlohmann\detail\conversions\to_json.hpp" />
+    <ClInclude Include="include\nlohmann\detail\exceptions.hpp" />
+    <ClInclude Include="include\nlohmann\detail\hash.hpp" />
+    <ClInclude Include="include\nlohmann\detail\input\binary_reader.hpp" />
+    <ClInclude Include="include\nlohmann\detail\input\input_adapters.hpp" />
+    <ClInclude Include="include\nlohmann\detail\input\json_sax.hpp" />
+    <ClInclude Include="include\nlohmann\detail\input\lexer.hpp" />
+    <ClInclude Include="include\nlohmann\detail\input\parser.hpp" />
+    <ClInclude Include="include\nlohmann\detail\input\position_t.hpp" />
+    <ClInclude Include="include\nlohmann\detail\iterators\internal_iterator.hpp" />
+    <ClInclude Include="include\nlohmann\detail\iterators\iteration_proxy.hpp" />
+    <ClInclude Include="include\nlohmann\detail\iterators\iterator_traits.hpp" />
+    <ClInclude Include="include\nlohmann\detail\iterators\iter_impl.hpp" />
+    <ClInclude Include="include\nlohmann\detail\iterators\json_reverse_iterator.hpp" />
+    <ClInclude Include="include\nlohmann\detail\iterators\primitive_iterator.hpp" />
+    <ClInclude Include="include\nlohmann\detail\json_custom_base_class.hpp" />
+    <ClInclude Include="include\nlohmann\detail\json_pointer.hpp" />
+    <ClInclude Include="include\nlohmann\detail\json_ref.hpp" />
+    <ClInclude Include="include\nlohmann\detail\macro_scope.hpp" />
+    <ClInclude Include="include\nlohmann\detail\macro_unscope.hpp" />
+    <ClInclude Include="include\nlohmann\detail\meta\call_std\begin.hpp" />
+    <ClInclude Include="include\nlohmann\detail\meta\call_std\end.hpp" />
+    <ClInclude Include="include\nlohmann\detail\meta\cpp_future.hpp" />
+    <ClInclude Include="include\nlohmann\detail\meta\detected.hpp" />
+    <ClInclude Include="include\nlohmann\detail\meta\identity_tag.hpp" />
+    <ClInclude Include="include\nlohmann\detail\meta\is_sax.hpp" />
+    <ClInclude Include="include\nlohmann\detail\meta\std_fs.hpp" />
+    <ClInclude Include="include\nlohmann\detail\meta\type_traits.hpp" />
+    <ClInclude Include="include\nlohmann\detail\meta\void_t.hpp" />
+    <ClInclude Include="include\nlohmann\detail\output\binary_writer.hpp" />
+    <ClInclude Include="include\nlohmann\detail\output\output_adapters.hpp" />
+    <ClInclude Include="include\nlohmann\detail\output\serializer.hpp" />
+    <ClInclude Include="include\nlohmann\detail\string_concat.hpp" />
+    <ClInclude Include="include\nlohmann\detail\string_escape.hpp" />
+    <ClInclude Include="include\nlohmann\detail\value_t.hpp" />
+    <ClInclude Include="include\nlohmann\json.hpp" />
+    <ClInclude Include="include\nlohmann\json_fwd.hpp" />
+    <ClInclude Include="include\nlohmann\ordered_map.hpp" />
+    <ClInclude Include="include\nlohmann\thirdparty\hedley\hedley.hpp" />
+    <ClInclude Include="include\nlohmann\thirdparty\hedley\hedley_undef.hpp" />
     <ClInclude Include="include\player.h" />
     <ClInclude Include="include\simple_grid.h" />
     <ClInclude Include="include\stack_trace_element.h" />
+    <ClInclude Include="include\stats.h" />
     <ClInclude Include="include\stl_helper_functions.hpp" />
     <ClInclude Include="include\tiny_rcon_client_user.h" />
     <ClInclude Include="include\tiny_rcon_utility_data_types.h" />
@@ -239,6 +286,7 @@
     <ClCompile Include="src\connection_manager_for_rcon_messages.cpp" />
     <ClCompile Include="src\md5.cpp" />
     <ClCompile Include="src\simple_grid.cpp" />
+    <ClCompile Include="src\stats.cpp" />
     <ClCompile Include="src\tiny_rcon_client.cpp" />
     <ClCompile Include="src\tiny_rcon_utility_functions.cpp" />
   </ItemGroup>
@@ -246,7 +294,6 @@
     <ResourceCompile Include="TinyRconClient.rc" />
   </ItemGroup>
   <ItemGroup>
-    <None Include=".clang-tidy" />
     <None Include=".cmake-format.yaml" />
   </ItemGroup>
   <ItemGroup>

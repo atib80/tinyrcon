@@ -1,8 +1,10 @@
 #pragma once
-// #define ASIO_STANDALONE
+
 #include <asio.hpp>
 #include <string>
-#include "tiny_rcon_utility_functions.h"
+
+class game_server;
+struct geoip_data;
 
 using namespace asio;
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "tiny_rcon_utility_data_types.h"
+
 #include <CommCtrl.h>
 #include <Richedit.h>
 #include <regex>
@@ -9,10 +10,12 @@
 #undef max
 
 std::pair<bool, std::string> create_necessary_file_path(const std::string &file_);
+std::pair<bool, std::wstring> create_necessary_file_path(const std::wstring &file_);
 std::pair<bool, std::string> create_necessary_folders_and_files(const std::vector<std::string> &folder_file_paths);
+std::pair<bool, std::wstring> create_necessary_folders_and_files(const std::vector<std::wstring> &folder_file_paths);
 void set_rich_edit_control_colors(HWND richEditCtrl, const COLORREF fg_color, const COLORREF bg_color = color::black, const char *font_face_name = "Consolas");
-CHARFORMAT get_char_fmt(HWND hwnd, DWORD range = SCF_SELECTION);
-void set_char_fmt(HWND hwnd, const CHARFORMAT2 &cf, DWORD range = SCF_SELECTION);
+CHARFORMATA get_char_fmt(HWND hwnd, DWORD range = SCF_SELECTION);
+void set_char_fmt(HWND hwnd, const CHARFORMAT2A &cf, DWORD range = SCF_SELECTION);
 void replace_sel(HWND hwnd, const char *str);
 void cursor_to_bottom(HWND hwnd);
 void scroll_to_beginning(HWND hwnd);
@@ -30,45 +33,61 @@ bool check_ip_address_validity(std::string_view, unsigned long &);
 bool check_ip_address_range_validity(const std::string &ip_address_range);
 
 void convert_guid_key_to_country_name(const std::vector<geoip_data> &geo_data,
-  std::string_view player_ip,
-  player &player_data);
+									  std::string_view player_ip,
+									  player &player_data);
 
 size_t get_number_of_characters_without_color_codes(const char *);
 
-template<typename Iter>
+template <typename Iter>
 size_t find_longest_entry_length(
-  Iter first,
-  Iter last,
-  const bool count_color_codes)
+	Iter first,
+	Iter last,
+	const bool count_color_codes)
 {
-  if (first == last)
-    return 0;
-  size_t max_player_name_length{ 32 };
-  while (first != last) {
-    max_player_name_length =
-      std::max<size_t>(count_color_codes ? first->length() : get_number_of_characters_without_color_codes(first->c_str()), max_player_name_length);
-    ++first;
-  }
+	if (first == last)
+		return 0;
+	size_t max_player_name_length{32};
+	while (first != last)
+	{
+		max_player_name_length =
+			std::max<size_t>(count_color_codes ? first->length() : get_number_of_characters_without_color_codes(first->c_str()), max_player_name_length);
+		++first;
+	}
 
-  return max_player_name_length;
+	return max_player_name_length;
 }
 
+template <typename Iter>
 size_t find_longest_player_name_length(
-  const std::vector<player> &,
-  const bool,
-  const size_t number_of_players_to_process);
+	Iter first,
+	const Iter last,
+	const bool count_color_codes)
+{
+	if (first == last)
+		return 0;
+	size_t max_player_name_length{8};
+	while (first != last)
+	{
+		max_player_name_length =
+			std::max<size_t>(count_color_codes ? stl::helper::len(first->player_name) : get_number_of_characters_without_color_codes(first->player_name), max_player_name_length);
+		++first;
+	}
+
+	return max_player_name_length;
+}
+
 size_t find_longest_player_country_city_info_length(
-  const std::vector<player> &,
-  const size_t number_of_players_to_process);
+	const std::vector<player> &,
+	const size_t number_of_players_to_process);
 
 size_t find_longest_user_name_length(
-  const std::vector<std::shared_ptr<tiny_rcon_client_user>> &users,
-  const bool count_color_codes,
-  const size_t number_of_users_to_process);
+	const std::vector<std::shared_ptr<tiny_rcon_client_user>> &users,
+	const bool count_color_codes,
+	const size_t number_of_users_to_process);
 
 size_t find_longest_user_country_city_info_length(
-  const std::vector<std::shared_ptr<tiny_rcon_client_user>> &users,
-  const size_t number_of_users_to_process);
+	const std::vector<std::shared_ptr<tiny_rcon_client_user>> &users,
+	const size_t number_of_users_to_process);
 
 void parse_tinyrcon_tool_config_file(const char *);
 
@@ -108,8 +127,8 @@ bool remove_permanently_banned_country(const std::string &country, std::set<std:
 std::pair<bool, player> remove_temp_banned_ip_address(const std::string &ip_address, std::string &message, const bool is_automatic_temp_ban_remove = true, const bool is_report_public_message = true);
 std::pair<bool, player> remove_permanently_banned_ip_address(std::string &ip_address, std::string &message, const bool is_report_public_message = true);
 
-size_t print_colored_text(HWND re_control, const char *text, const is_append_message_to_richedit_control = is_append_message_to_richedit_control::yes, const is_log_message = is_log_message::yes, const is_log_datetime = is_log_datetime::yes, const bool is_prevent_auto_vertical_scrolling = false, const bool is_remove_color_codes_for_log_message = true);
-size_t print_message(HWND re_control, const std::string &text, const is_log_message log_to_file = is_log_message::yes, const is_log_datetime is_log_current_date_time = is_log_datetime::yes, const bool is_remove_color_codes_for_log_message = true);
+size_t print_colored_text(HWND re_control, const char *text, const is_append_message_to_richedit_control = is_append_message_to_richedit_control::yes, const is_log_message = is_log_message::yes, is_log_datetime = is_log_datetime::yes, const bool is_prevent_auto_vertical_scrolling = false, const bool is_remove_color_codes_for_log_message = true);
+size_t print_message(HWND re_control, const std::string &text, const is_log_message log_to_file = is_log_message::yes, is_log_datetime is_log_current_date_time = is_log_datetime::yes, const bool is_remove_color_codes_for_log_message = true);
 size_t print_colored_text_to_grid_cell(HDC hdc, RECT &rect, const char *text, DWORD formatting_style);
 
 bool get_user_input();
@@ -121,13 +140,15 @@ void display_online_admins_information();
 bool is_valid_decimal_whole_number(const std::string &str, int &number);
 
 bool check_if_user_provided_argument_is_valid_for_specified_command(
-  const char *cmd,
-  const std::string &arg);
+	const char *cmd,
+	const std::string &arg);
 
 bool check_if_user_provided_pid_is_valid(const std::string &);
 
 void remove_all_color_codes(char *msg);
+void remove_all_color_codes(wchar_t *msg);
 void remove_all_color_codes(std::string &);
+void remove_all_color_codes(std::wstring &);
 std::string remove_ip_addresses(const std::string &src, const char *replacement = "hidden");
 
 void check_for_warned_players();
@@ -179,6 +200,7 @@ void export_geoip_data(const std::vector<geoip_data> &, const char *);
 void change_colors();
 
 void strip_leading_and_trailing_quotes(std::string &);
+void strip_leading_and_trailing_quotes(std::wstring &);
 
 void replace_all_escaped_new_lines_with_new_lines(std::string &);
 
@@ -201,42 +223,49 @@ bool specify_reason_for_player_pid(const int, const std::string &);
 void build_tiny_rcon_message(std::string &);
 
 void say_message(const char *);
-void rcon_say(std::string &, const bool = true);
+void rcon_say(std::string &, const bool is_print_to_rich_edit_messages_box = true);
+void rcon_say_top_players(std::string &&title);
 void tell_message(const char *, const int);
 std::string word_wrap(const char *, const size_t);
 
 std::string get_time_interval_info_string_for_seconds(const time_t seconds);
+std::string get_time_interval_info_string_for_seconds_in_hours_and_minutes(const time_t seconds);
 
 void change_game_type(const std::string &game_type, const bool = false);
 void load_map(const std::string &, const std::string &, const bool = true);
 
-template<typename... T>
+template <typename... T>
 void unused(T &&...) {}
 
 void say_slow(HWND control, const char *msg, size_t const len);
 
-template<typename... Args>
+template <typename... Args>
 void say(HWND control, const char *szoveg, Args... args)
 {
-  static char outbuffer[8196];
+	static char outbuffer[8196];
 
-  if (-1 == snprintf(outbuffer, std::size(outbuffer), szoveg, args...)) return;
-  print_colored_text(control, outbuffer, is_append_message_to_richedit_control::yes);
+	if (-1 == snprintf(outbuffer, std::size(outbuffer), szoveg, args...))
+		return;
+	print_colored_text(control, outbuffer, is_append_message_to_richedit_control::yes);
 }
 
-template<typename... Args>
+template <typename... Args>
 void csay(HWND control, const char *szoveg, Args... args)
 {
-  static char outbuffer[8196];
+	static char outbuffer[8196];
 
-  if (-1 == snprintf(outbuffer, std::size(outbuffer), szoveg, args...)) return;
+	if (-1 == snprintf(outbuffer, std::size(outbuffer), szoveg, args...))
+		return;
 
-  print_colored_text(control, outbuffer, is_append_message_to_richedit_control::yes);
+	print_colored_text(control, outbuffer, is_append_message_to_richedit_control::yes);
 }
 
 bool remove_dir_path_sep_char(char *);
+bool remove_dir_path_sep_char(wchar_t *);
 void replace_backward_slash_with_forward_slash(std::string &);
+void replace_backward_slash_with_forward_slash(std::wstring &);
 void replace_forward_slash_with_backward_slash(std::string &);
+void replace_forward_slash_with_backward_slash(std::wstring &);
 
 const char *find_call_of_duty_1_installation_path(const bool is_show_browse_folder_dialog = true);
 
@@ -259,6 +288,7 @@ const char *BrowseFolder(const char *, const char *);
 bool connect_to_the_game_server(const std::string &, const game_name_t, const bool, const bool = true);
 
 bool check_if_file_path_exists(const char *);
+bool check_if_file_path_exists(const wchar_t *);
 bool check_if_cod1_multiplayer_game_launch_command_is_correct(const std::string &);
 bool check_if_cod2_multiplayer_game_launch_command_is_correct(const std::string &);
 bool check_if_cod4_multiplayer_game_launch_command_is_correct(const std::string &);
@@ -278,6 +308,14 @@ void initialize_servers_grid(HWND hgrid, const size_t cols, const size_t rows);
 void display_players_data_in_players_grid(HWND hgrid);
 void display_game_servers_data_in_servers_grid(HWND hgrid);
 void display_game_server_data_in_servers_grid(HWND hgrid, const size_t game_server_index);
+
+class stats_data;
+std::string get_top_players_stats_data(std::vector<player_stats> &stats_data, std::unordered_map<std::string, player_stats> &stats_data_map,
+									   const size_t number_of_top_players, std::string &public_message, const char *title,
+									   std::string partial_or_full_player_name = "", const bool find_exact_player_name_match = false);
+
+std::string get_online_players_stats_data_report(std::vector<player_stats> &stats_data, std::unordered_map<std::string, player_stats> &stats_data_map, const char *title);
+
 void clear_players_data_in_players_grid(HWND hgrid, const size_t start_row, const size_t last_row, const size_t cols);
 void clear_servers_data_in_servers_grid(HWND hgrid, const size_t start_row, const size_t last_row, const size_t cols);
 void PutCell(HWND, const int, const int, const char *);
@@ -309,24 +347,25 @@ extern LRESULT CALLBACK ComboProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
 // void display_context_menu_over_grid(const int mouse_x, const int mouse_y, const int selected_row);
 inline std::pair<const char *, const char *> get_appropriate_rcon_status_response_header(const game_name_t game_name)
 {
-  static constexpr const char *cod1_rcon_status_response_header{ "num score ping name            lastmsg address               qport rate\n" };
-  static constexpr const char *cod2_rcon_status_response_header{ "num score ping guid   name            lastmsg address               qport rate\n" };
-  static constexpr const char *cod4_rcon_status_response_header{ "num score ping guid                             name            lastmsg address               qport rate\n" };
-  static constexpr const char *cod5_rcon_status_response_header{ "num score ping guid       name            lastmsg address               qport  rate\n" };
-  static constexpr const char *cod5_rcon_status_response_header_team{ "num score ping guid       name            team lastmsg address               qport  rate\n" };
+	static constexpr const char *cod1_rcon_status_response_header{"num score ping name            lastmsg address               qport rate\n"};
+	static constexpr const char *cod2_rcon_status_response_header{"num score ping guid   name            lastmsg address               qport rate\n"};
+	static constexpr const char *cod4_rcon_status_response_header{"num score ping guid                             name            lastmsg address               qport rate\n"};
+	static constexpr const char *cod5_rcon_status_response_header{"num score ping guid       name            lastmsg address               qport  rate\n"};
+	static constexpr const char *cod5_rcon_status_response_header_team{"num score ping guid       name            team lastmsg address               qport  rate\n"};
 
-  switch (game_name) {
-  case game_name_t::cod1:
-    return std::make_pair(cod1_rcon_status_response_header, nullptr);
-  case game_name_t::cod2:
-    return std::make_pair(cod2_rcon_status_response_header, nullptr);
-  case game_name_t::cod4:
-    return std::make_pair(cod4_rcon_status_response_header, nullptr);
-  case game_name_t::cod5:
-    return std::make_pair(cod5_rcon_status_response_header, cod5_rcon_status_response_header_team);
-  default:
-    return std::make_pair(cod2_rcon_status_response_header, nullptr);
-  }
+	switch (game_name)
+	{
+	case game_name_t::cod1:
+		return std::make_pair(cod1_rcon_status_response_header, nullptr);
+	case game_name_t::cod2:
+		return std::make_pair(cod2_rcon_status_response_header, nullptr);
+	case game_name_t::cod4:
+		return std::make_pair(cod4_rcon_status_response_header, nullptr);
+	case game_name_t::cod5:
+		return std::make_pair(cod5_rcon_status_response_header, cod5_rcon_status_response_header_team);
+	default:
+		return std::make_pair(cod2_rcon_status_response_header, nullptr);
+	}
 }
 
 // const std::regex &get_appropriate_status_regex_for_specified_game_name(const game_name_t game_name);
@@ -346,6 +385,7 @@ void prepare_players_data_for_display_for_regular_users(game_server &gs, const b
 void prepare_players_data_for_display_of_getstatus_response(game_server &gs, const bool is_log_status_table = false);
 
 size_t get_file_size_in_bytes(const char *);
+size_t get_file_size_in_bytes(const wchar_t *file_path);
 std::string get_date_and_time_for_time_t(const char *date_time_format_str, time_t t_c = 0);
 const char *get_current_short_month_name(const size_t index);
 
@@ -363,12 +403,13 @@ void display_banned_cities(const std::set<std::string> &banned_cities);
 void display_banned_countries(const std::set<std::string> &banned_countries);
 void save_banned_entries_to_file(const char *file_path, const std::set<std::string> &banned_entries);
 
-template<typename ContainerType, typename ElementValue>
+template <typename ContainerType, typename ElementValue>
 void initialize_elements_of_container_to_specified_value(ContainerType &data, const ElementValue &value, const size_t start_index = 0)
 {
-  for (size_t i{ start_index }; i < data.size(); ++i) {
-    data[i] = value;
-  }
+	for (size_t i{start_index}; i < data.size(); ++i)
+	{
+		data[i] = value;
+	}
 }
 
 time_t get_current_time_stamp();
@@ -392,7 +433,7 @@ void display_protected_entries(const char *table_title, const std::set<std::stri
 bool check_if_player_is_protected(const player &online_player, const char *admin_command, std::string &message);
 void get_first_valid_ip_address_from_ip_address_range(std::string ip_range, player &pd);
 bool run_executable(const char *file_path_for_executable);
-void restart_tinyrcon_client(const char *file_path_to_tinyrcon_exe, const std::string &file_path_to_temporary_tinyrcon_exe = std::string{}, const std::string &file_path_to_old_tinyrcon_exe = std::string{});
+void restart_tinyrcon_client(const char *file_path_to_tinyrcon_exe, const std::string &file_path_to_temporary_tinyrcon_exe = "", const std::string &file_path_to_old_tinyrcon_exe = "");
 size_t get_random_number();
 bool parse_game_type_information_from_rcon_reply(const std::string &rcon_reply, game_server &gs);
 void view_game_servers(HWND grid);
@@ -406,7 +447,6 @@ std::string find_users_player_name_for_installed_cod2_game(const std::shared_ptr
 std::string find_version_of_installed_cod2_game();
 bool add_permanently_banned_player_name(player &pd, std::vector<player> &banned_players_names_vector, std::unordered_map<std::string, player> &banned_players_names_map);
 bool remove_permanently_banned_player_name(player &pd, std::vector<player> &banned_names_vector, std::unordered_map<std::string, player> &banned_names_map);
-// std::shared_ptr<tiny_rcon_client_user> &get_user_for_specified_username_and_ip_address();
 void load_reported_players_to_file(const char *file_path, std::vector<player> &reported_players);
 void save_reported_players_to_file(const char *file_path, const std::vector<player> &reported_players);
 std::pair<bool, player> remove_reported_player(std::string &ip_address, std::string &message, const bool is_report_public_message);
@@ -416,7 +456,23 @@ struct version_data;
 void check_version_number_and_file_path_information(version_data &dest_version);
 std::string get_file_name_from_path(const std::string &file_path);
 void execute_at_exit();
-bool check_if_exists_and_download_missing_custom_map_files_downloader(/*const char* downloader_program_file_path*/);
-HRESULT CreateLink(const char *lpszPathObj, const char *lpszPathLink, const char *lpszDesc);
+bool check_if_exists_and_download_missing_custom_map_files_downloader();
+HRESULT CreateLink(const wchar_t *lpszPathObj, const wchar_t *lpszPathLink, const wchar_t *lpszDesc);
 const std::string &get_current_map_image_name(const std::string &current_map);
 void load_current_map_image(const std::string &rcon_map_name);
+std::wstring str_to_wstr(const std::string &src);
+std::string wstr_to_str(const std::wstring &src);
+std::vector<std::string> get_file_name_matches_for_specified_file_path_pattern(const char *dir_path, const char *file_pattern);
+// void print_trace_message(const char* file_name, const size_t line_number, const char* function_name);
+std::string calculate_md5_checksum_of_file(const char *file_path);
+bool fix_path_strings_in_json_config_file(const std::string &config_file_path);
+std::string escape_backward_slash_characters_in_place(const std::string &line);
+class stats;
+void update_player_scores(stats &tinyrcon_stats);
+void sort_players_stats_data(std::vector<player_stats> &stats_data_vec, std::unordered_map<std::string, player_stats> &stats_data_map);
+void save_players_stats_data(const char *file_path, std::vector<player_stats> &stats_data, std::unordered_map<std::string, player_stats> &stats_data_map);
+void load_players_stats_data(const char *file_path, std::vector<player_stats> &stats_data, std::unordered_map<std::string, player_stats> &stats_data_map);
+void process_topplayers_request(const std::string &data);
+void load_image_files_information(const char *file_path);
+[[maybe_unused]] bool tell_player_their_stats_data_in_a_private_message(const char *title, const player &pd);
+bool remove_stats_for_player_name(const std::string &player_name_index);
