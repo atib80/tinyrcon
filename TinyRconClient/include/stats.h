@@ -1,5 +1,7 @@
 #pragma once
 
+#include "tiny_rcon_utility_classes.h"
+
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -12,7 +14,7 @@ using std::vector;
 struct player;
 struct player_stats;
 
-class stats
+class stats : public disabled_copy_operations, public disabled_move_operations
 {
 public:
   stats();

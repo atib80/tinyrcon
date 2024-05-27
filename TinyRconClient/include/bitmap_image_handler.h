@@ -5,11 +5,12 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
+#include "tiny_rcon_utility_classes.h"
 #include "tiny_rcon_utility_functions.h"
 
 using std::string;
 
-class bitmap_image_handler
+class bitmap_image_handler : public disabled_copy_operations, public disabled_move_operations
 {
 	string bitmap_images_folder_path_;
 	std::unordered_map<std::string, HBITMAP> bitmap_images_;
@@ -17,6 +18,8 @@ class bitmap_image_handler
 public:
 
 	bitmap_image_handler() = default;
+	// DISABLE_COPY_SEMANTICS(bitmap_image_handler);
+	// DISABLE_MOVE_SEMANTICS(bitmap_image_handler);
 
 	~bitmap_image_handler() {
 		for (auto&& [bitmap_image_name, bitmap_image_handle] : bitmap_images_) {

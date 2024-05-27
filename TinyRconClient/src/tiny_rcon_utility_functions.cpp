@@ -1166,10 +1166,6 @@ bool write_tiny_rcon_json_settings_to_file(
 	config_file << R"(  "iw3mp_exe_path": ")" << escape_backward_slash_characters_in_place(main_app.get_iw3mp_exe_path()) << "\",\n";
 	config_file << R"(  "cod5mp_exe_path": ")" << escape_backward_slash_characters_in_place(main_app.get_cod5mp_exe_path()) << "\"\n";
 	config_file << "},\n";
-	// config_file << R"("codmp_exe_path": ")" << escape_backward_slash_characters_in_place(main_app.get_codmp_exe_path()) << "\",\n";
-	// config_file << R"("cod2mp_s_exe_path": ")" << escape_backward_slash_characters_in_place(main_app.get_cod2mp_exe_path()) << "\",\n";
-	// config_file << R"("iw3mp_exe_path": ")" << escape_backward_slash_characters_in_place(main_app.get_iw3mp_exe_path()) << "\",\n";
-	// config_file << R"("cod5mp_exe_path": ")" << escape_backward_slash_characters_in_place(main_app.get_cod5mp_exe_path()) << "\",\n";
 	config_file << "\"is_automatic_city_kick_enabled\": "
 				<< (main_app.get_is_automatic_city_kick_enabled() ? "true" : "false") << ",\n";
 	config_file << "\"is_automatic_country_kick_enabled\": "

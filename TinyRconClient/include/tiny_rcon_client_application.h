@@ -20,6 +20,7 @@
 #include "game_server.h"
 #include "tiny_rcon_client_user.h"
 #include "internet_handle.h"
+#include "tiny_rcon_utility_classes.h"
 #include "tiny_rcon_utility_functions.h"
 #include "autoupdate.h"
 #include "bitmap_image_handler.h"
@@ -31,7 +32,7 @@ using std::string;
 
 extern tiny_rcon_handles app_handles;
 
-class tiny_rcon_client_application
+class tiny_rcon_client_application : public disabled_copy_operations, public disabled_move_operations
 {
 	bool is_log_file_open{};
 	bool is_custom_map_names_message_received{};

@@ -8,7 +8,7 @@
 #include <set>
 
 #undef max
-
+  
 std::pair<bool, std::string> create_necessary_file_path(const std::string &file_);
 std::pair<bool, std::wstring> create_necessary_file_path(const std::wstring &file_);
 std::pair<bool, std::string> create_necessary_folders_and_files(const std::vector<std::string> &folder_file_paths);
