@@ -4,10 +4,11 @@
 
 #pragma once
 
+#include <asio.hpp>
 #include "targetver.h"
 #define WIN32_LEAN_AND_MEAN
 #define _CRT_SECURE_NO_WARNINGS
-#define ASIO_STANDALONE
+// #define ASIO_STANDALONE
 // Windows Header Files
 #include <Windows.h>
 // C RunTime Header Files
@@ -24,4 +25,5 @@
 #include <thread>
 #include "simple_grid.h"
 #include "tiny_rcon_server_application.h"
+#include "tiny_rcon_handles.h"
 #include <filesystem>

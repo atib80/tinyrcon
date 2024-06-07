@@ -74,7 +74,7 @@ private:
   time_t stop_time_in_seconds_for_month{};
   time_t stop_time_in_seconds_for_day{};
 
-  static constexpr int days_in_months[12]{ 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+  static constexpr int days_in_months[12]{31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
   std::vector<player_stats> scores_vector;
   std::vector<player_stats> scores_for_year_vector;

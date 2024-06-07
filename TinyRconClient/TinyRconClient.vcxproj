@@ -103,7 +103,7 @@
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions);NTDDI_VERSION= 0x06030000;WINVER=0x0A00;_WIN32_WINNT=0x0A00</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_MBCS;NTDDI_VERSION= 0x06030000;WINVER=0x0A00;_WIN32_WINNT=0x0A00</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp20</LanguageStandard>

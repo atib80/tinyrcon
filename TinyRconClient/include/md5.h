@@ -36,7 +36,6 @@ documentation and/or software.
 #include <cstring>
 #include <iostream>
 
-
 // a small class for calculating MD5 hashes of strings or byte arrays
 // it is not meant to be fast or secure
 //
@@ -50,7 +49,7 @@ documentation and/or software.
 class MD5
 {
 public:
-  typedef unsigned int size_type;// must be 32bit
+  typedef unsigned int size_type; // must be 32bit
 
   MD5();
   MD5(const std::string &text);
@@ -63,19 +62,22 @@ public:
 
 private:
   void init();
-  typedef unsigned char uint1;//  8bit
-  typedef unsigned int uint4;// 32bit
-  enum { blocksize = 64 };// VC6 won't eat a const static int here
+  typedef unsigned char uint1; //  8bit
+  typedef unsigned int uint4;  // 32bit
+  enum
+  {
+    blocksize = 64
+  }; // VC6 won't eat a const static int here
 
   void transform(const uint1 block[blocksize]);
   static void decode(uint4 output[], const uint1 input[], size_type len);
   static void encode(uint1 output[], const uint4 input[], size_type len);
 
   bool finalized;
-  uint1 buffer[blocksize];// bytes that didn't fit in last 64 byte chunk
-  uint4 count[2];// 64bit counter for number of bits (lo, hi)
-  uint4 state[4];// digest so far
-  uint1 digest[16];// the result
+  uint1 buffer[blocksize]; // bytes that didn't fit in last 64 byte chunk
+  uint4 count[2];          // 64bit counter for number of bits (lo, hi)
+  uint4 state[4];          // digest so far
+  uint1 digest[16];        // the result
 
   // low level logic operations
   static inline uint4 F(uint4 x, uint4 y, uint4 z);

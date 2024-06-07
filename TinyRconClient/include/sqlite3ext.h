@@ -310,9 +310,9 @@ struct sqlite3_api_routines
   sqlite3_int64 (*total_changes64)(sqlite3 *);
   /* Version 3.37.0 and later */
   int (*autovacuum_pages)(sqlite3 *,
-    unsigned int (*)(void *, const char *, unsigned int, unsigned int, unsigned int),
-    void *,
-    void (*)(void *));
+                          unsigned int (*)(void *, const char *, unsigned int, unsigned int, unsigned int),
+                          void *,
+                          void (*)(void *));
   /* Version 3.38.0 and later */
   int (*error_offset)(sqlite3 *);
   int (*vtab_rhs_value)(sqlite3_index_info *, int, sqlite3_value **);
@@ -337,9 +337,9 @@ struct sqlite3_api_routines
 ** is also defined in the file "loadext.c".
 */
 typedef int (*sqlite3_loadext_entry)(
-  sqlite3 *db, /* Handle to the database. */
-  char **pzErrMsg, /* Used to set error string on failure. */
-  const sqlite3_api_routines *pThunk /* Extension API function pointers. */
+    sqlite3 *db,                       /* Handle to the database. */
+    char **pzErrMsg,                   /* Used to set error string on failure. */
+    const sqlite3_api_routines *pThunk /* Extension API function pointers. */
 );
 
 /*
@@ -672,9 +672,9 @@ typedef int (*sqlite3_loadext_entry)(
 #else
 /* This case when the file is being statically linked into the
 ** application */
-#define SQLITE_EXTENSION_INIT1 /*no-op*/
+#define SQLITE_EXTENSION_INIT1             /*no-op*/
 #define SQLITE_EXTENSION_INIT2(v) (void)v; /* unused parameter */
-#define SQLITE_EXTENSION_INIT3 /*no-op*/
+#define SQLITE_EXTENSION_INIT3             /*no-op*/
 #endif
 
 #endif /* SQLITE3EXT_H */

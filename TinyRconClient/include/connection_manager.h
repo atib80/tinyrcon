@@ -11,18 +11,20 @@ using namespace asio;
 class connection_manager
 {
   using rcv_timeout_option =
-    asio::detail::socket_option::integer<SOL_SOCKET, SO_RCVTIMEO>;
-  inline static constexpr size_t receive_buffer_size{ 4096 };
+      asio::detail::socket_option::integer<SOL_SOCKET, SO_RCVTIMEO>;
+  inline static constexpr size_t receive_buffer_size{4096};
 
 public:
   connection_manager();
   inline ~connection_manager()
   {
-    if (udp_socket_for_rcon_commands.is_open()) {
+    if (udp_socket_for_rcon_commands.is_open())
+    {
       udp_socket_for_rcon_commands.close();
     }
 
-    if (udp_socket_for_non_rcon_commands.is_open()) {
+    if (udp_socket_for_non_rcon_commands.is_open())
+    {
       udp_socket_for_non_rcon_commands.close();
     }
   };
@@ -53,7 +55,7 @@ private:
   inline static std::size_t number_of_sent_non_rcon_commands{};
   inline static std::size_t number_of_sent_rcon_commands{};
   inline static std::size_t rcon_status_sent_counter{};
-  inline static const std::string unknown_rcon_password{ "abc123" };
+  inline static const std::string unknown_rcon_password{"abc123"};
   std::vector<geoip_data> geoip_db;
   io_service udp_service_for_rcon_commands;
   io_service udp_service_for_non_rcon_commands;

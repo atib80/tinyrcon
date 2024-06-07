@@ -20,6 +20,11 @@ class game_server
 public:
   game_server() = default;// : players_data(64, player_data{}) {}
 
+  std::vector<player>& get_players_data()
+  {
+      return players_data;
+  }
+
 
   [[nodiscard]] const std::string &get_server_ip_address() const noexcept
   {
@@ -880,6 +885,7 @@ private:
   std::vector<player> removed_banned_ip_address_ranges_vector;
   std::vector<player> banned_names_vector;
   std::vector<player> removed_banned_names_vector;
+  std::vector<player> players_data;
   std::string short_version{ "1.0" };
   std::string ip_address{ "185.158.113.146" };
   std::string sv_hostname{ "CoD2 CTF" };

@@ -75,22 +75,26 @@ struct tiny_rcon_handles
   HWND hwnd_upload_speed_info;
 };
 
-enum class is_append_message_to_richedit_control {
+enum class is_append_message_to_richedit_control
+{
   no,
   yes
 };
 
-enum class is_log_message {
+enum class is_log_message
+{
   no,
   yes
 };
 
-enum class is_log_datetime {
+enum class is_log_datetime
+{
   no,
   yes
 };
 
-enum class game_name_t {
+enum class game_name_t
+{
   unknown,
   cod1,
   cod2,
@@ -98,23 +102,29 @@ enum class game_name_t {
   cod5
 };
 
-enum class command_type { rcon,
-  user };
+enum class command_type
+{
+  rcon,
+  user
+};
 
 struct command_t
 {
-  command_t(std::vector<std::string> cmd, const command_type cmd_type, const bool wait_for_reply) : command{ std::move(cmd) }, type{ cmd_type }, is_wait_for_reply{ wait_for_reply } {}
+  command_t(std::vector<std::string> cmd, const command_type cmd_type, const bool wait_for_reply) : command{std::move(cmd)}, type{cmd_type}, is_wait_for_reply{wait_for_reply} {}
   std::vector<std::string> command;
   command_type type;
   bool is_wait_for_reply{};
 };
 
-enum class message_type_t { send,
-  receive };
+enum class message_type_t
+{
+  send,
+  receive
+};
 
 struct print_message_t
 {
-  explicit print_message_t(std::string message, is_log_message log_to_file, is_log_datetime is_log_current_date_time, const bool is_remove_color_codes_for_log_message = true, const bool is_display_message_to_remote_user = true, const bool is_send_message_to_player = false) : message_{ std::move(message) }, log_to_file_{ log_to_file }, is_log_current_date_time_{ is_log_current_date_time }, is_remove_color_codes_for_log_message_{ is_remove_color_codes_for_log_message }, is_display_message_to_remote_user_{ is_display_message_to_remote_user }, is_send_message_to_player_{ is_send_message_to_player } {}
+  explicit print_message_t(std::string message, is_log_message log_to_file, is_log_datetime is_log_current_date_time, const bool is_remove_color_codes_for_log_message = true, const bool is_display_message_to_remote_user = true, const bool is_send_message_to_player = false) : message_{std::move(message)}, log_to_file_{log_to_file}, is_log_current_date_time_{is_log_current_date_time}, is_remove_color_codes_for_log_message_{is_remove_color_codes_for_log_message}, is_display_message_to_remote_user_{is_display_message_to_remote_user}, is_send_message_to_player_{is_send_message_to_player} {}
   std::string message_;
   is_log_message log_to_file_;
   is_log_datetime is_log_current_date_time_;
@@ -125,7 +135,7 @@ struct print_message_t
 
 struct message_t
 {
-  explicit message_t(std::string message_command, std::string message_data, const bool is_show_in_messages = true) : command{ std::move(message_command) }, data{ std::move(message_data) }, is_show_in_messages{ is_show_in_messages } {}
+  explicit message_t(std::string message_command, std::string message_data, const bool is_show_in_messages = true) : command{std::move(message_command)}, data{std::move(message_data)}, is_show_in_messages{is_show_in_messages} {}
   std::string command;
   std::string data;
   const bool is_show_in_messages;
@@ -133,14 +143,15 @@ struct message_t
 
 struct server_message_t
 {
-  explicit server_message_t(std::string message_command, std::string message_data, const std::shared_ptr<tiny_rcon_client_user> &s, const bool is_show_in_messages = true) : command{ std::move(message_command) }, data{ std::move(message_data) }, sender{ s }, is_show_in_messages{ is_show_in_messages } {}
+  explicit server_message_t(std::string message_command, std::string message_data, const std::shared_ptr<tiny_rcon_client_user> &s, const bool is_show_in_messages = true) : command{std::move(message_command)}, data{std::move(message_data)}, sender{s}, is_show_in_messages{is_show_in_messages} {}
   std::string command;
   std::string data;
   std::shared_ptr<tiny_rcon_client_user> sender;
   const bool is_show_in_messages;
 };
 
-enum class sort_type {
+enum class sort_type
+{
   unknown,
   pid_desc,
   pid_asc,
@@ -156,7 +167,9 @@ enum class sort_type {
   geo_asc
 };
 
-enum class color_type { black,
+enum class color_type
+{
+  black,
   red,
   green,
   yellow,
@@ -166,21 +179,22 @@ enum class color_type { black,
   white,
 };
 
-namespace color {
-static COLORREF black{ RGB(0, 0, 0) };
-static COLORREF blue{ RGB(0, 0, 255) };
-static COLORREF cyan{ RGB(0, 255, 255) };
-static COLORREF green{ RGB(0, 255, 0) };
-static COLORREF grey{ RGB(128, 128, 128) };
-static COLORREF light_blue{ RGB(173, 216, 230) };
-static COLORREF magenta{ RGB(255, 0, 255) };
-static COLORREF maroon{ RGB(128, 0, 0) };
-static COLORREF purple{ RGB(128, 0, 128) };
-static COLORREF red{ RGB(255, 0, 0) };
-static COLORREF teal{ RGB(0, 128, 128) };
-static COLORREF yellow{ RGB(255, 255, 0) };
-static COLORREF white{ RGB(255, 255, 255) };
-}// namespace color
+namespace color
+{
+  static COLORREF black{RGB(0, 0, 0)};
+  static COLORREF blue{RGB(0, 0, 255)};
+  static COLORREF cyan{RGB(0, 255, 255)};
+  static COLORREF green{RGB(0, 255, 0)};
+  static COLORREF grey{RGB(128, 128, 128)};
+  static COLORREF light_blue{RGB(173, 216, 230)};
+  static COLORREF magenta{RGB(255, 0, 255)};
+  static COLORREF maroon{RGB(128, 0, 0)};
+  static COLORREF purple{RGB(128, 0, 128)};
+  static COLORREF red{RGB(255, 0, 0)};
+  static COLORREF teal{RGB(0, 128, 128)};
+  static COLORREF yellow{RGB(255, 255, 0)};
+  static COLORREF white{RGB(255, 255, 255)};
+} // namespace color
 
 struct player;
 
@@ -195,7 +209,7 @@ struct geoip_data
 
   geoip_data() = default;
 
-  geoip_data(const unsigned long lib, const unsigned long uib, const char *code, const char *country, const char *reg, const char *ci) : lower_ip_bound{ lib }, upper_ip_bound{ uib }
+  geoip_data(const unsigned long lib, const unsigned long uib, const char *code, const char *country, const char *reg, const char *ci) : lower_ip_bound{lib}, upper_ip_bound{uib}
   {
 
     const size_t no_of_chars_for_country_code = std::min<size_t>(3U, stl::helper::len(code));
@@ -242,8 +256,8 @@ struct row_of_player_data_to_display
   char ping[8]{};
   char player_name[36]{};
   char ip_address[20]{};
-  char geo_info[128]{ "Unknown, Unknown" };
-  const char *country_code{ "xy" };
+  char geo_info[128]{"Unknown, Unknown"};
+  const char *country_code{"xy"};
 };
 
 extern size_t get_number_of_characters_without_color_codes(const char *);
@@ -254,19 +268,22 @@ class text_element
   const char *text_{};
   const size_t width_{};
   const char *color_code_{};
-  const bool is_left_adjusted_{ true };
+  const bool is_left_adjusted_{true};
 
 public:
-  explicit text_element(const char *text, const size_t width, const char *color_code = nullptr, const bool is_left_adjusted = true) : text_{ text }, width_{ width }, color_code_{ color_code }, is_left_adjusted_{ is_left_adjusted } {}
+  explicit text_element(const char *text, const size_t width, const char *color_code = nullptr, const bool is_left_adjusted = true) : text_{text}, width_{width}, color_code_{color_code}, is_left_adjusted_{is_left_adjusted} {}
   explicit operator std::string() const
   {
     std::ostringstream oss;
-    std::string text_with_colors{ std::string{ color_code_ } + text_ };
+    std::string text_with_colors{std::string{color_code_} + text_};
     stl::helper::trim_in_place(text_with_colors);
-    const size_t printed_name_char_count{ get_number_of_characters_without_color_codes(text_with_colors.c_str()) };
-    if (printed_name_char_count < width_) {
+    const size_t printed_name_char_count{get_number_of_characters_without_color_codes(text_with_colors.c_str())};
+    if (printed_name_char_count < width_)
+    {
       oss << (is_left_adjusted_ ? std::left : std::right) << std::setw(width_) << text_with_colors + std::string(width_ - printed_name_char_count, ' ');
-    } else {
+    }
+    else
+    {
       oss << (is_left_adjusted_ ? std::left : std::right) << std::setw(width_) << text_with_colors;
     }
 
@@ -280,7 +297,7 @@ inline std::ostream &operator<<(std::ostream &os, const text_element &te)
   return os;
 }
 
-template<typename T>
+template <typename T>
 concept string_convertible = requires(const T &value) {
   {
     to_string(value)

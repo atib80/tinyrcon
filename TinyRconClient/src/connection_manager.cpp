@@ -244,7 +244,8 @@ size_t connection_manager::receive_non_rcon_reply_from_server(const char *remote
 			gs.set_number_of_players(player_num);
 			gs.set_number_of_online_players(number_of_online_players);
 			gs.set_number_of_offline_players(number_of_offline_players);
-			prepare_players_data_for_display_of_getstatus_response(gs, false);
+			prepare_players_data_for_display_of_getstatus_response(gs, false);		
+
 		}
 	}
 
@@ -691,11 +692,11 @@ size_t connection_manager::receive_rcon_reply_from_server(const char *remote_ip,
 				if (60 == rcon_status_sent_counter)
 					rcon_status_sent_counter = 0;
 				prepare_players_data_for_display(gs, log_players_data);
-				std::thread update_player_scores_task{[]()
+				/*std::thread update_player_scores_task{[]()
 				{
 					update_player_scores(main_app.get_stats_data());
 				}};
-				update_player_scores_task.detach();
+				update_player_scores_task.detach();*/
 			}
 			else if (received_reply.find("Server info") != string::npos)
 			{
@@ -767,6 +768,7 @@ size_t connection_manager::receive_rcon_reply_from_server(const char *remote_ip,
 				start = last = current;
 				while (*last != '^' && *(last + 1) != '7' && *(last + 2) != '"')
 					++last;
+				// if (!is_rcon_game_server(gs))
 				gs.set_server_name(string(start, last));
 			}
 			else if (size_t first_pos2{}; (first_pos2 = received_reply.find(R"("mapname" is: ")")) != string::npos && received_reply.find(R"(default: ")") != string::npos)

@@ -8,7 +8,9 @@
 #include "sqlite3.h"
 #include "tiny_rcon_utility_data_types.h"
 
-enum class table_id { tempborary_bans,
+enum class table_id
+{
+  tempborary_bans,
   ip_address_bans,
   ip_address_range_bans,
   city_bans,
@@ -16,11 +18,12 @@ enum class table_id { tempborary_bans,
   protected_ip_addresses,
   protected_ip_address_ranges,
   protected_cities,
-  protected_countries };
+  protected_countries
+};
 
 using std::format;
-using std::string;
 using std::ostringstream;
+using std::string;
 
 class tiny_rcon_client_sqlite_database
 {
@@ -32,16 +35,15 @@ class tiny_rcon_client_sqlite_database
   bool is_db_initialized_{};
   std::string db_file_path;
   const std::unordered_map<table_id, std::string> table_id_to_table_name{
-    { table_id::tempborary_bans, "temporary_bans" },
-    { table_id::ip_address_bans, "ip_address_bans" },
-    { table_id::ip_address_range_bans, "ip_address_range_bans" },
-    { table_id::city_bans, "city_bans" },
-    { table_id::country_bans, "country_bans" },
-    { table_id::protected_ip_addresses, "protected_ip_addresses" },
-    { table_id::protected_ip_address_ranges, "protected_ip_address_ranges" },
-    { table_id::protected_cities, "protected_cities" },
-    { table_id::protected_countries, "protected_countries" }
-  };
+      {table_id::tempborary_bans, "temporary_bans"},
+      {table_id::ip_address_bans, "ip_address_bans"},
+      {table_id::ip_address_range_bans, "ip_address_range_bans"},
+      {table_id::city_bans, "city_bans"},
+      {table_id::country_bans, "country_bans"},
+      {table_id::protected_ip_addresses, "protected_ip_addresses"},
+      {table_id::protected_ip_address_ranges, "protected_ip_address_ranges"},
+      {table_id::protected_cities, "protected_cities"},
+      {table_id::protected_countries, "protected_countries"}};
 
   std::unordered_map<std::string, std::string> last_row_data;
 
@@ -56,19 +58,23 @@ public:
 
   ~tiny_rcon_client_sqlite_database()
   {
-    if (*this) { sqlite3_close_v2(db); }
+    if (*this)
+    {
+      sqlite3_close_v2(db);
+    }
   }
 
   static int sqlite3_db_callback_func(void *param, int number_of_columns, char **row_values, char **column_names)
   {
 
     tiny_rcon_client_sqlite_database *sqlite3_db{
-      reinterpret_cast<tiny_rcon_client_sqlite_database *>(param)
-    };
+        reinterpret_cast<tiny_rcon_client_sqlite_database *>(param)};
 
-    if (row_values && column_names) {
+    if (row_values && column_names)
+    {
       sqlite3_db->last_row_data.clear();
-      for (int col_index{}; col_index < number_of_columns; ++col_index) {
+      for (int col_index{}; col_index < number_of_columns; ++col_index)
+      {
         sqlite3_db->last_row_data[column_names[col_index]] = row_values[col_index];
       }
     }
@@ -76,17 +82,18 @@ public:
 
   bool create_database_tables() const;
 
-  template<typename T, typename... Values>
+  template <typename T, typename... Values>
   void append_value_to_string(std::ostringstream &oss, const T &arg, const Values &...values)
   {
     oss << arg;
-    if (sizeof...(values) > 0) {
+    if (sizeof...(values) > 0)
+    {
       oss << ',';
       append_value_to_string(oss, values...);
     }
   }
 
-  template<typename... Values>
+  template <typename... Values>
   bool insert_record_into_table(const table_id table, const Values &...values)
   {
     char *err_msg{};
@@ -94,65 +101,72 @@ public:
     oss << format("INSERT OR REPLACE INTO {} VALUES(", table_id_to_table_name.at(table));
     append_value_to_string(oss, values...);
     oss << ");";
-    std::string sql{ oss.str() };
+    std::string sql{oss.str()};
 
     auto rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &err_msg);
 
-    if (rc != SQLITE_OK) {
-      const std::string error_msg{ format("^3SQL error: ^1{}", err_msg) };
+    if (rc != SQLITE_OK)
+    {
+      const std::string error_msg{format("^3SQL error: ^1{}", err_msg)};
       print_colored_text(messages_window, error_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes, false, true, false);
       sqlite3_free(err_msg);
       err_msg = nullptr;
       return false;
     }
 
-    const std::string info_msg{ "^5Successfully executed SQL statement: ^1{}", sql };
+    const std::string info_msg{"^5Successfully executed SQL statement: ^1{}", sql};
     print_colored_text(messages_window, info_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes, false, true, false);
     return true;
   }
 
-  template<typename T>
+  template <typename T>
   bool delete_record_from_table(const table_id table, const std::string &column_name, const T &value)
   {
     char *err_msg{};
-    const std::string sql{ format("DELETE FROM {} WHERE {}='{}';", table_id_to_table_name.at(table), column_name, value) };
+    const std::string sql{format("DELETE FROM {} WHERE {}='{}';", table_id_to_table_name.at(table), column_name, value)};
 
     auto rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &err_msg);
 
-    if (rc != SQLITE_OK) {
-      const std::string error_msg{ format("^3SQL error: ^1{}", err_msg) };
+    if (rc != SQLITE_OK)
+    {
+      const std::string error_msg{format("^3SQL error: ^1{}", err_msg)};
       print_colored_text(messages_window, error_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes, false, true, false);
       sqlite3_free(err_msg);
       err_msg = nullptr;
-
-    } else {
-      const std::string info_msg{ "^5Successfully executed SQL statement: ^1{}", sql };
+    }
+    else
+    {
+      const std::string info_msg{"^5Successfully executed SQL statement: ^1{}", sql};
       print_colored_text(messages_window, info_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes, false, true, false);
     }
 
-    if (err_msg) sqlite3_free(err_msg);
+    if (err_msg)
+      sqlite3_free(err_msg);
   }
 
-  template<typename T>
+  template <typename T>
   bool find_record_in_table(const table_id table, const std::string &column_name, const T &value)
   {
     char *err_msg{};
-    const std::string sql{ format("select * FROM {} WHERE {}='{}';", table_id_to_table_name.at(table), column_name, value) };
+    const std::string sql{format("select * FROM {} WHERE {}='{}';", table_id_to_table_name.at(table), column_name, value)};
 
     auto rc = sqlite3_exec(db, sql.c_str(), &sqlite3_db_callback_func, this, &err_msg);
 
-    if (rc != SQLITE_OK) {
-      const std::string error_msg{ format("^3SQL error: ^1{}", err_msg) };
+    if (rc != SQLITE_OK)
+    {
+      const std::string error_msg{format("^3SQL error: ^1{}", err_msg)};
       print_colored_text(messages_window, error_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes, false, true, false);
       sqlite3_free(err_msg);
       err_msg = nullptr;
-
-    } else {
-      const std::string info_msg{ "^5Successfully executed SQL statement: ^1{}", sql };
+    }
+    else
+    {
+      const std::string info_msg{"^5Successfully executed SQL statement: ^1{}", sql};
       print_colored_text(messages_window, info_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes, false, true, false);
     }
 
-    if (err_msg) sqlite3_free(err_msg);
+    if (err_msg)
+      sqlite3_free(err_msg);
   }
 
   bool is_db_initizalized() const noexcept

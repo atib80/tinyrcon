@@ -5,7 +5,7 @@
 
 struct tiny_rcon_client_user
 {
-  bool is_admin{ true };
+  bool is_admin{true};
   bool is_logged_in{};
   bool is_online{};
   size_t no_of_logins{};
@@ -27,10 +27,9 @@ struct tiny_rcon_client_user
   size_t no_of_map_changes{};
   time_t last_login_time_stamp{};
   time_t last_logout_time_stamp{};
-  const char *country_code{ "xy" };
+  const char *country_code{"xy"};
   std::string user_name{
-    "^3Player"
-  };
+      "^3Player"};
   std::string player_name;
   std::string ip_address;
   std::string geo_information;

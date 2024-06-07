@@ -21,6 +21,7 @@ struct player
   const char *country_name{};
   const char *region{};
   const char *city{};
+  std::string player_name_index;
   std::string ip_address;
   std::string reason;
   std::string banned_by_user_name;

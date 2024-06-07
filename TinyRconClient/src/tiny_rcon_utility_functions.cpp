@@ -310,7 +310,9 @@ extern const map<string, string> user_commands_help{
 	{"!names",
 	 "^5!names player_name [reason] ^2-> ^5displays all currently banned names."},
 	{"!stats",
-	 "^5!stats ^2-> ^5displays up-to-date ^5Tiny^6Rcon ^1admins' ^5related stats data."}};
+	 "^5!stats ^2-> ^5displays up-to-date ^5Tiny^6Rcon ^1admins' ^5related stats data."},
+	{"!rcon",
+	 "^1!rcon custom_rcon_command [optional_parameters] ^2-> ^3sends ^1custom_rcon_command [optional_parameters] ^3to game server.\n  ^7Examples: ^1!rcon map_restart ^7| ^1!rcon fast_restart ^7| ^1!rcon sv_iwdnames"}};
 
 extern const unordered_set<string> user_commands_set{
 	"!admins",
@@ -369,6 +371,7 @@ extern const unordered_set<string> user_commands_set{
 	"gs",
 	"!gs",
 	"!getstatus",
+	"!rcon",
 	"!config",
 	"!stats",
 	"tp",
@@ -1161,7 +1164,7 @@ bool write_tiny_rcon_json_settings_to_file(
 	config_file << R"("tiny_rcon_ftp_server_username": ")" << main_app.get_tiny_rcon_ftp_server_username() << "\",\n";
 	config_file << R"("tiny_rcon_ftp_server_password": ")" << main_app.get_tiny_rcon_ftp_server_password() << "\",\n";
 	config_file << R"("game_executable_paths" : {)" << "\n";
-	config_file << R"(  "codmp_exe_path": )" << escape_backward_slash_characters_in_place(main_app.get_codmp_exe_path()) << "\",\n";
+	config_file << R"(  "codmp_exe_path": ")" << escape_backward_slash_characters_in_place(main_app.get_codmp_exe_path()) << "\",\n";
 	config_file << R"(  "cod2mp_s_exe_path": ")" << escape_backward_slash_characters_in_place(main_app.get_cod2mp_exe_path()) << "\",\n";
 	config_file << R"(  "iw3mp_exe_path": ")" << escape_backward_slash_characters_in_place(main_app.get_iw3mp_exe_path()) << "\",\n";
 	config_file << R"(  "cod5mp_exe_path": ")" << escape_backward_slash_characters_in_place(main_app.get_cod5mp_exe_path()) << "\"\n";
@@ -1281,8 +1284,8 @@ bool write_tiny_rcon_json_settings_to_file(
 	config_file << R"("plugins_geoIP_geo_dat_md5": ")" << main_app.get_plugins_geoIP_geo_dat_md5() << "\",\n";
 	config_file << R"("images_data_md5": ")" << main_app.get_images_data_md5() << "\",\n";
 	config_file << R"("enable_automatic_program_updates": )" << (main_app.get_is_enable_automatic_program_updates() ? "true" : "false") << ",\n";
-	config_file << R"("enable_automatic_missing_map_image_download": )" << (main_app.get_is_enable_automatic_missing_map_image_download() ? "true" : "false") << ",\n";
-	config_file << R"("players_stats_feature": {)" << '\n';
+	config_file << R"("enable_automatic_missing_map_image_download": )" << (main_app.get_is_enable_automatic_missing_map_image_download() ? "true" : "false") << "\n";
+	/*config_file << R"("players_stats_feature": {)" << '\n';
 	config_file << R"("enabled": )" << (main_app.get_is_enable_players_stats_feature() ? "true" : "false") << ",\n";
 	config_file << R"("enable_tracking_of_player_stats_data_for_day": )" << (main_app.get_is_enable_tracking_of_player_stats_data_for_day() ? "true" : "false") << ",\n";
 	config_file << R"("enable_tracking_of_player_stats_data_for_month": )" << (main_app.get_is_enable_tracking_of_player_stats_data_for_month() ? "true" : "false") << ",\n";
@@ -1292,7 +1295,7 @@ bool write_tiny_rcon_json_settings_to_file(
 	config_file << R"("number_of_top_players_to_display_in_tinyrcon": )" << main_app.get_number_of_top_players_to_display_in_tinyrcon() << ",\n";
 	config_file << R"("time_period_in_minutes_for_displaying_top_players_stats_data_in_game_chat": )" << main_app.get_time_period_in_minutes_for_displaying_top_players_stats_data_in_game_chat() << ",\n";
 	config_file << R"("time_period_in_minutes_for_displaying_top_players_stats_data_in_tinyrcon": )" << main_app.get_time_period_in_minutes_for_displaying_top_players_stats_data_in_tinyrcon() << ",\n";
-	config_file << R"("time_period_in_minutes_for_saving_players_stats_data": )" << main_app.get_time_period_in_minutes_for_saving_players_stats_data() << "\n}\n";
+	config_file << R"("time_period_in_minutes_for_saving_players_stats_data": )" << main_app.get_time_period_in_minutes_for_saving_players_stats_data() << "\n}\n";*/
 	config_file << "}" << flush;
 	return true;
 }
@@ -1316,15 +1319,15 @@ bool check_ip_address_validity(string_view ip_address,
 	const bool is_valid_ip_address =
 		all_of(cbegin(parts), cend(parts), [](const string &part)
 			   {
-		if (part.length() > 3)
-			return false;
-		for (const auto digit : part) {
-			if (!isdigit(digit))
-				return false;
-		}
+				if (part.length() > 3)
+					return false;
+				for (const auto digit : part) {
+					if (!isdigit(digit))
+						return false;
+				}
 
-		const int value{ stoi(part) };
-		return value >= 0 && value <= 255; });
+				const int value{ stoi(part) };
+				return value >= 0 && value <= 255; });
 
 	if (is_valid_ip_address)
 	{
@@ -1513,12 +1516,14 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
 	}
 	catch (std::exception &ex)
 	{
-		const std::string exception_message{format("Exception occurred while parsing tinyrcon.json file!\n{}", ex.what())};
-		show_error(app_handles.hwnd_main_window, exception_message.c_str(), 0);
+		const std::string exception_message{format("^1Exception ^3occurred while parsing tinyrcon.json file!\n^5{}", ex.what())};
+		print_colored_text(app_handles.hwnd_re_messages_data, exception_message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+		// show_error(app_handles.hwnd_main_window, exception_message.c_str(), 0);
 	}
 	catch (...)
 	{
-		show_error(app_handles.hwnd_main_window, "Exception occurred while parsing tinyrcon.json file!", 0);
+		print_colored_text(app_handles.hwnd_re_messages_data, "^3Unknown exception occurred while parsing tinyrcon.json file!", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+		// show_error(app_handles.hwnd_main_window, "Exception occurred while parsing tinyrcon.json file!", 0);
 	}
 
 	string data_line;
@@ -1748,111 +1753,111 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
 		}
 	}
 
-	if (json_resource.contains("players_stats_feature") && json_resource.at("players_stats_feature").is_object())
-	{
-		auto &players_stats_feature_json_object = json_resource["players_stats_feature"];
-		if (players_stats_feature_json_object.contains("enabled"))
-		{
-			main_app.set_is_enable_players_stats_feature(players_stats_feature_json_object["enabled"].template get<bool>());
-		}
-		else
-		{
-			found_missing_config_setting = true;
-			main_app.set_is_enable_players_stats_feature(false);
-		}
+	// if (json_resource.contains("players_stats_feature") && json_resource.at("players_stats_feature").is_object())
+	//{
+	//	auto &players_stats_feature_json_object = json_resource["players_stats_feature"];
+	//	if (players_stats_feature_json_object.contains("enabled"))
+	//	{
+	//		main_app.set_is_enable_players_stats_feature(players_stats_feature_json_object["enabled"].template get<bool>());
+	//	}
+	//	else
+	//	{
+	//		found_missing_config_setting = true;
+	//		main_app.set_is_enable_players_stats_feature(false);
+	//	}
 
-		if (players_stats_feature_json_object.contains("enable_tracking_of_player_stats_data_for_day"))
-		{
-			main_app.set_is_enable_tracking_of_player_stats_data_for_day(players_stats_feature_json_object["enable_tracking_of_player_stats_data_for_day"].template get<bool>());
-		}
-		else
-		{
-			found_missing_config_setting = true;
-			main_app.set_is_enable_tracking_of_player_stats_data_for_day(false);
-		}
+	//	if (players_stats_feature_json_object.contains("enable_tracking_of_player_stats_data_for_day"))
+	//	{
+	//		main_app.set_is_enable_tracking_of_player_stats_data_for_day(players_stats_feature_json_object["enable_tracking_of_player_stats_data_for_day"].template get<bool>());
+	//	}
+	//	else
+	//	{
+	//		found_missing_config_setting = true;
+	//		main_app.set_is_enable_tracking_of_player_stats_data_for_day(false);
+	//	}
 
-		if (players_stats_feature_json_object.contains("enable_tracking_of_player_stats_data_for_month"))
-		{
-			main_app.set_is_enable_tracking_of_player_stats_data_for_month(players_stats_feature_json_object["enable_tracking_of_player_stats_data_for_month"].template get<bool>());
-		}
-		else
-		{
-			found_missing_config_setting = true;
-			main_app.set_is_enable_tracking_of_player_stats_data_for_month(false);
-		}
+	//	if (players_stats_feature_json_object.contains("enable_tracking_of_player_stats_data_for_month"))
+	//	{
+	//		main_app.set_is_enable_tracking_of_player_stats_data_for_month(players_stats_feature_json_object["enable_tracking_of_player_stats_data_for_month"].template get<bool>());
+	//	}
+	//	else
+	//	{
+	//		found_missing_config_setting = true;
+	//		main_app.set_is_enable_tracking_of_player_stats_data_for_month(false);
+	//	}
 
-		if (players_stats_feature_json_object.contains("enable_tracking_of_player_stats_data_for_year"))
-		{
-			main_app.set_is_enable_tracking_of_player_stats_data_for_year(players_stats_feature_json_object["enable_tracking_of_player_stats_data_for_year"].template get<bool>());
-		}
-		else
-		{
-			found_missing_config_setting = true;
-			main_app.set_is_enable_tracking_of_player_stats_data_for_year(false);
-		}
+	//	if (players_stats_feature_json_object.contains("enable_tracking_of_player_stats_data_for_year"))
+	//	{
+	//		main_app.set_is_enable_tracking_of_player_stats_data_for_year(players_stats_feature_json_object["enable_tracking_of_player_stats_data_for_year"].template get<bool>());
+	//	}
+	//	else
+	//	{
+	//		found_missing_config_setting = true;
+	//		main_app.set_is_enable_tracking_of_player_stats_data_for_year(false);
+	//	}
 
-		if (players_stats_feature_json_object.contains("enable_tracking_of_player_stats_data_permanently"))
-		{
-			main_app.set_is_enable_tracking_of_player_stats_data_permanently(players_stats_feature_json_object["enable_tracking_of_player_stats_data_permanently"].template get<bool>());
-		}
-		else
-		{
-			found_missing_config_setting = true;
-			main_app.set_is_enable_tracking_of_player_stats_data_permanently(false);
-		}
+	//	if (players_stats_feature_json_object.contains("enable_tracking_of_player_stats_data_permanently"))
+	//	{
+	//		main_app.set_is_enable_tracking_of_player_stats_data_permanently(players_stats_feature_json_object["enable_tracking_of_player_stats_data_permanently"].template get<bool>());
+	//	}
+	//	else
+	//	{
+	//		found_missing_config_setting = true;
+	//		main_app.set_is_enable_tracking_of_player_stats_data_permanently(false);
+	//	}
 
-		// number_of_top_players_to_display_in_game_chat
-		if (players_stats_feature_json_object.contains("number_of_top_players_to_display_in_game_chat"))
-		{
-			main_app.set_number_of_top_players_to_display_in_game_chat(players_stats_feature_json_object["number_of_top_players_to_display_in_game_chat"].template get<int>());
-		}
-		else
-		{
-			found_missing_config_setting = true;
-			main_app.set_number_of_top_players_to_display_in_game_chat(10u);
-		}
+	//	// number_of_top_players_to_display_in_game_chat
+	//	if (players_stats_feature_json_object.contains("number_of_top_players_to_display_in_game_chat"))
+	//	{
+	//		main_app.set_number_of_top_players_to_display_in_game_chat(players_stats_feature_json_object["number_of_top_players_to_display_in_game_chat"].template get<int>());
+	//	}
+	//	else
+	//	{
+	//		found_missing_config_setting = true;
+	//		main_app.set_number_of_top_players_to_display_in_game_chat(10u);
+	//	}
 
-		// number_of_top_players_to_display_in_tinyrcon
-		if (players_stats_feature_json_object.contains("number_of_top_players_to_display_in_tinyrcon"))
-		{
-			main_app.set_number_of_top_players_to_display_in_tinyrcon(players_stats_feature_json_object["number_of_top_players_to_display_in_tinyrcon"].template get<int>());
-		}
-		else
-		{
-			found_missing_config_setting = true;
-			main_app.set_number_of_top_players_to_display_in_tinyrcon(25u);
-		}
+	//	// number_of_top_players_to_display_in_tinyrcon
+	//	if (players_stats_feature_json_object.contains("number_of_top_players_to_display_in_tinyrcon"))
+	//	{
+	//		main_app.set_number_of_top_players_to_display_in_tinyrcon(players_stats_feature_json_object["number_of_top_players_to_display_in_tinyrcon"].template get<int>());
+	//	}
+	//	else
+	//	{
+	//		found_missing_config_setting = true;
+	//		main_app.set_number_of_top_players_to_display_in_tinyrcon(25u);
+	//	}
 
-		if (players_stats_feature_json_object.contains("time_period_in_minutes_for_displaying_top_players_stats_data_in_game_chat"))
-		{
-			main_app.set_time_period_in_minutes_for_displaying_top_players_stats_data_in_game_chat(players_stats_feature_json_object["time_period_in_minutes_for_displaying_top_players_stats_data_in_game_chat"].template get<int>());
-		}
-		else
-		{
-			found_missing_config_setting = true;
-			main_app.set_time_period_in_minutes_for_displaying_top_players_stats_data_in_game_chat(45u);
-		}
+	//	if (players_stats_feature_json_object.contains("time_period_in_minutes_for_displaying_top_players_stats_data_in_game_chat"))
+	//	{
+	//		main_app.set_time_period_in_minutes_for_displaying_top_players_stats_data_in_game_chat(players_stats_feature_json_object["time_period_in_minutes_for_displaying_top_players_stats_data_in_game_chat"].template get<int>());
+	//	}
+	//	else
+	//	{
+	//		found_missing_config_setting = true;
+	//		main_app.set_time_period_in_minutes_for_displaying_top_players_stats_data_in_game_chat(45u);
+	//	}
 
-		if (players_stats_feature_json_object.contains("time_period_in_minutes_for_displaying_top_players_stats_data_in_tinyrcon"))
-		{
-			main_app.set_time_period_in_minutes_for_displaying_top_players_stats_data_in_tinyrcon(players_stats_feature_json_object["time_period_in_minutes_for_displaying_top_players_stats_data_in_tinyrcon"].template get<int>());
-		}
-		else
-		{
-			found_missing_config_setting = true;
-			main_app.set_time_period_in_minutes_for_displaying_top_players_stats_data_in_tinyrcon(45u);
-		}
+	//	if (players_stats_feature_json_object.contains("time_period_in_minutes_for_displaying_top_players_stats_data_in_tinyrcon"))
+	//	{
+	//		main_app.set_time_period_in_minutes_for_displaying_top_players_stats_data_in_tinyrcon(players_stats_feature_json_object["time_period_in_minutes_for_displaying_top_players_stats_data_in_tinyrcon"].template get<int>());
+	//	}
+	//	else
+	//	{
+	//		found_missing_config_setting = true;
+	//		main_app.set_time_period_in_minutes_for_displaying_top_players_stats_data_in_tinyrcon(45u);
+	//	}
 
-		if (players_stats_feature_json_object.contains("time_period_in_minutes_for_saving_players_stats_data"))
-		{
-			main_app.set_time_period_in_minutes_for_saving_players_stats_data(players_stats_feature_json_object["time_period_in_minutes_for_saving_players_stats_data"].template get<int>());
-		}
-		else
-		{
-			found_missing_config_setting = true;
-			main_app.set_time_period_in_minutes_for_saving_players_stats_data(30u);
-		}
-	}
+	//	if (players_stats_feature_json_object.contains("time_period_in_minutes_for_saving_players_stats_data"))
+	//	{
+	//		main_app.set_time_period_in_minutes_for_saving_players_stats_data(players_stats_feature_json_object["time_period_in_minutes_for_saving_players_stats_data"].template get<int>());
+	//	}
+	//	else
+	//	{
+	//		found_missing_config_setting = true;
+	//		main_app.set_time_period_in_minutes_for_saving_players_stats_data(30u);
+	//	}
+	//}
 
 	if (json_resource.contains("tiny_rcon_server_ip"))
 	{
@@ -1866,16 +1871,16 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
 		main_app.set_tiny_rcon_server_ip_address("85.222.189.119");
 	}
 
-	if (json_resource.contains("tiny_rcon_server_port"))
-	{
-		const int port_number{json_resource["tiny_rcon_server_port"].template get<int>()};
-		main_app.set_tiny_rcon_server_port(static_cast<uint_least16_t>(port_number));
-	}
-	else
-	{
-		found_missing_config_setting = true;
-		main_app.set_tiny_rcon_server_port(27015);
-	}
+	// if (json_resource.contains("tiny_rcon_server_port"))
+	// {
+	// 	const int port_number{json_resource["tiny_rcon_server_port"].template get<int>()};
+	// 	main_app.set_tiny_rcon_server_port(static_cast<uint_least16_t>(port_number));
+	// }
+	// else
+	// {
+	// 	found_missing_config_setting = true;
+	// 	main_app.set_tiny_rcon_server_port(27015);
+	// }
 
 	if (json_resource.contains("tiny_rcon_server_ip_for_players"))
 	{
@@ -1889,16 +1894,16 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
 		main_app.set_tiny_rcon_server_ip_address_for_players("85.222.189.119");
 	}
 
-	if (json_resource.contains("tiny_rcon_server_port_for_players"))
-	{
-		const int port_number{json_resource["tiny_rcon_server_port_for_players"].template get<int>()};
-		main_app.set_tiny_rcon_server_port_for_players(static_cast<uint_least16_t>(port_number));
-	}
-	else
-	{
-		found_missing_config_setting = true;
-		main_app.set_tiny_rcon_server_port_for_players(27017);
-	}
+	// if (json_resource.contains("tiny_rcon_server_port_for_players"))
+	// {
+	// 	const int port_number{json_resource["tiny_rcon_server_port_for_players"].template get<int>()};
+	// 	main_app.set_tiny_rcon_server_port_for_players(static_cast<uint_least16_t>(port_number));
+	// }
+	// else
+	// {
+	// 	found_missing_config_setting = true;
+	// 	main_app.set_tiny_rcon_server_port_for_players(27017);
+	// }
 
 	if (json_resource.contains("tiny_rcon_ftp_server_username"))
 	{
@@ -3987,10 +3992,6 @@ void print_help_information(const std::vector<std::string> &input_parts)
  ^1!ranges ^5-> displays data about all ^1IP address range bans.
  ^1!bans ^3-> displays a list of permanently banned IP addresses.
  ^1!tempbans ^5-> displays a list of temporarily banned IP addresses.
- ^1!banip pid|valid_ip_address optional_reason ^3-> bans player whose 'pid' number or 'ip_address' is equal to specified 'pid'
-    or 'valid_ip_address', respectively.
- ^1!addip pid|valid_ip_address optional_reason ^5-> bans player whose 'pid' number or 'ip_address' is equal to specified 'pid'
-    or 'valid_ip_address', respectively.
  ^1!ub valid_ip_address optional_reason ^3-> removes temporarily and|or permanently banned IP address 'valid_ip_address'.
  ^1!unban valid_ip_address optional_reason ^5-> removes temporarily and|or permanently banned IP address 'valid_ip_address'.
  ^1!m map_name game_type ^3-> loads map 'map_name' in specified game mode 'game_type', example: !m mp_toujane hq
@@ -4030,7 +4031,8 @@ void print_help_information(const std::vector<std::string> &input_parts)
  specified ^1'pid' ^2or ^1'valid_ip_address'^2, respectively.
  ^1!unprotectcountry pid|country_name ^5-> ^3removes protected ^1IP address ^3of player whose ^1'pid' ^3number or ^1'country name'
  ^3is equal to specified ^1'pid' ^3or ^1'country_name'^3, respectively.
- ^1!banname pid|player_name [reason] ^5-> ^2bans ^1player name ^2of online player whose ^1pid ^2number is equal to specified ^1'pid' ^2or bans specified player name ^1'player_name'.
+ ^1!banname pid|player_name [reason] ^5-> ^2bans ^1player name ^2of online player whose ^1pid ^2number is equal to specified ^1'pid' 
+   ^2or bans specified player name ^1'player_name'.
  ^1!unbanname player_name [reason] ^5-> ^3removes previously banned ^1'player name'.
  ^1!names ^5-> ^2displays all currently banned names.
  ^1!stats ^5-> ^3displays up-to-date ^5Tiny^6Rcon ^1admins' ^3related stats data.
@@ -4042,7 +4044,12 @@ void print_help_information(const std::vector<std::string> &input_parts)
  ^1!tpm [optional_number] ^5-> displays top ^125 ^3or ^1optional_number ^3players' stats data for current month.
  ^1!tpy [optional_number] ^5-> displays top ^125 ^5or ^1optional_number ^5players' stats data for current year.
  ^1!s player_name ^5-> displays stats data for player whose partially or fully specified name is ^1player_name. 
-   ^3You can omit ^1color codes ^3in partially or fully specified ^1player_name^3.)"};
+   ^3You can omit ^1color codes ^3in partially or fully specified ^1player_name^3.
+ ^1!addip 123.123.123.123 wh ^5-> bans custom IP address ^1123.123.123.123 ^5with reason ^1wh.
+ ^1!addip 123.123.123.123 n:Pro100Nik^2123 r:wh ^3[Enter] ^5-> bans custom IP address ^1123.123.123.123
+   ^3(of player named ^7Pro100Nik^2123^3) with specified reason: ^1wh
+ ^1!rcon custom_rcon_command [optional_parameters] ^5-> sends ^1custom_rcon_command [optional_parameters] ^3to game server.
+   ^7Examples: ^1!rcon map_restart ^7| ^1!rcon fast_restart ^7| ^1!rcon sv_iwdnames)"};
 		print_colored_text(app_handles.hwnd_re_messages_data, help_message.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
 		print_colored_text(app_handles.hwnd_re_messages_data, "^5\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::no);
 	}
@@ -5097,12 +5104,12 @@ void sort_players_data(std::vector<player> &players_data, const sort_type sort_m
 		{
 			std::sort(std::begin(players_data), std::begin(players_data) + number_of_players, [](const player &pl1, const player &pl2)
 					  {
-				unsigned long ip_key1{}, ip_key2{};
-				if (!check_ip_address_validity(pl1.ip_address, ip_key1))
-					return true;
-				if (!check_ip_address_validity(pl2.ip_address, ip_key2))
-					return false;
-				return ip_key1 < ip_key2; });
+					unsigned long ip_key1{}, ip_key2{};
+					if (!check_ip_address_validity(pl1.ip_address, ip_key1))
+						return true;
+					if (!check_ip_address_validity(pl2.ip_address, ip_key2))
+						return false;
+					return ip_key1 < ip_key2; });
 		}
 		break;
 
@@ -5111,65 +5118,65 @@ void sort_players_data(std::vector<player> &players_data, const sort_type sort_m
 		{
 			std::sort(std::begin(players_data), std::begin(players_data) + number_of_players, [](const player &pl1, const player &pl2)
 					  {
-				unsigned long ip_key1{}, ip_key2{};
-				if (!check_ip_address_validity(pl1.ip_address, ip_key1))
-					return false;
-				if (!check_ip_address_validity(pl2.ip_address, ip_key2))
-					return true;
-				return ip_key1 > ip_key2; });
+					unsigned long ip_key1{}, ip_key2{};
+					if (!check_ip_address_validity(pl1.ip_address, ip_key1))
+						return false;
+					if (!check_ip_address_validity(pl2.ip_address, ip_key2))
+						return true;
+					return ip_key1 > ip_key2; });
 		}
 		break;
 
 	case sort_type::name_asc:
 		std::sort(std::begin(players_data), std::begin(players_data) + number_of_players, [](const player &pl1, const player &pl2)
 				  {
-			string pl1_cleaned_lc_name{ pl1.player_name };
-			string pl2_cleaned_lc_name{ pl2.player_name };
-			remove_all_color_codes(pl1_cleaned_lc_name);
-			remove_all_color_codes(pl2_cleaned_lc_name);
-			to_lower_case_in_place(pl1_cleaned_lc_name);
-			to_lower_case_in_place(pl2_cleaned_lc_name);
-			return pl1_cleaned_lc_name < pl2_cleaned_lc_name; });
+				string pl1_cleaned_lc_name{ pl1.player_name };
+				string pl2_cleaned_lc_name{ pl2.player_name };
+				remove_all_color_codes(pl1_cleaned_lc_name);
+				remove_all_color_codes(pl2_cleaned_lc_name);
+				to_lower_case_in_place(pl1_cleaned_lc_name);
+				to_lower_case_in_place(pl2_cleaned_lc_name);
+				return pl1_cleaned_lc_name < pl2_cleaned_lc_name; });
 		break;
 
 	case sort_type::name_desc:
 		std::sort(std::begin(players_data), std::begin(players_data) + number_of_players, [](const player &pl1, const player &pl2)
 				  {
-			string pl1_cleaned_lc_name{ pl1.player_name };
-			string pl2_cleaned_lc_name{ pl2.player_name };
-			remove_all_color_codes(pl1_cleaned_lc_name);
-			remove_all_color_codes(pl2_cleaned_lc_name);
-			to_lower_case_in_place(pl1_cleaned_lc_name);
-			to_lower_case_in_place(pl2_cleaned_lc_name);
-			return pl1_cleaned_lc_name > pl2_cleaned_lc_name; });
+				string pl1_cleaned_lc_name{ pl1.player_name };
+				string pl2_cleaned_lc_name{ pl2.player_name };
+				remove_all_color_codes(pl1_cleaned_lc_name);
+				remove_all_color_codes(pl2_cleaned_lc_name);
+				to_lower_case_in_place(pl1_cleaned_lc_name);
+				to_lower_case_in_place(pl2_cleaned_lc_name);
+				return pl1_cleaned_lc_name > pl2_cleaned_lc_name; });
 		break;
 
 	case sort_type::geo_asc:
 		std::sort(std::begin(players_data), std::begin(players_data) + number_of_players, [](const player &pl1, const player &pl2)
 				  {
-			char buffer1[256];
-			(void)snprintf(buffer1, std::size(buffer1), "%s, %s", (len(pl1.country_name) > 0 ? pl1.country_name : pl1.region), pl1.city);
-			char buffer2[256];
-			(void)snprintf(buffer2, std::size(buffer2), "%s, %s", (len(pl2.country_name) > 0 ? pl2.country_name : pl2.region), pl2.city);
-			string pl1_cleaned_geo{ buffer1 };
-			string pl2_cleaned_geo{ buffer2 };
-			to_lower_case_in_place(pl1_cleaned_geo);
-			to_lower_case_in_place(pl2_cleaned_geo);
-			return pl1_cleaned_geo < pl2_cleaned_geo; });
+				char buffer1[256];
+				(void)snprintf(buffer1, std::size(buffer1), "%s, %s", (len(pl1.country_name) > 0 ? pl1.country_name : pl1.region), pl1.city);
+				char buffer2[256];
+				(void)snprintf(buffer2, std::size(buffer2), "%s, %s", (len(pl2.country_name) > 0 ? pl2.country_name : pl2.region), pl2.city);
+				string pl1_cleaned_geo{ buffer1 };
+				string pl2_cleaned_geo{ buffer2 };
+				to_lower_case_in_place(pl1_cleaned_geo);
+				to_lower_case_in_place(pl2_cleaned_geo);
+				return pl1_cleaned_geo < pl2_cleaned_geo; });
 		break;
 
 	case sort_type::geo_desc:
 		std::sort(std::begin(players_data), std::begin(players_data) + number_of_players, [](const player &pl1, const player &pl2)
 				  {
-			char buffer1[256];
-			(void)snprintf(buffer1, std::size(buffer1), "%s, %s", (len(pl1.country_name) > 0 ? pl1.country_name : pl1.region), pl1.city);
-			char buffer2[256];
-			(void)snprintf(buffer2, std::size(buffer2), "%s, %s", (len(pl2.country_name) > 0 ? pl2.country_name : pl2.region), pl2.city);
-			string pl1_cleaned_geo{ buffer1 };
-			string pl2_cleaned_geo{ buffer2 };
-			to_lower_case_in_place(pl1_cleaned_geo);
-			to_lower_case_in_place(pl2_cleaned_geo);
-			return pl2_cleaned_geo < pl1_cleaned_geo; });
+				char buffer1[256];
+				(void)snprintf(buffer1, std::size(buffer1), "%s, %s", (len(pl1.country_name) > 0 ? pl1.country_name : pl1.region), pl1.city);
+				char buffer2[256];
+				(void)snprintf(buffer2, std::size(buffer2), "%s, %s", (len(pl2.country_name) > 0 ? pl2.country_name : pl2.region), pl2.city);
+				string pl1_cleaned_geo{ buffer1 };
+				string pl2_cleaned_geo{ buffer2 };
+				to_lower_case_in_place(pl1_cleaned_geo);
+				to_lower_case_in_place(pl2_cleaned_geo);
+				return pl2_cleaned_geo < pl1_cleaned_geo; });
 		break;
 
 	case sort_type::unknown:
@@ -7536,54 +7543,70 @@ std::string escape_backward_slash_characters_in_place(const std::string &line)
 
 void replace_backward_slash_with_forward_slash(std::string &path)
 {
-	// print_trace_message(__FILE__, __LINE__, __FUNCTION__);
-	if (path.starts_with("steam://"))
-		return;
+  // print_trace_message(__FILE__, __LINE__, __FUNCTION__);
 
-	string output;
-	output.reserve(path.size());
-	char prev{};
-	for (size_t i{}; i < path.length(); ++i)
-	{
-		if ('\\' == path[i] || '/' == path[i])
-		{
-			if (prev != '/')
-				output.push_back('/');
-			prev = '/';
-		}
-		else
-		{
-			output.push_back(path[i]);
-			prev = path[i];
-		}
-	}
-	path = std::move(output);
+  string output;
+  output.reserve(path.size());
+  size_t start_pos{};
+
+  if (path.starts_with("steam://")) {
+    start_pos = len("steam://");
+    output += "steam://";
+  } else if (path.starts_with("ftp://")) {
+    output += "ftp://";
+    start_pos = len("ftp://");
+  }
+  if (path.starts_with("http://")) {
+    output += "http://";
+    start_pos = len("http://");
+  }
+
+  char prev{};
+  for (size_t i{ start_pos }; i < path.length(); ++i) {
+    if ('\\' == path[i] || '/' == path[i]) {
+      if (prev != '/')
+        output.push_back('/');
+      prev = '/';
+    } else {
+      output.push_back(path[i]);
+      prev = path[i];
+    }
+  }
+  path = std::move(output);
 }
 
 void replace_backward_slash_with_forward_slash(std::wstring &path)
 {
-	// print_trace_message(__FILE__, __LINE__, __FUNCTION__);
-	if (path.starts_with(L"steam://"))
-		return;
+  // print_trace_message(__FILE__, __LINE__, __FUNCTION__);
 
-	wstring output;
-	output.reserve(path.size());
-	wchar_t prev{};
-	for (size_t i{}; i < path.length(); ++i)
-	{
-		if (L'\\' == path[i] || L'/' == path[i])
-		{
-			if (prev != L'/')
-				output.push_back(L'/');
-			prev = L'/';
-		}
-		else
-		{
-			output.push_back(path[i]);
-			prev = path[i];
-		}
-	}
-	path = std::move(output);
+  wstring output;
+  output.reserve(path.size());
+  size_t start_pos{};
+
+  if (path.starts_with(L"steam://")) {
+    start_pos = len(L"steam://");
+    output += L"steam://";
+  } else if (path.starts_with(L"ftp://")) {
+    output += L"ftp://";
+    start_pos = len(L"ftp://");
+  }
+  if (path.starts_with(L"http://")) {
+    output += L"http://";
+    start_pos = len(L"http://");
+  }
+
+  wchar_t prev{};
+  for (size_t i{ start_pos }; i < path.length(); ++i) {
+    if (L'\\' == path[i] || L'/' == path[i]) {
+      if (prev != L'/')
+        output.push_back(L'/');
+      prev = L'/';
+    } else {
+      output.push_back(path[i]);
+      prev = path[i];
+    }
+  }
+  path = std::move(output);
 }
 
 void replace_forward_slash_with_backward_slash(std::string &path)
@@ -10630,19 +10653,26 @@ void initialize_servers_grid(HWND
 	SimpleGrid_EnableEdit(hgrid, FALSE);
 }
 
-bool is_alpha(const char ch)
+bool is_alpha(const char ch) noexcept
 {
 	// print_trace_message(__FILE__, __LINE__, __FUNCTION__);
 	return !is_decimal_digit(ch) && !is_ws(ch);
 }
 
-bool is_decimal_digit(const char ch)
+bool is_decimal_digit(const char ch) noexcept
 {
 	// print_trace_message(__FILE__, __LINE__, __FUNCTION__);
 	return ch >= '0' && ch <= '9';
 }
 
-bool is_ws(const char ch)
+bool is_printable(const char ch)
+{
+	static string printable_characters{"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!\"#$%&'()*+,-./:;?@[\\]^_`{|}~ "};
+	// static const unordered_set<char> printable_characters_set(printable_characters, printable_characters + strlen(printable_characters));
+	return printable_characters.find(ch) != string::npos;
+}
+
+bool is_ws(const char ch) noexcept
 {
 	// print_trace_message(__FILE__, __LINE__, __FUNCTION__);
 	return ch == ' ' || ch == '\t' || ch == '\n' || ch == '\f' || ch == '\v';
@@ -10910,6 +10940,7 @@ void update_game_server_setting(game_server &gs, std::string key, std::string va
 	}
 	else if (key == "hostname")
 	{
+		// if (!is_rcon_game_server(gs))
 		gs.set_server_name(value);
 	}
 	else if (key == "mapname")
@@ -10998,6 +11029,7 @@ void update_game_server_setting(game_server &gs, std::string key, std::string va
 	}
 	else if (key == "sv_hostname")
 	{
+		// if (!is_rcon_game_server(gs))
 		gs.set_server_name(value);
 	}
 	else if (key == "sv_maxclients")
@@ -12701,11 +12733,11 @@ void prepare_players_data_for_display_for_regular_users(game_server &gs, const b
 
 			std::sort(std::begin(players), std::begin(players) + number_of_players, [](const player &pl1, const player &pl2)
 					  {
-				string pl1_cleaned_geo{ pl1.geo_information };
-				string pl2_cleaned_geo{ pl2.geo_information };
-				to_lower_case_in_place(pl1_cleaned_geo);
-				to_lower_case_in_place(pl2_cleaned_geo);
-				return pl1_cleaned_geo < pl2_cleaned_geo; });
+					string pl1_cleaned_geo{ pl1.geo_information };
+					string pl2_cleaned_geo{ pl2.geo_information };
+					to_lower_case_in_place(pl1_cleaned_geo);
+					to_lower_case_in_place(pl2_cleaned_geo);
+					return pl1_cleaned_geo < pl2_cleaned_geo; });
 
 		} /*else if (type_of_sort == sort_type::geo_desc) {
 	  std::sort(std::begin(players), std::begin(players) + number_of_players, [](const player &pl1, const player &pl2) {
@@ -15188,16 +15220,16 @@ void execute_at_exit()
 	save_protected_entries_file(main_app.get_protected_cities_file_path(), main_app.get_current_game_server().get_protected_cities());
 	save_protected_entries_file(main_app.get_protected_countries_file_path(), main_app.get_current_game_server().get_protected_countries());
 
-	save_players_stats_data("data\\player_stats.dat", main_app.get_stats_data().get_scores_vector(), main_app.get_stats_data().get_scores_map());
+	/*save_players_stats_data("data\\player_stats.dat", main_app.get_stats_data().get_scores_vector(), main_app.get_stats_data().get_scores_map());
 
-  const string file_name_path_for_stats_data_for_year{ format("data\\player_stats_for_year-{}.dat", main_app.get_stats_data().get_stop_time_in_seconds_for_year()) };
-  save_players_stats_data(file_name_path_for_stats_data_for_year.c_str(), main_app.get_stats_data().get_scores_for_year_vector(), main_app.get_stats_data().get_scores_for_year_map());
+	const string file_name_path_for_stats_data_for_year{format("data\\player_stats_for_year-{}.dat", main_app.get_stats_data().get_stop_time_in_seconds_for_year())};
+	save_players_stats_data(file_name_path_for_stats_data_for_year.c_str(), main_app.get_stats_data().get_scores_for_year_vector(), main_app.get_stats_data().get_scores_for_year_map());
 
-  const string file_name_path_for_stats_data_for_month{ format("data\\player_stats_for_month-{}.dat", main_app.get_stats_data().get_stop_time_in_seconds_for_month()) };
-  save_players_stats_data(file_name_path_for_stats_data_for_month.c_str(), main_app.get_stats_data().get_scores_for_month_vector(), main_app.get_stats_data().get_scores_for_month_map());
+	const string file_name_path_for_stats_data_for_month{format("data\\player_stats_for_month-{}.dat", main_app.get_stats_data().get_stop_time_in_seconds_for_month())};
+	save_players_stats_data(file_name_path_for_stats_data_for_month.c_str(), main_app.get_stats_data().get_scores_for_month_vector(), main_app.get_stats_data().get_scores_for_month_map());
 
-  const string file_name_path_for_stats_data_for_day{ format("data\\player_stats_for_day-{}.dat", main_app.get_stats_data().get_stop_time_in_seconds_for_day()) };
-  save_players_stats_data(file_name_path_for_stats_data_for_day.c_str(), main_app.get_stats_data().get_scores_for_day_vector(), main_app.get_stats_data().get_scores_for_day_map());
+	const string file_name_path_for_stats_data_for_day{format("data\\player_stats_for_day-{}.dat", main_app.get_stats_data().get_stop_time_in_seconds_for_day())};
+	save_players_stats_data(file_name_path_for_stats_data_for_day.c_str(), main_app.get_stats_data().get_scores_for_day_vector(), main_app.get_stats_data().get_scores_for_day_map());*/
 }
 
 bool check_if_exists_and_download_missing_custom_map_files_downloader(/*const char* downloader_program_file_path*/)
@@ -15523,601 +15555,610 @@ bool fix_path_strings_in_json_config_file(const std::string &config_file_path)
 	return true;
 }
 
-void load_image_files_information(const char *file_path)
+// void process_topplayers_request(const std::string &d)
+//{
+//	std::thread process_topplayers_request_task{[data = d]()
+//												{
+//													// IsGUIThread(TRUE);
+//													auto parts = stl::helper::str_split(data, "\\", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::yes);
+//													// for (auto &part : parts) stl::helper::trim_in_place(part);
+//													if (parts.size() >= 2)
+//													{
+//														int n{25};
+//														if (parts[0] == "!s")
+//														{
+//															const string title{format("^5Stats data of ^1player(s) ^5matching specified player name ^1({}):", parts[1])};
+//															string public_message;
+//															const string players_stats_information{get_top_players_stats_data(main_app.get_stats_data().get_scores_vector(), main_app.get_stats_data().get_scores_map(), n, public_message, title.c_str(), parts[1])};
+//															print_colored_text(app_handles.hwnd_re_messages_data, players_stats_information.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true, true);
+//														}
+//														else if (parts[0] == "tp" || parts[0] == "!tp")
+//														{
+//															if (!is_valid_decimal_whole_number(parts[1], n))
+//																n = 25;
+//															const string title{format("Top {} {}", n, n != 1 ? "players" : "player")};
+//															string public_message;
+//															const string players_stats_information{get_top_players_stats_data(main_app.get_stats_data().get_scores_vector(), main_app.get_stats_data().get_scores_map(), n, public_message, title.c_str())};
+//															print_colored_text(app_handles.hwnd_re_messages_data, players_stats_information.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true, true);
+//														}
+//														else if (parts[0] == "tpy" || parts[0] == "!tpy")
+//														{
+//															if (!is_valid_decimal_whole_number(parts[1], n))
+//																n = 25;
+//															tm time_info{};
+//															auto t_c = get_current_time_stamp();
+//															localtime_s(&time_info, &t_c);
+//															const string title{format("Top {} {} for year {}:", n, n != 1 ? "players" : "player", time_info.tm_year + 1900)};
+//															string public_message;
+//															const string players_stats_information{get_top_players_stats_data(main_app.get_stats_data().get_scores_for_year_vector(), main_app.get_stats_data().get_scores_for_year_map(), n, public_message, title.c_str())};
+//															print_colored_text(app_handles.hwnd_re_messages_data, players_stats_information.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true, true);
+//														}
+//														else if (parts[0] == "tpm" || parts[0] == "!tpm")
+//														{
+//															if (!is_valid_decimal_whole_number(parts[1], n))
+//																n = 25;
+//															tm time_info{};
+//															auto t_c = get_current_time_stamp();
+//															localtime_s(&time_info, &t_c);
+//															const string title{format("Top {} {} for month {}:", n, n != 1 ? "players" : "player", get_current_short_month_name(time_info.tm_mon + 1), time_info.tm_year + 1900)};
+//															string public_message;
+//															const string players_stats_information{get_top_players_stats_data(main_app.get_stats_data().get_scores_for_month_vector(), main_app.get_stats_data().get_scores_for_month_map(), n, public_message, title.c_str())};
+//															print_colored_text(app_handles.hwnd_re_messages_data, players_stats_information.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true, true);
+//														}
+//														else if (parts[0] == "tpd" || parts[0] == "!tpd")
+//														{
+//															if (!is_valid_decimal_whole_number(parts[1], n))
+//																n = 25;
+//															tm time_info{};
+//															auto t_c = get_current_time_stamp();
+//															localtime_s(&time_info, &t_c);
+//															const string title{format("Top {} {} for {}.{}.{}:", n, n != 1 ? "players" : "player", time_info.tm_mday, get_current_short_month_name(time_info.tm_mon + 1), time_info.tm_year + 1900)};
+//															string public_message;
+//															const string players_stats_information{get_top_players_stats_data(main_app.get_stats_data().get_scores_for_day_vector(), main_app.get_stats_data().get_scores_for_day_map(), n, public_message, title.c_str())};
+//															print_colored_text(app_handles.hwnd_re_messages_data, players_stats_information.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true, true);
+//														}
+//													}
+//												}};
+//	process_topplayers_request_task.detach();
+// }
+//
+//[[maybe_unused]] bool tell_player_their_stats_data_in_a_private_message(const char *, const player &pd)
+//{
+//	auto &stats_data_vector = main_app.get_stats_data().get_scores_vector();
+//	auto &stats_data_map = main_app.get_stats_data().get_scores_map();
+//	if (stats_data_map.contains(pd.player_name_index))
+//	{
+//		const auto &user = stats_data_map[pd.player_name_index];
+//		for (size_t i{}; i < stats_data_vector.size(); ++i)
+//		{
+//			if (pd.player_name_index == stats_data_vector[i].index_name)
+//			{
+//				char buffer[32]{};
+//				ostringstream rcon;
+//				rcon << "Your stats data: ^5Rank: ";
+//				snprintf(buffer, std::size(buffer), "%lu", i + 1);
+//				rcon << "^1" << buffer << " ^5Score: ";
+//				snprintf(buffer, std::size(buffer), "%lld", user.score);
+//				rcon << "^1" << buffer << " ^5SPM: ";
+//				const auto time_interval_in_minutes = (user.time_spent_on_server_in_seconds + 5) / 60;
+//				snprintf(buffer, std::size(buffer), "%.2lf spm", time_interval_in_minutes != 0 ? static_cast<double>(user.score) / time_interval_in_minutes : 0.0);
+//				rcon << "^1" << buffer << " ^5Time played: ";
+//				const string time_period_information{get_time_interval_info_string_for_seconds_in_hours_and_minutes(user.time_spent_on_server_in_seconds + 5)};
+//				rcon << "^1" << time_period_information;
+//				const string private_msg{rcon.str()};
+//				tell_message(private_msg.c_str(), pd.pid);
+//				return true;
+//			}
+//		}
+//	}
+//
+//	return false;
+// }
+//
+// bool remove_stats_for_player_name(const std::string &player_name_index)
+//{
+//
+//	auto &sd = main_app.get_stats_data();
+//	bool is_found_player_name{};
+//
+//	{
+//		lock_guard lg{main_app.get_stats_data().get_stats_data_mutex()};
+//		if (sd.get_scores_map().contains(player_name_index))
+//		{
+//			sd.get_scores_map().erase(player_name_index);
+//			is_found_player_name = true;
+//		}
+//
+//		if (sd.get_scores_for_year_map().contains(player_name_index))
+//		{
+//			sd.get_scores_for_year_map().erase(player_name_index);
+//			is_found_player_name = true;
+//		}
+//
+//		if (sd.get_scores_for_month_map().contains(player_name_index))
+//		{
+//			sd.get_scores_for_month_map().erase(player_name_index);
+//			is_found_player_name = true;
+//		}
+//
+//		if (sd.get_scores_for_day_map().contains(player_name_index))
+//		{
+//			sd.get_scores_for_day_map().erase(player_name_index);
+//			is_found_player_name = true;
+//		}
+//	}
+//
+//	if (is_found_player_name)
+//	{
+//		sort_players_stats_data(sd.get_scores_vector(), sd.get_scores_map());
+//		sort_players_stats_data(sd.get_scores_for_year_vector(), sd.get_scores_for_year_map());
+//		sort_players_stats_data(sd.get_scores_for_month_vector(), sd.get_scores_for_month_map());
+//		sort_players_stats_data(sd.get_scores_for_day_vector(), sd.get_scores_for_day_map());
+//	}
+//
+//	return is_found_player_name;
+// }
+//
+// void rcon_say_top_players(std::string &&title)
+//{
+//	string public_message;
+//	get_top_players_stats_data(main_app.get_stats_data().get_scores_vector(), main_app.get_stats_data().get_scores_map(), main_app.get_number_of_top_players_to_display_in_game_chat(), public_message, "Top players:");
+//	// print_colored_text(app_handles.hwnd_re_messages_data, top_players_stats.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true, true, true);
+//	if (main_app.get_current_game_server().get_number_of_players() >= 2u)
+//	{
+//		const string online_players_stats{get_online_players_stats_data_report(main_app.get_stats_data().get_scores_vector(), main_app.get_stats_data().get_scores_map(), "Online players' stats data:")};
+//		print_colored_text(app_handles.hwnd_re_messages_data, online_players_stats.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true, true);
+//	}
+//
+//	rcon_say(title, false);
+//	Sleep(3000);
+//	auto lines = stl::helper::str_split(public_message, '\n', nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::yes);
+//	for (size_t i{}; i < std::min<size_t>(10u, lines.size()); ++i)
+//	{
+//		stl::helper::trim_in_place(lines[i]);
+//		if (lines[i].empty())
+//			continue;
+//		rcon_say(lines[i], false);
+//		Sleep(3000);
+//	}
+//
+//	const auto &stats_data_map = main_app.get_stats_data().get_scores_map();
+//	const auto &players_data = main_app.get_current_game_server().get_players_data();
+//	for (size_t i{}; i < main_app.get_current_game_server().get_number_of_players(); ++i)
+//	{
+//		const auto &pd = players_data[i];
+//		if (stats_data_map.contains(pd.player_name_index))
+//		{
+//			tell_player_their_stats_data_in_a_private_message("^5Your stats data: ", pd);
+//			Sleep(3000);
+//		}
+//	}
+// }
+//
+// std::string get_top_players_stats_data(
+//	std::vector<player_stats> &stats_data, std::unordered_map<std::string, player_stats> &stats_data_map,
+//	const size_t number_of_top_players, std::string &public_message, const char *title,
+//	std::string partial_or_full_player_name, const bool find_exact_player_name_match)
+//{
+//	sort_players_stats_data(stats_data, stats_data_map);
+//
+//	size_t number_of_entries_to_display{
+//		number_of_top_players <= 1000U && number_of_top_players < stats_data.size()
+//			? number_of_top_players
+//			: std::min<size_t>(1000U, stats_data.size())};
+//
+//	if (!partial_or_full_player_name.empty())
+//	{
+//		number_of_entries_to_display = 25u;
+//		partial_or_full_player_name = get_cleaned_user_name(partial_or_full_player_name);
+//		vector<player_stats> found_player_stats;
+//
+//		unordered_set<string> seen_index_names;
+//		unordered_set<string> seen_player_names;
+//		size_t j{};
+//		for (size_t i{}; i < stats_data.size() && j < number_of_entries_to_display; ++i)
+//		{
+//			if (seen_index_names.contains(stats_data[i].index_name) || seen_player_names.contains(stats_data[i].player_name))
+//				continue;
+//			seen_index_names.emplace(stats_data[i].index_name);
+//			seen_player_names.emplace(stats_data[i].player_name);
+//			if ((!find_exact_player_name_match && stl::helper::str_contains(stats_data[i].index_name, partial_or_full_player_name.c_str(), 0U)) || partial_or_full_player_name == stats_data[i].index_name)
+//			{
+//				found_player_stats.emplace_back(stats_data[i]);
+//				found_player_stats.back().first_seen = i + 1;
+//				++j;
+//				if (find_exact_player_name_match)
+//					break;
+//			}
+//		}
+//
+//		size_t longest_name_length{12};
+//		if (!found_player_stats.empty())
+//		{
+//			longest_name_length = std::max(longest_name_length, find_longest_player_name_length(found_player_stats.cbegin(), found_player_stats.cend(), false));
+//		}
+//
+//		ostringstream oss;
+//		const string decoration_line(68 + longest_name_length, '=');
+//		oss << "^5\n"
+//			<< decoration_line << "\n";
+//		std::string title_str{title};
+//		stl::helper::trim_in_place(title_str);
+//		remove_all_color_codes(title_str);
+//		const size_t printed_name_char_count{get_number_of_characters_without_color_codes(title)};
+//		const size_t padding_size{(decoration_line.length() - 4u - printed_name_char_count)};
+//		const string pad_str(padding_size, ' ');
+//		if (printed_name_char_count + 4u <= decoration_line.length())
+//		{
+//			oss << "^5| " << left << title << right << pad_str << " ^5|\n";
+//		}
+//		else
+//		{
+//			oss << "^5| " << left << title << " ^5|\n";
+//		}
+//		oss << decoration_line << "\n";
+//		oss << "^5| ";
+//		oss << left << setw(6) << "Rank "
+//			<< " | " << left << setw(longest_name_length) << "Player name"
+//			<< " | " << left << setw(10) << "Score"
+//			<< " | " << left << setw(17) << "Score/minute"
+//			<< " | " << left << setw(20) << "Time played"
+//			<< "^5|\n";
+//		oss << decoration_line << "\n";
+//		bool is_first_color{true};
+//		char buffer[32]{};
+//		for (size_t i{}; i < found_player_stats.size(); ++i)
+//		{
+//			const auto &user = found_player_stats[i];
+//			const char *next_color{is_first_color ? "^3" : "^5"};
+//			snprintf(buffer, std::size(buffer), "%lld.", user.first_seen);
+//			oss << "^5| " << text_element{buffer, 6, next_color};
+//			oss << " ^5| " << text_element{user.player_name, longest_name_length, "^7"} << " ^5| ";
+//			snprintf(buffer, std::size(buffer), "%lld", user.score);
+//			oss << text_element{buffer, 10, next_color} << " ^5| ";
+//			const auto time_interval_in_minutes = (user.time_spent_on_server_in_seconds + 5) / 60;
+//			snprintf(buffer, std::size(buffer), "%.2lf spm", time_interval_in_minutes != 0 ? static_cast<double>(user.score) / time_interval_in_minutes : 0.0);
+//			oss << text_element{buffer, 17, next_color} << " ^5| ";
+//			const string time_period_information{get_time_interval_info_string_for_seconds_in_hours_and_minutes(user.time_spent_on_server_in_seconds + 5)};
+//			oss << text_element{time_period_information.c_str(), 20, next_color} << "^5|\n";
+//			is_first_color = !is_first_color;
+//		}
+//
+//		if (0u == j)
+//		{
+//			const size_t message_len = stl::helper::len("| No matches found!");
+//			oss << "^5| ^3No matches found!";
+//
+//			if (message_len + 2 < decoration_line.length())
+//			{
+//				oss << string(decoration_line.length() - 2 - message_len, ' ');
+//			}
+//			oss << " ^5|\n";
+//		}
+//
+//		oss << string{"^5"s + decoration_line + "\n\n"s};
+//		return oss.str();
+//	}
+//
+//	size_t longest_name_length{12};
+//	if (!stats_data.empty())
+//	{
+//		longest_name_length = std::max(longest_name_length, find_longest_player_name_length(stats_data.cbegin(), stats_data.cbegin() + number_of_entries_to_display, false));
+//	}
+//
+//	ostringstream oss;
+//	ostringstream rcon;
+//	const string decoration_line(68 + longest_name_length, '=');
+//	oss << "^5\n"
+//		<< decoration_line << "\n";
+//	std::string title_str{title};
+//	stl::helper::trim_in_place(title_str);
+//	remove_all_color_codes(title_str);
+//	const size_t printed_name_char_count{get_number_of_characters_without_color_codes(title)};
+//	const size_t padding_size{(decoration_line.length() - 4u - printed_name_char_count)};
+//	const string pad_str(padding_size, ' ');
+//	if (printed_name_char_count + 4u < decoration_line.length())
+//	{
+//		oss << "^5| " << left << title << right << pad_str << " ^5|\n";
+//	}
+//	else
+//	{
+//		oss << "^5| " << left << title << " ^5|\n";
+//	}
+//	oss << decoration_line << "\n";
+//	oss << "^5| ";
+//	oss << left << setw(6) << "Rank "
+//		<< " | " << left << setw(longest_name_length) << "Player name"
+//		<< " | " << left << setw(10) << "Score"
+//		<< " | " << left << setw(17) << "Score/minute"
+//		<< " | " << left << setw(20) << "Time played"
+//		<< "^5|\n";
+//	oss << decoration_line << "\n";
+//	if (stats_data.empty())
+//	{
+//		const size_t message_len = stl::helper::len("| Players' stats data hasn't been tracked yet.");
+//		oss << "^5| ^3Players' stats data hasn't been tracked yet.";
+//
+//		if (message_len + 2 < decoration_line.length())
+//		{
+//			oss << string(decoration_line.length() - 2 - message_len, ' ');
+//		}
+//		oss << " ^5|\n";
+//	}
+//	else
+//	{
+//		bool is_first_color{true};
+//		char buffer[32]{};
+//		char buffer2[32]{};
+//		unordered_set<string> seen_index_names;
+//		unordered_set<string> seen_player_names;
+//		size_t j{};
+//		for (size_t i{}; i < stats_data.size() && j < number_of_entries_to_display; ++i)
+//		{
+//			if (seen_index_names.contains(stats_data[i].index_name) || seen_player_names.contains(stats_data[i].player_name))
+//				continue;
+//			seen_index_names.emplace(stats_data[i].index_name);
+//			seen_player_names.emplace(stats_data[i].player_name);
+//			const auto &user = stats_data[i];
+//			++j;
+//			const char *next_color{is_first_color ? "^3" : "^5"};
+//			snprintf(buffer, std::size(buffer), "%lu.", i + 1);
+//			oss << "^5| " << text_element{buffer, 6, next_color};
+//			// rcon << text_element{ buffer, 6, "^1" } << ' ';
+//			rcon << "^1" << buffer << ' ';
+//			oss << " ^5| " << text_element{user.player_name, longest_name_length, "^7"} << " ^5| ";
+//			rcon << "^7" << user.player_name << ' ';
+//			snprintf(buffer, std::size(buffer), "%lld", user.score);
+//			oss << text_element{buffer, 10, next_color} << " ^5| ";
+//			rcon << "^7Score: ^4" << buffer << ' ';
+//			const auto time_interval_in_minutes = (user.time_spent_on_server_in_seconds + 5) / 60;
+//			snprintf(buffer, std::size(buffer), "%.2lf spm", time_interval_in_minutes != 0 ? static_cast<double>(user.score) / time_interval_in_minutes : 0.0);
+//			snprintf(buffer2, std::size(buffer2), "%.2lf", time_interval_in_minutes != 0 ? static_cast<double>(user.score) / time_interval_in_minutes : 0.0);
+//			oss << text_element{buffer, 17, next_color} << " ^5| ";
+//			rcon << "^7Score/min: ^4" << buffer2 << ' ';
+//			const string time_period_information{get_time_interval_info_string_for_seconds_in_hours_and_minutes(user.time_spent_on_server_in_seconds + 5)};
+//			oss << text_element{time_period_information.c_str(), 20, next_color} << "^5|\n";
+//			rcon << "^7Time: ^2" << time_period_information << '\n';
+//			if (find_exact_player_name_match)
+//				break;
+//			is_first_color = !is_first_color;
+//		}
+//
+//		if (0u == j)
+//		{
+//			const size_t message_len = stl::helper::len("| No matches found!");
+//			oss << "^5| ^3No matches found!";
+//
+//			if (message_len + 2 < decoration_line.length())
+//			{
+//				oss << string(decoration_line.length() - 2 - message_len, ' ');
+//			}
+//			oss << " ^5|\n";
+//		}
+//	}
+//	oss << string{"^5"s + decoration_line + "\n\n"s};
+//	public_message = rcon.str();
+//	return oss.str();
+// }
+//
+// void sort_players_stats_data(std::vector<player_stats> &stats_data_vec, std::unordered_map<std::string, player_stats> &stats_data_map)
+//{
+//	std::lock_guard lg{main_app.get_stats_data().get_stats_data_mutex()};
+//	stats_data_vec.clear();
+//	stats_data_vec.reserve(stats_data_map.size());
+//
+//	for (const auto &[name_index, stats_data] : stats_data_map)
+//	{
+//		stats_data_vec.emplace_back(stats_data);
+//	}
+//
+//	std::sort(std::execution::par, std::begin(stats_data_vec), std::end(stats_data_vec), [](const player_stats &ps1, const player_stats &ps2)
+//			  { return ps1.score > ps2.score; });
+//
+//	for (size_t i{}; i < stats_data_vec.size(); ++i)
+//	{
+//		const auto current_max_score{stats_data_vec[i].score};
+//		size_t j{i};
+//		for (; j < stats_data_vec.size() && current_max_score == stats_data_vec[j].score; ++j)
+//			;
+//		if (j - i > 1u)
+//		{
+//			std::sort(stats_data_vec.begin() + i, stats_data_vec.begin() + j, [](const player_stats &ps1, const player_stats &ps2)
+//					  { return ps1.time_spent_on_server_in_seconds < ps2.time_spent_on_server_in_seconds; });
+//		}
+//
+//		i = j - 1;
+//	}
+// }
+//
+// void save_players_stats_data(const char *file_path, std::vector<player_stats> &stats_data_vec, std::unordered_map<std::string, player_stats> &stats_data_map)
+//{
+//	sort_players_stats_data(stats_data_vec, stats_data_map);
+//	ofstream output_file{file_path, std::ios::binary};
+//	output_file.write(reinterpret_cast<const char *>(stats_data_vec.data()), stats_data_vec.size() * sizeof(player_stats));
+//	output_file.flush();
+//	output_file.close();
+// }
+//
+// void load_players_stats_data(const char *file_path, std::vector<player_stats> &stats_data_vec, std::unordered_map<std::string, player_stats> &stats_data_map)
+//{
+//	std::lock_guard lg{main_app.get_stats_data().get_stats_data_mutex()};
+//
+//	stats_data_vec.clear();
+//	stats_data_map.clear();
+//
+//	if (!check_if_file_path_exists(file_path))
+//	{
+//		ofstream output_file{file_path, std::ios::binary};
+//		output_file.flush();
+//		output_file.close();
+//		return;
+//	}
+//
+//	const size_t input_file_size = get_file_size_in_bytes(file_path);
+//	if (input_file_size >= sizeof(player_stats))
+//	{
+//		const size_t number_of_player_stats = input_file_size / sizeof(player_stats);
+//		stats_data_vec.reserve(number_of_player_stats);
+//		stats_data_vec.resize(number_of_player_stats, player_stats{});
+//		ifstream input_file{file_path, std::ios::binary};
+//		input_file.read(reinterpret_cast<char *>(stats_data_vec.data()), number_of_player_stats * sizeof(player_stats));
+//		input_file.close();
+//
+//		for (const auto &ps : stats_data_vec)
+//		{
+//			if (len(ps.index_name) > 0u)
+//			{
+//				if (!stats_data_map.contains(ps.index_name))
+//				{
+//					stats_data_map.emplace(ps.index_name, ps);
+//				}
+//			}
+//		}
+//
+//		sort_players_stats_data(stats_data_vec, stats_data_map);
+//	}
+// }
+//
+// std::string get_online_players_stats_data_report(std::vector<player_stats> &stats_data, std::unordered_map<std::string, player_stats> &stats_data_map, const char *title)
+//{
+//	sort_players_stats_data(stats_data, stats_data_map);
+//	const size_t number_of_players{main_app.get_current_game_server().get_number_of_players()};
+//	vector<player_stats> found_player_stats;
+//	unordered_map<string, string> online_player_name_index_to_player_name;
+//	for (const auto &pd : main_app.get_current_game_server().get_players_data())
+//	{
+//		online_player_name_index_to_player_name[pd.player_name_index] = pd.player_name;
+//	}
+//
+//	size_t j{};
+//	for (size_t i{}; i < stats_data.size() && j < number_of_players; ++i)
+//	{
+//		if (online_player_name_index_to_player_name.contains(stats_data[i].index_name))
+//		{
+//			found_player_stats.emplace_back(stats_data[i]);
+//			found_player_stats.back().first_seen = i + 1;
+//			++j;
+//			online_player_name_index_to_player_name.erase(stats_data[i].index_name);
+//		}
+//	}
+//
+//	size_t longest_name_length{12};
+//	if (!found_player_stats.empty())
+//	{
+//		longest_name_length = std::max(longest_name_length, find_longest_player_name_length(found_player_stats.cbegin(), found_player_stats.cend(), false));
+//	}
+//
+//	ostringstream oss;
+//	const string decoration_line(68 + longest_name_length, '=');
+//	oss << "^5\n"
+//		<< decoration_line << "\n";
+//	std::string title_str{title};
+//	stl::helper::trim_in_place(title_str);
+//	remove_all_color_codes(title_str);
+//	const size_t printed_name_char_count{get_number_of_characters_without_color_codes(title)};
+//	const size_t padding_size{(decoration_line.length() - 4u - printed_name_char_count)};
+//	const string pad_str(padding_size, ' ');
+//	if (printed_name_char_count + 4u <= decoration_line.length())
+//	{
+//		oss << "^5| " << left << title << right << pad_str << " ^5|\n";
+//	}
+//	else
+//	{
+//		oss << "^5| " << left << title << " ^5|\n";
+//	}
+//	oss << decoration_line << "\n";
+//	oss << "^5| ";
+//	oss << left << setw(6) << "Rank "
+//		<< " | " << left << setw(longest_name_length) << "Player name"
+//		<< " | " << left << setw(10) << "Score"
+//		<< " | " << left << setw(17) << "Score/minute"
+//		<< " | " << left << setw(20) << "Time played"
+//		<< "^5|\n";
+//	oss << decoration_line << "\n";
+//	bool is_first_color{true};
+//	char buffer[32]{};
+//	for (size_t i{}; i < found_player_stats.size(); ++i)
+//	{
+//		const auto &user = found_player_stats[i];
+//		const char *next_color{is_first_color ? "^3" : "^5"};
+//		snprintf(buffer, std::size(buffer), "%lld.", user.first_seen);
+//		oss << "^5| " << text_element{buffer, 6, next_color};
+//		oss << " ^5| " << text_element{user.player_name, longest_name_length, "^7"} << " ^5| ";
+//		snprintf(buffer, std::size(buffer), "%lld", user.score);
+//		oss << text_element{buffer, 10, next_color} << " ^5| ";
+//		const auto time_interval_in_minutes = (user.time_spent_on_server_in_seconds + 5) / 60;
+//		snprintf(buffer, std::size(buffer), "%.2lf spm", time_interval_in_minutes != 0 ? static_cast<double>(user.score) / time_interval_in_minutes : 0.0);
+//		oss << text_element{buffer, 17, next_color} << " ^5| ";
+//		const string time_period_information{get_time_interval_info_string_for_seconds_in_hours_and_minutes(user.time_spent_on_server_in_seconds + 5)};
+//		oss << text_element{time_period_information.c_str(), 20, next_color} << "^5|\n";
+//		is_first_color = !is_first_color;
+//	}
+//
+//	if (0u == j)
+//	{
+//		const size_t message_len = stl::helper::len("| No online players' stats data found!");
+//		oss << "^5| ^3No online players' stats data found!";
+//
+//		if (message_len + 2 < decoration_line.length())
+//		{
+//			oss << string(decoration_line.length() - 2 - message_len, ' ');
+//		}
+//		oss << " ^5|\n";
+//	}
+//
+//	oss << string{"^5"s + decoration_line + "\n\n"s};
+//	return oss.str();
+// }
+//
+// void update_player_scores(stats &tinyrcon_stats)
+//{
+//	static time_t last_timestamp{get_current_time_stamp()};
+//
+//	const size_t number_of_players{main_app.get_current_game_server().get_number_of_players()};
+//	auto &current_players_data = main_app.get_current_game_server().get_players_data();
+//	auto &previous_player_score_and_timestamp = main_app.get_stats_data().get_previous_player_score_and_timestamp();
+//
+//	const auto current_timestamp = get_current_time_stamp();
+//
+//	for (size_t i{}; i < std::min<size_t>(number_of_players, 64u); ++i)
+//	{
+//
+//		const auto &current_index_name{current_players_data[i].player_name_index};
+//
+//		if (current_index_name.empty())
+//			continue;
+//
+//		if (!previous_player_score_and_timestamp.contains(current_index_name))
+//		{
+//			previous_player_score_and_timestamp.emplace(current_index_name, make_pair(0, current_timestamp));
+//		}
+//
+//		tinyrcon_stats.update_player_score(current_players_data[i], current_players_data[i].score - previous_player_score_and_timestamp[current_index_name].first, current_timestamp - last_timestamp, current_timestamp);
+//		previous_player_score_and_timestamp[current_index_name].first = current_players_data[i].score;
+//		previous_player_score_and_timestamp[current_index_name].second = current_timestamp;
+//	}
+//
+//	last_timestamp = current_timestamp;
+// }
+
+bool download_bitmap_image_file(const char *bitmap_image_name, const char *destination_file_path)
 {
-	ifstream input_file{file_path};
-
-	if (input_file)
-	{
-
-		ostringstream oss;
-
-		for (string line; getline(input_file, line);)
-		{
-			stl::helper::trim_in_place(line);
-			auto image_file_info_parts = stl::helper::str_split(line, ",", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::yes);
-			if (image_file_info_parts.size() >= 2)
-			{
-				stl::helper::trim_in_place(image_file_info_parts[0]);
-				stl::helper::trim_in_place(image_file_info_parts[1]);
-				oss << image_file_info_parts[0] << ',' << image_file_info_parts[1] << '\n';
-			}
-		}
-
-		const std::string image_files_information{oss.str()};
-
-		main_app.set_image_files_path_to_md5(image_files_information);
-
-		auto parts = stl::helper::str_split(image_files_information, "\n", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::yes);
-		for (auto &part : parts)
-		{
-			stl::helper::trim_in_place(part);
-			auto image_file_info_parts = stl::helper::str_split(part, ",", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::yes);
-			if (image_file_info_parts.size() >= 2)
-			{
-				stl::helper::trim_in_place(image_file_info_parts[0]);
-				stl::helper::trim_in_place(image_file_info_parts[1]);
-				const string image_file_absolute_path{format("{}{}", main_app.get_current_working_directory(), image_file_info_parts[0])};
-				const bool is_download_file = [&]()
-				{
-					if (!check_if_file_path_exists(image_file_absolute_path.c_str()))
-						return true;
-					const auto image_file_md5 = calculate_md5_checksum_of_file(image_file_absolute_path.c_str());
-					return image_file_md5 != image_file_info_parts[1];
-				}();
-
-				if (is_download_file)
-				{
-					string ftp_download_link{format("ftp://{}/{}/{}", main_app.get_ftp_download_site_ip_address(), main_app.get_ftp_download_folder_path(), image_file_info_parts[0])};
-					replace_backward_slash_with_forward_slash(ftp_download_link);
-					main_app.get_auto_update_manager().download_file(ftp_download_link.c_str(), image_file_absolute_path.c_str());
-				}
-			}
-		}
-	}
+	const std::string download_bitmap_image_url{format("ftp://{}/{}/data/images/maps/{}.bmp", main_app.get_ftp_download_site_ip_address(), main_app.get_ftp_download_folder_path(), bitmap_image_name)};
+	return main_app.get_auto_update_manager().download_file(download_bitmap_image_url.c_str(), destination_file_path);
 }
 
-void process_topplayers_request(const std::string &d)
+bool is_rcon_game_server(const game_server &gs)
 {
-	std::thread process_topplayers_request_task{[data = d]()
-												{
-													// IsGUIThread(TRUE);
-													auto parts = stl::helper::str_split(data, "\\", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::yes);
-													// for (auto &part : parts) stl::helper::trim_in_place(part);
-													if (parts.size() >= 2)
-													{
-														int n{25};
-														if (parts[0] == "!s")
-														{
-															const string title{format("^5Stats data of ^1player(s) ^5matching specified player name ^1({}):", parts[1])};
-															string public_message;
-															const string players_stats_information{get_top_players_stats_data(main_app.get_stats_data().get_scores_vector(), main_app.get_stats_data().get_scores_map(), n, public_message, title.c_str(), parts[1])};
-															print_colored_text(app_handles.hwnd_re_messages_data, players_stats_information.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true, true);
-														}
-														else if (parts[0] == "tp" || parts[0] == "!tp")
-														{
-															if (!is_valid_decimal_whole_number(parts[1], n))
-																n = 25;
-															const string title{format("Top {} {}", n, n != 1 ? "players" : "player")};
-															string public_message;
-															const string players_stats_information{get_top_players_stats_data(main_app.get_stats_data().get_scores_vector(), main_app.get_stats_data().get_scores_map(), n, public_message, title.c_str())};
-															print_colored_text(app_handles.hwnd_re_messages_data, players_stats_information.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true, true);
-														}
-														else if (parts[0] == "tpy" || parts[0] == "!tpy")
-														{
-															if (!is_valid_decimal_whole_number(parts[1], n))
-																n = 25;
-															tm time_info{};
-															auto t_c = get_current_time_stamp();
-															localtime_s(&time_info, &t_c);
-															const string title{format("Top {} {} for year {}:", n, n != 1 ? "players" : "player", time_info.tm_year + 1900)};
-															string public_message;
-															const string players_stats_information{get_top_players_stats_data(main_app.get_stats_data().get_scores_for_year_vector(), main_app.get_stats_data().get_scores_for_year_map(), n, public_message, title.c_str())};
-															print_colored_text(app_handles.hwnd_re_messages_data, players_stats_information.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true, true);
-														}
-														else if (parts[0] == "tpm" || parts[0] == "!tpm")
-														{
-															if (!is_valid_decimal_whole_number(parts[1], n))
-																n = 25;
-															tm time_info{};
-															auto t_c = get_current_time_stamp();
-															localtime_s(&time_info, &t_c);
-															const string title{format("Top {} {} for month {}:", n, n != 1 ? "players" : "player", get_current_short_month_name(time_info.tm_mon + 1), time_info.tm_year + 1900)};
-															string public_message;
-															const string players_stats_information{get_top_players_stats_data(main_app.get_stats_data().get_scores_for_month_vector(), main_app.get_stats_data().get_scores_for_month_map(), n, public_message, title.c_str())};
-															print_colored_text(app_handles.hwnd_re_messages_data, players_stats_information.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true, true);
-														}
-														else if (parts[0] == "tpd" || parts[0] == "!tpd")
-														{
-															if (!is_valid_decimal_whole_number(parts[1], n))
-																n = 25;
-															tm time_info{};
-															auto t_c = get_current_time_stamp();
-															localtime_s(&time_info, &t_c);
-															const string title{format("Top {} {} for {}.{}.{}:", n, n != 1 ? "players" : "player", time_info.tm_mday, get_current_short_month_name(time_info.tm_mon + 1), time_info.tm_year + 1900)};
-															string public_message;
-															const string players_stats_information{get_top_players_stats_data(main_app.get_stats_data().get_scores_for_day_vector(), main_app.get_stats_data().get_scores_for_day_map(), n, public_message, title.c_str())};
-															print_colored_text(app_handles.hwnd_re_messages_data, players_stats_information.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true, true);
-														}
-													}
-												}};
-	process_topplayers_request_task.detach();
-}
-
-[[maybe_unused]] bool tell_player_their_stats_data_in_a_private_message(const char *, const player &pd)
-{
-	auto &stats_data_vector = main_app.get_stats_data().get_scores_vector();
-	auto &stats_data_map = main_app.get_stats_data().get_scores_map();
-	if (stats_data_map.contains(pd.player_name_index))
+	const auto &game_servers = main_app.get_game_servers();
+	for (size_t i{}; i < std::min<size_t>(main_app.get_rcon_game_servers_count(), main_app.get_game_servers_count()); ++i)
 	{
-		const auto &user = stats_data_map[pd.player_name_index];
-		for (size_t i{}; i < stats_data_vector.size(); ++i)
+		if (gs.get_server_ip_address() == game_servers[i].get_server_ip_address() &&
+			gs.get_server_port() == game_servers[i].get_server_port())
 		{
-			if (pd.player_name_index == stats_data_vector[i].index_name)
-			{
-				char buffer[32]{};
-				ostringstream rcon;
-				rcon << "Your stats data: ^5Rank: ";
-				snprintf(buffer, std::size(buffer), "%lu", i + 1);
-				rcon << "^1" << buffer << " ^5Score: ";
-				snprintf(buffer, std::size(buffer), "%lld", user.score);
-				rcon << "^1" << buffer << " ^5SPM: ";
-				const auto time_interval_in_minutes = (user.time_spent_on_server_in_seconds + 5) / 60;
-				snprintf(buffer, std::size(buffer), "%.2lf spm", time_interval_in_minutes != 0 ? static_cast<double>(user.score) / time_interval_in_minutes : 0.0);
-				rcon << "^1" << buffer << " ^5Time played: ";
-				const string time_period_information{get_time_interval_info_string_for_seconds_in_hours_and_minutes(user.time_spent_on_server_in_seconds + 5)};
-				rcon << "^1" << time_period_information;
-				const string private_msg{rcon.str()};
-				tell_message(private_msg.c_str(), pd.pid);
-				return true;
-			}
+			return true;
 		}
 	}
 
 	return false;
-}
-
-bool remove_stats_for_player_name(const std::string &player_name_index)
-{
-
-	auto &sd = main_app.get_stats_data();
-	bool is_found_player_name{};
-
-	{
-		lock_guard lg{main_app.get_stats_data().get_stats_data_mutex()};
-		if (sd.get_scores_map().contains(player_name_index))
-		{
-			sd.get_scores_map().erase(player_name_index);
-			is_found_player_name = true;
-		}
-
-		if (sd.get_scores_for_year_map().contains(player_name_index))
-		{
-			sd.get_scores_for_year_map().erase(player_name_index);
-			is_found_player_name = true;
-		}
-
-		if (sd.get_scores_for_month_map().contains(player_name_index))
-		{
-			sd.get_scores_for_month_map().erase(player_name_index);
-			is_found_player_name = true;
-		}
-
-		if (sd.get_scores_for_day_map().contains(player_name_index))
-		{
-			sd.get_scores_for_day_map().erase(player_name_index);
-			is_found_player_name = true;
-		}
-	}
-
-	if (is_found_player_name)
-	{
-		sort_players_stats_data(sd.get_scores_vector(), sd.get_scores_map());
-		sort_players_stats_data(sd.get_scores_for_year_vector(), sd.get_scores_for_year_map());
-		sort_players_stats_data(sd.get_scores_for_month_vector(), sd.get_scores_for_month_map());
-		sort_players_stats_data(sd.get_scores_for_day_vector(), sd.get_scores_for_day_map());
-	}
-
-	return is_found_player_name;
-}
-
-void rcon_say_top_players(std::string &&title)
-{
-	string public_message;
-	get_top_players_stats_data(main_app.get_stats_data().get_scores_vector(), main_app.get_stats_data().get_scores_map(), main_app.get_number_of_top_players_to_display_in_game_chat(), public_message, "Top players:");
-	// print_colored_text(app_handles.hwnd_re_messages_data, top_players_stats.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true, true, true);
-    if (main_app.get_current_game_server().get_number_of_players() >= 2u) {
-	  const string online_players_stats{get_online_players_stats_data_report(main_app.get_stats_data().get_scores_vector(), main_app.get_stats_data().get_scores_map(), "Online players' stats data:")};
-	  print_colored_text(app_handles.hwnd_re_messages_data, online_players_stats.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true, true);
-	}
-
-	rcon_say(title, false);
-	Sleep(3000);
-	auto lines = stl::helper::str_split(public_message, '\n', nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::yes);
-	for (size_t i{}; i < std::min<size_t>(10u, lines.size()); ++i)
-	{
-		stl::helper::trim_in_place(lines[i]);
-		if (lines[i].empty())
-			continue;
-		rcon_say(lines[i], false);
-		Sleep(3000);
-	}
-
-	const auto &stats_data_map = main_app.get_stats_data().get_scores_map();
-	const auto &players_data = main_app.get_current_game_server().get_players_data();
-	for (size_t i{}; i < main_app.get_current_game_server().get_number_of_players(); ++i)
-	{
-		const auto &pd = players_data[i];
-		if (stats_data_map.contains(pd.player_name_index))
-		{
-			tell_player_their_stats_data_in_a_private_message("^5Your stats data: ", pd);
-			Sleep(3000);
-		}
-	}
-}
-
-std::string get_top_players_stats_data(
-	std::vector<player_stats> &stats_data, std::unordered_map<std::string, player_stats> &stats_data_map, 
-	const size_t number_of_top_players, std::string &public_message, const char *title, 
-	std::string partial_or_full_player_name, const bool find_exact_player_name_match)
-{
-  sort_players_stats_data(stats_data, stats_data_map);
-
-  size_t number_of_entries_to_display{
-    number_of_top_players <= 1000U && number_of_top_players < stats_data.size()
-      ? number_of_top_players
-      : std::min<size_t>(1000U, stats_data.size())
-  };
-
-  if (!partial_or_full_player_name.empty()) {
-    number_of_entries_to_display = 25u;
-    partial_or_full_player_name = get_cleaned_user_name(partial_or_full_player_name);
-    vector<player_stats> found_player_stats;
-
-    unordered_set<string> seen_index_names;
-    unordered_set<string> seen_player_names;
-    size_t j{};
-    for (size_t i{}; i < stats_data.size() && j < number_of_entries_to_display; ++i) {
-      if (seen_index_names.contains(stats_data[i].index_name) || seen_player_names.contains(stats_data[i].player_name)) continue;
-      seen_index_names.emplace(stats_data[i].index_name);
-      seen_player_names.emplace(stats_data[i].player_name);
-      if ((!find_exact_player_name_match && stl::helper::str_contains(stats_data[i].index_name, partial_or_full_player_name.c_str(), 0U))
-          || partial_or_full_player_name == stats_data[i].index_name) {
-        found_player_stats.emplace_back(stats_data[i]);
-        found_player_stats.back().first_seen = i + 1;
-        ++j;
-        if (find_exact_player_name_match) break;
-      }
-    }
-
-    size_t longest_name_length{ 12 };
-    if (!found_player_stats.empty()) {
-      longest_name_length = std::max(longest_name_length, find_longest_player_name_length(found_player_stats.cbegin(), found_player_stats.cend(), false));
-    }
-
-    ostringstream oss;
-    const string decoration_line(68 + longest_name_length, '=');
-    oss << "^5\n"
-        << decoration_line << "\n";
-    std::string title_str{ title };
-    stl::helper::trim_in_place(title_str);
-    remove_all_color_codes(title_str);
-    const size_t printed_name_char_count{ get_number_of_characters_without_color_codes(title) };
-    const size_t padding_size{ (decoration_line.length() - 4u - printed_name_char_count) };
-    const string pad_str(padding_size, ' ');
-    if (printed_name_char_count + 4u <= decoration_line.length()) {
-      oss << "^5| " << left << title << right << pad_str << " ^5|\n";
-    } else {
-      oss << "^5| " << left << title << " ^5|\n";
-    }
-    oss << decoration_line << "\n";
-    oss << "^5| ";
-    oss << left << setw(6) << "Rank "
-        << " | " << left << setw(longest_name_length) << "Player name"
-        << " | " << left << setw(10) << "Score"
-        << " | " << left << setw(17) << "Score/minute"
-        << " | " << left << setw(20) << "Time played"
-        << "^5|\n";
-    oss << decoration_line << "\n";
-    bool is_first_color{ true };
-    char buffer[32]{};
-    for (size_t i{}; i < found_player_stats.size(); ++i) {
-      const auto &user = found_player_stats[i];
-      const char *next_color{ is_first_color ? "^3" : "^5" };
-      snprintf(buffer, std::size(buffer), "%lld.", user.first_seen);
-      oss << "^5| " << text_element{ buffer, 6, next_color };
-      oss << " ^5| " << text_element{ user.player_name, longest_name_length, "^7" } << " ^5| ";
-      snprintf(buffer, std::size(buffer), "%lld", user.score);
-      oss << text_element{ buffer, 10, next_color } << " ^5| ";
-      const auto time_interval_in_minutes = (user.time_spent_on_server_in_seconds + 5) / 60;
-      snprintf(buffer, std::size(buffer), "%.2lf spm", time_interval_in_minutes != 0 ? static_cast<double>(user.score) / time_interval_in_minutes : 0.0);
-      oss << text_element{ buffer, 17, next_color } << " ^5| ";
-      const string time_period_information{ get_time_interval_info_string_for_seconds_in_hours_and_minutes(user.time_spent_on_server_in_seconds + 5) };
-      oss << text_element{ time_period_information.c_str(), 20, next_color } << "^5|\n";
-      is_first_color = !is_first_color;
-    }
-
-    if (0u == j) {
-      const size_t message_len = stl::helper::len("| No matches found!");
-      oss << "^5| ^3No matches found!";
-
-      if (message_len + 2 < decoration_line.length()) {
-        oss << string(decoration_line.length() - 2 - message_len, ' ');
-      }
-      oss << " ^5|\n";
-    }
-
-    oss << string{ "^5"s + decoration_line + "\n\n"s };
-    return oss.str();
-  }
-
-  size_t longest_name_length{ 12 };
-  if (!stats_data.empty()) {
-    longest_name_length = std::max(longest_name_length, find_longest_player_name_length(stats_data.cbegin(), stats_data.cbegin() + number_of_entries_to_display, false));
-  }
-
-  ostringstream oss;
-  ostringstream rcon;
-  const string decoration_line(68 + longest_name_length, '=');
-  oss << "^5\n"
-      << decoration_line << "\n";
-  std::string title_str{ title };
-  stl::helper::trim_in_place(title_str);
-  remove_all_color_codes(title_str);
-  const size_t printed_name_char_count{ get_number_of_characters_without_color_codes(title) };
-  const size_t padding_size{ (decoration_line.length() - 4u - printed_name_char_count) };
-  const string pad_str(padding_size, ' ');
-  if (printed_name_char_count + 4u < decoration_line.length()) {
-    oss << "^5| " << left << title << right << pad_str << " ^5|\n";
-  } else {
-    oss << "^5| " << left << title << " ^5|\n";
-  }
-  oss << decoration_line << "\n";
-  oss << "^5| ";
-  oss << left << setw(6) << "Rank "
-      << " | " << left << setw(longest_name_length) << "Player name"
-      << " | " << left << setw(10) << "Score"
-      << " | " << left << setw(17) << "Score/minute"
-      << " | " << left << setw(20) << "Time played"
-      << "^5|\n";
-  oss << decoration_line << "\n";
-  if (stats_data.empty()) {
-    const size_t message_len = stl::helper::len("| Players' stats data hasn't been tracked yet.");
-    oss << "^5| ^3Players' stats data hasn't been tracked yet.";
-
-    if (message_len + 2 < decoration_line.length()) {
-      oss << string(decoration_line.length() - 2 - message_len, ' ');
-    }
-    oss << " ^5|\n";
-
-  } else {
-    bool is_first_color{ true };
-    char buffer[32]{};
-    char buffer2[32]{};
-    unordered_set<string> seen_index_names;
-    unordered_set<string> seen_player_names;
-    size_t j{};
-    for (size_t i{}; i < stats_data.size() && j < number_of_entries_to_display; ++i) {
-      if (seen_index_names.contains(stats_data[i].index_name) || seen_player_names.contains(stats_data[i].player_name)) continue;
-      seen_index_names.emplace(stats_data[i].index_name);
-      seen_player_names.emplace(stats_data[i].player_name);
-      const auto &user = stats_data[i];
-      ++j;
-      const char *next_color{ is_first_color ? "^3" : "^5" };
-      snprintf(buffer, std::size(buffer), "%lu.", i + 1);
-      oss << "^5| " << text_element{ buffer, 6, next_color };
-      // rcon << text_element{ buffer, 6, "^1" } << ' ';
-      rcon << "^1" << buffer << ' ';
-      oss << " ^5| " << text_element{ user.player_name, longest_name_length, "^7" } << " ^5| ";
-      rcon << "^7" << user.player_name << ' ';
-      snprintf(buffer, std::size(buffer), "%lld", user.score);
-      oss << text_element{ buffer, 10, next_color } << " ^5| ";
-      rcon << "^7Score: ^4" << buffer << ' ';
-      const auto time_interval_in_minutes = (user.time_spent_on_server_in_seconds + 5) / 60;
-      snprintf(buffer, std::size(buffer), "%.2lf spm", time_interval_in_minutes != 0 ? static_cast<double>(user.score) / time_interval_in_minutes : 0.0);
-      snprintf(buffer2, std::size(buffer2), "%.2lf", time_interval_in_minutes != 0 ? static_cast<double>(user.score) / time_interval_in_minutes : 0.0);
-      oss << text_element{ buffer, 17, next_color } << " ^5| ";
-      rcon << "^7Score/min: ^4" << buffer2 << ' ';
-      const string time_period_information{ get_time_interval_info_string_for_seconds_in_hours_and_minutes(user.time_spent_on_server_in_seconds + 5) };
-      oss << text_element{ time_period_information.c_str(), 20, next_color } << "^5|\n";
-      rcon << "^7Time: ^2" << time_period_information << '\n';
-      if (find_exact_player_name_match) break;
-      is_first_color = !is_first_color;
-    }
-
-    if (0u == j) {
-      const size_t message_len = stl::helper::len("| No matches found!");
-      oss << "^5| ^3No matches found!";
-
-      if (message_len + 2 < decoration_line.length()) {
-        oss << string(decoration_line.length() - 2 - message_len, ' ');
-      }
-      oss << " ^5|\n";
-    }
-  }
-  oss << string{ "^5"s + decoration_line + "\n\n"s };
-  public_message = rcon.str();
-  return oss.str();
-}
-
-void sort_players_stats_data(std::vector<player_stats> &stats_data_vec, std::unordered_map<std::string, player_stats> &stats_data_map)
-{
-  std::lock_guard lg{ main_app.get_stats_data().get_stats_data_mutex() };
-  stats_data_vec.clear();
-  stats_data_vec.reserve(stats_data_map.size());
-
-  for (const auto &[name_index, stats_data] : stats_data_map) {
-    stats_data_vec.emplace_back(stats_data);
-  }
-
-  std::sort(std::execution::par, std::begin(stats_data_vec), std::end(stats_data_vec), [](const player_stats &ps1, const player_stats &ps2) {
-    return ps1.score > ps2.score;
-  });
-
-  for (size_t i{}; i < stats_data_vec.size(); ++i) {
-    const auto current_max_score{ stats_data_vec[i].score };
-    size_t j{ i };
-    for (; j < stats_data_vec.size() && current_max_score == stats_data_vec[j].score; ++j);
-    if (j - i > 1u) {
-      std::sort(stats_data_vec.begin() + i, stats_data_vec.begin() + j, [](const player_stats &ps1, const player_stats &ps2) {
-        return ps1.time_spent_on_server_in_seconds < ps2.time_spent_on_server_in_seconds;
-      });
-    }
-
-    i = j - 1;
-  }
-}
-
-void save_players_stats_data(const char *file_path, std::vector<player_stats> &stats_data_vec, std::unordered_map<std::string, player_stats> &stats_data_map)
-{
-  sort_players_stats_data(stats_data_vec, stats_data_map);
-  ofstream output_file{ file_path, std::ios::binary };
-  output_file.write(reinterpret_cast<const char *>(stats_data_vec.data()), stats_data_vec.size() * sizeof(player_stats));
-  output_file.flush();
-  output_file.close();
-}
-
-void load_players_stats_data(const char *file_path, std::vector<player_stats> &stats_data_vec, std::unordered_map<std::string, player_stats> &stats_data_map)
-{
-  std::lock_guard lg{ main_app.get_stats_data().get_stats_data_mutex() };
-
-  stats_data_vec.clear();
-  stats_data_map.clear();
-
-  if (!check_if_file_path_exists(file_path)) {
-    ofstream output_file{ file_path, std::ios::binary };
-    output_file.flush();
-    output_file.close();
-    return;
-  }
-
-  const size_t input_file_size = get_file_size_in_bytes(file_path);
-  if (input_file_size >= sizeof(player_stats)) {
-    const size_t number_of_player_stats = input_file_size / sizeof(player_stats);
-    stats_data_vec.reserve(number_of_player_stats);
-    stats_data_vec.resize(number_of_player_stats, player_stats{});
-    ifstream input_file{ file_path, std::ios::binary };
-    input_file.read(reinterpret_cast<char *>(stats_data_vec.data()), number_of_player_stats * sizeof(player_stats));
-    input_file.close();
-
-    for (const auto &ps : stats_data_vec) {
-      if (len(ps.index_name) > 0u) {
-        if (!stats_data_map.contains(ps.index_name)) {
-          stats_data_map.emplace(ps.index_name, ps);
-        } 
-      }
-    }
-
-    sort_players_stats_data(stats_data_vec, stats_data_map);
-
-  }
-}
-
-std::string get_online_players_stats_data_report(std::vector<player_stats> &stats_data, std::unordered_map<std::string, player_stats>&stats_data_map, const char *title)
-{
-  sort_players_stats_data(stats_data, stats_data_map);
-  const size_t number_of_players{ main_app.get_current_game_server().get_number_of_players() };
-  vector<player_stats> found_player_stats;
-  unordered_map<string, string> online_player_name_index_to_player_name;
-  for (const auto &pd : main_app.get_current_game_server().get_players_data()) {
-    online_player_name_index_to_player_name[pd.player_name_index] = pd.player_name;
-  }
-
-  size_t j{};
-  for (size_t i{}; i < stats_data.size() && j < number_of_players; ++i) {
-    if (online_player_name_index_to_player_name.contains(stats_data[i].index_name)) {
-      found_player_stats.emplace_back(stats_data[i]);
-      found_player_stats.back().first_seen = i + 1;
-      ++j;
-      online_player_name_index_to_player_name.erase(stats_data[i].index_name);
-    }
-  }
-
-  size_t longest_name_length{ 12 };
-  if (!found_player_stats.empty()) {
-    longest_name_length = std::max(longest_name_length, find_longest_player_name_length(found_player_stats.cbegin(), found_player_stats.cend(), false));
-  }
-
-  ostringstream oss;
-  const string decoration_line(68 + longest_name_length, '=');
-  oss << "^5\n"
-      << decoration_line << "\n";
-  std::string title_str{ title };
-  stl::helper::trim_in_place(title_str);
-  remove_all_color_codes(title_str);
-  const size_t printed_name_char_count{ get_number_of_characters_without_color_codes(title) };
-  const size_t padding_size{ (decoration_line.length() - 4u - printed_name_char_count) };
-  const string pad_str(padding_size, ' ');
-  if (printed_name_char_count + 4u <= decoration_line.length()) {
-    oss << "^5| " << left << title << right << pad_str << " ^5|\n";
-  } else {
-    oss << "^5| " << left << title << " ^5|\n";
-  }
-  oss << decoration_line << "\n";
-  oss << "^5| ";
-  oss << left << setw(6) << "Rank "
-      << " | " << left << setw(longest_name_length) << "Player name"
-      << " | " << left << setw(10) << "Score"
-      << " | " << left << setw(17) << "Score/minute"
-      << " | " << left << setw(20) << "Time played"
-      << "^5|\n";
-  oss << decoration_line << "\n";
-  bool is_first_color{ true };
-  char buffer[32]{};
-  for (size_t i{}; i < found_player_stats.size(); ++i) {
-    const auto &user = found_player_stats[i];
-    const char *next_color{ is_first_color ? "^3" : "^5" };
-    snprintf(buffer, std::size(buffer), "%lld.", user.first_seen);
-    oss << "^5| " << text_element{ buffer, 6, next_color };
-    oss << " ^5| " << text_element{ user.player_name, longest_name_length, "^7" } << " ^5| ";
-    snprintf(buffer, std::size(buffer), "%lld", user.score);
-    oss << text_element{ buffer, 10, next_color } << " ^5| ";
-    const auto time_interval_in_minutes = (user.time_spent_on_server_in_seconds + 5) / 60;
-    snprintf(buffer, std::size(buffer), "%.2lf spm", time_interval_in_minutes != 0 ? static_cast<double>(user.score) / time_interval_in_minutes : 0.0);
-    oss << text_element{ buffer, 17, next_color } << " ^5| ";
-    const string time_period_information{ get_time_interval_info_string_for_seconds_in_hours_and_minutes(user.time_spent_on_server_in_seconds + 5) };
-    oss << text_element{ time_period_information.c_str(), 20, next_color } << "^5|\n";
-    is_first_color = !is_first_color;
-  }
-
-  if (0u == j) {
-    const size_t message_len = stl::helper::len("| No online players' stats data found!");
-    oss << "^5| ^3No online players' stats data found!";
-
-    if (message_len + 2 < decoration_line.length()) {
-      oss << string(decoration_line.length() - 2 - message_len, ' ');
-    }
-    oss << " ^5|\n";
-  }
-
-  oss << string{ "^5"s + decoration_line + "\n\n"s };
-  return oss.str();
-}
-
-void update_player_scores(stats &tinyrcon_stats)
-{
-  static time_t last_timestamp{ get_current_time_stamp() };
-
-  const size_t number_of_players{ main_app.get_current_game_server().get_number_of_players() };
-  auto &current_players_data = main_app.get_current_game_server().get_players_data();
-  auto &previous_player_score_and_timestamp = main_app.get_stats_data().get_previous_player_score_and_timestamp();
-
-  const auto current_timestamp = get_current_time_stamp();
-
-  for (size_t i{}; i < std::min<size_t>(number_of_players, 64u); ++i) {
-
-    const auto &current_index_name{ current_players_data[i].player_name_index };
-
-    if (current_index_name.empty()) continue;
-
-    if (!previous_player_score_and_timestamp.contains(current_index_name)) {
-      previous_player_score_and_timestamp.emplace(current_index_name, make_pair(0, current_timestamp));
-    }
-
-    tinyrcon_stats.update_player_score(current_players_data[i], current_players_data[i].score - previous_player_score_and_timestamp[current_index_name].first, current_timestamp - last_timestamp, current_timestamp);
-    previous_player_score_and_timestamp[current_index_name].first = current_players_data[i].score;
-    previous_player_score_and_timestamp[current_index_name].second = current_timestamp;
-  }
-
-  last_timestamp = current_timestamp;
 }

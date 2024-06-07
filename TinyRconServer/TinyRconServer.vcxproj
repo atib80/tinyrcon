@@ -159,6 +159,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="include\connection_manager.h" />
     <ClInclude Include="include\connection_manager_for_messages.h" />
     <ClInclude Include="include\daily_tinyrcon_activities.h" />
     <ClInclude Include="include\detail\stl_helper_functions_impl.hpp" />
@@ -170,14 +171,17 @@
     <ClInclude Include="include\resource.h" />
     <ClInclude Include="include\simple_grid.h" />
     <ClInclude Include="include\stack_trace_element.h" />
+    <ClInclude Include="include\stats.h" />
     <ClInclude Include="include\stl_helper_functions.hpp" />
     <ClInclude Include="include\tiny_rcon_server_application.h" />
+    <ClInclude Include="include\tiny_rcon_utility_classes.h" />
     <ClInclude Include="include\tiny_rcon_utility_data_types.h" />
     <ClInclude Include="include\tiny_rcon_utility_functions.h" />
     <ClInclude Include="include\tiny_rcon_client_user.h" />
     <ClInclude Include="include\targetver.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="include\tiny_rcon_handles.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="data\icons\big_codicon.ico" />
@@ -440,8 +444,10 @@
     <Image Include="data\images\flags\zw.bmp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\connection_manager.cpp" />
     <ClCompile Include="src\connection_manager_for_messages.cpp" />
     <ClCompile Include="src\simple_grid.cpp" />
+    <ClCompile Include="src\stats.cpp" />
     <ClCompile Include="src\tiny_rcon_server.cpp" />
     <ClCompile Include="src\tiny_rcon_utility_functions.cpp" />
   </ItemGroup>

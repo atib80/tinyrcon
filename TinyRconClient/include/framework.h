@@ -27,7 +27,6 @@
 #include "stack_trace_element.h"
 #include "stats.h"
 
-
 // #define ASSERT _ASSERTE
 //
 // #ifdef _DEBUG

@@ -74,9 +74,9 @@
 /// @brief This is the data associated with a grid column
 typedef struct tagSGCOLUMN
 {
-  DWORD dwType;///< Column type
-  const char *lpszHeader;///< Column header text
-  LPVOID pOptional;///< Optional data (ex: combobox choices)
+  DWORD dwType;           ///< Column type
+  const char *lpszHeader; ///< Column header text
+  LPVOID pOptional;       ///< Optional data (ex: combobox choices)
 } SGCOLUMN, *LPSGCOLUMN;
 
 /// @var SGITEM
@@ -89,9 +89,9 @@ typedef struct tagSGCOLUMN
 /// @brief This is the address data associated with a grid cell
 typedef struct tagSGITEM
 {
-  int col;///< Column number
-  int row;///< Row number
-  LPARAM lpCurValue;///< Item (cell) value
+  int col;           ///< Column number
+  int row;           ///< Row number
+  LPARAM lpCurValue; ///< Item (cell) value
 } SGITEM, *LPSGITEM;
 
 /// @var NMGRID
@@ -105,10 +105,10 @@ typedef struct tagSGITEM
 /// @brief This is the data associated with a simple grid notification
 typedef struct tagNMGRID
 {
-  NMHDR hdr;///< Notification message header
-  int col;///< Column number
-  int row;///< Row number
-  DWORD dwType;///< Column type (thus cell type) identifier
+  NMHDR hdr;    ///< Notification message header
+  int col;      ///< Column number
+  int row;      ///< Row number
+  DWORD dwType; ///< Column type (thus cell type) identifier
 } NMGRID, *LPNMGRID;
 
 /// @var NMSGKEYDOWN
@@ -121,11 +121,11 @@ typedef struct tagNMGRID
 /// @brief This is the data associated with the SGN_KEYDOWN notification
 typedef struct tagNMSGKEYDOWN
 {
-  NMHDR hdr;///< Notification message header
-  int col;///< Column number
-  int row;///< Row number
-  DWORD dwType;///< Column type (thus cell type) identifier
-  WORD wVKey;///< Virtual key code
+  NMHDR hdr;    ///< Notification message header
+  int col;      ///< Column number
+  int row;      ///< Row number
+  DWORD dwType; ///< Column type (thus cell type) identifier
+  WORD wVKey;   ///< Virtual key code
 } NMSGKEYDOWN, *LPNMSGKEYDOWN;
 
 /// @var NMSGFOCUS
@@ -139,23 +139,23 @@ typedef struct tagNMSGKEYDOWN
 /// @brief This is the data associated with the SGN_GOTFOCUS and SGN_LOSTFOCUS notification
 typedef struct tagNMSGFOCUS
 {
-  NMHDR hdr;///< Notification message header
-  int col;///< Column number
-  int row;///< Row number
-  DWORD dwType;///< Column type (thus cell type) identifier
-  HWND hFocus;///< Handle of window receiving or loosing focus
+  NMHDR hdr;    ///< Notification message header
+  int col;      ///< Column number
+  int row;      ///< Row number
+  DWORD dwType; ///< Column type (thus cell type) identifier
+  HWND hFocus;  ///< Handle of window receiving or loosing focus
 } NMSGFOCUS, *LPNMSGFOCUS;
 
 /****************************************************************************/
 /// @name Grid Column types.
 /// @{
 
-#define GCT_EDIT 1///< Grid column type: Edit
-#define GCT_COMBO 2///< Grid column type: Combobox
-#define GCT_BUTTON 3///< Grid column type: Button
-#define GCT_CHECK 4///< Grid column type: Checkbox
-#define GCT_LINK 5///< Grid column type: Hyperlink
-#define GCT_IMAGE 6///< Grid column type: Image
+#define GCT_EDIT 1   ///< Grid column type: Edit
+#define GCT_COMBO 2  ///< Grid column type: Combobox
+#define GCT_BUTTON 3 ///< Grid column type: Button
+#define GCT_CHECK 4  ///< Grid column type: Checkbox
+#define GCT_LINK 5   ///< Grid column type: Hyperlink
+#define GCT_IMAGE 6  ///< Grid column type: Image
 
 /// @}
 
@@ -163,9 +163,9 @@ typedef struct tagNMSGFOCUS
 /// @name Grid Selection mode options.
 /// @{
 
-#define GSO_ROWHEADER 1///< Grid selection option: Row Header click
-#define GSO_CELL 2///< Grid selection option: Single cell
-#define GSO_FULLROW 3///< Grid selection option: Full row select
+#define GSO_ROWHEADER 1 ///< Grid selection option: Row Header click
+#define GSO_CELL 2      ///< Grid selection option: Single cell
+#define GSO_FULLROW 3   ///< Grid selection option: Full row select
 
 /// @}
 
@@ -173,9 +173,9 @@ typedef struct tagNMSGFOCUS
 /// @name Grid Text alignments.
 /// @{
 
-#define GSA_LEFT 1///< Item Text alignment: Left justified
-#define GSA_GENERAL 2///< Item Text alignment: Auto selected
-#define GSA_RIGHT 3///< Item Text alignment: Right justified
+#define GSA_LEFT 1    ///< Item Text alignment: Left justified
+#define GSA_GENERAL 2 ///< Item Text alignment: Auto selected
+#define GSA_RIGHT 3   ///< Item Text alignment: Right justified
 
 /// @}
 
@@ -286,58 +286,58 @@ typedef struct tagNMSGFOCUS
 /// @name Simple Grid messages.
 /// @{
 
-#define SG_ADDCOLUMN WM_USER + 0x01///< SimpleGrid_AddColumn()
-#define SG_ADDROW WM_USER + 0x02///< SimpleGrid_AddRow()
-#define SG_ENABLEEDIT WM_USER + 0x03///< SimpleGrid_EnableEdit()
-#define SG_EXTENDLASTCOLUMN WM_USER + 0x04///< SimpleGrid_ExtendLastColumn()
-#define SG_GETCOLCOUNT WM_USER + 0x05///< SimpleGrid_GetColCount()
-#define SG_GETCOLUMNHEADERTEXT WM_USER + 0x06///< SimpleGrid_GetColumnHeaderText()
-#define SG_GETCOLUMNHEADERTEXTLENGTH WM_USER + 0x07///< SimpleGrid_GetColumnHeaderTextLen()
-#define SG_GETCOLUMNTYPE WM_USER + 0x08///< SimpleGrid_GetColumnType()
-#define SG_GETCOLWIDTH WM_USER + 0x09///< SimpleGrid_GetColWidth()
-#define SG_GETCURSORCOL WM_USER + 0x0A///< SimpleGrid_GetCursorCol()
-#define SG_GETCURSORROW WM_USER + 0x0B///< SimpleGrid_GetCursorRow()
-#define SG_GETHEADERROWHEIGHT WM_USER + 0x0C///< SimpleGrid_GetHeaderRowHeight()
-#define SG_GETIMAGELIST WM_USER + 0x0D///< SimpleGrid_GetImageList()
-#define SG_GETITEMDATA WM_USER + 0x0E///< SimpleGrid_GetItemData()
-#define SG_GETITEMDATALENGTH WM_USER + 0x0F///< SimpleGrid_GetItemDataLen()
-#define SG_GETITEMPROTECTION WM_USER + 0x10///< SimpleGrid_GetItemProtection()
-#define SG_GETROWCOUNT WM_USER + 0x11///< SimpleGrid_GetRowCount()
-#define SG_GETROWHEADERTEXT WM_USER + 0x12///< SimpleGrid_GetRowHeaderText()
-#define SG_GETROWHEADERTEXTLENGTH WM_USER + 0x13///< SimpleGrid_GetRowHeaderTextLen()
-#define SG_GETROWHEIGHT WM_USER + 0x14///< SimpleGrid_GetRowHeight()
-#define SG_REFRESHGRID WM_USER + 0x15///< SimpleGrid_RefreshGrid()
-#define SG_RESETCONTENT WM_USER + 0x16///< SimpleGrid_ResetContent()
-#define SG_SELECTCELL WM_USER + 0x17///< SimpleGrid_SelectCell()
-#define SG_SETALLOWCOLRESIZE WM_USER + 0x18///< SimpleGrid_SetAllowColResize()
-#define SG_SETCOLAUTOWIDTH WM_USER + 0x19///< SimpleGrid_SetColAutoWidth()
-#define SG_SETCOLSNUMBERED WM_USER + 0x1A///< SimpleGrid_SetColsNumbered()
-#define SG_SETCOLUMNHEADERTEXT WM_USER + 0x1B///< SimpleGrid_SetColumnHeaderText()
-#define SG_SETCOLWIDTH WM_USER + 0x1C///< SimpleGrid_SetColWidth()
-#define SG_SETCURSORPOS WM_USER + 0x1D///< SimpleGrid_SetCursorPos()
-#define SG_SETDOUBLEBUFFER WM_USER + 0x1E///< SimpleGrid_SetDoubleBuffer()
-#define SG_SETELLIPSIS WM_USER + 0x1F///< SimpleGrid_SetEllipsis()
-#define SG_SETGRIDLINECOLOR WM_USER + 0x20///< SimpleGrid_SetGridLineColor()
-#define SG_SETHEADERROWHEIGHT WM_USER + 0x21///< SimpleGrid_SetHeaderRowHeight()
-#define SG_SETHEADINGFONT WM_USER + 0x22///< SimpleGrid_SetHeadingFont()
-#define SG_SETHILIGHTCOLOR WM_USER + 0x23///< SimpleGrid_SetHilightColor()
-#define SG_SETHILIGHTTEXTCOLOR WM_USER + 0x24///< SimpleGrid_SetHilightTextColor()
-#define SG_SETIMAGELIST WM_USER + 0x25///< SimpleGrid_SetImageList()
-#define SG_SETITEMDATA WM_USER + 0x26///< SimpleGrid_SetItemData()
-#define SG_SETITEMTEXTALIGNMENT WM_USER + 0x27///< SimpleGrid_SetItemTextAlignment()
-#define SG_SETITEMPROTECTION WM_USER + 0x28///< SimpleGrid_SetItemProtection()
-#define SG_SETPROTECTCOLOR WM_USER + 0x29///< SimpleGrid_SetProtectColor()
-#define SG_SETROWHEADERTEXT WM_USER + 0x2A///< SimpleGrid_SetRowHeaderText()
-#define SG_SETROWHEADERWIDTH WM_USER + 0x2B///< SimpleGrid_SetRowHeaderWidth()
-#define SG_SETROWHEIGHT WM_USER + 0x2C///< SimpleGrid_SetRowHeight()
-#define SG_SETROWSNUMBERED WM_USER + 0x2D///< SimpleGrid_SetRowsNumbered()
-#define SG_SETSELECTIONMODE WM_USER + 0x2E///< SimpleGrid_SetSelectionMode()
-#define SG_SETTITLEFONT WM_USER + 0x2F///< SimpleGrid_SetTitleFont()
-#define SG_SETTITLEHEIGHT WM_USER + 0x30///< SimpleGrid_SetTitleHeight()
-#define SG_SHOWINTEGRALROWS WM_USER + 0x31///< SimpleGrid_ShowIntegralRows()
-#define SG_RIGHTJUSTIFYNUMERICS WM_USER + 0x32///< Unused
-#define SG_INSERTROW WM_USER + 0x33///< SimpleGrid_InsertRow()
-#define SG_DELETEROW WM_USER + 0x34///< SimpleGrid_DeleteRow()
+#define SG_ADDCOLUMN WM_USER + 0x01                 ///< SimpleGrid_AddColumn()
+#define SG_ADDROW WM_USER + 0x02                    ///< SimpleGrid_AddRow()
+#define SG_ENABLEEDIT WM_USER + 0x03                ///< SimpleGrid_EnableEdit()
+#define SG_EXTENDLASTCOLUMN WM_USER + 0x04          ///< SimpleGrid_ExtendLastColumn()
+#define SG_GETCOLCOUNT WM_USER + 0x05               ///< SimpleGrid_GetColCount()
+#define SG_GETCOLUMNHEADERTEXT WM_USER + 0x06       ///< SimpleGrid_GetColumnHeaderText()
+#define SG_GETCOLUMNHEADERTEXTLENGTH WM_USER + 0x07 ///< SimpleGrid_GetColumnHeaderTextLen()
+#define SG_GETCOLUMNTYPE WM_USER + 0x08             ///< SimpleGrid_GetColumnType()
+#define SG_GETCOLWIDTH WM_USER + 0x09               ///< SimpleGrid_GetColWidth()
+#define SG_GETCURSORCOL WM_USER + 0x0A              ///< SimpleGrid_GetCursorCol()
+#define SG_GETCURSORROW WM_USER + 0x0B              ///< SimpleGrid_GetCursorRow()
+#define SG_GETHEADERROWHEIGHT WM_USER + 0x0C        ///< SimpleGrid_GetHeaderRowHeight()
+#define SG_GETIMAGELIST WM_USER + 0x0D              ///< SimpleGrid_GetImageList()
+#define SG_GETITEMDATA WM_USER + 0x0E               ///< SimpleGrid_GetItemData()
+#define SG_GETITEMDATALENGTH WM_USER + 0x0F         ///< SimpleGrid_GetItemDataLen()
+#define SG_GETITEMPROTECTION WM_USER + 0x10         ///< SimpleGrid_GetItemProtection()
+#define SG_GETROWCOUNT WM_USER + 0x11               ///< SimpleGrid_GetRowCount()
+#define SG_GETROWHEADERTEXT WM_USER + 0x12          ///< SimpleGrid_GetRowHeaderText()
+#define SG_GETROWHEADERTEXTLENGTH WM_USER + 0x13    ///< SimpleGrid_GetRowHeaderTextLen()
+#define SG_GETROWHEIGHT WM_USER + 0x14              ///< SimpleGrid_GetRowHeight()
+#define SG_REFRESHGRID WM_USER + 0x15               ///< SimpleGrid_RefreshGrid()
+#define SG_RESETCONTENT WM_USER + 0x16              ///< SimpleGrid_ResetContent()
+#define SG_SELECTCELL WM_USER + 0x17                ///< SimpleGrid_SelectCell()
+#define SG_SETALLOWCOLRESIZE WM_USER + 0x18         ///< SimpleGrid_SetAllowColResize()
+#define SG_SETCOLAUTOWIDTH WM_USER + 0x19           ///< SimpleGrid_SetColAutoWidth()
+#define SG_SETCOLSNUMBERED WM_USER + 0x1A           ///< SimpleGrid_SetColsNumbered()
+#define SG_SETCOLUMNHEADERTEXT WM_USER + 0x1B       ///< SimpleGrid_SetColumnHeaderText()
+#define SG_SETCOLWIDTH WM_USER + 0x1C               ///< SimpleGrid_SetColWidth()
+#define SG_SETCURSORPOS WM_USER + 0x1D              ///< SimpleGrid_SetCursorPos()
+#define SG_SETDOUBLEBUFFER WM_USER + 0x1E           ///< SimpleGrid_SetDoubleBuffer()
+#define SG_SETELLIPSIS WM_USER + 0x1F               ///< SimpleGrid_SetEllipsis()
+#define SG_SETGRIDLINECOLOR WM_USER + 0x20          ///< SimpleGrid_SetGridLineColor()
+#define SG_SETHEADERROWHEIGHT WM_USER + 0x21        ///< SimpleGrid_SetHeaderRowHeight()
+#define SG_SETHEADINGFONT WM_USER + 0x22            ///< SimpleGrid_SetHeadingFont()
+#define SG_SETHILIGHTCOLOR WM_USER + 0x23           ///< SimpleGrid_SetHilightColor()
+#define SG_SETHILIGHTTEXTCOLOR WM_USER + 0x24       ///< SimpleGrid_SetHilightTextColor()
+#define SG_SETIMAGELIST WM_USER + 0x25              ///< SimpleGrid_SetImageList()
+#define SG_SETITEMDATA WM_USER + 0x26               ///< SimpleGrid_SetItemData()
+#define SG_SETITEMTEXTALIGNMENT WM_USER + 0x27      ///< SimpleGrid_SetItemTextAlignment()
+#define SG_SETITEMPROTECTION WM_USER + 0x28         ///< SimpleGrid_SetItemProtection()
+#define SG_SETPROTECTCOLOR WM_USER + 0x29           ///< SimpleGrid_SetProtectColor()
+#define SG_SETROWHEADERTEXT WM_USER + 0x2A          ///< SimpleGrid_SetRowHeaderText()
+#define SG_SETROWHEADERWIDTH WM_USER + 0x2B         ///< SimpleGrid_SetRowHeaderWidth()
+#define SG_SETROWHEIGHT WM_USER + 0x2C              ///< SimpleGrid_SetRowHeight()
+#define SG_SETROWSNUMBERED WM_USER + 0x2D           ///< SimpleGrid_SetRowsNumbered()
+#define SG_SETSELECTIONMODE WM_USER + 0x2E          ///< SimpleGrid_SetSelectionMode()
+#define SG_SETTITLEFONT WM_USER + 0x2F              ///< SimpleGrid_SetTitleFont()
+#define SG_SETTITLEHEIGHT WM_USER + 0x30            ///< SimpleGrid_SetTitleHeight()
+#define SG_SHOWINTEGRALROWS WM_USER + 0x31          ///< SimpleGrid_ShowIntegralRows()
+#define SG_RIGHTJUSTIFYNUMERICS WM_USER + 0x32      ///< Unused
+#define SG_INSERTROW WM_USER + 0x33                 ///< SimpleGrid_InsertRow()
+#define SG_DELETEROW WM_USER + 0x34                 ///< SimpleGrid_DeleteRow()
 
 /// @}
 
@@ -380,18 +380,21 @@ typedef struct tagNMSGFOCUS
 /// @param count The number of elements in @b aryData
 ///
 /// @returns The return value is not meaningful.
-#define SimpleGrid_AddRowData(hGrid, szHeader, dwAlignment, aryData, count)                              \
-  {                                                                                                      \
-    SGITEM _sgi;                                                                                         \
-    _sgi.row = (int)(DWORD)SNDMSG((hGrid), SG_ADDROW, 0, (LPARAM)(szHeader));                            \
-    if (SG_ERROR != _sgi.row) {                                                                          \
-      for (int i = 0; i < count; ++i) {                                                                  \
-        _sgi.col = i;                                                                                    \
-        _sgi.lpCurValue = (LPARAM)aryData[i];                                                            \
-        if (SG_ERROR == (int)SNDMSG((hGrid), SG_SETITEMDATA, 0, (LPARAM)(LPSGITEM)&_sgi)) break;         \
-        SNDMSG((hGrid), SG_SETITEMTEXTALIGNMENT, (WPARAM)(DWORD)(dwAlignment), (LPARAM)(LPSGITEM)&_sgi); \
-      }                                                                                                  \
-    }                                                                                                    \
+#define SimpleGrid_AddRowData(hGrid, szHeader, dwAlignment, aryData, count)                                \
+  {                                                                                                        \
+    SGITEM _sgi;                                                                                           \
+    _sgi.row = (int)(DWORD)SNDMSG((hGrid), SG_ADDROW, 0, (LPARAM)(szHeader));                              \
+    if (SG_ERROR != _sgi.row)                                                                              \
+    {                                                                                                      \
+      for (int i = 0; i < count; ++i)                                                                      \
+      {                                                                                                    \
+        _sgi.col = i;                                                                                      \
+        _sgi.lpCurValue = (LPARAM)aryData[i];                                                              \
+        if (SG_ERROR == (int)SNDMSG((hGrid), SG_SETITEMDATA, 0, (LPARAM)(LPSGITEM) & _sgi))                \
+          break;                                                                                           \
+        SNDMSG((hGrid), SG_SETITEMTEXTALIGNMENT, (WPARAM)(DWORD)(dwAlignment), (LPARAM)(LPSGITEM) & _sgi); \
+      }                                                                                                    \
+    }                                                                                                      \
   }
 
 /// @def SimpleGrid_EnableEdit(hGrid,fSet)
@@ -533,13 +536,13 @@ typedef struct tagNMSGFOCUS
 /// @param pszText Pointer to a buffer to recieve text.
 ///
 /// @returns The return value is not meaningful.
-#define SimpleGrid_GetItemText(hGrid, iCol, iRow, pszText)       \
-  {                                                              \
-    SGITEM _sgi;                                                 \
-    _sgi.col = iCol;                                             \
-    _sgi.row = iRow;                                             \
-    _sgi.lpCurValue = (LPARAM)pszText;                           \
-    SNDMSG((hGrid), SG_GETITEMDATA, 0, (LPARAM)(LPSGITEM)&_sgi); \
+#define SimpleGrid_GetItemText(hGrid, iCol, iRow, pszText)         \
+  {                                                                \
+    SGITEM _sgi;                                                   \
+    _sgi.col = iCol;                                               \
+    _sgi.row = iRow;                                               \
+    _sgi.lpCurValue = (LPARAM)pszText;                             \
+    SNDMSG((hGrid), SG_GETITEMDATA, 0, (LPARAM)(LPSGITEM) & _sgi); \
   }
 
 /// @def SimpleGrid_GetItemDataLen(hGrid, iCol, iRow)
@@ -666,12 +669,12 @@ typedef struct tagNMSGFOCUS
 ///         the current contents of the cell.
 ///
 /// @returns ERROR_SUCCESS otherwise SG_ERROR if desired cell is out of bounds
-#define SimpleGrid_SelectCell(hGrid, iCol, iRow, fOverwritemode)                           \
-  {                                                                                        \
-    SGITEM _sgi;                                                                           \
-    _sgi.col = iCol;                                                                       \
-    _sgi.row = iRow;                                                                       \
-    SNDMSG((hGrid), SG_SELECTCELL, (WPARAM)(BOOL)fOverwritemode, (LPARAM)(LPSGITEM)&_sgi); \
+#define SimpleGrid_SelectCell(hGrid, iCol, iRow, fOverwritemode)                             \
+  {                                                                                          \
+    SGITEM _sgi;                                                                             \
+    _sgi.col = iCol;                                                                         \
+    _sgi.row = iRow;                                                                         \
+    SNDMSG((hGrid), SG_SELECTCELL, (WPARAM)(BOOL)fOverwritemode, (LPARAM)(LPSGITEM) & _sgi); \
   }
 
 /// @def SimpleGrid_SetAllowColResize(hGrid,fSet)
@@ -849,13 +852,13 @@ typedef struct tagNMSGFOCUS
 /// @param pszText The text string.
 ///
 /// @returns The return value is not meaningful.
-#define SimpleGrid_SetItemText(hGrid, iCol, iRow, pszText)       \
-  {                                                              \
-    SGITEM _sgi;                                                 \
-    _sgi.col = iCol;                                             \
-    _sgi.row = iRow;                                             \
-    _sgi.lpCurValue = (LPARAM)pszText;                           \
-    SNDMSG((hGrid), SG_SETITEMDATA, 0, (LPARAM)(LPSGITEM)&_sgi); \
+#define SimpleGrid_SetItemText(hGrid, iCol, iRow, pszText)         \
+  {                                                                \
+    SGITEM _sgi;                                                   \
+    _sgi.col = iCol;                                               \
+    _sgi.row = iRow;                                               \
+    _sgi.lpCurValue = (LPARAM)pszText;                             \
+    SNDMSG((hGrid), SG_SETITEMDATA, 0, (LPARAM)(LPSGITEM) & _sgi); \
   }
 
 /// @def SimpleGrid_SetItemTextAlignment(hGrid, pItem, iAlign)
@@ -879,12 +882,12 @@ typedef struct tagNMSGFOCUS
 /// @param dwAlign One of the alignments (GSA_LEFT, GSA_GENERAL, or GSA_RIGHT).
 ///
 /// @returns The return value is not meaningful.
-#define SimpleGrid_SetItemTextAlignmentEx(hGrid, iCol, iRow, dwAlign)                            \
-  {                                                                                              \
-    SGITEM _sgi;                                                                                 \
-    _sgi.col = iCol;                                                                             \
-    _sgi.row = iRow;                                                                             \
-    SNDMSG((hGrid), SG_SETITEMTEXTALIGNMENT, (WPARAM)(DWORD)(dwAlign), (LPARAM)(LPSGITEM)&_sgi); \
+#define SimpleGrid_SetItemTextAlignmentEx(hGrid, iCol, iRow, dwAlign)                              \
+  {                                                                                                \
+    SGITEM _sgi;                                                                                   \
+    _sgi.col = iCol;                                                                               \
+    _sgi.row = iRow;                                                                               \
+    SNDMSG((hGrid), SG_SETITEMTEXTALIGNMENT, (WPARAM)(DWORD)(dwAlign), (LPARAM)(LPSGITEM) & _sgi); \
   }
 
 /// @def SimpleGrid_SetItemProtection(hGrid, pItem, fSet)
@@ -908,12 +911,12 @@ typedef struct tagNMSGFOCUS
 /// @param fSet TRUE to protect cell FALSE to allow changes.
 ///
 /// @returns The return value is not meaningful.
-#define SimpleGrid_SetItemProtectionEx(hGrid, iCol, iRow, fSet)                     \
-  {                                                                                 \
-    SGITEM _sgi;                                                                    \
-    _sgi.col = iCol;                                                                \
-    _sgi.row = iRow;                                                                \
-    SNDMSG((hGrid), SG_SETITEMPROTECTION, (WPARAM)(fSet), (LPARAM)(LPSGITEM)&_sgi); \
+#define SimpleGrid_SetItemProtectionEx(hGrid, iCol, iRow, fSet)                       \
+  {                                                                                   \
+    SGITEM _sgi;                                                                      \
+    _sgi.col = iCol;                                                                  \
+    _sgi.row = iRow;                                                                  \
+    SNDMSG((hGrid), SG_SETITEMPROTECTION, (WPARAM)(fSet), (LPARAM)(LPSGITEM) & _sgi); \
   }
 
 /// @def SimpleGrid_SetProtectColor(hGrid, clrProtect)
@@ -1061,4 +1064,4 @@ VOID ShowHscroll(HWND);
 // VOID SetHomeRow(HWND hwnd, int col, int row);
 int findLongestTextWidthInColumn(HWND hwnd, const int col, const int start_row, const int last_row, const int min_col_width = 160, const int max_col_width = 330);
 
-#endif// GENERICCONTROL_H
+#endif // GENERICCONTROL_H

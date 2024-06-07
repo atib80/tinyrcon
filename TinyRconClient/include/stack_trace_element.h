@@ -7,9 +7,10 @@ extern size_t print_colored_text(HWND re_control, const char *text, const is_app
 
 struct stack_trace_element
 {
-  explicit stack_trace_element(HWND hwnd_re_control, std::string message) : number_of_unhandled_exceptions{ std::uncaught_exceptions() },
-                                                                            hwnd_re_control{ hwnd_re_control }, message{ std::move(message) }
-  {}
+  explicit stack_trace_element(HWND hwnd_re_control, std::string message) : number_of_unhandled_exceptions{std::uncaught_exceptions()},
+                                                                            hwnd_re_control{hwnd_re_control}, message{std::move(message)}
+  {
+  }
   ~stack_trace_element()
   {
     if (number_of_unhandled_exceptions != std::uncaught_exceptions() && !message.empty())

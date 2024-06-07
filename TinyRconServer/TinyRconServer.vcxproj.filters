@@ -72,6 +72,18 @@
     <ClInclude Include="include\tiny_rcon_utility_data_types.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\stats.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\connection_manager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\tiny_rcon_utility_classes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\tiny_rcon_handles.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="data\icons\big_codicon.ico">
@@ -860,6 +872,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\connection_manager_for_messages.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\connection_manager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\stats.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

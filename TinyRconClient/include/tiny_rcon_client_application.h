@@ -24,7 +24,7 @@
 #include "tiny_rcon_utility_functions.h"
 #include "autoupdate.h"
 #include "bitmap_image_handler.h"
-#include "stats.h"
+// #include "stats.h"
 
 #undef max
 
@@ -49,7 +49,7 @@ class tiny_rcon_client_application : public disabled_copy_operations, public dis
 	bool is_bans_synchronized{false};
 	bool is_enable_automatic_program_updates{true};
 	bool is_enable_automatic_missing_map_image_download{true};
-	bool is_enable_players_stats_feature{false};
+	/*bool is_enable_players_stats_feature{false};
 	bool is_enable_tracking_of_player_stats_data_for_day{false};
 	bool is_enable_tracking_of_player_stats_data_for_month{false};
 	bool is_enable_tracking_of_player_stats_data_for_year{false};
@@ -58,7 +58,7 @@ class tiny_rcon_client_application : public disabled_copy_operations, public dis
 	size_t number_of_top_players_to_display_in_tinyrcon{50u};
 	size_t time_period_in_minutes_for_displaying_top_players_stats_data_in_game_chat{45u};
 	size_t time_period_in_minutes_for_displaying_top_players_stats_data_in_tinyrcon{45u};
-	size_t time_period_in_minutes_for_saving_players_stats_data{30u};
+	size_t time_period_in_minutes_for_saving_players_stats_data{30u};*/
 	size_t game_server_index{};
 	size_t game_servers_count{};
 	size_t rcon_game_servers_count{};
@@ -67,8 +67,8 @@ class tiny_rcon_client_application : public disabled_copy_operations, public dis
 	std::atomic<uint64_t> previous_uploaded_data_in_bytes{0ULL};
 	std::atomic<uint64_t> next_downloaded_data_in_bytes{0ULL};
 	std::atomic<uint64_t> next_uploaded_data_in_bytes{0ULL};
-	uint_least16_t tiny_rcon_server_port{27015};
-	uint_least16_t tiny_rcon_server_port_for_players{27017};
+	const uint_least16_t tiny_rcon_server_port{27015};
+	const uint_least16_t tiny_rcon_server_port_for_players{27017};
 	game_name_t game_name{game_name_t::unknown};
 	std::condition_variable command_queue_cv{};
 	std::mutex command_mutex{};
@@ -263,7 +263,7 @@ class tiny_rcon_client_application : public disabled_copy_operations, public dis
 
 	auto_update_manager au;
 	bitmap_image_handler bih;
-	stats stats_data;
+	// stats stats_data;
 	connection_manager rcon_connection_manager;
 	connection_manager_for_messages cm_for_messages;
 	connection_manager_for_rcon_messages cm_for_rcon_messages;
@@ -374,7 +374,6 @@ public:
 		is_use_different_foreground_colors_for_even_and_odd_lines = new_value;
 	}
 
-	// ***
 	bool get_is_enable_automatic_program_updates() const noexcept
 	{
 		return is_enable_automatic_program_updates;
@@ -395,7 +394,7 @@ public:
 		is_enable_automatic_missing_map_image_download = new_value;
 	}
 
-	bool get_is_enable_players_stats_feature() const noexcept
+	/*bool get_is_enable_players_stats_feature() const noexcept
 	{
 		return is_enable_players_stats_feature;
 	}
@@ -443,7 +442,7 @@ public:
 	void set_is_enable_tracking_of_player_stats_data_permanently(const bool new_value) noexcept
 	{
 		is_enable_tracking_of_player_stats_data_permanently = new_value;
-	}	
+	}
 
 	size_t get_number_of_top_players_to_display_in_game_chat() const noexcept
 	{
@@ -484,7 +483,7 @@ public:
 	{
 		time_period_in_minutes_for_displaying_top_players_stats_data_in_tinyrcon = new_value;
 	}
-	
+
 	size_t get_time_period_in_minutes_for_saving_players_stats_data() const noexcept
 	{
 		return time_period_in_minutes_for_saving_players_stats_data;
@@ -493,8 +492,7 @@ public:
 	void set_time_period_in_minutes_for_saving_players_stats_data(const size_t new_value) noexcept
 	{
 		time_period_in_minutes_for_saving_players_stats_data = new_value;
-	}
-	// ***
+	}*/
 
 	inline game_name_t get_game_name() const noexcept
 	{
@@ -619,11 +617,10 @@ public:
 		return bih;
 	}
 
-  inline stats &get_stats_data() noexcept
-  {
-    return stats_data;
-  }
-
+	/*inline stats &get_stats_data() noexcept
+	{
+	  return stats_data;
+	}*/
 
 	inline size_t get_game_servers_count() const noexcept
 	{
@@ -882,7 +879,7 @@ public:
 	std::map<std::string, std::string> &get_available_full_map_to_rcon_map_names() noexcept
 	{
 		return available_full_map_to_rcon_map_names;
-	}	
+	}
 
 	std::vector<std::shared_ptr<tiny_rcon_client_user>> &get_users() noexcept
 	{
@@ -1295,20 +1292,20 @@ public:
 		return tiny_rcon_server_port;
 	}
 
-	void set_tiny_rcon_server_port(const int new_tiny_rcon_server_port) noexcept
-	{
-		tiny_rcon_server_port = static_cast<uint_least16_t>(new_tiny_rcon_server_port);
-	}
+	// void set_tiny_rcon_server_port(const int new_tiny_rcon_server_port) noexcept
+	// {
+	// 	tiny_rcon_server_port = static_cast<uint_least16_t>(new_tiny_rcon_server_port);
+	// }
 
 	uint_least16_t get_tiny_rcon_server_port_for_players() const noexcept
 	{
 		return tiny_rcon_server_port_for_players;
 	}
 
-	void set_tiny_rcon_server_port_for_players(const int new_tiny_rcon_server_port_for_players) noexcept
-	{
-		tiny_rcon_server_port_for_players = static_cast<uint_least16_t>(new_tiny_rcon_server_port_for_players);
-	}
+	// void set_tiny_rcon_server_port_for_players(const int new_tiny_rcon_server_port_for_players) noexcept
+	// {
+	// 	tiny_rcon_server_port_for_players = static_cast<uint_least16_t>(new_tiny_rcon_server_port_for_players);
+	// }
 
 	const std::string &get_game_version_number() const noexcept
 	{
@@ -1379,26 +1376,15 @@ public:
 		ftp_download_file_pattern = std::move(new_ftp_download_file_pattern);
 	}
 
-	// images_data_file_pattern
-	/*const std::wstring& get_images_data_file_pattern() const noexcept
+	const std::string &get_image_files_path_to_md5() const noexcept
 	{
-		return images_data_file_pattern;
+		return image_files_path_to_md5;
 	}
 
-	void set_images_data_file_pattern(std::wstring new_images_data_file_pattern) noexcept
+	void set_image_files_path_to_md5(std::string value) noexcept
 	{
-		images_data_file_pattern = std::move(new_images_data_file_pattern);
-	}*/
-
-  const std::string &get_image_files_path_to_md5() const noexcept
-  {
-    return image_files_path_to_md5;
-  }
-
-  void set_image_files_path_to_md5(std::string value) noexcept
-  {
-    image_files_path_to_md5 = std::move(value);
-  }
+		image_files_path_to_md5 = std::move(value);
+	}
 
 	const std::string &get_plugins_geoIP_geo_dat_md5() const noexcept
 	{

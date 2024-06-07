@@ -8,7 +8,7 @@
 #include <set>
 
 #undef max
-  
+
 std::pair<bool, std::string> create_necessary_file_path(const std::string &file_);
 std::pair<bool, std::wstring> create_necessary_file_path(const std::wstring &file_);
 std::pair<bool, std::string> create_necessary_folders_and_files(const std::vector<std::string> &folder_file_paths);
@@ -322,9 +322,10 @@ void PutCell(HWND, const int, const int, const char *);
 void display_country_flag(HWND, const int, const int, const char *);
 std::string GetCellContents(HWND, const int row, const int col);
 
-bool is_alpha(const char ch);
-bool is_decimal_digit(const char ch);
-bool is_ws(const char ch);
+bool is_alpha(const char ch) noexcept;
+bool is_decimal_digit(const char ch) noexcept;
+// bool is_printable(const char ch);
+bool is_ws(const char ch) noexcept;
 
 void change_hdc_fg_color(HDC hdc, COLORREF fg_color);
 bool check_if_selected_cell_indices_are_valid_for_players_grid(const int row_index, const int col_index);
@@ -467,12 +468,14 @@ std::vector<std::string> get_file_name_matches_for_specified_file_path_pattern(c
 std::string calculate_md5_checksum_of_file(const char *file_path);
 bool fix_path_strings_in_json_config_file(const std::string &config_file_path);
 std::string escape_backward_slash_characters_in_place(const std::string &line);
-class stats;
-void update_player_scores(stats &tinyrcon_stats);
-void sort_players_stats_data(std::vector<player_stats> &stats_data_vec, std::unordered_map<std::string, player_stats> &stats_data_map);
-void save_players_stats_data(const char *file_path, std::vector<player_stats> &stats_data, std::unordered_map<std::string, player_stats> &stats_data_map);
-void load_players_stats_data(const char *file_path, std::vector<player_stats> &stats_data, std::unordered_map<std::string, player_stats> &stats_data_map);
-void process_topplayers_request(const std::string &data);
-void load_image_files_information(const char *file_path);
-[[maybe_unused]] bool tell_player_their_stats_data_in_a_private_message(const char *title, const player &pd);
-bool remove_stats_for_player_name(const std::string &player_name_index);
+// class stats;
+// void update_player_scores(stats &tinyrcon_stats);
+// void sort_players_stats_data(std::vector<player_stats> &stats_data_vec, std::unordered_map<std::string, player_stats> &stats_data_map);
+// void save_players_stats_data(const char *file_path, std::vector<player_stats> &stats_data, std::unordered_map<std::string, player_stats> &stats_data_map);
+// void load_players_stats_data(const char *file_path, std::vector<player_stats> &stats_data, std::unordered_map<std::string, player_stats> &stats_data_map);
+// void process_topplayers_request(const std::string &data);
+// void load_image_files_information(const char *file_path);
+// [[maybe_unused]] bool tell_player_their_stats_data_in_a_private_message(const char *title, const player &pd);
+// bool remove_stats_for_player_name(const std::string &player_name_index);
+bool download_bitmap_image_file(const char *bitmap_image_name, const char *destination_file_path);
+bool is_rcon_game_server(const game_server &gs);
