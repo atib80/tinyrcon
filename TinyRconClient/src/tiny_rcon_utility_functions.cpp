@@ -5227,9 +5227,10 @@ void display_temporarily_banned_ip_addresses(const size_t number_of_last_bans_to
     auto &temp_banned_players = main_app.get_current_game_server().get_temp_banned_ip_addresses_vector();
     if (!temp_banned_players.empty())
     {
-        longest_name_length =
-            std::max(longest_name_length,
-                     find_longest_player_name_length(temp_banned_players.cbegin(), temp_banned_players.cend(), false));
+        longest_name_length = std::max(
+            longest_name_length,
+            find_longest_entry_length(temp_banned_players.cbegin(), temp_banned_players.cend(), false, 8u,
+                                      [](const vector<player>::const_iterator iter) { return iter->player_name; }));
         longest_country_length =
             std::max(longest_country_length,
                      find_longest_player_country_city_info_length(temp_banned_players, temp_banned_players.size()));
@@ -5452,9 +5453,10 @@ void display_banned_ip_address_ranges(const size_t number_of_last_bans_to_displa
     auto &banned_players = main_app.get_current_game_server().get_banned_ip_address_ranges_vector();
     if (!banned_players.empty())
     {
-        longest_name_length =
-            std::max(longest_name_length,
-                     find_longest_player_name_length(banned_players.cbegin(), banned_players.cend(), false));
+        longest_name_length = std::max(
+            longest_name_length,
+            find_longest_entry_length(banned_players.cbegin(), banned_players.cend(), false, 8u,
+                                      [](const vector<player>::const_iterator iter) { return iter->player_name; }));
         longest_country_length =
             std::max(longest_country_length,
                      find_longest_player_country_city_info_length(banned_players, banned_players.size()));
@@ -5660,6 +5662,7 @@ void display_protected_entries(const char *table_title, const std::set<std::stri
                                const bool is_save_data_to_log_file)
 {
     // print_trace_message(__FILE__, __LINE__, __FUNCTION__);
+    using iter_type = decltype(cbegin(protected_entries));
     size_t longest_protected_entry_length{32};
 
     auto &banned_players = main_app.get_current_game_server().get_banned_ip_addresses_vector();
@@ -5667,7 +5670,8 @@ void display_protected_entries(const char *table_title, const std::set<std::stri
     {
         longest_protected_entry_length =
             std::max(longest_protected_entry_length,
-                     find_longest_entry_length(cbegin(protected_entries), cend(protected_entries), false));
+                     find_longest_entry_length(cbegin(protected_entries), cend(protected_entries), false, 32u,
+                                               [](iter_type iter) { return iter->c_str(); }));
     }
 
     ostringstream oss;
@@ -5811,9 +5815,10 @@ void display_reported_players(const size_t number_of_last_reports_to_display, co
     auto &reported_players = main_app.get_reported_players();
     if (!reported_players.empty())
     {
-        longest_name_length =
-            std::max(longest_name_length,
-                     find_longest_player_name_length(reported_players.cbegin(), reported_players.cend(), false));
+        longest_name_length = std::max(
+            longest_name_length,
+            find_longest_entry_length(reported_players.cbegin(), reported_players.cend(), false, 8u,
+                                      [](const vector<player>::const_iterator iter) { return iter->player_name; }));
         longest_country_length =
             std::max(longest_country_length,
                      find_longest_player_country_city_info_length(reported_players, reported_players.size()));
@@ -6019,9 +6024,10 @@ void display_permanently_banned_ip_addresses(const size_t number_of_last_bans_to
     auto &banned_players = main_app.get_current_game_server().get_banned_ip_addresses_vector();
     if (!banned_players.empty())
     {
-        longest_name_length =
-            std::max(longest_name_length,
-                     find_longest_player_name_length(banned_players.cbegin(), banned_players.cend(), false));
+        longest_name_length = std::max(
+            longest_name_length,
+            find_longest_entry_length(banned_players.cbegin(), banned_players.cend(), false, 8u,
+                                      [](const vector<player>::const_iterator iter) { return iter->player_name; }));
         longest_country_length =
             std::max(longest_country_length,
                      find_longest_player_country_city_info_length(banned_players, banned_players.size()));
@@ -6231,9 +6237,10 @@ void display_banned_player_names(const char *title, const size_t number_of_last_
     auto &banned_players = main_app.get_current_game_server().get_banned_names_vector();
     if (!banned_players.empty())
     {
-        longest_name_length =
-            std::max(longest_name_length,
-                     find_longest_player_name_length(banned_players.cbegin(), banned_players.cend(), false));
+        longest_name_length = std::max(
+            longest_name_length,
+            find_longest_entry_length(banned_players.cbegin(), banned_players.cend(), false, 8u,
+                                      [](const vector<player>::const_iterator iter) { return iter->player_name; }));
         longest_country_length =
             std::max(longest_country_length,
                      find_longest_player_country_city_info_length(banned_players, banned_players.size()));
@@ -12894,8 +12901,11 @@ void prepare_players_data_for_display(game_server &gs, const bool is_log_status_
             sort_players_data(players, type_of_sort);
             if (!players.empty())
             {
-                longest_name_length = std::max(
-                    longest_name_length, find_longest_player_name_length(players.cbegin(), players.cend(), false));
+                longest_name_length = std::max(longest_name_length,
+                                               find_longest_entry_length(players.cbegin(), players.cend(), false, 8u,
+                                                                         [](const vector<player>::const_iterator iter) {
+                                                                             return iter->player_name;
+                                                                         }));
                 longest_country_length = std::max(
                     longest_country_length, find_longest_player_country_city_info_length(players, number_of_players));
             }
@@ -13063,8 +13073,11 @@ void prepare_players_data_for_display_for_regular_users(game_server &gs, const b
 
         if (!players.empty())
         {
-            longest_name_length =
-                std::max(longest_name_length, find_longest_player_name_length(players.cbegin(), players.cend(), false));
+            longest_name_length = std::max(
+                longest_name_length,
+                find_longest_entry_length(players.cbegin(), players.cend(), false, 8u,
+                                          [](const vector<player>::const_iterator iter) { return iter->player_name; }));
+
             longest_country_length = std::max(longest_country_length,
                                               find_longest_player_country_city_info_length(players, number_of_players));
         }
@@ -13196,8 +13209,10 @@ void prepare_players_data_for_display_of_getstatus_response(game_server &gs, con
         sort_players_data(players, sort_type::score_desc);
         if (!players.empty())
         {
-            longest_name_length =
-                std::max(longest_name_length, find_longest_player_name_length(players.cbegin(), players.cend(), false));
+            longest_name_length = std::max(
+                longest_name_length,
+                find_longest_entry_length(players.cbegin(), players.cend(), false, 8u,
+                                          [](const vector<player>::const_iterator iter) { return iter->player_name; }));
         }
     }
 

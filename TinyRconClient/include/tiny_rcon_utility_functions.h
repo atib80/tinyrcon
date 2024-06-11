@@ -40,38 +40,23 @@ void convert_guid_key_to_country_name(const std::vector<geoip_data> &geo_data, s
 
 size_t get_number_of_characters_without_color_codes(const char *);
 
-template <typename Iter> size_t find_longest_entry_length(Iter first, Iter last, const bool count_color_codes)
+template <typename Iter, typename Func>
+size_t find_longest_entry_length(Iter first, Iter last, const bool count_color_codes, const size_t initial_entry_length,
+                                 Func get_property)
 {
     if (first == last)
         return 0;
-    size_t max_player_name_length{32};
+    size_t max_entry_length{initial_entry_length};
     while (first != last)
     {
-        max_player_name_length = std::max<size_t>(
-            count_color_codes ? first->length() : get_number_of_characters_without_color_codes(first->c_str()),
-            max_player_name_length);
+        max_entry_length =
+            std::max<size_t>(count_color_codes ? stl::helper::len(get_property(first))
+                                               : get_number_of_characters_without_color_codes(get_property(first)),
+                             max_entry_length);
         ++first;
     }
 
-    return max_player_name_length;
-}
-
-template <typename Iter>
-size_t find_longest_player_name_length(Iter first, const Iter last, const bool count_color_codes)
-{
-    if (first == last)
-        return 0;
-    size_t max_player_name_length{8};
-    while (first != last)
-    {
-        max_player_name_length =
-            std::max<size_t>(count_color_codes ? stl::helper::len(first->player_name)
-                                               : get_number_of_characters_without_color_codes(first->player_name),
-                             max_player_name_length);
-        ++first;
-    }
-
-    return max_player_name_length;
+    return max_entry_length;
 }
 
 size_t find_longest_player_country_city_info_length(const std::vector<player> &,
