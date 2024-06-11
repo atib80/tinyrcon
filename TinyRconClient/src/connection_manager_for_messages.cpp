@@ -1,5 +1,5 @@
-#include "connection_manager_for_messages.h"
 #include "tiny_rcon_client_application.h"
+#include "connection_manager_for_rcon_messages.h"
 
 using namespace std;
 using namespace stl::helper;

@@ -69,6 +69,7 @@
 //          (1) included bug fix suggestion provided by Hans-Peter Kalb
 
 #define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
 #include "simple_grid.h"
 
 #include <commctrl.h>
@@ -1497,8 +1498,7 @@ static VOID DisplayColumn(HWND hwnd, int col, int offset, HFONT hfont, HFONT hco
         // Draw row header as well as controls and text over other cells
         switch (iColumnType)
         {
-        case GCT_ROWHEADER:
-        {
+        case GCT_ROWHEADER: {
             if (g_lpInst->ROWSNUMBERED)
             {
                 isNumeric = TRUE;
@@ -1518,8 +1518,7 @@ static VOID DisplayColumn(HWND hwnd, int col, int offset, HFONT hfont, HFONT hco
             print_colored_text_to_grid_cell(hdc, rect, buffer, uFormat);
         }
         break;
-        case GCT_BUTTON:
-        {
+        case GCT_BUTTON: {
             InflateRect(&rect, -2, -2);
             DrawFrameControl(hdc, &rect, DFC_BUTTON, DFCS_BUTTONPUSH);
             if (g_lpInst->ELLIPSIS)
@@ -1539,8 +1538,7 @@ static VOID DisplayColumn(HWND hwnd, int col, int offset, HFONT hfont, HFONT hco
             }
         }
         break;
-        case GCT_COMBO:
-        {
+        case GCT_COMBO: {
             // Calculate and draw drop down button
             RECT rectButton = {0, 0, 0, 0};
             CopyRect(&rectButton, &rect);
@@ -1569,8 +1567,7 @@ static VOID DisplayColumn(HWND hwnd, int col, int offset, HFONT hfont, HFONT hco
             }
         }
         break;
-        case GCT_CHECK:
-        {
+        case GCT_CHECK: {
             // Calculate and draw checkbox
             RECT rectCheck = {0, 0, 0, 0};
             CopyRect(&rectCheck, &rect);
@@ -1584,8 +1581,7 @@ static VOID DisplayColumn(HWND hwnd, int col, int offset, HFONT hfont, HFONT hco
                              DFCS_BUTTONCHECK | (0 == _stricmp(buffer, CHECKED) ? DFCS_CHECKED : 0));
         }
         break;
-        case GCT_IMAGE:
-        {
+        case GCT_IMAGE: {
             // Calculate and draw image
             RECT rectImage = {0, 0, 0, 0};
             LONG index = 0;
@@ -1621,8 +1617,7 @@ static VOID DisplayColumn(HWND hwnd, int col, int offset, HFONT hfont, HFONT hco
                              g_lpInst->clrBackground, CLR_DEFAULT, style | ILD_TRANSPARENT);
         }
         break;
-        case GCT_LINK:
-        {
+        case GCT_LINK: {
             InflateRect(&rect, -2, -2);
 
             // Draw the link underlined and in the link color
@@ -2787,8 +2782,7 @@ static void Grid_OnKeyDown(HWND hwnd, UINT vk, BOOL, int cRepeat, UINT flags)
     case VK_NEXT:
     case VK_PRIOR:
     case VK_DOWN:
-    case VK_UP:
-    {
+    case VK_UP: {
         RECT gridrect = {0, 0, 0, 0};
         int rpp;
         if (rows == 0)
@@ -2839,8 +2833,7 @@ static void Grid_OnKeyDown(HWND hwnd, UINT vk, BOOL, int cRepeat, UINT flags)
         }
         // Everything else
         // FALL THROUGH
-    case VK_LEFT:
-    {
+    case VK_LEFT: {
         int k = GetAdjacentCol(g_lpInst->cursorcol, VK_RIGHT == vk);
 
         if (!k)
@@ -2855,8 +2848,7 @@ static void Grid_OnKeyDown(HWND hwnd, UINT vk, BOOL, int cRepeat, UINT flags)
         RefreshGrid(hwnd);
     }
     break;
-    default:
-    {
+    default: {
         // DWM 1.5: Exclude certain keys from triggering edit by default
         if ((VK_F1 <= vk && vk <= VK_F24) || VK_TAB == vk || // DWM 1.7: Added
             VK_RETURN == vk || VK_MENU == vk || VK_PAUSE == vk || VK_CAPITAL == vk || VK_INSERT == vk ||
@@ -2908,21 +2900,18 @@ static void Grid_OnKeyDown(HWND hwnd, UINT vk, BOOL, int cRepeat, UINT flags)
                               fEditMode); // DWM 1.7: Added fEditMode
         }
         break;
-        case GCT_COMBO:
-        {
+        case GCT_COMBO: {
             Grid_OnSelectComboBox(hwnd, cellrect, (char *)GetColOptional(g_lpInst->cursorcol), lpgi->lpszCurValue);
         }
         break;
-        case GCT_BUTTON:
-        {
+        case GCT_BUTTON: {
             Grid_OnSelectButton(hwnd, cellrect, lpgi->lpszCurValue);
             FORWARD_WM_KEYDOWN(g_lpInst->hwndControl, vk, cRepeat, flags, SNDMSG);
 
             // Cell click handled by Grid_OnCommand()
         }
         break;
-        case GCT_CHECK:
-        {
+        case GCT_CHECK: {
             if (0 == _stricmp(lpgi->lpszCurValue, CHECKED))
                 String_Replace(lpgi->lpszCurValue, UNCHECKED);
             else
@@ -2931,8 +2920,7 @@ static void Grid_OnKeyDown(HWND hwnd, UINT vk, BOOL, int cRepeat, UINT flags)
             NotifyCellClick(hwnd);
         }
         break;
-        case GCT_LINK:
-        {
+        case GCT_LINK: {
             if (!IsEmptyString(lpgi->lpszMisc) && (VK_RETURN == vk || VK_SPACE == vk))
                 ShellExecuteA(NULL, "open", lpgi->lpszMisc, NULL, NULL, SW_SHOW);
 
@@ -2959,16 +2947,14 @@ static VOID Grid_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 {
     switch (id)
     {
-    case ID_BUTTON:
-    {
+    case ID_BUTTON: {
         if (BN_CLICKED == codeNotify) // One of the buttons was clicked fire notify
         {
             NotifyCellClick(hwnd);
         }
     }
     break;
-    case ID_COMBO:
-    {
+    case ID_COMBO: {
         static char combobox_buffer[1024];
         if (CBN_KILLFOCUS == codeNotify) // A selection was made update the cell text
         {
@@ -2991,8 +2977,7 @@ static VOID Grid_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
         }
     }
     break;
-    case ID_EDIT:
-    {
+    case ID_EDIT: {
         static char edit_buffer[1024];
         if (EN_EDITENDOK == codeNotify)
         {
@@ -4204,8 +4189,7 @@ static LRESULT Grid_OnGetItemDataLength(HWND, WPARAM wParam, LPARAM lParam)
         case GCT_COMBO:
         case GCT_BUTTON:
             return _tcslen((LPTSTR)lpgi->lpszCurValue);
-        case GCT_LINK:
-        {
+        case GCT_LINK: {
             // Note: The Link text and hyperlink are allocated in a double null
             // terminated string buf and so are adjacent.  The pointer
             // lpgi->lpszCurValue points to the first element and the beginning of
@@ -4259,13 +4243,11 @@ static LRESULT Grid_OnGetItemData(HWND, WPARAM, LPARAM lParam)
     {
     case GCT_EDIT:
     case GCT_COMBO:
-    case GCT_BUTTON:
-    {
+    case GCT_BUTTON: {
         strcpy_s((char *)lpSGitem->lpCurValue, 1024, (const char *)lpgi->lpszCurValue);
         return len((const char *)lpSGitem->lpCurValue);
     }
-    case GCT_LINK:
-    {
+    case GCT_LINK: {
         // Note: The Link text and hyperlink are allocated in a double null
         // terminated string buf and so are adjacent.  The pointer
         // lpgi->lpszCurValue points to the first element and the beginning of the
@@ -4496,8 +4478,7 @@ static LRESULT CALLBACK Grid_Proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
         break;
     case SG_GETCOLCOUNT:
         return ColCount() - 1; // don't include row header column
-    case SG_GETCOLUMNHEADERTEXT:
-    {
+    case SG_GETCOLUMNHEADERTEXT: {
         DWORD dwRtn = 0;
         SGITEM sgi;
         sgi.row = 0;
@@ -4510,8 +4491,7 @@ static LRESULT CALLBACK Grid_Proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
         }
         return dwRtn;
     }
-    case SG_GETCOLUMNHEADERTEXTLENGTH:
-    {
+    case SG_GETCOLUMNHEADERTEXTLENGTH: {
         LPGRIDITEM lpgi; // Skip the row header column
         lpgi = GetCellData((INT)wParam + 1, 0);
 
@@ -4525,8 +4505,7 @@ static LRESULT CALLBACK Grid_Proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
     }
     case SG_GETCOLUMNTYPE:
         return GetColType(wParam + 1); // Skip the row header column
-    case SG_GETCOLWIDTH:
-    {
+    case SG_GETCOLWIDTH: {
         INT iCol = wParam + 1; // Skip the row header column
         if (iCol > ColCount())
         {
@@ -4543,8 +4522,7 @@ static LRESULT CALLBACK Grid_Proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
         return g_lpInst->headerrowheight;
     case SG_GETIMAGELIST:
         return Grid_OnGetImageList(wParam, lParam);
-    case SG_GETITEMDATA:
-    {
+    case SG_GETITEMDATA: {
         DWORD dwRtn = 0;
         ((LPSGITEM)lParam)->col++; // don't include row header column
         ((LPSGITEM)lParam)->row++; // don't include column header row
@@ -4559,8 +4537,7 @@ static LRESULT CALLBACK Grid_Proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
         return Grid_OnGetItemProtection(hwnd, wParam + 1, lParam + 1);
     case SG_GETROWCOUNT: // but don't include col headers
         return RowCount() - 1;
-    case SG_GETROWHEADERTEXT:
-    {
+    case SG_GETROWHEADERTEXT: {
         DWORD dwRtn = 0;
         SGITEM sgi;
         sgi.row = wParam + 1; // Skip the column header row
@@ -4573,8 +4550,7 @@ static LRESULT CALLBACK Grid_Proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
         }
         return dwRtn;
     }
-    case SG_GETROWHEADERTEXTLENGTH:
-    {
+    case SG_GETROWHEADERTEXTLENGTH: {
         LPGRIDITEM lpgi; // Skip the column header row
         lpgi = GetCellData(0, (INT)wParam + 1);
 
@@ -4606,8 +4582,7 @@ static LRESULT CALLBACK Grid_Proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
     case SG_SETCOLAUTOWIDTH:
         g_lpInst->COLAUTOWIDTH = (BOOL)wParam;
         break;
-    case SG_SETCOLSNUMBERED:
-    {
+    case SG_SETCOLSNUMBERED: {
         g_lpInst->COLUMNSNUMBERED = (BOOL)wParam;
 
         // adjust the column width if necessary
@@ -4619,8 +4594,7 @@ static LRESULT CALLBACK Grid_Proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
         RefreshGrid(hwnd);
     }
     break;
-    case SG_SETCOLUMNHEADERTEXT:
-    {
+    case SG_SETCOLUMNHEADERTEXT: {
         SGITEM sgi;
         sgi.row = 0;
         sgi.col = wParam + 1; // Skip the row header column
@@ -4662,8 +4636,7 @@ static LRESULT CALLBACK Grid_Proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
     case SG_SETIMAGELIST:
         // don't include row header column
         return Grid_OnSetImageList((WPARAM)(wParam + 1), lParam);
-    case SG_SETITEMDATA:
-    {
+    case SG_SETITEMDATA: {
         DWORD dwRtn = 0;
         ((LPSGITEM)lParam)->col++; // don't include row header column
         ((LPSGITEM)lParam)->row++; // don't include column header row
@@ -4672,8 +4645,7 @@ static LRESULT CALLBACK Grid_Proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
         ((LPSGITEM)lParam)->row--; // restore initial index
         return dwRtn;
     }
-    case SG_SETITEMTEXTALIGNMENT:
-    {
+    case SG_SETITEMTEXTALIGNMENT: {
         INT iRtn = 0;
         ((LPSGITEM)lParam)->col++; // don't include row header column
         ((LPSGITEM)lParam)->row++; // don't include column header row
@@ -4682,8 +4654,7 @@ static LRESULT CALLBACK Grid_Proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
         ((LPSGITEM)lParam)->row--; // restore initial index
         return iRtn;
     }
-    case SG_SETITEMPROTECTION:
-    {
+    case SG_SETITEMPROTECTION: {
         DWORD dwRtn = 0;
         ((LPSGITEM)lParam)->col++; // don't include row header column
         ((LPSGITEM)lParam)->row++; // don't include column header row
@@ -4696,16 +4667,14 @@ static LRESULT CALLBACK Grid_Proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
         g_lpInst->clrProtect = (COLORREF)wParam;
         RefreshGrid(hwnd);
         break;
-    case SG_SETROWHEADERTEXT:
-    {
+    case SG_SETROWHEADERTEXT: {
         SGITEM sgi;
         sgi.row = wParam + 1; // Skip the column header row
         sgi.col = 0;
         sgi.lpCurValue = lParam;
         return Grid_OnSetItemData(hwnd, 0, (LPARAM)&sgi);
     }
-    case SG_SETROWHEADERWIDTH:
-    {
+    case SG_SETROWHEADERWIDTH: {
         DWORD dwRtn = 0;
         dwRtn = Grid_OnSetColWidth(hwnd, 0, lParam);
         return dwRtn;
@@ -4713,8 +4682,7 @@ static LRESULT CALLBACK Grid_Proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
     case SG_SETROWHEIGHT:
         Grid_OnSetRowHeight(hwnd, wParam);
         break;
-    case SG_SETROWSNUMBERED:
-    {
+    case SG_SETROWSNUMBERED: {
         g_lpInst->ROWSNUMBERED = (BOOL)wParam;
 
         // adjust the column width if necessary

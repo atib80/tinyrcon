@@ -5,27 +5,30 @@
 #pragma once
 // #define _CRTDBG_MAP_ALLOC
 // #include <crtdbg.h>
+// clang-format off
 #include "../targetver.h"
 #define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
 #define _CRT_SECURE_NO_WARNINGS
 #define ASIO_STANDALONE
 // Windows Header Files
-#include <Windows.h>
-#include <memory.h>
-#include <windowsx.h>
-#include <condition_variable>
-#include <cstring>
-#include <format>
-#include <regex>
-#include <string>
-#include <unordered_map>
-#include <thread>
-#include "simple_grid.h"
-#include "tiny_rcon_client_application.h"
 #include "autoupdate.h"
-#include <filesystem>
+#include "simple_grid.h"
 #include "stack_trace_element.h"
 #include "stats.h"
+#include "tiny_rcon_client_application.h"
+#include <Windows.h>
+#include <condition_variable>
+#include <cstring>
+#include <filesystem>
+#include <format>
+#include <memory.h>
+#include <regex>
+#include <string>
+#include <thread>
+#include <unordered_map>
+#include <windowsx.h>
+// clang-format on
 
 // #define ASSERT _ASSERTE
 //
@@ -102,7 +105,8 @@
 //
 //     ASSERT(-1 != count);
 //
-//     ASSERT(-1 != _snprintf_s(buffer + count, _countof(buffer) - count, _countof(buffer) - count - 1, format, args...));
+//     ASSERT(-1 != _snprintf_s(buffer + count, _countof(buffer) - count,
+//     _countof(buffer) - count - 1, format, args...));
 //
 //     OutputDebugStringA(buffer);
 //   }
