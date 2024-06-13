@@ -1,4 +1,5 @@
-﻿#include "game_server.h"
+﻿#include "tiny_rcon_utility_functions.h"
+#include "game_server.h"
 #include "tiny_rcon_server_application.h"
 #include <algorithm>
 #include <crtdbg.h>
@@ -9,6 +10,7 @@
 
 #include "nlohmann/json.hpp"
 #include "resource.h"
+
 #include "simple_grid.h"
 #include "stack_trace_element.h"
 #include <Psapi.h>
@@ -648,7 +650,31 @@ bool write_tiny_rcon_json_settings_to_file(const char *file_path)
     config_file << "\"ftp_bans_folder_path\": \"" << main_app.get_ftp_bans_folder_path() << "\",\n";
     config_file << "\"ftp_download_file_pattern\": \""
                 << escape_backward_slash_characters_in_place(main_app.get_ftp_download_file_pattern()) << "\",\n";
-    config_file << "\"plugins_geoIP_geo_dat_md5\": \"" << main_app.get_plugins_geoIP_geo_dat_md5() << "\"\n";
+    config_file << R"("plugins_geoIP_geo_dat_md5": ")" << main_app.get_plugins_geoIP_geo_dat_md5() << "\",\n";
+    config_file << R"("players_stats_feature": {)" << '\n';
+    config_file << R"("enabled": )" << (main_app.get_is_enable_players_stats_feature() ? "true" : "false") << ",\n";
+    config_file << R"("enable_tracking_of_player_stats_data_for_day": )"
+                << (main_app.get_is_enable_tracking_of_player_stats_data_for_day() ? "true" : "false") << ",\n";
+    config_file << R"("enable_tracking_of_player_stats_data_for_month": )"
+                << (main_app.get_is_enable_tracking_of_player_stats_data_for_month() ? "true" : "false") << ",\n";
+    config_file << R"("enable_tracking_of_player_stats_data_for_year": )"
+                << (main_app.get_is_enable_tracking_of_player_stats_data_for_year() ? "true" : "false") << ",\n";
+    config_file << R"("enable_tracking_of_player_stats_data_permanently": )"
+                << (main_app.get_is_enable_tracking_of_player_stats_data_permanently() ? "true" : "false") << ",\n";
+    config_file << R"("number_of_top_players_to_display_in_game_chat": )"
+                << main_app.get_number_of_top_players_to_display_in_game_chat() << ",\n";
+    config_file << R"("number_of_top_players_to_display_in_tinyrcon": )"
+                << main_app.get_number_of_top_players_to_display_in_tinyrcon() << ",\n";
+    config_file <<
+        R"("time_period_in_minutes_for_displaying_top_players_stats_data_in_game_chat":
+    )" << main_app.get_time_period_in_minutes_for_displaying_top_players_stats_data_in_game_chat()
+                << ",\n";
+    config_file <<
+        R"("time_period_in_minutes_for_displaying_top_players_stats_data_in_tinyrcon":
+    )" << main_app.get_time_period_in_minutes_for_displaying_top_players_stats_data_in_tinyrcon()
+                << ",\n";
+    config_file << R"("time_period_in_minutes_for_saving_players_stats_data": )"
+                << main_app.get_time_period_in_minutes_for_saving_players_stats_data() << "\n}\n";
     config_file << "}" << flush;
     return true;
 }
@@ -985,6 +1011,132 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
     {
         found_missing_config_setting = true;
         main_app.get_game_server().set_check_for_banned_players_time_period(5u);
+    }
+
+    if (json_resource.contains("players_stats_feature") && json_resource.at("players_stats_feature").is_object())
+    {
+        auto &players_stats_feature_json_object = json_resource["players_stats_feature"];
+        if (players_stats_feature_json_object.contains("enabled"))
+        {
+            main_app.set_is_enable_players_stats_feature(
+                players_stats_feature_json_object["enabled"].template get<bool>());
+        }
+        else
+        {
+            found_missing_config_setting = true;
+            main_app.set_is_enable_players_stats_feature(false);
+        }
+
+        if (players_stats_feature_json_object.contains("enable_tracking_of_player_stats_data_for_day"))
+        {
+            main_app.set_is_enable_tracking_of_player_stats_data_for_day(
+                players_stats_feature_json_object["enable_tracking_of_player_stats_data_for_day"].template get<bool>());
+        }
+        else
+        {
+            found_missing_config_setting = true;
+            main_app.set_is_enable_tracking_of_player_stats_data_for_day(false);
+        }
+
+        if (players_stats_feature_json_object.contains("enable_tracking_of_player_stats_data_for_month"))
+        {
+            main_app.set_is_enable_tracking_of_player_stats_data_for_month(
+                players_stats_feature_json_object["enable_tracking_of_player_stats_data_for_month"]
+                    .template get<bool>());
+        }
+        else
+        {
+            found_missing_config_setting = true;
+            main_app.set_is_enable_tracking_of_player_stats_data_for_month(false);
+        }
+
+        if (players_stats_feature_json_object.contains("enable_tracking_of_player_stats_data_for_year"))
+        {
+            main_app.set_is_enable_tracking_of_player_stats_data_for_year(
+                players_stats_feature_json_object["enable_tracking_of_player_stats_data_for_year"]
+                    .template get<bool>());
+        }
+        else
+        {
+            found_missing_config_setting = true;
+            main_app.set_is_enable_tracking_of_player_stats_data_for_year(false);
+        }
+
+        if (players_stats_feature_json_object.contains("enable_tracking_of_player_stats_data_permanently"))
+        {
+            main_app.set_is_enable_tracking_of_player_stats_data_permanently(
+                players_stats_feature_json_object["enable_tracking_of_player_stats_data_permanently"]
+                    .template get<bool>());
+        }
+        else
+        {
+            found_missing_config_setting = true;
+            main_app.set_is_enable_tracking_of_player_stats_data_permanently(false);
+        }
+
+        // number_of_top_players_to_display_in_game_chat
+        if (players_stats_feature_json_object.contains("number_of_top_players_to_display_in_game_chat"))
+        {
+            main_app.set_number_of_top_players_to_display_in_game_chat(
+                players_stats_feature_json_object["number_of_top_players_to_display_in_game_chat"].template get<int>());
+        }
+        else
+        {
+            found_missing_config_setting = true;
+            main_app.set_number_of_top_players_to_display_in_game_chat(10u);
+        }
+
+        // number_of_top_players_to_display_in_tinyrcon
+        if (players_stats_feature_json_object.contains("number_of_top_players_to_display_in_tinyrcon"))
+        {
+            main_app.set_number_of_top_players_to_display_in_tinyrcon(
+                players_stats_feature_json_object["number_of_top_players_to_display_in_tinyrcon"].template get<int>());
+        }
+        else
+        {
+            found_missing_config_setting = true;
+            main_app.set_number_of_top_players_to_display_in_tinyrcon(25u);
+        }
+
+        if (players_stats_feature_json_object.contains(
+                "time_period_in_minutes_for_displaying_top_players_stats_data_in_game_chat"))
+        {
+            main_app.set_time_period_in_minutes_for_displaying_top_players_stats_data_in_game_chat(
+                players_stats_feature_json_object
+                    ["time_period_in_minutes_for_displaying_top_players_stats_data_in_game_chat"]
+                        .template get<int>());
+        }
+        else
+        {
+            found_missing_config_setting = true;
+            main_app.set_time_period_in_minutes_for_displaying_top_players_stats_data_in_game_chat(45u);
+        }
+
+        if (players_stats_feature_json_object.contains(
+                "time_period_in_minutes_for_displaying_top_players_stats_data_in_tinyrcon"))
+        {
+            main_app.set_time_period_in_minutes_for_displaying_top_players_stats_data_in_tinyrcon(
+                players_stats_feature_json_object
+                    ["time_period_in_minutes_for_displaying_top_players_stats_data_in_tinyrcon"]
+                        .template get<int>());
+        }
+        else
+        {
+            found_missing_config_setting = true;
+            main_app.set_time_period_in_minutes_for_displaying_top_players_stats_data_in_tinyrcon(45u);
+        }
+
+        if (players_stats_feature_json_object.contains("time_period_in_minutes_for_saving_players_stats_data"))
+        {
+            main_app.set_time_period_in_minutes_for_saving_players_stats_data(
+                players_stats_feature_json_object["time_period_in_minutes_for_saving_players_stats_data"]
+                    .template get<int>());
+        }
+        else
+        {
+            found_missing_config_setting = true;
+            main_app.set_time_period_in_minutes_for_saving_players_stats_data(30u);
+        }
     }
 
     if (json_resource.contains("tiny_rcon_server_ip"))
@@ -8527,4 +8679,104 @@ game_name_t convert_game_name_to_game_name_t(const std::string &game_name)
     }
 
     return game_name_t::cod2;
+}
+
+vector<string> get_file_name_matches_for_specified_file_path_pattern(const char *dir_path, const char *file_pattern)
+{
+    char download_file_path_pattern[MAX_PATH];
+    vector<string> found_file_names;
+
+    snprintf(download_file_path_pattern, std::size(download_file_path_pattern), "%s\\%s", dir_path, file_pattern);
+    WIN32_FIND_DATA file_data{};
+    HANDLE read_file_data_handle{FindFirstFile(download_file_path_pattern, &file_data)};
+
+    if (read_file_data_handle != INVALID_HANDLE_VALUE)
+    {
+        while (stl::helper::len(file_data.cFileName) > 0)
+        {
+            found_file_names.emplace_back(file_data.cFileName);
+            ZeroMemory(&file_data, sizeof(WIN32_FIND_DATA));
+            FindNextFile(read_file_data_handle, &file_data);
+        }
+
+        FindClose(read_file_data_handle);
+    }
+
+    return found_file_names;
+}
+
+void say_message(const char *message)
+{
+    static char buffer[512];
+    (void)snprintf(buffer, std::size(buffer), "say \"%s\"", message);
+    // main_app.add_command_to_queue({ "say", format("\"{}\"", message) }, command_type::rcon, false);
+    string reply_buffer;
+    main_app.get_connection_manager().send_and_receive_rcon_data(
+        buffer, reply_buffer, main_app.get_game_server().get_server_ip_address().c_str(),
+        main_app.get_game_server().get_server_port(), main_app.get_game_server().get_rcon_password().c_str(),
+        main_app.get_game_server(), false, false);
+}
+
+void rcon_say(string &msg, const bool is_print_to_rich_edit_messages_box)
+{
+    str_replace_all(msg, "{{br}}", "\n");
+    str_replace_all(msg, "\\", "|");
+    str_replace_all(msg, "/", "|");
+
+    msg = word_wrap(msg.c_str(), 140);
+    const auto lines =
+        stl::helper::str_split(msg, '\n', nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::yes);
+    for (const auto &line : lines)
+    {
+        say_message(line.c_str());
+        if (is_print_to_rich_edit_messages_box)
+        {
+            print_colored_text(app_handles.hwnd_re_messages_data, line.c_str(),
+                               is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        }
+    }
+}
+
+void rcon_say_top_players(std::string &&title)
+{
+    const int n{50};
+    string public_message;
+    const string tinyrcon_title_message{format("Top {} players:", n)};
+    get_top_players_stats_data(main_app.get_stats_data().get_scores_vector(),
+                               main_app.get_stats_data().get_scores_map(), n, public_message,
+                               tinyrcon_title_message.c_str());
+    // print_colored_text(app_handles.hwnd_re_messages_data, top_players_stats.c_str(),
+    // is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true, true, true); if
+    // (main_app.get_current_game_server().get_number_of_players() >= 2) {
+    //    const string online_players_stats{
+    //    get_online_players_stats_data_report(main_app.get_stats_data().get_scores_vector(),
+    //    main_app.get_stats_data().get_scores_map(), "Online players' stats data:") };
+    //    print_colored_text(app_handles.hwnd_re_messages_data, online_players_stats.c_str(),
+    //    is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true, true, true);
+    // }
+
+    rcon_say(title, false);
+    Sleep(3000);
+    auto lines =
+        stl::helper::str_split(public_message, '\n', nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::yes);
+    for (size_t i{}; i < std::min<size_t>(10u, lines.size()); ++i)
+    {
+        stl::helper::trim_in_place(lines[i]);
+        if (lines[i].empty())
+            continue;
+        rcon_say(lines[i], false);
+        Sleep(3000);
+    }
+
+    const auto &stats_data_map = main_app.get_stats_data().get_scores_map();
+    const auto &players_data = main_app.get_game_server().get_players_data();
+    for (size_t i{}; i < main_app.get_game_server().get_number_of_players(); ++i)
+    {
+        const auto &pd = players_data[i];
+        if (stats_data_map.contains(pd.player_name_index))
+        {
+            tell_player_their_stats_data_in_a_private_message("^5Your stats data: ", pd);
+            Sleep(3000);
+        }
+    }
 }

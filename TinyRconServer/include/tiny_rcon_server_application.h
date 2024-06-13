@@ -147,11 +147,21 @@ class tiny_rcon_server_application
 {
     std::atomic<bool> is_connection_settings_valid{true};
     bool is_log_file_open{};
+    bool is_enable_players_stats_feature{false};
+    bool is_enable_tracking_of_player_stats_data_for_day{false};
+    bool is_enable_tracking_of_player_stats_data_for_month{false};
+    bool is_enable_tracking_of_player_stats_data_for_year{false};
+    bool is_enable_tracking_of_player_stats_data_permanently{false};
+    size_t number_of_top_players_to_display_in_game_chat{10u};
+    size_t number_of_top_players_to_display_in_tinyrcon{50u};
+    size_t time_period_in_minutes_for_displaying_top_players_stats_data_in_game_chat{45u};
+    size_t time_period_in_minutes_for_displaying_top_players_stats_data_in_tinyrcon{45u};
+    size_t time_period_in_minutes_for_saving_players_stats_data{30u};
     std::atomic<uint64_t> previous_downloaded_data_in_bytes{0ULL};
     std::atomic<uint64_t> previous_uploaded_data_in_bytes{0ULL};
     std::atomic<uint64_t> next_downloaded_data_in_bytes{0ULL};
     std::atomic<uint64_t> next_uploaded_data_in_bytes{0ULL};
-    tiny_rcon_handles *app_handles;
+    tiny_rcon_handles *app_handles{};
     string username{"^1Admin"};
     string game_name{"cod2"}; // "cod1,cod2,cod4,cod5"
     string game_server_name{"185.158.113.146:28995 CoD2 CTF"};
@@ -1156,9 +1166,6 @@ class tiny_rcon_server_application
         SetWindowTextA(app_handles->hwnd_download_and_upload_speed_info, "");
         print_colored_text(app_handles->hwnd_download_and_upload_speed_info, speed_message.c_str(),
                            is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::no, true);
-        /*SendMessage(app_handles.hwnd_upload_speed_info, EM_SETSEL, 0, -1);
-        SendMessage(app_handles.hwnd_upload_speed_info, EM_SETFONTSIZE, (WPARAM)2,
-        (LPARAM)NULL);*/
 
         previous_uploaded_data_in_bytes.store(next_uploaded_data_in_bytes.load());
         previous_downloaded_data_in_bytes.store(next_downloaded_data_in_bytes.load());
@@ -1168,5 +1175,105 @@ class tiny_rcon_server_application
     inline stats &get_stats_data() noexcept
     {
         return stats_data;
+    }
+
+    bool get_is_enable_players_stats_feature() const noexcept
+    {
+        return is_enable_players_stats_feature;
+    }
+
+    void set_is_enable_players_stats_feature(const bool new_value) noexcept
+    {
+        is_enable_players_stats_feature = new_value;
+    }
+
+    bool get_is_enable_tracking_of_player_stats_data_for_day() const noexcept
+    {
+        return is_enable_tracking_of_player_stats_data_for_day;
+    }
+
+    void set_is_enable_tracking_of_player_stats_data_for_day(const bool new_value) noexcept
+    {
+        is_enable_tracking_of_player_stats_data_for_day = new_value;
+    }
+
+    bool get_is_enable_tracking_of_player_stats_data_for_month() const noexcept
+    {
+        return is_enable_tracking_of_player_stats_data_for_month;
+    }
+
+    void set_is_enable_tracking_of_player_stats_data_for_month(const bool new_value) noexcept
+    {
+        is_enable_tracking_of_player_stats_data_for_month = new_value;
+    }
+
+    bool get_is_enable_tracking_of_player_stats_data_for_year() const noexcept
+    {
+        return is_enable_tracking_of_player_stats_data_for_year;
+    }
+
+    void set_is_enable_tracking_of_player_stats_data_for_year(const bool new_value) noexcept
+    {
+        is_enable_tracking_of_player_stats_data_for_year = new_value;
+    }
+
+    bool get_is_enable_tracking_of_player_stats_data_permanently() const noexcept
+    {
+        return is_enable_tracking_of_player_stats_data_permanently;
+    }
+
+    void set_is_enable_tracking_of_player_stats_data_permanently(const bool new_value) noexcept
+    {
+        is_enable_tracking_of_player_stats_data_permanently = new_value;
+    }
+
+    size_t get_number_of_top_players_to_display_in_game_chat() const noexcept
+    {
+        return number_of_top_players_to_display_in_game_chat;
+    }
+
+    void set_number_of_top_players_to_display_in_game_chat(const size_t new_value) noexcept
+    {
+        number_of_top_players_to_display_in_game_chat = new_value;
+    }
+
+    size_t get_number_of_top_players_to_display_in_tinyrcon() const noexcept
+    {
+        return number_of_top_players_to_display_in_tinyrcon;
+    }
+
+    void set_number_of_top_players_to_display_in_tinyrcon(const size_t new_value) noexcept
+    {
+        number_of_top_players_to_display_in_tinyrcon = new_value;
+    }
+
+    size_t get_time_period_in_minutes_for_displaying_top_players_stats_data_in_game_chat() const noexcept
+    {
+        return time_period_in_minutes_for_displaying_top_players_stats_data_in_game_chat;
+    }
+
+    void set_time_period_in_minutes_for_displaying_top_players_stats_data_in_game_chat(const size_t new_value) noexcept
+    {
+        time_period_in_minutes_for_displaying_top_players_stats_data_in_game_chat = new_value;
+    }
+
+    size_t get_time_period_in_minutes_for_displaying_top_players_stats_data_in_tinyrcon() const noexcept
+    {
+        return time_period_in_minutes_for_displaying_top_players_stats_data_in_tinyrcon;
+    }
+
+    void set_time_period_in_minutes_for_displaying_top_players_stats_data_in_tinyrcon(const size_t new_value) noexcept
+    {
+        time_period_in_minutes_for_displaying_top_players_stats_data_in_tinyrcon = new_value;
+    }
+
+    size_t get_time_period_in_minutes_for_saving_players_stats_data() const noexcept
+    {
+        return time_period_in_minutes_for_saving_players_stats_data;
+    }
+
+    void set_time_period_in_minutes_for_saving_players_stats_data(const size_t new_value) noexcept
+    {
+        time_period_in_minutes_for_saving_players_stats_data = new_value;
     }
 };

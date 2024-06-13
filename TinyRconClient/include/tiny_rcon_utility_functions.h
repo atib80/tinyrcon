@@ -226,7 +226,7 @@ void build_tiny_rcon_message(std::string &);
 
 void say_message(const char *);
 void rcon_say(std::string &, const bool is_print_to_rich_edit_messages_box = true);
-void rcon_say_top_players(std::string &&title);
+// void rcon_say_top_players(std::string &&title);
 void tell_message(const char *, const int);
 std::string word_wrap(const char *, const size_t);
 

@@ -363,3 +363,8 @@ const std::map<std::string, std::string> &get_rcon_map_names_to_full_map_names_f
     const game_name_t);
 const std::map<std::string, std::string> &get_rcon_gametype_names_to_full_gametype_names_for_specified_game_name(
     const game_name_t);
+std::vector<std::string> get_file_name_matches_for_specified_file_path_pattern(const char *dir_path,
+                                                                               const char *file_pattern);
+void say_message(const char *);
+void rcon_say(std::string &, const bool = true);
+void rcon_say_top_players(std::string &&title);

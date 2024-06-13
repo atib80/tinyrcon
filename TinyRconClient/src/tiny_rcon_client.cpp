@@ -16,7 +16,7 @@ using namespace std::string_literals;
 using namespace std::chrono;
 using namespace std::filesystem;
 
-extern const string program_version{"2.7.6.2"};
+extern const string program_version{"2.7.6.3"};
 
 extern const std::regex ip_address_and_port_regex;
 extern const unordered_set<string> rcon_status_commands;
@@ -47,6 +47,7 @@ volatile std::atomic<bool> is_display_admins_data_event{false};
 volatile std::atomic<bool> is_display_players_data{true};
 volatile std::atomic<bool> is_refreshing_game_servers_data_event{false};
 volatile std::atomic<bool> is_display_geoinformation_data_for_players{false};
+volatile std::atomic<bool> is_executed_tasks_at_exit{false};
 static std::atomic<size_t> number_of_bans_to_display{25u};
 
 std::mutex reports_mutex;
@@ -6797,6 +6798,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
             }
         }
 
+        stl::helper::run_at_scope_exit<std::function<void(void)>> tasks_at_exit{[]() { execute_at_exit(); }};
+        execute_at_exit();
+
         is_terminate_program.store(true);
 
         log_message("Exiting TinyRcon program.", is_log_datetime::yes);
@@ -7297,13 +7301,23 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         SendMessage(app_handles.hwnd_progress_bar, PBM_SETPOS, (WPARAM)atomic_counter.load(), 0);
         ++counter;
 
-        if (!me->is_admin && (counter % 5 == 0))
+        if (counter % 5 == 0)
         {
-            main_app.get_connection_manager_for_rcon_messages().process_and_send_message(
-                "rcon-heartbeat-player",
-                format("{}\\{}\\{}", main_app.get_username(), get_current_time_stamp(), me->ip_address), true,
-                main_app.get_tiny_rcon_server_ip_address_for_players(),
-                main_app.get_tiny_rcon_server_port_for_players(), false);
+            if (!me->is_admin)
+            {
+                main_app.get_connection_manager_for_rcon_messages().process_and_send_message(
+                    "rcon-heartbeat-player",
+                    format("{}\\{}\\{}", main_app.get_username(), get_current_time_stamp(), me->ip_address), true,
+                    main_app.get_tiny_rcon_server_ip_address_for_players(),
+                    main_app.get_tiny_rcon_server_port_for_players(), false);
+            }
+            else
+            {
+                const auto current_ts{get_current_time_stamp()};
+                main_app.get_connection_manager_for_messages().process_and_send_message(
+                    "heartbeat", format("{}\\{}", main_app.get_username(), current_ts), true,
+                    main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+            }
         }
 
         if (counter % 15 == 0)
@@ -7314,8 +7328,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
                 call_once(synchronize_bans_flag, [&]() {
                     unsigned long guid_number{};
-                    // const auto &me =
-                    // main_app.get_user_for_name(main_app.get_username());
                     std::fill(operation_completed_flag, operation_completed_flag + 6, 0);
 
                     const string data_for_tempbans{
@@ -7362,7 +7374,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
         }
 
-        if (counter % 60 == 0)
+        if (counter % 30 == 0)
         {
             counter = 0;
 
@@ -7417,16 +7429,56 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
         /*if (counter % 60 == 0)
         {
-                const auto& rcon_game_server = main_app.get_game_servers()[0];
-                main_app.get_connection_manager_for_messages().process_and_send_message("query-request",
-        format("is_user_admin?{}\\{}", me->user_name,
-        rcon_game_server.get_rcon_password()), true,
-        main_app.get_tiny_rcon_server_ip_address(),
+            counter = 0;
+
+            const auto current_ts{get_current_time_stamp()};
+            if (me->is_admin)
+            {
+                main_app.add_message_to_queue(message_t{
+                    "request-admindata", format("{}\\{}\\{}", me->user_name, me->ip_address, current_ts), true});
+                save_current_user_data_to_json_file(main_app.get_user_data_file_path());
+
+                if (!main_app.get_is_bans_synchronized())
+                {
+                    std::fill(operation_completed_flag, operation_completed_flag + 6, 0);
+                    const string user_details{
+                        format("{}\\{}\\{}", me->user_name, me->ip_address, get_current_time_stamp())};
+                    main_app.add_message_to_queue(message_t{"request-tempbans", user_details, true});
+                    main_app.add_message_to_queue(message_t{"request-ipaddressbans", user_details, true});
+                    main_app.add_message_to_queue(message_t{"request-ipaddressrangebans", user_details, true});
+                    main_app.add_message_to_queue(message_t{"request-namebans", user_details, true});
+                    main_app.add_message_to_queue(message_t{"request-citybans", user_details, true});
+                    main_app.add_message_to_queue(message_t{"request-countrybans", user_details, true});
+                }
+            }
+            else
+            {
+                main_app.add_remote_message_to_queue(message_t{
+                    "request-admindata-player", format("{}\\{}\\{}", me->user_name, me->ip_address, current_ts),
+        true}); save_current_user_data_to_json_file(main_app.get_user_data_file_path()); if
+        (!main_app.get_is_bans_synchronized())
+                {
+                    const string user_details{
+                        format("{}\\{}\\{}", me->user_name, me->ip_address, get_current_time_stamp())};
+                    main_app.add_remote_message_to_queue(message_t{"request-tempbans-player", user_details, true});
+                    main_app.add_remote_message_to_queue(message_t{"request-ipaddressbans-player", user_details,
+        true}); main_app.add_remote_message_to_queue( message_t{"request-ipaddressrangebans-player", user_details,
+        true}); main_app.add_remote_message_to_queue(message_t{"request-namebans-player", user_details, true});
+                    main_app.add_remote_message_to_queue(message_t{"request-citybans-player", user_details, true});
+                    main_app.add_remote_message_to_queue(message_t{"request-countrybans-player", user_details,
+        true});
+                }
+            }
+
+            const auto &rcon_game_server = main_app.get_game_servers()[0];
+            main_app.get_connection_manager_for_messages().process_and_send_message(
+                "query-request", format("is_user_admin?{}\\{}", me->user_name,
+        rcon_game_server.get_rcon_password()), true, main_app.get_tiny_rcon_server_ip_address(),
         main_app.get_tiny_rcon_server_port(), false); const auto status =
-        check_if_specified_server_ip_port_and_rcon_password_are_valid(rcon_game_server.get_server_ip_address().c_str(),
-        rcon_game_server.get_server_port(),
-        rcon_game_server.get_rcon_password().c_str()); me->is_admin =
-        status.first;
+        check_if_specified_server_ip_port_and_rcon_password_are_valid(
+                rcon_game_server.get_server_ip_address().c_str(), rcon_game_server.get_server_port(),
+                rcon_game_server.get_rcon_password().c_str());
+            me->is_admin = status.first;
         }*/
 
         /*if (main_app.get_is_enable_players_stats_feature() && (counter %
@@ -7937,7 +7989,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
 
         case ID_QUITBUTTON:
-            execute_at_exit();
+            // execute_at_exit();
             // is_terminate_program.store(true);
             PostQuitMessage(0);
             break;
@@ -8743,7 +8795,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
             if (is_terminate_program.load())
             {
-                execute_at_exit();
+                // execute_at_exit();
                 PostQuitMessage(0);
             }
             break;
@@ -8833,7 +8885,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             return 0;
         break;
     case WM_CLOSE:
-        execute_at_exit();
+        // execute_at_exit();
         DestroyWindow(hWnd);
         return 0;
 

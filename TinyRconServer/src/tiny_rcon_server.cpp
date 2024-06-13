@@ -226,6 +226,101 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
     parse_tinyrcon_tool_config_file(main_app.get_tinyrcon_config_file_path());
     load_available_map_names(custom_map_names_file_path.c_str());
 
+    if (main_app.get_is_enable_players_stats_feature())
+    {
+
+        const string stats_data_dir_path{format("{}data", main_app.get_current_working_directory())};
+        auto file_name_matches = get_file_name_matches_for_specified_file_path_pattern(stats_data_dir_path.c_str(),
+                                                                                       "player_stats_for_year-*.dat");
+
+        time_t max_time_stamp = get_current_time_stamp();
+        string stats_data_file_name;
+        for (const auto &file_name : file_name_matches)
+        {
+            size_t start_pos{file_name.rfind('-')};
+            const size_t end_pos{file_name.rfind(".dat")};
+            if (start_pos != string::npos && end_pos != string::npos)
+            {
+                ++start_pos;
+                const auto ts = stoll(file_name.substr(start_pos, end_pos - start_pos));
+                if (ts > max_time_stamp)
+                {
+                    max_time_stamp = ts;
+                    stats_data_file_name = file_name;
+                }
+            }
+        }
+        if (!stats_data_file_name.empty())
+        {
+            const string file_name_path_for_stats_data_for_year{format("data\\{}", stats_data_file_name)};
+            main_app.get_stats_data().set_stop_time_in_seconds_for_year(max_time_stamp);
+            load_players_stats_data(file_name_path_for_stats_data_for_year.c_str(),
+                                    main_app.get_stats_data().get_scores_for_year_vector(),
+                                    main_app.get_stats_data().get_scores_for_year_map());
+        }
+
+        file_name_matches = get_file_name_matches_for_specified_file_path_pattern(stats_data_dir_path.c_str(),
+                                                                                  "player_stats_for_month-*.dat");
+
+        max_time_stamp = get_current_time_stamp();
+        stats_data_file_name.clear();
+        for (const auto &file_name : file_name_matches)
+        {
+            size_t start_pos{file_name.rfind('-')};
+            const size_t end_pos{file_name.rfind(".dat")};
+            if (start_pos != string::npos && end_pos != string::npos)
+            {
+                ++start_pos;
+                const auto ts = stoll(file_name.substr(start_pos, end_pos - start_pos));
+                if (ts > max_time_stamp)
+                {
+                    max_time_stamp = ts;
+                    stats_data_file_name = file_name;
+                }
+            }
+        }
+        if (!stats_data_file_name.empty())
+        {
+            const string file_name_path_for_stats_data_for_month{format("data\\{}", stats_data_file_name)};
+            main_app.get_stats_data().set_stop_time_in_seconds_for_month(max_time_stamp);
+            load_players_stats_data(file_name_path_for_stats_data_for_month.c_str(),
+                                    main_app.get_stats_data().get_scores_for_month_vector(),
+                                    main_app.get_stats_data().get_scores_for_month_map());
+        }
+
+        file_name_matches = get_file_name_matches_for_specified_file_path_pattern(stats_data_dir_path.c_str(),
+                                                                                  "player_stats_for_day-*.dat");
+
+        max_time_stamp = get_current_time_stamp();
+        stats_data_file_name.clear();
+        for (const auto &file_name : file_name_matches)
+        {
+            size_t start_pos{file_name.rfind('-')};
+            const size_t end_pos{file_name.rfind(".dat")};
+            if (start_pos != string::npos && end_pos != string::npos)
+            {
+                ++start_pos;
+                const auto ts = stoll(file_name.substr(start_pos, end_pos - start_pos));
+                if (ts > max_time_stamp)
+                {
+                    max_time_stamp = ts;
+                    stats_data_file_name = file_name;
+                }
+            }
+        }
+        if (!stats_data_file_name.empty())
+        {
+            const string file_name_path_for_stats_data_for_day{format("data\\{}", stats_data_file_name)};
+            main_app.get_stats_data().set_stop_time_in_seconds_for_day(max_time_stamp);
+            load_players_stats_data(file_name_path_for_stats_data_for_day.c_str(),
+                                    main_app.get_stats_data().get_scores_for_day_vector(),
+                                    main_app.get_stats_data().get_scores_for_day_map());
+        }
+
+        load_players_stats_data("data\\player_stats.dat", main_app.get_stats_data().get_scores_vector(),
+                                main_app.get_stats_data().get_scores_map());
+    }
+
     main_app.add_command_handler({"cls", "!cls"}, [](const vector<string> &) {
         Edit_SetText(app_handles.hwnd_re_messages_data, "");
         g_message_data_contents.clear();
@@ -433,6 +528,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                 current_user->geo_information = format("{}, {}", pd.country_name, pd.city);
                 current_user->country_code = pd.country_code;
                 current_user->is_logged_in = true;
+                display_users_data_in_users_table(app_handles.hwnd_users_table);
             }
         });
 
@@ -2424,7 +2520,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                     main_app.process_queue_command(std::move(cmd));
                 }
 
-                if (!is_terminate_program.load() && is_refresh_players_data_event.load())
+                if (!is_terminate_program.load() && main_app.get_is_enable_players_stats_feature() &&
+                    is_refresh_players_data_event.load())
                 {
                     string rcon_reply;
 
@@ -2723,6 +2820,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     static char message_buffer[512];
     static const size_t time_period{main_app.get_game_server().get_check_for_banned_players_time_period()};
     static size_t counter{};
+    static const size_t counter_max =
+        std::max<size_t>({60u, main_app.get_time_period_in_minutes_for_displaying_top_players_stats_data_in_game_chat(),
+                          main_app.get_time_period_in_minutes_for_displaying_top_players_stats_data_in_tinyrcon(),
+                          main_app.get_time_period_in_minutes_for_saving_players_stats_data()});
     HBRUSH orig_textEditBrush{};
     HBRUSH comboBrush1{}, comboBrush2{}, comboBrush3{}, comboBrush4{}, comboBrush5{};
     HBRUSH defaultbrush{};
@@ -2779,32 +2880,93 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
         ++counter;
 
-        if (counter % 5 == 0)
+        /*if (counter % 5 == 0)
         {
             display_users_data_in_users_table(app_handles.hwnd_users_table);
             display_online_admins_information();
-        }
+        }*/
 
-        if (counter % 30 == 0)
+        if (counter % 10 == 0)
         {
-            counter = 0;
+            display_users_data_in_users_table(app_handles.hwnd_users_table);
+            display_online_admins_information();
+
             const auto current_ts{get_current_time_stamp()};
-            unsigned long guid_key{};
+
             for (auto &u : main_app.get_users())
             {
-                if (u->is_logged_in && check_ip_address_validity(u->ip_address, guid_key))
+                if (unsigned long guid_key{}; check_ip_address_validity(u->ip_address, guid_key))
                 {
                     u->is_logged_in = false;
                     main_app.get_connection_manager_for_messages().process_and_send_message(
                         "heartbeat", format("{}\\{}", u->user_name, current_ts), true, u);
                 }
             }
+        }
+
+        if (counter % 30 == 0)
+        {
             save_tinyrcon_statistics_data("data\\data_stats.json");
+        }
+
+        if (main_app.get_is_enable_players_stats_feature() &&
+            (counter % main_app.get_time_period_in_minutes_for_saving_players_stats_data() == 0))
+        {
+
+            save_players_stats_data("data\\player_stats.dat", main_app.get_stats_data().get_scores_vector(),
+                                    main_app.get_stats_data().get_scores_map());
+
+            const string file_name_path_for_stats_data_for_year{format(
+                "data\\player_stats_for_year-{}.dat", main_app.get_stats_data().get_stop_time_in_seconds_for_year())};
+            save_players_stats_data(file_name_path_for_stats_data_for_year.c_str(),
+                                    main_app.get_stats_data().get_scores_for_year_vector(),
+                                    main_app.get_stats_data().get_scores_for_year_map());
+
+            const string file_name_path_for_stats_data_for_month{format(
+                "data\\player_stats_for_month-{}.dat", main_app.get_stats_data().get_stop_time_in_seconds_for_month())};
+            save_players_stats_data(file_name_path_for_stats_data_for_month.c_str(),
+                                    main_app.get_stats_data().get_scores_for_month_vector(),
+                                    main_app.get_stats_data().get_scores_for_month_map());
+
+            const string file_name_path_for_stats_data_for_day{format(
+                "data\\player_stats_for_day-{}.dat", main_app.get_stats_data().get_stop_time_in_seconds_for_day())};
+            save_players_stats_data(file_name_path_for_stats_data_for_day.c_str(),
+                                    main_app.get_stats_data().get_scores_for_day_vector(),
+                                    main_app.get_stats_data().get_scores_for_day_map());
+        }
+
+        if (main_app.get_is_enable_players_stats_feature() &&
+            (counter % main_app.get_time_period_in_minutes_for_displaying_top_players_stats_data_in_tinyrcon() == 0))
+        {
+            std::thread task{[]() {
+                string public_message;
+                const string title{
+                    format("Top {} players:", main_app.get_number_of_top_players_to_display_in_tinyrcon())};
+                const string top_players_stats{get_top_players_stats_data(
+                    main_app.get_stats_data().get_scores_vector(), main_app.get_stats_data().get_scores_map(),
+                    main_app.get_number_of_top_players_to_display_in_tinyrcon(), public_message, title.c_str())};
+                print_colored_text(app_handles.hwnd_re_messages_data, top_players_stats.c_str(),
+                                   is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes,
+                                   true, true);
+            }};
+            task.detach();
+        }
+
+        if (main_app.get_is_enable_players_stats_feature() &&
+            (counter % main_app.get_time_period_in_minutes_for_displaying_top_players_stats_data_in_game_chat() == 0))
+        {
+            string title{format("^5Top {} players:", main_app.get_number_of_top_players_to_display_in_game_chat())};
+            std::thread task{rcon_say_top_players, std::move(title)};
+            task.detach();
+        }
+
+        if (counter % counter_max == 0)
+        {
+            counter = 0;
         }
 
         if (10U == atomic_counter.load())
         {
-
             is_refresh_players_data_event.store(true);
         }
 

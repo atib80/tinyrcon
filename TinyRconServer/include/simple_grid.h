@@ -57,6 +57,9 @@
 #define WC_SIMPLEGRID WC_SIMPLEGRIDA
 #endif
 
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+
 /****************************************************************************/
 // Public errors
 

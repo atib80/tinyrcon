@@ -82,6 +82,7 @@ extern volatile std::atomic<bool> is_display_banned_cities_data_event;
 extern volatile std::atomic<bool> is_display_banned_countries_data_event;
 extern volatile std::atomic<bool> is_refreshing_game_servers_data_event;
 extern volatile std::atomic<bool> is_display_geoinformation_data_for_players;
+extern volatile std::atomic<bool> is_executed_tasks_at_exit;
 extern std::atomic<int> admin_choice;
 extern std::string admin_reason;
 
@@ -15720,68 +15721,73 @@ std::string get_file_name_from_path(const std::string &file_path)
 void execute_at_exit()
 {
     // print_trace_message(__FILE__, __LINE__, __FUNCTION__);
-    const string player_name{find_users_player_name_for_installed_cod2_game(
-        me, !main_app.get_current_game_server().get_game_mod_name().empty()
-                ? main_app.get_current_game_server().get_game_mod_name()
-                : "main"s)};
-
-    const auto current_ts{get_current_time_stamp()};
-    if (me->is_admin)
+    if (!is_executed_tasks_at_exit.load())
     {
-        main_app.get_connection_manager_for_messages().process_and_send_message(
-            "request-logout",
-            format("{}\\{}\\{}\\{}\\{}", me->user_name, me->ip_address, current_ts, player_name,
-                   main_app.get_game_version_number()),
-            true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+
+        const string player_name{find_users_player_name_for_installed_cod2_game(
+            me, !main_app.get_current_game_server().get_game_mod_name().empty()
+                    ? main_app.get_current_game_server().get_game_mod_name()
+                    : "main"s)};
+
+        const auto current_ts{get_current_time_stamp()};
+        if (me->is_admin)
+        {
+            main_app.get_connection_manager_for_messages().process_and_send_message(
+                "request-logout",
+                format(R"({}\{}\{}\{}\{})", me->user_name, me->ip_address, current_ts, player_name,
+                       main_app.get_game_version_number()),
+                true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+        }
+        else
+        {
+            main_app.get_connection_manager_for_rcon_messages().process_and_send_message(
+                "request-logout-player",
+                format(R"({}\{}\{}\{}\{})", me->user_name, me->ip_address, current_ts, player_name,
+                       main_app.get_game_version_number()),
+                true, main_app.get_tiny_rcon_server_ip_address_for_players(),
+                main_app.get_tiny_rcon_server_port_for_players(), false);
+        }
+        me->is_logged_in = false;
+        me->last_logout_time_stamp = current_ts;
+        save_current_user_data_to_json_file(main_app.get_user_data_file_path());
+
+        save_reported_players_to_file(main_app.get_reported_players_file_path(), main_app.get_reported_players());
+
+        save_protected_entries_file(main_app.get_protected_ip_addresses_file_path(),
+                                    main_app.get_current_game_server().get_protected_ip_addresses());
+        save_protected_entries_file(main_app.get_protected_ip_address_ranges_file_path(),
+                                    main_app.get_current_game_server().get_protected_ip_address_ranges());
+        save_protected_entries_file(main_app.get_protected_cities_file_path(),
+                                    main_app.get_current_game_server().get_protected_cities());
+        save_protected_entries_file(main_app.get_protected_countries_file_path(),
+                                    main_app.get_current_game_server().get_protected_countries());
+
+        /*save_players_stats_data("data\\player_stats.dat",
+        main_app.get_stats_data().get_scores_vector(),
+        main_app.get_stats_data().get_scores_map());
+
+        const string
+        file_name_path_for_stats_data_for_year{format("data\\player_stats_for_year-{}.dat",
+        main_app.get_stats_data().get_stop_time_in_seconds_for_year())};
+        save_players_stats_data(file_name_path_for_stats_data_for_year.c_str(),
+        main_app.get_stats_data().get_scores_for_year_vector(),
+        main_app.get_stats_data().get_scores_for_year_map());
+
+        const string
+        file_name_path_for_stats_data_for_month{format("data\\player_stats_for_month-{}.dat",
+        main_app.get_stats_data().get_stop_time_in_seconds_for_month())};
+        save_players_stats_data(file_name_path_for_stats_data_for_month.c_str(),
+        main_app.get_stats_data().get_scores_for_month_vector(),
+        main_app.get_stats_data().get_scores_for_month_map());
+
+        const string
+        file_name_path_for_stats_data_for_day{format("data\\player_stats_for_day-{}.dat",
+        main_app.get_stats_data().get_stop_time_in_seconds_for_day())};
+        save_players_stats_data(file_name_path_for_stats_data_for_day.c_str(),
+        main_app.get_stats_data().get_scores_for_day_vector(),
+        main_app.get_stats_data().get_scores_for_day_map());*/
+        is_executed_tasks_at_exit.store(true);
     }
-    else
-    {
-        main_app.get_connection_manager_for_rcon_messages().process_and_send_message(
-            "request-logout-player",
-            format("{}\\{}\\{}\\{}\\{}", me->user_name, me->ip_address, current_ts, player_name,
-                   main_app.get_game_version_number()),
-            true, main_app.get_tiny_rcon_server_ip_address_for_players(),
-            main_app.get_tiny_rcon_server_port_for_players(), false);
-    }
-    me->is_logged_in = false;
-    me->last_logout_time_stamp = current_ts;
-    save_current_user_data_to_json_file(main_app.get_user_data_file_path());
-
-    save_reported_players_to_file(main_app.get_reported_players_file_path(), main_app.get_reported_players());
-
-    save_protected_entries_file(main_app.get_protected_ip_addresses_file_path(),
-                                main_app.get_current_game_server().get_protected_ip_addresses());
-    save_protected_entries_file(main_app.get_protected_ip_address_ranges_file_path(),
-                                main_app.get_current_game_server().get_protected_ip_address_ranges());
-    save_protected_entries_file(main_app.get_protected_cities_file_path(),
-                                main_app.get_current_game_server().get_protected_cities());
-    save_protected_entries_file(main_app.get_protected_countries_file_path(),
-                                main_app.get_current_game_server().get_protected_countries());
-
-    /*save_players_stats_data("data\\player_stats.dat",
-    main_app.get_stats_data().get_scores_vector(),
-    main_app.get_stats_data().get_scores_map());
-
-    const string
-    file_name_path_for_stats_data_for_year{format("data\\player_stats_for_year-{}.dat",
-    main_app.get_stats_data().get_stop_time_in_seconds_for_year())};
-    save_players_stats_data(file_name_path_for_stats_data_for_year.c_str(),
-    main_app.get_stats_data().get_scores_for_year_vector(),
-    main_app.get_stats_data().get_scores_for_year_map());
-
-    const string
-    file_name_path_for_stats_data_for_month{format("data\\player_stats_for_month-{}.dat",
-    main_app.get_stats_data().get_stop_time_in_seconds_for_month())};
-    save_players_stats_data(file_name_path_for_stats_data_for_month.c_str(),
-    main_app.get_stats_data().get_scores_for_month_vector(),
-    main_app.get_stats_data().get_scores_for_month_map());
-
-    const string
-    file_name_path_for_stats_data_for_day{format("data\\player_stats_for_day-{}.dat",
-    main_app.get_stats_data().get_stop_time_in_seconds_for_day())};
-    save_players_stats_data(file_name_path_for_stats_data_for_day.c_str(),
-    main_app.get_stats_data().get_scores_for_day_vector(),
-    main_app.get_stats_data().get_scores_for_day_map());*/
 }
 
 bool check_if_exists_and_download_missing_custom_map_files_downloader(
@@ -16116,8 +16122,8 @@ bool fix_path_strings_in_json_config_file(const std::string &config_file_path)
 //	std::thread process_topplayers_request_task{[data = d]()
 //												{
 //													//
-// IsGUIThread(TRUE); 													auto parts = stl::helper::str_split(data, "\\",
-// nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::yes);
+// IsGUIThread(TRUE); 													auto parts = stl::helper::str_split(data,
+// "\\", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::yes);
 //													//
 // for (auto &part : parts) stl::helper::trim_in_place(part); 													if
 // (parts.size() >= 2)
@@ -16137,7 +16143,8 @@ bool fix_path_strings_in_json_config_file(const std::string &config_file_path)
 // if (parts[0] == "tp" || parts[0] == "!tp")
 //														{
 //															if
-//(!is_valid_decimal_whole_number(parts[1], n)) 																n = 25;
+//(!is_valid_decimal_whole_number(parts[1], n)) 																n =
+// 25;
 // const string title{format("Top {} {}", n, n != 1 ? "players" : "player")};
 // string public_message; 															const string
 // players_stats_information{get_top_players_stats_data(main_app.get_stats_data().get_scores_vector(),
@@ -16149,7 +16156,8 @@ bool fix_path_strings_in_json_config_file(const std::string &config_file_path)
 // if (parts[0] == "tpy" || parts[0] == "!tpy")
 //														{
 //															if
-//(!is_valid_decimal_whole_number(parts[1], n)) 																n = 25;
+//(!is_valid_decimal_whole_number(parts[1], n)) 																n =
+// 25;
 // tm time_info{}; 															auto t_c = get_current_time_stamp();
 // localtime_s(&time_info, &t_c); 															const string
 // title{format("Top {} {} for year {}:", n, n != 1 ? "players" : "player",
@@ -16164,7 +16172,8 @@ bool fix_path_strings_in_json_config_file(const std::string &config_file_path)
 // if (parts[0] == "tpm" || parts[0] == "!tpm")
 //														{
 //															if
-//(!is_valid_decimal_whole_number(parts[1], n)) 																n = 25;
+//(!is_valid_decimal_whole_number(parts[1], n)) 																n =
+// 25;
 // tm time_info{}; 															auto t_c = get_current_time_stamp();
 // localtime_s(&time_info, &t_c); 															const string
 // title{format("Top {} {} for month {}:", n, n != 1 ? "players" : "player",
@@ -16180,7 +16189,8 @@ bool fix_path_strings_in_json_config_file(const std::string &config_file_path)
 // if (parts[0] == "tpd" || parts[0] == "!tpd")
 //														{
 //															if
-//(!is_valid_decimal_whole_number(parts[1], n)) 																n = 25;
+//(!is_valid_decimal_whole_number(parts[1], n)) 																n =
+// 25;
 // tm time_info{}; 															auto t_c = get_current_time_stamp();
 // localtime_s(&time_info, &t_c); 															const string
 // title{format("Top {} {} for {}.{}.{}:", n, n != 1 ? "players" : "player",
