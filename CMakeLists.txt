@@ -4,4 +4,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED 20)
 
 add_subdirectory(TinyRconClient)
+add_subdirectory(TinyRconPrivateClient)
+add_subdirectory(TinyRconPrivateClient_v2)
+add_subdirectory(TinyRconPrivateServer)
 add_subdirectory(TinyRconServer)

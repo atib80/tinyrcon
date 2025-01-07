@@ -538,14 +538,14 @@ bool write_tiny_rcon_json_settings_to_file(const char *file_path)
     config_file << "\"check_for_banned_players_time_interval\": "
                 << main_app.get_game_server().get_check_for_banned_players_time_period() << ",\n";
     config_file << "\"game_server_name\": \"" << main_app.get_game_server_name() << "\",\n";
-    config_file << "\"rcon_server_ip_address\": \"" << main_app.get_game_server().get_server_ip_address() << "\",\n";
-    config_file << "\"rcon_port\": " << main_app.get_game_server().get_server_port() << ",\n";
+    config_file << "\"game_server_ip_address\": \"" << main_app.get_game_server().get_server_ip_address() << "\",\n";
+    config_file << "\"game_server_port\": " << main_app.get_game_server().get_server_port() << ",\n";
     config_file << "\"rcon_password\": \"" << main_app.get_game_server().get_rcon_password() << "\",\n";
     config_file << "\"private_slot_password\": \"" << main_app.get_game_server().get_private_slot_password() << "\",\n";
-    config_file << "\"tiny_rcon_server_ip\": \"" << main_app.get_tiny_rcon_server_ip_address() << "\",\n";
-    config_file << "\"tiny_rcon_server_port\": " << main_app.get_tiny_rcon_server_port() << ",\n";
-    config_file << "\"tiny_rcon_ftp_server_username\": \"" << main_app.get_tiny_rcon_ftp_server_username() << "\",\n";
-    config_file << "\"tiny_rcon_ftp_server_password\": \"" << main_app.get_tiny_rcon_ftp_server_password() << "\",\n";
+    config_file << "\"tinyrcon_server_ip_address\": \"" << main_app.get_tiny_rcon_server_ip_address() << "\",\n";
+    config_file << "\"tinyrcon_server_port\": " << main_app.get_tiny_rcon_server_port() << ",\n";
+    config_file << "\"tinyrcon_ftp_server_username\": \"" << main_app.get_tiny_rcon_ftp_server_username() << "\",\n";
+    config_file << "\"tinyrcon_ftp_server_password\": \"" << main_app.get_tiny_rcon_ftp_server_password() << "\",\n";
     config_file << "\"is_automatic_city_kick_enabled\": "
                 << (main_app.get_game_server().get_is_automatic_city_kick_enabled() ? "true" : "false") << ",\n";
     config_file << "\"is_automatic_country_kick_enabled\": "
@@ -955,9 +955,9 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
         main_app.set_game_server_name("TinyRcon game server");
     }
 
-    if (json_resource.contains("rcon_server_ip_address"))
+    if (json_resource.contains("game_server_ip_address"))
     {
-        data_line = json_resource["rcon_server_ip_address"];
+        data_line = json_resource["game_server_ip_address"];
         strip_leading_and_trailing_quotes(data_line);
         main_app.get_game_server().set_server_ip_address(std::move(data_line));
     }
@@ -967,9 +967,9 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
         main_app.get_game_server().set_server_ip_address("185.158.113.146");
     }
 
-    if (json_resource.contains("rcon_port"))
+    if (json_resource.contains("game_server_port"))
     {
-        const int port_number{json_resource["rcon_port"].template get<int>()};
+        const int port_number{json_resource["game_server_port"].template get<int>()};
         main_app.get_game_server().set_server_port(static_cast<uint_least16_t>(port_number));
     }
     else
@@ -1139,9 +1139,9 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
         }
     }
 
-    if (json_resource.contains("tiny_rcon_server_ip"))
+    if (json_resource.contains("tinyrcon_server_ip_address"))
     {
-        data_line = json_resource["tiny_rcon_server_ip"];
+        data_line = json_resource["tinyrcon_server_ip_address"];
         strip_leading_and_trailing_quotes(data_line);
         main_app.set_tiny_rcon_server_ip_address(std::move(data_line));
     }
@@ -1151,9 +1151,9 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
         main_app.set_tiny_rcon_server_ip_address("85.222.189.119");
     }
 
-    if (json_resource.contains("tiny_rcon_server_port"))
+    if (json_resource.contains("tinyrcon_server_port"))
     {
-        const int port_number{json_resource["tiny_rcon_server_port"].template get<int>()};
+        const int port_number{json_resource["tinyrcon_server_port"].template get<int>()};
         main_app.set_tiny_rcon_server_port(static_cast<uint_least16_t>(port_number));
     }
     else
@@ -1162,9 +1162,9 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
         main_app.set_tiny_rcon_server_port(27015);
     }
 
-    if (json_resource.contains("tiny_rcon_ftp_server_username"))
+    if (json_resource.contains("tinyrcon_ftp_server_username"))
     {
-        data_line = json_resource["tiny_rcon_ftp_server_username"];
+        data_line = json_resource["tinyrcon_ftp_server_username"];
         strip_leading_and_trailing_quotes(data_line);
         main_app.set_tiny_rcon_ftp_server_username(std::move(data_line));
     }
@@ -1174,9 +1174,9 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
         main_app.set_tiny_rcon_ftp_server_username("tinyrcon");
     }
 
-    if (json_resource.contains("tiny_rcon_ftp_server_password"))
+    if (json_resource.contains("tinyrcon_ftp_server_password"))
     {
-        data_line = json_resource["tiny_rcon_ftp_server_password"];
+        data_line = json_resource["tinyrcon_ftp_server_password"];
         strip_leading_and_trailing_quotes(data_line);
         main_app.set_tiny_rcon_ftp_server_password(std::move(data_line));
     }

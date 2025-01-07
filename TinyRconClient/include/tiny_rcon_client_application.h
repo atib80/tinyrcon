@@ -10,6 +10,7 @@
 #include "tiny_rcon_client_user.h"
 #include "tiny_rcon_utility_classes.h"
 #include "tiny_rcon_utility_functions.h"
+#include "player.h"
 #include <atomic>
 #include <filesystem>
 #include <format>
@@ -64,13 +65,14 @@ class tiny_rcon_client_application : public disabled_copy_operations, public dis
     size_t game_server_index{};
     size_t game_servers_count{};
     size_t rcon_game_servers_count{};
+    size_t spec_time_delay{200};
     static constexpr size_t max_game_servers_size{4096};
     std::atomic<uint64_t> previous_downloaded_data_in_bytes{0ULL};
     std::atomic<uint64_t> previous_uploaded_data_in_bytes{0ULL};
     std::atomic<uint64_t> next_downloaded_data_in_bytes{0ULL};
     std::atomic<uint64_t> next_uploaded_data_in_bytes{0ULL};
-    const uint_least16_t tiny_rcon_server_port{27015};
-    const uint_least16_t tiny_rcon_server_port_for_players{27017};
+    uint_least16_t tiny_rcon_server_port{27015};
+    uint_least16_t private_tiny_rcon_server_port{27017};
     game_name_t game_name{game_name_t::unknown};
     std::condition_variable command_queue_cv{};
     std::mutex command_mutex{};
@@ -80,7 +82,7 @@ class tiny_rcon_client_application : public disabled_copy_operations, public dis
     std::recursive_mutex tinyrcon_messages_queue_mutex{};
     string username{"^3Player"};
     string player_name{"^7Unknown Soldier"};
-    std::string game_server_name{"185.158.113.146:28995 CoD2 CTF"};
+    std::string game_server_name{"Game server"};
     std::string codmp_exe_path;
     std::string cod2mp_s_exe_path;
     std::string iw3mp_exe_path;
@@ -94,6 +96,7 @@ class tiny_rcon_client_application : public disabled_copy_operations, public dis
     std::string tinyrcon_config_file_path{"config\\tinyrcon.json"};
     std::string user_data_file_path{"data\\user.txt"};
     std::string reported_players_file_path{"data\\reported_players.txt"};
+    std::string muted_players_file_path{"data\\muted_players.txt"};
     std::string temp_bans_file_path{"data\\tempbans.txt"};
     std::string ip_bans_file_path{"data\\bans.txt"};
     std::string ip_range_bans_file_path{"data\\ip_range_bans.txt"};
@@ -116,7 +119,7 @@ class tiny_rcon_client_application : public disabled_copy_operations, public dis
     std::string tiny_rcon_ftp_server_username{"tinyrcon"};
     std::string tiny_rcon_ftp_server_password{"08021980"};
     std::string tiny_rcon_server_ip_address{"85.222.189.119"};
-    std::string tiny_rcon_server_ip_address_for_players{"85.222.189.119"};
+    std::string private_tiny_rcon_server_ip_address{"85.222.189.119"};
     std::string cod2_master_server_ip_address{"185.34.107.159"};
 
     string current_match_info{"^3Map: {MAP_FULL_NAME} ^1({MAP_RCON_NAME}^1) ^3| Gametype: "
@@ -157,10 +160,18 @@ class tiny_rcon_client_application : public disabled_copy_operations, public dis
     std::vector<std::shared_ptr<tiny_rcon_client_user>> users;
     std::vector<std::shared_ptr<tiny_rcon_client_user>> players;
     std::vector<player> reported_players;
+    // std::vector<player> muted_players_vector;
+    std::unordered_map<std::string, player> muted_players_map;
+    std::unordered_map<int, std::pair<std::string, bool>> pid_to_ip_address;
+    std::vector<player_information_in_game_process> online_players_information_in_game_process;
 
     map<string, string> server_settings;
     std::unordered_map<string, size_t> ip_address_frequency;
     std::unordered_map<std::string, std::string> admin_messages{
+        {"user_defined_mute_message",
+         "^7{PLAYERNAME} ^1you have been muted by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}"},
+        {"user_defined_unmute_message",
+         "^7{PLAYERNAME} ^1you have been unmuted by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}"},
         {"user_defined_warn_msg", "^7{PLAYERNAME} ^1you have been warned by admin ^5{ADMINNAME}. ^3Reason: "
                                   "^1{REASON}"},
         {"user_defined_kick_msg", "^7{PLAYERNAME} ^1you are being kicked by admin ^5{ADMINNAME}. ^3Reason: "
@@ -572,13 +583,13 @@ class tiny_rcon_client_application : public disabled_copy_operations, public dis
 
     inline void set_username(string new_value)
     {
-        remove_disallowed_character_in_string(new_value);
+        removed_disallowed_characters_in_place(new_value);
         username = std::move(new_value);
     }
 
     inline void set_player_name(string new_value)
     {
-        remove_disallowed_character_in_string(new_value);
+        removed_disallowed_characters_in_place(new_value);
         player_name = std::move(new_value);
     }
 
@@ -920,10 +931,42 @@ class tiny_rcon_client_application : public disabled_copy_operations, public dis
         return players;
     }
 
+    // muted_players_file_path
+    const char *get_muted_players_file_path() const noexcept
+    {
+        return muted_players_file_path.c_str();
+    }
+
+    std::unordered_map<int, std::pair<std::string, bool>> &get_pid_to_ip_address() noexcept
+    {
+        return pid_to_ip_address;
+    }
+
+    const std::unordered_map<int, std::pair<std::string, bool>> &get_pid_to_ip_address() const noexcept
+    {
+        return pid_to_ip_address;
+    }
+
+    /*std::vector<player> &get_muted_players_vector() noexcept
+    {
+        return muted_players_vector;
+    }*/
+
+    std::unordered_map<std::string, player> &get_muted_players_map() noexcept
+    {
+        return muted_players_map;
+    }
+
     // reported players
     std::vector<player> &get_reported_players() noexcept
     {
         return reported_players;
+    }
+
+    // online_players_information_in_game_process
+    std::vector<player_information_in_game_process> &get_online_players_information_in_game_process() noexcept
+    {
+        return online_players_information_in_game_process;
     }
 
     std::shared_ptr<tiny_rcon_client_user> &get_user_for_name(const std::string &name)
@@ -1133,6 +1176,18 @@ class tiny_rcon_client_application : public disabled_copy_operations, public dis
         return admin_messages["user_defined_unprotect_country_message"];
     }
 
+    // user_defined_mute_message
+    std::string get_user_defined_mute_message()
+    {
+        return admin_messages["user_defined_mute_message"];
+    }
+
+    // user_defined_unmute_message
+    std::string get_user_defined_unmute_message()
+    {
+        return admin_messages["user_defined_unmute_message"];
+    }
+
     inline const char *get_game_title() noexcept
     {
         if (game_names.contains(game_name))
@@ -1319,14 +1374,14 @@ class tiny_rcon_client_application : public disabled_copy_operations, public dis
         tiny_rcon_server_ip_address = std::move(new_tiny_rcon_server_ip_address);
     }
 
-    const std::string &get_tiny_rcon_server_ip_address_for_players() const noexcept
+    const std::string &get_private_tiny_rcon_server_ip_address() const noexcept
     {
-        return tiny_rcon_server_ip_address_for_players;
+        return private_tiny_rcon_server_ip_address;
     }
 
-    void set_tiny_rcon_server_ip_address_for_players(string new_tiny_rcon_server_ip_address_for_players) noexcept
+    void set_private_tiny_rcon_server_ip_address(string new_private_tiny_rcon_server_ip_address) noexcept
     {
-        tiny_rcon_server_ip_address_for_players = std::move(new_tiny_rcon_server_ip_address_for_players);
+        private_tiny_rcon_server_ip_address = std::move(new_private_tiny_rcon_server_ip_address);
     }
 
     uint_least16_t get_tiny_rcon_server_port() const noexcept
@@ -1334,24 +1389,34 @@ class tiny_rcon_client_application : public disabled_copy_operations, public dis
         return tiny_rcon_server_port;
     }
 
-    // void set_tiny_rcon_server_port(const int new_tiny_rcon_server_port)
-    // noexcept
-    // {
-    // 	tiny_rcon_server_port =
-    // static_cast<uint_least16_t>(new_tiny_rcon_server_port);
-    // }
+     void set_tiny_rcon_server_port(const int new_tiny_rcon_server_port)
+     noexcept
+     {
+     	tiny_rcon_server_port =
+     static_cast<uint_least16_t>(new_tiny_rcon_server_port);
+     }
 
-    uint_least16_t get_tiny_rcon_server_port_for_players() const noexcept
+    uint_least16_t get_private_tiny_rcon_server_port() const noexcept
     {
-        return tiny_rcon_server_port_for_players;
+        return private_tiny_rcon_server_port;
     }
 
-    // void set_tiny_rcon_server_port_for_players(const int
-    // new_tiny_rcon_server_port_for_players) noexcept
-    // {
-    // 	tiny_rcon_server_port_for_players =
-    // static_cast<uint_least16_t>(new_tiny_rcon_server_port_for_players);
-    // }
+     void set_private_tiny_rcon_server_port(const int new_private_tiny_rcon_server_port) noexcept
+     {
+     	private_tiny_rcon_server_port = static_cast<uint_least16_t>(new_private_tiny_rcon_server_port);
+     }
+
+    inline size_t get_spec_time_delay() const noexcept
+    {
+        return spec_time_delay;
+    }
+
+    void set_spec_time_delay(size_t new_value)
+    {
+        if (new_value < 100 || new_value > 2000)
+            new_value = 200;
+        spec_time_delay = new_value;
+    }
 
     const std::string &get_game_version_number() const noexcept
     {
@@ -1859,7 +1924,7 @@ class tiny_rcon_client_application : public disabled_copy_operations, public dis
         command_handlers.emplace(std::move(command_names.back()), std::move(command_handler));
     }
 
-    std::pair<bool, const std::function<void(const std::vector<std::string> &)> &> get_command_handler(
+    std::pair<bool, const std::function<void(const std::vector<std::string> &)>> get_command_handler(
         const std::string &command_name) const noexcept
     {
         static std::function<void(const std::vector<std::string> &)> unknown_command_handler{

@@ -302,7 +302,7 @@ class tiny_rcon_server_application
     std::string tiny_rcon_ftp_server_username;
     std::string tiny_rcon_ftp_server_password;
     std::string tiny_rcon_server_ip_address;
-    int tiny_rcon_server_port{};
+    int tiny_rcon_server_port{27015};
     tinyrcon_activities_stats tinyrcon_stats_data;
 
   public:
@@ -413,6 +413,8 @@ class tiny_rcon_server_application
             users.back()->user_name = name;
             name_to_user.emplace(cleaned_name, users.back());
         }
+
+        name_to_user.at(cleaned_name)->ip_address = ip_address;
 
         return name_to_user.at(cleaned_name);
     }

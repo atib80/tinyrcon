@@ -1,5 +1,5 @@
 # cmake_minimum_required(VERSION 3.22)
-project(tinyrconserver)
+project(TinyRconServer)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED 20)
@@ -37,10 +37,17 @@ set(BOOST_ENABLE_CMAKE ON)
 #)
 # FetchContent_MakeAvailable(Boost)
 
-set(src_files src/simple_grid.cpp src/tiny_rcon_utility_functions.cpp src/connection_manager_for_messages.cpp src/tiny_rcon_server.cpp)
+set(src_files 
+src/connection_manager.cpp
+src/connection_manager_for_messages.cpp
+src/md5.cpp
+src/simple_grid.cpp
+src/stats.cpp
+src/tiny_rcon_server.cpp
+src/tiny_rcon_utility_functions.cpp)
 
-add_executable(tinyrconserver ${src_files})
+add_executable(TinyRconServer ${src_files})
 
-target_include_directories(tinyrconserver PUBLIC include deps/asio-1.26.0/include deps/bit7z-v3.2.0-msvc2019_mt_x86/bit7z/include)
-target_link_directories(tinyrconserver PUBLIC deps/asio-1.26.0/include deps/bit7z-v3.2.0-msvc2019_mt_x86/bit7z/lib)
-target_link_libraries(tinyrconserver PUBLIC kernel32 shell32 advapi32 user32 gdi32 comctl32 uxtheme ws2_32 bit7z.lib)
+target_include_directories(TinyRconServer PUBLIC include deps/asio-1.26.0/include deps/bit7z/include)
+target_link_directories(TinyRconServer PUBLIC deps/bit7z/lib)
+target_link_libraries(TinyRconServer PUBLIC kernel32 shell32 advapi32 user32 gdi32 comctl32 uxtheme ws2_32 bit7z.lib)

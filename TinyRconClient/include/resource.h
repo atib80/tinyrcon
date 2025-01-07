@@ -348,6 +348,12 @@
 #define ID_REPORTPLAYER 451
 #define ID_MAP_RESTART 452
 #define ID_FAST_RESTART 453
+#define ID_SPECTATEPLAYER 454
+#define ID_MUTE_PLAYER 455
+#define ID_UNMUTE_PLAYER 456
+#define ID_VIEWMUTEDPLAYERS 457
+#define IDR_BMP_UNMUTED 510
+#define IDR_BMP_MUTED 511
 #define IDC_STATIC -1
 
 // Next default values for new objects

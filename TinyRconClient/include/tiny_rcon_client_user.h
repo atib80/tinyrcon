@@ -10,6 +10,7 @@ struct tiny_rcon_client_user
     bool is_online{};
     size_t no_of_logins{};
     size_t no_of_reports{};
+    size_t no_of_muted_ip_addresses{};
     size_t no_of_warnings{};
     size_t no_of_kicks{};
     size_t no_of_tempbans{};

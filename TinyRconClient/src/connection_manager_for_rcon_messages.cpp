@@ -41,7 +41,7 @@ size_t connection_manager_for_rcon_messages::process_and_send_message(
         msg_handler(command_name, t_c, data, is_show_in_messages);
     }
 
-    const string sender{remove_disallowed_character_in_string(main_app.get_username())};
+    const string sender{remove_disallowed_characters_in_string(main_app.get_username())};
     snprintf(send_buffer, std::size(send_buffer), R"(%s\%s\%s\%lld\%s\%s)", command_name.c_str(), sender.c_str(),
              main_app.get_current_game_server().get_rcon_password().c_str(), t_c,
              is_show_in_messages ? "true" : "false", data.c_str());

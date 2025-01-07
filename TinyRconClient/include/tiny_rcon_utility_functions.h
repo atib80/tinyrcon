@@ -27,11 +27,14 @@ void scroll_to_bottom(HWND hwnd);
 void append_to_title(HWND window, std::string text, const char *animation_sequence_chars = "-\\|/");
 
 void show_error(HWND parent_window, const char *, const size_t);
+std::string get_last_error_as_string();
 size_t get_number_of_lines_in_file(const char *file_path);
 bool parse_geodata_lite_csv_file(const char *);
 
 bool write_tiny_rcon_json_settings_to_file(const char *);
 
+std::string convert_guid_to_ip_address(const long guid);
+std::optional<long> convert_ip_address_to_guid(std::string_view ip_address);
 bool check_ip_address_validity(std::string_view, unsigned long &);
 bool check_ip_address_range_validity(const std::string &ip_address_range);
 
@@ -57,6 +60,45 @@ size_t find_longest_entry_length(Iter first, Iter last, const bool count_color_c
     }
 
     return max_entry_length;
+}
+
+template <typename Iter>
+size_t find_longest_player_name_length(Iter first, const Iter last, const bool count_color_codes)
+{
+    if (first == last)
+        return 0;
+    size_t max_player_name_length{8};
+    while (first != last)
+    {
+        max_player_name_length =
+            std::max<size_t>(count_color_codes ? stl::helper::len(first->player_name)
+                                               : get_number_of_characters_without_color_codes(first->player_name),
+                             max_player_name_length);
+        ++first;
+    }
+
+    return max_player_name_length;
+}
+
+template <typename ForwardIter>
+size_t find_longest_player_country_city_info_length(ForwardIter first, const ForwardIter last)
+{
+    if (first == last)
+        return 0;
+
+    using stl::helper::len;
+
+    size_t max_geodata_info_length{18};
+    for (; first != last; ++first)
+    {
+        const size_t country_len{len(first->country_name)};
+        const size_t region_len{len(first->region)};
+        const size_t city_len{len(first->city)};
+        const size_t current_player_geodata_info_length = (country_len != 0 ? country_len : region_len) + city_len + 2;
+        max_geodata_info_length = std::max(current_player_geodata_info_length, max_geodata_info_length);
+    }
+
+    return max_geodata_info_length;
 }
 
 size_t find_longest_player_country_city_info_length(const std::vector<player> &,
@@ -93,6 +135,13 @@ void save_banned_ip_address_range_entries_to_file(const char *file_path,
                                                   const std::vector<player> &banned_ip_address_ranges);
 void save_banned_cities_to_file(const char *file_path, const std::set<std::string> &banned_cities);
 void save_banned_countries_to_file(const char *file_path, const std::set<std::string> &banned_countries);
+void save_muted_players_data_to_file(const char *file_path,
+                                     const std::unordered_map<std::string, player> &muted_players);
+
+bool mute_player_ip_address(player &player_data);
+
+void get_muted_guid_keys_server_setting();
+void update_muted_guid_keys_server_setting();
 
 bool temp_ban_player_ip_address(player &player_data);
 
@@ -187,6 +236,9 @@ void display_banned_player_names(const char *title, const size_t number_of_last_
 void display_reported_players(const size_t number_of_last_reports_to_display = std::string::npos,
                               const bool is_save_data_to_log_file = false);
 
+void display_muted_players_information(const size_t number_of_last_muted_players_to_display = std::string::npos,
+                                       const bool is_save_data_to_log_file = false);
+
 void display_admins_data(const std::vector<std::shared_ptr<tiny_rcon_client_user>> &users, const char *title);
 
 const std::string &get_full_gametype_name(const std::string &);
@@ -214,11 +266,14 @@ int get_selected_players_pid_number(const int selected_row_in_players_grid, cons
 
 std::string get_player_name_for_pid(const int);
 
+std::string get_player_ip_address_for_pid(const int);
+
 player &get_player_data_for_pid(const int);
 
-std::string get_player_information(const int, const bool is_every_property_on_new_line = false);
+std::string get_player_information(const int, const bool is_every_property_on_new_line,
+                                   std::string_view action_by_admin_message);
 
-std::string get_player_information_for_player(player &);
+std::string get_player_information_for_player(player &, std::string_view action_by_admin_message);
 
 bool specify_reason_for_player_pid(const int, const std::string &);
 
@@ -274,7 +329,7 @@ bool check_if_call_of_duty_1_game_is_running(DWORD &pid);
 
 const char *find_call_of_duty_2_installation_path(const bool is_show_browse_folder_dialog = true);
 
-bool check_if_call_of_duty_2_game_is_running(DWORD &pid);
+std::pair<bool, std::string> check_if_call_of_duty_2_game_is_running(DWORD &pid);
 
 const char *find_call_of_duty_4_installation_path(const bool is_show_browse_folder_dialog = true);
 
@@ -325,6 +380,7 @@ void clear_players_data_in_players_grid(HWND hgrid, const size_t start_row, cons
 void clear_servers_data_in_servers_grid(HWND hgrid, const size_t start_row, const size_t last_row, const size_t cols);
 void PutCell(HWND, const int, const int, const char *);
 void display_country_flag(HWND, const int, const int, const char *);
+void display_chat_image(HWND hgrid, const int row, const int col, const bool is_chat_muted);
 std::string GetCellContents(HWND, const int row, const int col);
 
 bool is_alpha(const char ch) noexcept;
@@ -447,11 +503,12 @@ std::string get_wide_ip_address_range_for_specified_ip_address(const std::string
 void check_if_admins_are_online_and_get_admins_player_names(const std::vector<player> &players,
                                                             const size_t no_of_online_players);
 bool save_current_user_data_to_json_file(const char *json_file_path);
-bool validate_admin_and_show_missing_admin_privileges_message(
-    const bool is_show_message_box, const is_log_message log_message = is_log_message::no,
-    const is_log_datetime log_date_time = is_log_datetime::no);
-void removed_disallowed_character_in_string(std::string &);
-std::string remove_disallowed_character_in_string(const std::string &);
+bool validate_admin_and_show_missing_admin_privileges_message(const bool is_show_message_box,
+                                                              const is_log_message log_message = is_log_message::no,
+                                                              const is_log_datetime log_date_time = is_log_datetime::no,
+                                                              const bool is_print_log_message = true);
+void removed_disallowed_characters_in_place(std::string &);
+std::string remove_disallowed_characters_in_string(const std::string &);
 std::string remove_disallowed_characters_in_ip_address(const std::string &ip_address);
 size_t ltrim_specified_characters(char *src, const size_t buffer_len, const char *needle_chars);
 std::string get_cleaned_user_name(const std::string &name);
@@ -524,3 +581,18 @@ std::string escape_backward_slash_characters_in_place(const std::string &line);
 // std::string &player_name_index);
 bool download_bitmap_image_file(const char *bitmap_image_name, const char *destination_file_path);
 bool is_rcon_game_server(const game_server &gs);
+std::pair<bool, int> is_check_if_tinyrcon_user_is_online_and_get_their_pid_number(const std::string &ip_address);
+void spectate_player_for_specified_pid(const int pid);
+std::set<int> get_all_valid_online_pids(const game_server &gs);
+int get_minimum_valid_pid(const game_server &gs);
+int get_maximum_valid_pid(const game_server &gs);
+LRESULT CALLBACK monitor_game_key_press_events(_In_ int code, _In_ WPARAM wParam, _In_ LPARAM lParam);
+struct player_information_in_game_process;
+bool read_all_online_players_pid_and_names_from_game_process(
+    const size_t number_of_players, std::vector<player_information_in_game_process> &players_information);
+bool check_if_selected_player_has_my_ip_address();
+// bool replace_incorrect_ip_addresses(std::vector<std::string>&);
+// bool add_muted_ip_address(player &pd, std::vector<player> &muted_players_vector,
+                          // std::unordered_map<std::string, player> &muted_players_map);
+std::pair<bool, player> remove_muted_ip_address(std::string &ip_address, std::string &message,
+                                                const bool is_report_public_message = true);

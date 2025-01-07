@@ -46,6 +46,9 @@ size_t connection_manager_for_messages::process_and_send_message(
 
         const size_t sent_bytes = udp_socket_for_messages.send_to(buffer(outgoing_data.c_str(), outgoing_data.length()),
                                                                   user->remote_endpoint);
+        if (sent_bytes > 0u)
+            main_app.add_to_next_uploaded_data_in_bytes(sent_bytes);
+
         return sent_bytes;
     }
 
@@ -65,6 +68,9 @@ bool connection_manager_for_messages::wait_for_and_process_response_message()
     {
         return false;
     }
+
+    if (noOfReceivedBytes > 0u)
+        main_app.add_to_next_downloaded_data_in_bytes(noOfReceivedBytes);
 
     string message(incoming_data_buffer, incoming_data_buffer + noOfReceivedBytes);
 
@@ -218,13 +224,15 @@ bool connection_manager_for_messages::wait_for_and_process_response_message()
             // information.c_str());
             return true;
         }
-
-        const string unathorized_message_received{
-            format("^3Received an unauthorized message!\n^7{} ^5(^3IP: ^1{} ^5| ^3rcon: "
-                   "^1{} ^5| ^3geoinfo: ^1{}^5) sent the following command: "
-                   "^1'{}'\n^5Contents of message: ^1'{}'\n",
-                   sender, sender_ip, parts[2], geo_information, message_handler_name, message_contents)};
-        print_colored_text(app_handles.hwnd_re_messages_data, unathorized_message_received.c_str());
+        else
+        {
+            const string unathorized_message_received{
+                format("^3Received an unauthorized message!\n^7{} ^5(^3IP: ^1{} ^5| ^3rcon: "
+                       "^1{} ^5| ^3geoinfo: ^1{}^5) sent the following command: "
+                       "^1'{}'\n^5Contents of message: ^1'{}'\n",
+                       sender, sender_ip, parts[2], geo_information, message_handler_name, message_contents)};
+            print_colored_text(app_handles.hwnd_re_messages_data, unathorized_message_received.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes, false, true);
+        }
     }
     else
     {

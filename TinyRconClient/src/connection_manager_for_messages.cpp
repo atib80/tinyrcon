@@ -39,7 +39,7 @@ size_t connection_manager_for_messages::process_and_send_message(
         msg_handler(command_name, t_c, data, is_show_in_messages);
     }
 
-    const string sender{remove_disallowed_character_in_string(main_app.get_username())};
+    const string sender{remove_disallowed_characters_in_string(main_app.get_username())};
     const string outgoing_data{format(R"({}\{}\{}\{}\{}\{})", command_name, sender,
                                       main_app.get_game_servers()[0].get_rcon_password(), t_c,
                                       is_show_in_messages ? "true" : "false", data)};

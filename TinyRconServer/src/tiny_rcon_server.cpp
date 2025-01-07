@@ -22,7 +22,7 @@ using namespace std::string_literals;
 using namespace std::chrono;
 using namespace std::filesystem;
 
-extern const string program_version{"1.2.0.8"};
+extern const string program_version{"1.3.0.0"};
 
 extern std::atomic<bool> is_terminate_program;
 extern volatile std::atomic<bool> is_terminate_tinyrcon_settings_configuration_dialog_window;
@@ -2873,6 +2873,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     break;
 
     case WM_TIMER: {
+
+        main_app.update_download_and_upload_speed_statistics();
 
         ++atomic_counter;
         if (atomic_counter.load() > 10U)

@@ -63,7 +63,7 @@ size_t connection_manager::send_non_rcon_command(const string &outgoing_data, co
     const ip::udp::endpoint dst{ip::address::from_string(remote_ip), remote_port};
     const size_t sent_bytes =
         udp_socket_for_non_rcon_commands.send_to(buffer(outgoing_data.c_str(), outgoing_data.length()), dst);
-    if (sent_bytes > 0)
+    if (sent_bytes > 0u)
     {
         main_app.add_to_next_uploaded_data_in_bytes(sent_bytes);
         ++number_of_sent_non_rcon_commands;
@@ -102,7 +102,8 @@ size_t connection_manager::receive_non_rcon_reply_from_server(const char *remote
 
         incoming_data_buffer[noOfReceivedBytes] = '\0';
 
-        main_app.add_to_next_downloaded_data_in_bytes(noOfReceivedBytes);
+        if (noOfReceivedBytes > 0U)
+            main_app.add_to_next_downloaded_data_in_bytes(noOfReceivedBytes);
 
         if (remote_endpoint != ip::udp::endpoint{} && expected_remote_endpoint != remote_endpoint)
             return 0;
@@ -285,7 +286,7 @@ size_t connection_manager::send_rcon_command(const string &outgoing_data, const 
     const ip::udp::endpoint dst{ip::address::from_string(remote_ip), remote_port};
     const size_t sent_bytes =
         udp_socket_for_rcon_commands.send_to(buffer(outgoing_data.c_str(), outgoing_data.length()), dst);
-    if (sent_bytes > 0)
+    if (sent_bytes > 0u)
     {
         main_app.add_to_next_uploaded_data_in_bytes(sent_bytes);
         ++number_of_sent_rcon_commands;
@@ -318,7 +319,8 @@ size_t connection_manager::receive_rcon_reply_from_server(const char *remote_ip,
 
         incoming_data_buffer[noOfReceivedBytes] = '\0';
 
-        main_app.add_to_next_downloaded_data_in_bytes(noOfReceivedBytes);
+        if (noOfReceivedBytes > 0U)
+            main_app.add_to_next_downloaded_data_in_bytes(noOfReceivedBytes);
 
         if (remote_endpoint != ip::udp::endpoint{} && expected_remote_endpoint != remote_endpoint)
             continue;

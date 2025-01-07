@@ -44,6 +44,9 @@ struct tiny_rcon_handles
     HWND hwnd_connect_private_slot_button;
     HWND hwnd_say_button;
     HWND hwnd_tell_button;
+    HWND hwnd_spectate_player_button;
+    HWND hwnd_mute_player_button;
+    HWND hwnd_unmute_player_button;
     HWND hwnd_quit_button;
     HWND hwnd_confirmation_dialog;
     HWND hwnd_yes_button;
@@ -274,17 +277,17 @@ struct geoip_data
 
 struct row_of_player_data_to_display
 {
-    char pid[6]{};
-    char score[8]{};
-    char ping[8]{};
+    char geo_info[128]{"Unknown, Unknown"};
     char player_name[36]{};
     char ip_address[20]{};
-    char geo_info[128]{"Unknown, Unknown"};
+    char score[8]{};
+    char ping[8]{};
+    char pid[6]{};
     const char *country_code{"xy"};
+    bool is_muted{};
 };
 
 extern size_t get_number_of_characters_without_color_codes(const char *);
-extern size_t get_number_of_characters_printed_in_rcon_chat(const char *text);
 
 class text_element
 {
@@ -327,9 +330,13 @@ inline std::ostream &operator<<(std::ostream &os, const text_element &te)
 
 template <typename T>
 concept string_convertible = requires(const T &value) {
-    { to_string(value) } -> std::convertible_to<std::string>;
+    {
+        to_string(value)
+    } -> std::convertible_to<std::string>;
 } || requires(const T &value) {
-    { value.to_string() } -> std::convertible_to<std::string>;
+    {
+        value.to_string()
+    } -> std::convertible_to<std::string>;
 };
 
 struct player_stats

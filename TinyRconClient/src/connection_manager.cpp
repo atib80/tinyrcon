@@ -95,7 +95,8 @@ size_t connection_manager::receive_non_rcon_reply_from_server(const char *remote
 
         incoming_data_buffer[noOfReceivedBytes] = '\0';
 
-        main_app.add_to_next_downloaded_data_in_bytes(noOfReceivedBytes);
+        if (noOfReceivedBytes > 0U)
+            main_app.add_to_next_downloaded_data_in_bytes(noOfReceivedBytes);
 
         if (remote_endpoint != ip::udp::endpoint{} && expected_remote_endpoint != remote_endpoint)
             return 0;
@@ -280,13 +281,16 @@ size_t connection_manager::send_rcon_command(const string &outgoing_data, const 
 
 size_t connection_manager::receive_rcon_reply_from_server(const char *remote_ip, const uint_least16_t remote_port,
                                                           game_server &gs, std::string &received_reply,
-                                                          const bool) const
+                                                          const bool is_process_reply) const
 {
     char incoming_data_buffer[receive_buffer_size];
     size_t noOfReceivedBytes{}, noOfAllReceivedBytes{};
 
     received_reply.clear();
+    static constexpr const char *version_is_needle{"\xff\xff\xff\xffprint\n\"version\" is:"};
+    static constexpr const size_t version_is_needle_len{len("\xff\xff\xff\xffprint\n")};
     const char *start_needle_to_search_for{"print\n"};
+    const char *end_needle_to_search_for{"\nDomain is"};
     const auto start_needle_to_search_for_len{len("print\n")};
 
     while (true)
@@ -303,14 +307,23 @@ size_t connection_manager::receive_rcon_reply_from_server(const char *remote_ip,
 
         incoming_data_buffer[noOfReceivedBytes] = '\0';
 
-        main_app.add_to_next_downloaded_data_in_bytes(noOfReceivedBytes);
+        if (noOfReceivedBytes > 0U)
+            main_app.add_to_next_downloaded_data_in_bytes(noOfReceivedBytes);
 
         if (remote_endpoint != ip::udp::endpoint{} && expected_remote_endpoint != remote_endpoint)
             continue;
 
         if (noOfReceivedBytes > 0U)
         {
-            const size_t start_needle_pos = stl::helper::str_index_of(incoming_data_buffer, start_needle_to_search_for);
+            auto start_needle_pos = stl::helper::str_index_of(incoming_data_buffer, version_is_needle, 0u, true);
+            if (start_needle_pos != string::npos)
+            {
+                received_reply.assign(incoming_data_buffer + start_needle_pos + version_is_needle_len,
+                                      incoming_data_buffer + noOfReceivedBytes);
+                break;
+            }            
+
+            start_needle_pos = stl::helper::str_index_of(incoming_data_buffer, start_needle_to_search_for);
             if (start_needle_pos != string::npos)
             {
                 received_reply.append(incoming_data_buffer + start_needle_pos + start_needle_to_search_for_len,
@@ -330,8 +343,14 @@ size_t connection_manager::receive_rcon_reply_from_server(const char *remote_ip,
                 received_reply.ends_with("-----------------------------------\n------"
                                          "-----------------------------\n"))
                 break;
+
+            if (received_reply.find(end_needle_to_search_for) != string::npos)
+                break;
         }
     }
+
+    if (!is_process_reply)
+        return noOfAllReceivedBytes;
 
     if (noOfAllReceivedBytes > 0)
     {
@@ -369,12 +388,11 @@ size_t connection_manager::receive_rcon_reply_from_server(const char *remote_ip,
                 {
                     previous_map = current_map;
                     initialize_elements_of_container_to_specified_value(gs.get_players_data(), player{}, 0);
-                    // initialize_elements_of_container_to_specified_value(gs.get_previous_players_data(),
-                    // player{}, 0);
-                    clear_players_data_in_players_grid(app_handles.hwnd_players_grid, 0, max_players_grid_rows, 7);
+                    // initialize_elements_of_container_to_specified_value(gs.get_previous_players_data(), player{}, 0);
+                    clear_players_data_in_players_grid(app_handles.hwnd_players_grid, 0, max_players_grid_rows, 8);
                 }
-                gs.set_current_map(current_map);
 
+                gs.set_current_map(current_map);
                 bool is_server_empty_or_error_receiving_udp_datagrams{};
 
                 const auto digit_pos = received_reply.find_first_of("0123456789", (last - received_reply.c_str()) + 1);
@@ -397,6 +415,12 @@ size_t connection_manager::receive_rcon_reply_from_server(const char *remote_ip,
 
                 if (!is_server_empty_or_error_receiving_udp_datagrams)
                 {
+                    /*string ex_msg2{ R"(^1Exception ^3thrown from 'if
+                    (!is_server_empty_or_error_receiving_UDP_datagrams){...}')" }; stack_trace_element ste2{
+                      app_handles.hwnd_re_messages_data,
+                      std::move(ex_msg2)
+                    };*/
+
                     vector<string> lines{stl::helper::str_split(received_reply, "\n", nullptr)};
                     for (size_t i{}; i < lines.size(); ++i)
                     {
@@ -404,21 +428,21 @@ size_t connection_manager::receive_rcon_reply_from_server(const char *remote_ip,
                         auto last2 = lines[i].cend();
                         std::smatch ip_matches;
                         size_t found_count{};
-                        vector<std::string::const_iterator> new_line_positions;
+                        std::string::const_iterator new_line_position;
                         while (regex_search(first, last2, ip_matches, player_ip_address_regex))
                         {
                             ++found_count;
                             if (found_count == 2)
                             {
-                                std::string next_player_line(new_line_positions[0], last2);
-                                lines[i].erase(new_line_positions[0], last2);
+                                std::string next_player_line(new_line_position, last2);
+                                lines[i].erase(new_line_position, last2);
                                 lines.insert(cbegin(lines) + static_cast<std::ptrdiff_t>(i + 1),
                                              std::move(next_player_line));
                                 break;
                             }
 
                             first = ip_matches[1].second;
-                            new_line_positions.emplace_back(first);
+                            new_line_position = first;
                         }
                     }
 
@@ -426,9 +450,8 @@ size_t connection_manager::receive_rcon_reply_from_server(const char *remote_ip,
 
                     for (const string &player_line : lines)
                     {
-                        if (!regex_search(player_line, player_ip_address_regex) &&
-                            !regex_search(player_line, bot_ip_address_regex))
-                            continue;
+                        // if (!regex_search(player_line, player_ip_address_regex) && !regex_search(player_line,
+                        // bot_ip_address_regex)) continue;
                         int j{}, i{3};
                         int digit_count{};
                         int player_pid{};
@@ -490,10 +513,7 @@ size_t connection_manager::receive_rcon_reply_from_server(const char *remote_ip,
 
                                 if (2 == letter_count && 1 == digit_count && '-' == player_line[i] &&
                                     '1' == player_line[i + 1])
-                                {
-                                    j = i + 2;
                                     break;
-                                }
                             }
                             else
                                 break;
@@ -512,19 +532,19 @@ size_t connection_manager::receive_rcon_reply_from_server(const char *remote_ip,
                             ++number_of_online_players;
                         }
 
-                        i = j + ((gn == game_name_t::cod1 || gn == game_name_t::cod2) ? 8 : 33);
+                        i = j + ((gn == game_name_t::cod1 || gn == game_name_t::cod2) ? 12 : 33);
 
                         while (is_ws(player_line[j]) && j < i)
                             ++j;
                         const auto guid_start{j};
                         if (gn == game_name_t::cod1 || gn == game_name_t::cod2)
                         {
-                            while (isdigit(player_line[j]) && j < i)
+                            while ((isdigit(player_line[j]) || '-' == player_line[j]) && j < i)
                                 ++j;
                         }
                         else
                         {
-                            while (isxdigit(player_line[j]) && j < i)
+                            while ((isxdigit(player_line[j]) || '-' == player_line[j]) && j < i)
                                 ++j;
                         }
 
@@ -553,13 +573,15 @@ size_t connection_manager::receive_rcon_reply_from_server(const char *remote_ip,
                         }
                         else
                         {
-                            j = player_line.rfind(':');
-                            if (string::npos == j)
-                            {
-                                j = player_line.rfind('.');
 
-                                if (string::npos != j)
-                                {
+                            j = player_line.find_last_of(".:");
+                            if (string::npos != j)
+                            {
+                                if ('.' == player_line[j])
+                                { // 123.85.101.31115678
+                                    // j = player_line.rfind('.');
+
+                                    // if (string::npos != j) {
                                     i = j - 1;
                                     ++j;
                                     int octet{};
@@ -592,6 +614,7 @@ size_t connection_manager::receive_rcon_reply_from_server(const char *remote_ip,
                                         }
                                         else
                                         {
+
                                             octet += factor * static_cast<int>(player_line[i] - '0');
                                             factor *= 10;
                                             if (octet > 255)
@@ -607,60 +630,69 @@ size_t connection_manager::receive_rcon_reply_from_server(const char *remote_ip,
                                         }
 
                                         ip_address.insert(0, 1, player_line[i]);
+
                                         --i;
                                     }
+                                    // }
                                 }
-                            }
-                            else
-                            {
-                                i = j - 1;
-                                int dot_count{};
-                                int octet{};
-                                int factor{1};
-
-                                while (isdigit(player_line[i]) || player_line[i] == '.')
+                                else
                                 {
-                                    if (player_line[i] == '.')
+
+                                    i = j - 1;
+                                    int dot_count{};
+                                    int octet{};
+                                    int factor{1};
+
+                                    while (isdigit(player_line[i]) || player_line[i] == '.')
                                     {
-                                        ++dot_count;
-                                        if (dot_count > 3)
-                                            break;
-                                        factor = 1;
-                                        octet = 0;
-                                    }
-                                    else
-                                    {
-                                        octet += factor * static_cast<int>(player_line[i] - '0');
-                                        factor *= 10;
-                                        if (octet > 255)
+                                        if (player_line[i] == '.')
                                         {
                                             ++dot_count;
                                             if (dot_count > 3)
                                                 break;
-                                            octet = 0;
                                             factor = 1;
-                                            ip_address.insert(0, 1, '.');
-                                            continue;
+                                            octet = 0;
                                         }
+                                        else
+                                        {
+                                            octet += factor * static_cast<int>(player_line[i] - '0');
+                                            factor *= 10;
+                                            if (octet > 255)
+                                            {
+                                                ++dot_count;
+                                                if (dot_count > 3)
+                                                    break;
+                                                octet = 0;
+                                                factor = 1;
+                                                ip_address.insert(0, 1, '.');
+                                                continue;
+                                            }
+                                        }
+
+                                        ip_address.insert(0, 1, player_line[i]);
+                                        --i;
                                     }
-
-                                    ip_address.insert(0, 1, player_line[i]);
-                                    --i;
                                 }
-                            }
 
-                            if (!ip_address.empty() && '0' == ip_address[0])
+                                if (!ip_address.empty() && '0' == ip_address[0])
+                                {
+                                    ip_address.erase(0, 1);
+                                    ++i;
+                                }
+
+                                while (is_ws(player_line[i]))
+                                    --i;
+                                while (is_decimal_digit(player_line[i]))
+                                    --i;
+                                while (is_ws(player_line[i]))
+                                    --i;
+                            }
+                            else
                             {
-                                ip_address.erase(0, 1);
-                                ++i;
+                                i = player_line.rfind("^7");
+                                if (string::npos == i)
+                                    i = player_line.length() - 1;
                             }
-
-                            while (is_ws(player_line[i]))
-                                --i;
-                            while (is_decimal_digit(player_line[i]))
-                                --i;
-                            while (is_ws(player_line[i]))
-                                --i;
 
                             player_name.assign(player_line.c_str() + pn_start, player_line.c_str() + i + 1);
                             const auto pn_end = player_name.find_last_of("^7");
@@ -674,10 +706,6 @@ size_t connection_manager::receive_rcon_reply_from_server(const char *remote_ip,
                                 }
                             }
                             trim_in_place(player_name);
-                            /*if (const size_t pn_len{ player_name.length() }; (pn_len >= 1)
-                            && (player_name[pn_len - 1] == '^' || player_name[pn_len - 1] ==
-                            '7')) { player_name.pop_back();
-                            }*/
                         }
 
                         players_data[pl_index].pid = player_pid;
@@ -694,6 +722,12 @@ size_t connection_manager::receive_rcon_reply_from_server(const char *remote_ip,
                             get_cleaned_user_name(players_data[pl_index].player_name);
 
                         players_data[pl_index].ip_address = ip_address;
+
+                        if (main_app.get_muted_players_map().contains(players_data[pl_index].ip_address))
+                        {
+                            players_data[pl_index].is_muted = true;
+                        }
+                        
                         convert_guid_key_to_country_name(geoip_db, players_data[pl_index].ip_address,
                                                          players_data[pl_index]);
 
@@ -703,23 +737,32 @@ size_t connection_manager::receive_rcon_reply_from_server(const char *remote_ip,
                         {
                             ++ip_address_frequency[players_data[pl_index].ip_address];
                         }
+
                         ++pl_index;
+                    }
+
+                    if (lines.size() != pl_index)
+                    {
+                        const string warning_message{format(
+                            R"(^3Received ^1rcon status ^3contains more lines ^1({}) ^3than the actual number of parsed player entities ^1({})^3!)",
+                            lines.size(), pl_index)};
+                        print_colored_text(app_handles.hwnd_re_messages_data, warning_message.c_str(),
+                                           is_append_message_to_richedit_control::yes, is_log_message::yes,
+                                           is_log_datetime::yes);
+                        log_message(received_reply, is_log_datetime::yes);
                     }
                 }
 
                 gs.set_number_of_players(pl_index);
                 gs.set_number_of_online_players(number_of_online_players);
                 gs.set_number_of_offline_players(number_of_offline_players);
+
                 ++rcon_status_sent_counter;
                 const bool log_players_data{rcon_status_sent_counter % 60 == 0};
                 if (60 == rcon_status_sent_counter)
                     rcon_status_sent_counter = 0;
                 prepare_players_data_for_display(gs, log_players_data);
-                /*std::thread update_player_scores_task{[]()
-                {
-                        update_player_scores(main_app.get_stats_data());
-                }};
-                update_player_scores_task.detach();*/
+                main_app.get_pid_to_ip_address().clear();
             }
             else if (received_reply.find("Server info") != string::npos)
             {
@@ -793,8 +836,8 @@ size_t connection_manager::receive_rcon_reply_from_server(const char *remote_ip,
                 start = last = current;
                 while (*last != '^' && *(last + 1) != '7' && *(last + 2) != '"')
                     ++last;
-                // if (!is_rcon_game_server(gs))
-                gs.set_server_name(string(start, last));
+                if (!is_rcon_game_server(gs))
+                    gs.set_server_name(string(start, last));
             }
             else if (size_t first_pos2{}; (first_pos2 = received_reply.find(R"("mapname" is: ")")) != string::npos &&
                                           received_reply.find(R"(default: ")") != string::npos)
@@ -809,7 +852,7 @@ size_t connection_manager::receive_rcon_reply_from_server(const char *remote_ip,
                     {
                         previous_map = current_map;
                         initialize_elements_of_container_to_specified_value(gs.get_players_data(), player{}, 0);
-                        clear_players_data_in_players_grid(app_handles.hwnd_players_grid, 0, max_players_grid_rows, 7);
+                        clear_players_data_in_players_grid(app_handles.hwnd_players_grid, 0, max_players_grid_rows, 8);
                     }
                     gs.set_current_map(std::move(current_map));
                 }
@@ -929,7 +972,14 @@ size_t connection_manager::process_rcon_status_messages(game_server &gs, const s
                 players_data[pl_index].player_name[no_of_chars_to_copy] = '\0';
                 players_data[pl_index].player_name_index = get_cleaned_user_name(players_data[pl_index].player_name);
 
+                // ***
                 start_pos = next + 2;
+                next = line.find('\\', start_pos);
+                players_data[pl_index].ip_address =
+                    string::npos != next ? trim(line.substr(start_pos, next - start_pos)) : "Unknown"s;
+                // ***
+
+                start_pos = next + 1;
                 next = line.find('\\', start_pos);
                 const string player_geo{string::npos == next || !is_process_geoinformation
                                             ? "Unknown"s

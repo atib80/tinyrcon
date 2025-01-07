@@ -1,5 +1,4 @@
 {
-"reports": 0,
 "warnings": 0,
 "autokicks": 0,
 "kicks": 0,
@@ -15,5 +14,6 @@
 "protected_cities": 0,
 "protected_countries": 0,
 "map_restarts": 0,
-"map_changes": 0
+"map_changes": 0,
+"reports": 0
 }

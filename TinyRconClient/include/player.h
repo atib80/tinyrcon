@@ -11,6 +11,7 @@ struct player
         : pid{pid}, score{score}, country_code{country_code}, country_name{country_name}, region{region}, city{city}
     {
     }
+    bool is_muted{};
     int pid{-1};
     int score{};
     unsigned long ip_hash_key{};
@@ -31,4 +32,11 @@ struct player
     std::string ip_address;
     std::string reason;
     std::string banned_by_user_name;
+};
+
+struct alignas(4) player_information_in_game_process
+{
+    int32_t pid{};
+    char filler[56];
+    char name[32]{};
 };

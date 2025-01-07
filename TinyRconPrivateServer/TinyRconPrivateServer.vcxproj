@@ -1,0 +1,522 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{d964d9fc-af9a-46cd-857b-bc0f5f30b280}</ProjectGuid>
+    <RootNamespace>TinyRconPrivateServer</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>TinyRconPrivateServer</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <TargetName>$(ProjectName)</TargetName>
+    <OutDir>$(SolutionDir)$(ProjectName)\</OutDir>
+    <IntDir>$(SolutionDir)$(Configuration)\$(ProjectName)\Intermediate\</IntDir>
+    <IncludePath>$(IncludePath)</IncludePath>
+    <LibraryPath>$(VCToolsInstallDir)atlmfc\lib\;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <TargetName>TinyRconPrivateServer</TargetName>
+    <OutDir>$(SolutionDir)$(Configuration)\$(ProjectName)\</OutDir>
+    <IntDir>$(SolutionDir)$(Configuration)\$(ProjectName)\Intermediate\</IntDir>
+    <LibraryPath>$(VCToolsInstallDir)atlmfc\lib\;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <TargetName>$(ProjectName)</TargetName>
+    <OutDir>$(SolutionDir)$(ProjectName)\</OutDir>
+    <IntDir>$(SolutionDir)$(Configuration)\$(ProjectName)\Intermediate\</IntDir>
+    <IncludePath>$(IncludePath)</IncludePath>
+    <LibraryPath>$(VCToolsInstallDir)atlmfc\lib\;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <TargetName>TinyRconPrivateServer</TargetName>
+    <OutDir>$(SolutionDir)$(Configuration)\$(ProjectName)\</OutDir>
+    <IntDir>$(SolutionDir)$(Configuration)\$(ProjectName)\Intermediate\</IntDir>
+    <LibraryPath>$(VCToolsInstallDir)atlmfc\lib\;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_WIN32_WINNT=0x0601;%(PreprocessorDefinitions);NTDDI_VERSION= 0x06030000;WINVER=0x0A00;_WIN32_WINNT=0x0A00</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
+      <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <Optimization>Disabled</Optimization>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <EnableModules>false</EnableModules>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)deps\bit7z\include\;$(SolutionDir)deps\asio-1.26.0\include</AdditionalIncludeDirectories>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <DisableLanguageExtensions>false</DisableLanguageExtensions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(SolutionDir)deps\bit7z\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <OutputFile>$(SolutionDir)$(ProjectName)\$(ProjectName).exe</OutputFile>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions);_WIN32_WINNT=0x0601;NTDDI_VERSION= 0x06030000;WINVER=0x0A00;_WIN32_WINNT=0x0A00</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <LanguageStandard>stdcpp20</LanguageStandard>
+      <Optimization>MaxSpeed</Optimization>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <DebugInformationFormat>None</DebugInformationFormat>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <StringPooling>true</StringPooling>
+      <EnableModules>false</EnableModules>
+      <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)deps\bit7z\include\;$(SolutionDir)deps\asio-1.26.0\include</AdditionalIncludeDirectories>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <DisableLanguageExtensions>false</DisableLanguageExtensions>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(SolutionDir)deps\bit7z\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <OutputFile>$(SolutionDir)$(ProjectName)\$(ProjectName).exe</OutputFile>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions);_WIN32_WINNT=0x0601;NTDDI_VERSION= 0x06030000;WINVER=0x0A00;_WIN32_WINNT=0x0A00</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <OmitFramePointers>false</OmitFramePointers>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <Optimization>MaxSpeed</Optimization>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <EnableModules>false</EnableModules>
+      <AdditionalIncludeDirectories>include;$(SolutionDir)deps\asio-1.26.0\include;</AdditionalIncludeDirectories>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions);_WIN32_WINNT=0x0601;NTDDI_VERSION= 0x06030000;WINVER=0x0A00;_WIN32_WINNT=0x0A00</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <EnableModules>false</EnableModules>
+      <AdditionalIncludeDirectories>include;$(SolutionDir)deps\asio-1.26.0\include;$(ProjectDir)include</AdditionalIncludeDirectories>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="include\autoupdate.h" />
+    <ClInclude Include="include\bitmap_image_handler.h" />
+    <ClInclude Include="include\connection_manager.h" />
+    <ClInclude Include="include\connection_manager_for_remote_messages.h" />
+    <ClInclude Include="include\detail\stl_helper_functions_impl.hpp" />
+    <ClInclude Include="include\framework.h" />
+    <ClInclude Include="include\game_server.h" />
+    <ClInclude Include="include\internet_handle.h" />
+    <ClInclude Include="include\json_parser.hpp" />
+    <ClInclude Include="include\md5.h" />
+    <ClInclude Include="include\player.h" />
+    <ClInclude Include="include\simple_grid.h" />
+    <ClInclude Include="include\stack_trace_element.h" />
+    <ClInclude Include="include\stats.h" />
+    <ClInclude Include="include\stl_helper_functions.hpp" />
+    <ClInclude Include="include\tiny_rcon_client_user.h" />
+    <ClInclude Include="include\tiny_rcon_utility_data_types.h" />
+    <ClInclude Include="resource.h" />
+    <ClInclude Include="targetver.h" />
+    <ClInclude Include="include\tiny_rcon.h" />
+    <ClInclude Include="include\tiny_rcon_client_application.h" />
+    <ClInclude Include="include\tiny_rcon_utility_functions.h" />
+    <ClInclude Include="include\resource.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="include\connection_manager_for_messages.h" />
+    <ClCompile Include="src\autoupdate.cpp" />
+    <ClCompile Include="src\connection_manager.cpp" />
+    <ClCompile Include="src\connection_manager_for_messages.cpp" />
+    <ClCompile Include="src\connection_manager_for_remote_messages.cpp" />
+    <ClCompile Include="src\md5.cpp" />
+    <ClCompile Include="src\simple_grid.cpp" />
+    <ClCompile Include="src\stats.cpp" />
+    <ClCompile Include="src\tiny_rcon_client.cpp" />
+    <ClCompile Include="src\tiny_rcon_utility_functions.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="TinyRconPrivateServer.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include=".clang-format" />
+    <None Include=".clang-tidy" />
+    <None Include=".cmake-format.yaml" />
+    <None Include="data\private_admins.cfg" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="CMakeLists.txt" />
+    <Text Include="data\custom_map_names.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="data\icons\big_codicon.ico" />
+    <Image Include="data\icons\small.ico" />
+    <Image Include="data\icons\TinyRcon.ico" />
+    <Image Include="data\images\flags\ad.bmp" />
+    <Image Include="data\images\flags\ae.bmp" />
+    <Image Include="data\images\flags\af.bmp" />
+    <Image Include="data\images\flags\ag.bmp" />
+    <Image Include="data\images\flags\ai.bmp" />
+    <Image Include="data\images\flags\al.bmp" />
+    <Image Include="data\images\flags\am.bmp" />
+    <Image Include="data\images\flags\ao.bmp" />
+    <Image Include="data\images\flags\aq.bmp" />
+    <Image Include="data\images\flags\ar.bmp" />
+    <Image Include="data\images\flags\as.bmp" />
+    <Image Include="data\images\flags\at.bmp" />
+    <Image Include="data\images\flags\au.bmp" />
+    <Image Include="data\images\flags\aw.bmp" />
+    <Image Include="data\images\flags\ax.bmp" />
+    <Image Include="data\images\flags\az.bmp" />
+    <Image Include="data\images\flags\ba.bmp" />
+    <Image Include="data\images\flags\bb.bmp" />
+    <Image Include="data\images\flags\bd.bmp" />
+    <Image Include="data\images\flags\be.bmp" />
+    <Image Include="data\images\flags\bf.bmp" />
+    <Image Include="data\images\flags\bg.bmp" />
+    <Image Include="data\images\flags\bh.bmp" />
+    <Image Include="data\images\flags\bi.bmp" />
+    <Image Include="data\images\flags\bj.bmp" />
+    <Image Include="data\images\flags\bl.bmp" />
+    <Image Include="data\images\flags\bm.bmp" />
+    <Image Include="data\images\flags\bn.bmp" />
+    <Image Include="data\images\flags\bo.bmp" />
+    <Image Include="data\images\flags\bq.bmp" />
+    <Image Include="data\images\flags\br.bmp" />
+    <Image Include="data\images\flags\bs.bmp" />
+    <Image Include="data\images\flags\bt.bmp" />
+    <Image Include="data\images\flags\bv.bmp" />
+    <Image Include="data\images\flags\bw.bmp" />
+    <Image Include="data\images\flags\by.bmp" />
+    <Image Include="data\images\flags\bz.bmp" />
+    <Image Include="data\images\flags\ca.bmp" />
+    <Image Include="data\images\flags\cc.bmp" />
+    <Image Include="data\images\flags\cd.bmp" />
+    <Image Include="data\images\flags\cf.bmp" />
+    <Image Include="data\images\flags\cg.bmp" />
+    <Image Include="data\images\flags\ch.bmp" />
+    <Image Include="data\images\flags\ci.bmp" />
+    <Image Include="data\images\flags\ck.bmp" />
+    <Image Include="data\images\flags\cl.bmp" />
+    <Image Include="data\images\flags\cm.bmp" />
+    <Image Include="data\images\flags\cn.bmp" />
+    <Image Include="data\images\flags\co.bmp" />
+    <Image Include="data\images\flags\cr.bmp" />
+    <Image Include="data\images\flags\cu.bmp" />
+    <Image Include="data\images\flags\cv.bmp" />
+    <Image Include="data\images\flags\cw.bmp" />
+    <Image Include="data\images\flags\cx.bmp" />
+    <Image Include="data\images\flags\cy.bmp" />
+    <Image Include="data\images\flags\cz.bmp" />
+    <Image Include="data\images\flags\de.bmp" />
+    <Image Include="data\images\flags\dj.bmp" />
+    <Image Include="data\images\flags\dk.bmp" />
+    <Image Include="data\images\flags\dm.bmp" />
+    <Image Include="data\images\flags\do.bmp" />
+    <Image Include="data\images\flags\dz.bmp" />
+    <Image Include="data\images\flags\ec.bmp" />
+    <Image Include="data\images\flags\ee.bmp" />
+    <Image Include="data\images\flags\eg.bmp" />
+    <Image Include="data\images\flags\eh.bmp" />
+    <Image Include="data\images\flags\er.bmp" />
+    <Image Include="data\images\flags\es.bmp" />
+    <Image Include="data\images\flags\et.bmp" />
+    <Image Include="data\images\flags\fi.bmp" />
+    <Image Include="data\images\flags\fj.bmp" />
+    <Image Include="data\images\flags\fk.bmp" />
+    <Image Include="data\images\flags\fm.bmp" />
+    <Image Include="data\images\flags\fo.bmp" />
+    <Image Include="data\images\flags\fr.bmp" />
+    <Image Include="data\images\flags\ga.bmp" />
+    <Image Include="data\images\flags\gb-eng.bmp" />
+    <Image Include="data\images\flags\gb-nir.bmp" />
+    <Image Include="data\images\flags\gb-sct.bmp" />
+    <Image Include="data\images\flags\gb-wls.bmp" />
+    <Image Include="data\images\flags\gb.bmp" />
+    <Image Include="data\images\flags\gd.bmp" />
+    <Image Include="data\images\flags\ge.bmp" />
+    <Image Include="data\images\flags\gf.bmp" />
+    <Image Include="data\images\flags\gg.bmp" />
+    <Image Include="data\images\flags\gh.bmp" />
+    <Image Include="data\images\flags\gi.bmp" />
+    <Image Include="data\images\flags\gl.bmp" />
+    <Image Include="data\images\flags\gm.bmp" />
+    <Image Include="data\images\flags\gn.bmp" />
+    <Image Include="data\images\flags\gp.bmp" />
+    <Image Include="data\images\flags\gq.bmp" />
+    <Image Include="data\images\flags\gr.bmp" />
+    <Image Include="data\images\flags\gs.bmp" />
+    <Image Include="data\images\flags\gt.bmp" />
+    <Image Include="data\images\flags\gu.bmp" />
+    <Image Include="data\images\flags\gw.bmp" />
+    <Image Include="data\images\flags\gy.bmp" />
+    <Image Include="data\images\flags\hk.bmp" />
+    <Image Include="data\images\flags\hm.bmp" />
+    <Image Include="data\images\flags\hn.bmp" />
+    <Image Include="data\images\flags\hr.bmp" />
+    <Image Include="data\images\flags\ht.bmp" />
+    <Image Include="data\images\flags\hu.bmp" />
+    <Image Include="data\images\flags\id.bmp" />
+    <Image Include="data\images\flags\ie.bmp" />
+    <Image Include="data\images\flags\il.bmp" />
+    <Image Include="data\images\flags\im.bmp" />
+    <Image Include="data\images\flags\in.bmp" />
+    <Image Include="data\images\flags\io.bmp" />
+    <Image Include="data\images\flags\iq.bmp" />
+    <Image Include="data\images\flags\ir.bmp" />
+    <Image Include="data\images\flags\is.bmp" />
+    <Image Include="data\images\flags\it.bmp" />
+    <Image Include="data\images\flags\je.bmp" />
+    <Image Include="data\images\flags\jm.bmp" />
+    <Image Include="data\images\flags\jo.bmp" />
+    <Image Include="data\images\flags\jp.bmp" />
+    <Image Include="data\images\flags\ke.bmp" />
+    <Image Include="data\images\flags\kg.bmp" />
+    <Image Include="data\images\flags\kh.bmp" />
+    <Image Include="data\images\flags\ki.bmp" />
+    <Image Include="data\images\flags\km.bmp" />
+    <Image Include="data\images\flags\kn.bmp" />
+    <Image Include="data\images\flags\kp.bmp" />
+    <Image Include="data\images\flags\kr.bmp" />
+    <Image Include="data\images\flags\kw.bmp" />
+    <Image Include="data\images\flags\ky.bmp" />
+    <Image Include="data\images\flags\kz.bmp" />
+    <Image Include="data\images\flags\la.bmp" />
+    <Image Include="data\images\flags\lb.bmp" />
+    <Image Include="data\images\flags\lc.bmp" />
+    <Image Include="data\images\flags\li.bmp" />
+    <Image Include="data\images\flags\lk.bmp" />
+    <Image Include="data\images\flags\lr.bmp" />
+    <Image Include="data\images\flags\ls.bmp" />
+    <Image Include="data\images\flags\lt.bmp" />
+    <Image Include="data\images\flags\lu.bmp" />
+    <Image Include="data\images\flags\lv.bmp" />
+    <Image Include="data\images\flags\ly.bmp" />
+    <Image Include="data\images\flags\ma.bmp" />
+    <Image Include="data\images\flags\mc.bmp" />
+    <Image Include="data\images\flags\md.bmp" />
+    <Image Include="data\images\flags\me.bmp" />
+    <Image Include="data\images\flags\mf.bmp" />
+    <Image Include="data\images\flags\mg.bmp" />
+    <Image Include="data\images\flags\mh.bmp" />
+    <Image Include="data\images\flags\mk.bmp" />
+    <Image Include="data\images\flags\ml.bmp" />
+    <Image Include="data\images\flags\mm.bmp" />
+    <Image Include="data\images\flags\mn.bmp" />
+    <Image Include="data\images\flags\mo.bmp" />
+    <Image Include="data\images\flags\mp.bmp" />
+    <Image Include="data\images\flags\mq.bmp" />
+    <Image Include="data\images\flags\mr.bmp" />
+    <Image Include="data\images\flags\ms.bmp" />
+    <Image Include="data\images\flags\mt.bmp" />
+    <Image Include="data\images\flags\mu.bmp" />
+    <Image Include="data\images\flags\mv.bmp" />
+    <Image Include="data\images\flags\mw.bmp" />
+    <Image Include="data\images\flags\mx.bmp" />
+    <Image Include="data\images\flags\my.bmp" />
+    <Image Include="data\images\flags\mz.bmp" />
+    <Image Include="data\images\flags\na.bmp" />
+    <Image Include="data\images\flags\nc.bmp" />
+    <Image Include="data\images\flags\ne.bmp" />
+    <Image Include="data\images\flags\nf.bmp" />
+    <Image Include="data\images\flags\ng.bmp" />
+    <Image Include="data\images\flags\ni.bmp" />
+    <Image Include="data\images\flags\nl.bmp" />
+    <Image Include="data\images\flags\no.bmp" />
+    <Image Include="data\images\flags\np.bmp" />
+    <Image Include="data\images\flags\nr.bmp" />
+    <Image Include="data\images\flags\nu.bmp" />
+    <Image Include="data\images\flags\nz.bmp" />
+    <Image Include="data\images\flags\om.bmp" />
+    <Image Include="data\images\flags\pa.bmp" />
+    <Image Include="data\images\flags\pe.bmp" />
+    <Image Include="data\images\flags\pf.bmp" />
+    <Image Include="data\images\flags\pg.bmp" />
+    <Image Include="data\images\flags\ph.bmp" />
+    <Image Include="data\images\flags\pk.bmp" />
+    <Image Include="data\images\flags\pl.bmp" />
+    <Image Include="data\images\flags\pm.bmp" />
+    <Image Include="data\images\flags\pn.bmp" />
+    <Image Include="data\images\flags\pr.bmp" />
+    <Image Include="data\images\flags\ps.bmp" />
+    <Image Include="data\images\flags\pt.bmp" />
+    <Image Include="data\images\flags\pw.bmp" />
+    <Image Include="data\images\flags\py.bmp" />
+    <Image Include="data\images\flags\qa.bmp" />
+    <Image Include="data\images\flags\re.bmp" />
+    <Image Include="data\images\flags\ro.bmp" />
+    <Image Include="data\images\flags\rs.bmp" />
+    <Image Include="data\images\flags\ru.bmp" />
+    <Image Include="data\images\flags\rw.bmp" />
+    <Image Include="data\images\flags\sa.bmp" />
+    <Image Include="data\images\flags\sb.bmp" />
+    <Image Include="data\images\flags\sc.bmp" />
+    <Image Include="data\images\flags\sd.bmp" />
+    <Image Include="data\images\flags\se.bmp" />
+    <Image Include="data\images\flags\sg.bmp" />
+    <Image Include="data\images\flags\sh.bmp" />
+    <Image Include="data\images\flags\si.bmp" />
+    <Image Include="data\images\flags\sj.bmp" />
+    <Image Include="data\images\flags\sk.bmp" />
+    <Image Include="data\images\flags\sl.bmp" />
+    <Image Include="data\images\flags\sm.bmp" />
+    <Image Include="data\images\flags\sn.bmp" />
+    <Image Include="data\images\flags\so.bmp" />
+    <Image Include="data\images\flags\sr.bmp" />
+    <Image Include="data\images\flags\ss.bmp" />
+    <Image Include="data\images\flags\st.bmp" />
+    <Image Include="data\images\flags\sv.bmp" />
+    <Image Include="data\images\flags\sx.bmp" />
+    <Image Include="data\images\flags\sy.bmp" />
+    <Image Include="data\images\flags\sz.bmp" />
+    <Image Include="data\images\flags\tc.bmp" />
+    <Image Include="data\images\flags\td.bmp" />
+    <Image Include="data\images\flags\tf.bmp" />
+    <Image Include="data\images\flags\tg.bmp" />
+    <Image Include="data\images\flags\th.bmp" />
+    <Image Include="data\images\flags\tj.bmp" />
+    <Image Include="data\images\flags\tk.bmp" />
+    <Image Include="data\images\flags\tl.bmp" />
+    <Image Include="data\images\flags\tm.bmp" />
+    <Image Include="data\images\flags\tn.bmp" />
+    <Image Include="data\images\flags\to.bmp" />
+    <Image Include="data\images\flags\tr.bmp" />
+    <Image Include="data\images\flags\tt.bmp" />
+    <Image Include="data\images\flags\tv.bmp" />
+    <Image Include="data\images\flags\tw.bmp" />
+    <Image Include="data\images\flags\tz.bmp" />
+    <Image Include="data\images\flags\ua.bmp" />
+    <Image Include="data\images\flags\ug.bmp" />
+    <Image Include="data\images\flags\um.bmp" />
+    <Image Include="data\images\flags\us.bmp" />
+    <Image Include="data\images\flags\uy.bmp" />
+    <Image Include="data\images\flags\uz.bmp" />
+    <Image Include="data\images\flags\va.bmp" />
+    <Image Include="data\images\flags\vc.bmp" />
+    <Image Include="data\images\flags\ve.bmp" />
+    <Image Include="data\images\flags\vg.bmp" />
+    <Image Include="data\images\flags\vi.bmp" />
+    <Image Include="data\images\flags\vn.bmp" />
+    <Image Include="data\images\flags\vu.bmp" />
+    <Image Include="data\images\flags\wf.bmp" />
+    <Image Include="data\images\flags\ws.bmp" />
+    <Image Include="data\images\flags\xk.bmp" />
+    <Image Include="data\images\flags\xy.bmp" />
+    <Image Include="data\images\flags\ye.bmp" />
+    <Image Include="data\images\flags\yt.bmp" />
+    <Image Include="data\images\flags\za.bmp" />
+    <Image Include="data\images\flags\zm.bmp" />
+    <Image Include="data\images\flags\zw.bmp" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

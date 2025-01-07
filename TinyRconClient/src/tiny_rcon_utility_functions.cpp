@@ -83,11 +83,13 @@ extern volatile std::atomic<bool> is_display_banned_countries_data_event;
 extern volatile std::atomic<bool> is_refreshing_game_servers_data_event;
 extern volatile std::atomic<bool> is_display_geoinformation_data_for_players;
 extern volatile std::atomic<bool> is_executed_tasks_at_exit;
+extern volatile std::atomic<bool> is_player_being_spectated;
+extern volatile std::atomic<int> spectated_player_pid;
 extern std::atomic<int> admin_choice;
 extern std::string admin_reason;
-
+extern player selected_player;
+extern std::unordered_map<int, string> button_id_to_label_text;
 extern volatile atomic<size_t> atomic_counter;
-
 extern HBITMAP g_hBitMap;
 
 bool sort_by_pid_asc{true};
@@ -109,6 +111,7 @@ string previous_map;
 string online_admins_information;
 
 HIMAGELIST hImageList{};
+HIMAGELIST hImageListForChat{};
 row_of_player_data_to_display displayed_players_data[max_players_grid_rows]{};
 
 static char path_buffer[32768];
@@ -317,7 +320,13 @@ extern const map<string, string> user_commands_help{
     {"!rc", "^1!rc custom_rcon_command [optional_parameters] ^7-> ^3sends "
             "^1custom_rcon_command [optional_parameters] ^3to game server.\n  "
             "^7Examples: ^1!rc map_restart ^7| ^1!rc fast_restart ^7| ^1!rc "
-            "sv_iwdnames"}};
+            "sv_iwdnames"},
+    {"!spec", "^1!spec 12 ^7-> ^5tells your running game to spectate player whose ^1pid number ^5is ^112"},
+    {"!nospec", "^1!nospec ^7-> ^3forces your game to ^1stop spectating ^3previously spectated player."},
+    {"!mute", "^1!mute 12 ^7-> ^5mutes player whose ^1pid number ^5is ^112."},
+    {"!unmute", "^1!unmute 12 ^7-> ^3unmutes previously muted player whose ^1pid number ^3is ^112."},
+    {"!muted", "^1!muted [25|all] ^7-> ^5displays the last ^125 ^5muted player entries ^5or ^1all ^5muted player "
+               "entries, respectively."}};
 
 extern const unordered_set<string> user_commands_set{"list",
                                                      "!list",
@@ -382,6 +391,9 @@ extern const unordered_set<string> user_commands_set{"list",
                                                      "!gs",
                                                      "!getstatus",
                                                      "!rc",
+                                                     "!mute",
+                                                     "!unmute",
+                                                     "!muted",
                                                      "!config",
                                                      "!stats",
                                                      "tp",
@@ -420,7 +432,10 @@ extern const unordered_set<string> user_commands_set{"list",
                                                      "!protectedipaddresses",
                                                      "!protectedipaddressranges",
                                                      "!protectedcities",
-                                                     "!protectedcountries"};
+                                                     "!protectedcountries",
+                                                     "!spec",
+                                                     "!nospec",
+                                                     "!std"};
 
 extern const unordered_set<string> rcon_status_commands{"status", "!status"};
 
@@ -519,6 +534,8 @@ extern unordered_map<string, game_name_t> game_name_to_game_name_t{
     {"Call of Duty 4", game_name_t::cod4}, {"cod5", game_name_t::cod5},           {"Call of Duty 5", game_name_t::cod5},
 };
 
+extern const unordered_map<bool, int> unmuted_and_muted_image_index{{false, 0}, {true, 1}};
+
 extern const unordered_map<string, int> flag_name_index{
     {"xy", 0},      {"ad", 1},      {"ae", 2},   {"af", 3},   {"ag", 4},   {"ai", 5},   {"al", 6},      {"am", 7},
     {"ao", 8},      {"aq", 9},      {"ar", 10},  {"as", 11},  {"at", 12},  {"au", 13},  {"aw", 14},     {"ax", 15},
@@ -609,46 +626,62 @@ bool parse_geodata_lite_csv_file(const char *file_path)
     {
         stl::helper::trim_in_place(line);
         auto parts = stl::helper::str_split(line, ',', nullptr, split_on_whole_needle_t::yes);
-        parts[0].pop_back();
-        parts[0].erase(0, 1);
-        parts[1].pop_back();
-        parts[1].erase(0, 1);
-        parts[2].pop_back();
-        parts[2].erase(0, 1);
-        parts[3].pop_back();
-        parts[3].erase(0, 1);
-
-        parts[2][0] = static_cast<char>(std::tolower(parts[2][0]));
-        parts[2][1] = static_cast<char>(std::tolower(parts[2][1]));
-
-        if (size_t pos = parts[3].find("United Kingdom"); pos != string::npos)
+        if (parts.size() >= 6)
         {
-            parts[3] = "UK";
-        }
-        else if (pos = parts[3].find("United States of America"); pos != string::npos)
-        {
-            parts[3] = "USA";
-        }
-        else if (pos = parts[3].find("United Arab Emirates"); pos != string::npos)
-        {
-            parts[3] = "UAE";
-        }
 
-        for (size_t current{}; (current = parts[3].find('(')) != string::npos;)
-        {
-            const size_t next{parts[3].find(')', current + 1)};
-            if (next == string::npos)
-                break;
-            parts[3].erase(current, next - current + 1);
-            stl::helper::trim_in_place(parts[3]);
-        }
+            parts[0].pop_back();
+            parts[0].erase(0, 1);
+            parts[1].pop_back();
+            parts[1].erase(0, 1);
+            parts[2].pop_back();
+            parts[2].erase(0, 1);
+            parts[3].pop_back();
+            parts[3].erase(0, 1);
 
-        parts[4].pop_back();
-        parts[4].erase(0, 1);
-        parts[5].pop_back();
-        parts[5].erase(0, 1);
-        geoip_data.emplace_back(stoul(parts[0]), stoul(parts[1]), parts[2].c_str(), parts[3].c_str(), parts[4].c_str(),
-                                parts[5].c_str());
+            parts[2][0] = static_cast<char>(std::tolower(parts[2][0]));
+            parts[2][1] = static_cast<char>(std::tolower(parts[2][1]));
+
+            if (parts[3] == "-")
+            {
+                parts[3] = "Unknown";
+            }
+            else if (size_t pos = parts[3].find("United Kingdom"); pos != string::npos)
+            {
+                parts[3] = "UK";
+            }
+            else if (pos = parts[3].find("United States of America"); pos != string::npos)
+            {
+                parts[3] = "USA";
+            }
+            else if (pos = parts[3].find("United Arab Emirates"); pos != string::npos)
+            {
+                parts[3] = "UAE";
+            }
+
+            for (size_t current{}; (current = parts[3].find('(')) != string::npos;)
+            {
+                const size_t next{parts[3].find(')', current + 1)};
+                if (next == string::npos)
+                    break;
+                parts[3].erase(current, next - current + 1);
+                stl::helper::trim_in_place(parts[3]);
+            }
+
+            parts[4].pop_back();
+            parts[4].erase(0, 1);
+            if (parts[4] == "-")
+            {
+                parts[4] = "Unknown";
+            }
+            parts[5].pop_back();
+            parts[5].erase(0, 1);
+            if (parts[5] == "-")
+            {
+                parts[5] = "Unknown";
+            }
+            geoip_data.emplace_back(stoul(parts[0]), stoul(parts[1]), parts[2].c_str(), parts[3].c_str(),
+                                    parts[4].c_str(), parts[5].c_str());
+        }
     }
 
     main_app.get_connection_manager().get_geoip_data() = std::move(geoip_data);
@@ -925,31 +958,30 @@ bool write_tiny_rcon_json_settings_to_file(const char *file_path)
         auto &gs = main_app.get_game_servers()[i];
         config_file << "{\n";
         config_file << R"("game_server_name": ")" << gs.get_server_name() << "\",\n";
-        config_file << R"("rcon_server_ip_address": ")" << gs.get_server_ip_address() << "\",\n";
-        config_file << R"("rcon_port": )" << gs.get_server_port() << ",\n";
+        config_file << R"("game_server_ip_address": ")" << gs.get_server_ip_address() << "\",\n";
+        config_file << R"("game_server_port": )" << gs.get_server_port() << ",\n";
         config_file << R"("rcon_password": ")" << gs.get_rcon_password() << "\",\n";
         config_file << R"("private_slot_password": ")" << gs.get_private_slot_password() << "\"\n";
         config_file << (i < main_app.get_rcon_game_servers_count() - 1 ? "},\n" : "}\n");
     }
     config_file << "],\n";
 
-    config_file << R"("tiny_rcon_server_ip": ")" << main_app.get_tiny_rcon_server_ip_address() << "\",\n";
-    config_file << "\"tiny_rcon_server_port\": " << main_app.get_tiny_rcon_server_port() << ",\n";
-    config_file << R"("tiny_rcon_server_ip_for_players": ")" << main_app.get_tiny_rcon_server_ip_address_for_players()
+    config_file << R"("tinyrcon_server_ip_address": ")" << main_app.get_tiny_rcon_server_ip_address() << "\",\n";
+    config_file << "\"tinyrcon_server_port\": " << main_app.get_tiny_rcon_server_port() << ",\n";
+    config_file << R"("private_tinyrcon_server_ip_address": ")" << main_app.get_private_tiny_rcon_server_ip_address()
                 << "\",\n";
-    config_file << "\"tiny_rcon_server_port_for_players\": " << main_app.get_tiny_rcon_server_port_for_players()
-                << ",\n";
-    config_file << R"("tiny_rcon_ftp_server_username": ")" << main_app.get_tiny_rcon_ftp_server_username() << "\",\n";
-    config_file << R"("tiny_rcon_ftp_server_password": ")" << main_app.get_tiny_rcon_ftp_server_password() << "\",\n";
+    config_file << "\"private_tinyrcon_server_port\": " << main_app.get_private_tiny_rcon_server_port() << ",\n";
+    config_file << R"("tinyrcon_ftp_server_username": ")" << main_app.get_tiny_rcon_ftp_server_username() << "\",\n";
+    config_file << R"("tinyrcon_ftp_server_password": ")" << main_app.get_tiny_rcon_ftp_server_password() << "\",\n";
     config_file << R"("game_executable_paths" : {)"
                 << "\n";
-    config_file << R"(  "codmp_exe_path": ")"
-                << escape_backward_slash_characters_in_place(main_app.get_codmp_exe_path()) << "\",\n";
-    config_file << R"(  "cod2mp_s_exe_path": ")"
+    config_file << R"("codmp_exe_path": ")" << escape_backward_slash_characters_in_place(main_app.get_codmp_exe_path())
+                << "\",\n";
+    config_file << R"("cod2mp_s_exe_path": ")"
                 << escape_backward_slash_characters_in_place(main_app.get_cod2mp_exe_path()) << "\",\n";
-    config_file << R"(  "iw3mp_exe_path": ")"
-                << escape_backward_slash_characters_in_place(main_app.get_iw3mp_exe_path()) << "\",\n";
-    config_file << R"(  "cod5mp_exe_path": ")"
+    config_file << R"("iw3mp_exe_path": ")" << escape_backward_slash_characters_in_place(main_app.get_iw3mp_exe_path())
+                << "\",\n";
+    config_file << R"("cod5mp_exe_path": ")"
                 << escape_backward_slash_characters_in_place(main_app.get_cod5mp_exe_path()) << "\"\n";
     config_file << "},\n";
     config_file << "\"is_automatic_city_kick_enabled\": "
@@ -967,6 +999,12 @@ bool write_tiny_rcon_json_settings_to_file(const char *file_path)
                 << (main_app.get_is_disable_automatic_kick_messages() ? "true" : "false") << ",\n";
     config_file << "\"use_original_admin_messages\": "
                 << (main_app.get_is_use_original_admin_messages() ? "true" : "false") << ",\n";
+    // user_defined_mute_message
+    config_file << R"("user_defined_mute_message": ")" << main_app.get_admin_messages()["user_defined_mute_message"]
+                << "\",\n";
+    // user_defined_unmute_message
+    config_file << R"("user_defined_unmute_message": ")" << main_app.get_admin_messages()["user_defined_unmute_message"]
+                << "\",\n";
     config_file << R"("user_defined_warn_msg": ")" << main_app.get_admin_messages()["user_defined_warn_msg"] << "\",\n";
     config_file << R"("user_defined_kick_msg": ")" << main_app.get_admin_messages()["user_defined_kick_msg"] << "\",\n";
     config_file << R"("user_defined_temp_ban_msg": ")" << main_app.get_admin_messages()["user_defined_temp_ban_msg"]
@@ -1068,40 +1106,70 @@ bool write_tiny_rcon_json_settings_to_file(const char *file_path)
     config_file << R"("enable_automatic_program_updates": )"
                 << (main_app.get_is_enable_automatic_program_updates() ? "true" : "false") << ",\n";
     config_file << R"("enable_automatic_missing_map_image_download": )"
-                << (main_app.get_is_enable_automatic_missing_map_image_download() ? "true" : "false") << "\n";
-    /*config_file << R"("players_stats_feature": {)" << '\n';
-    config_file << R"("enabled": )" <<
-    (main_app.get_is_enable_players_stats_feature() ? "true" : "false") << ",\n";
-    config_file << R"("enable_tracking_of_player_stats_data_for_day": )" <<
-    (main_app.get_is_enable_tracking_of_player_stats_data_for_day() ? "true" :
-    "false") << ",\n"; config_file <<
-    R"("enable_tracking_of_player_stats_data_for_month": )" <<
-    (main_app.get_is_enable_tracking_of_player_stats_data_for_month() ? "true" :
-    "false") << ",\n"; config_file <<
-    R"("enable_tracking_of_player_stats_data_for_year": )" <<
-    (main_app.get_is_enable_tracking_of_player_stats_data_for_year() ? "true" :
-    "false") << ",\n"; config_file <<
-    R"("enable_tracking_of_player_stats_data_permanently": )" <<
-    (main_app.get_is_enable_tracking_of_player_stats_data_permanently() ? "true" :
-    "false") << ",\n"; config_file <<
-    R"("number_of_top_players_to_display_in_game_chat": )" <<
-    main_app.get_number_of_top_players_to_display_in_game_chat() << ",\n";
-    config_file << R"("number_of_top_players_to_display_in_tinyrcon": )" <<
-    main_app.get_number_of_top_players_to_display_in_tinyrcon() << ",\n";
-    config_file <<
-    R"("time_period_in_minutes_for_displaying_top_players_stats_data_in_game_chat":
-    )" <<
-    main_app.get_time_period_in_minutes_for_displaying_top_players_stats_data_in_game_chat()
-    << ",\n"; config_file <<
-    R"("time_period_in_minutes_for_displaying_top_players_stats_data_in_tinyrcon":
-    )" <<
-    main_app.get_time_period_in_minutes_for_displaying_top_players_stats_data_in_tinyrcon()
-    << ",\n"; config_file <<
-    R"("time_period_in_minutes_for_saving_players_stats_data": )" <<
-    main_app.get_time_period_in_minutes_for_saving_players_stats_data() <<
-    "\n}\n";*/
+                << (main_app.get_is_enable_automatic_missing_map_image_download() ? "true" : "false") << ",\n";
+    config_file << "\"spectate_time_delay\": " << main_app.get_spec_time_delay() << "\n";
     config_file << "}" << flush;
     return true;
+}
+
+std::string convert_guid_to_ip_address(const long guid_key)
+{
+    char buffer[24]{};
+    constexpr const int64_t upper_limit{1LL << 32};
+    unsigned long guid = static_cast<unsigned long>(guid_key < 0L ? upper_limit + guid_key : guid_key);
+    constexpr const unsigned long first_multiplier{1UL << 24};
+    constexpr const unsigned long second_multiplier{1UL << 16};
+    constexpr const unsigned long third_multiplier{1UL << 8};
+
+    const unsigned long first_octet = guid / first_multiplier;
+    guid -= first_octet * first_multiplier;
+
+    const unsigned long second_octet = guid / second_multiplier;
+    guid -= second_octet * second_multiplier;
+
+    const unsigned long third_octet = guid / third_multiplier;
+    guid -= third_octet * third_multiplier;
+
+    const unsigned long fourth_octet = guid;
+    snprintf(buffer, std::size(buffer), "%lu.%lu.%lu.%lu", first_octet, second_octet, third_octet, fourth_octet);
+
+    return buffer;
+}
+
+std::optional<long> convert_ip_address_to_guid(std::string_view ip_address)
+{
+    std::string ex_msg{std::format(R"(^1Exception ^3thrown from ^1bool check_ip_address_validity("{}"))", ip_address)};
+    stack_trace_element ste{app_handles.hwnd_re_messages_data, std::move(ex_msg)};
+    auto parts = stl::helper::str_split(ip_address, ".", nullptr, split_on_whole_needle_t::yes);
+    if (parts.size() < 4U)
+        return std::nullopt;
+
+    for (auto &part : parts)
+        stl::helper::trim_in_place(part);
+
+    long guid_key{};
+
+    const bool is_valid_ip_address = all_of(cbegin(parts), cend(parts), [&guid_key](const string &part) {
+        if (part.length() > 3)
+            return false;
+        for (const auto digit : part)
+        {
+            if (!isdigit(digit))
+                return false;
+        }
+
+        guid_key <<= 8u;
+        const long value{stol(part)};
+        guid_key += value;
+        return value >= 0 && value <= 255;
+    });
+
+    if (is_valid_ip_address)
+    {
+        return std::make_optional(guid_key);
+    }
+
+    return std::nullopt;
 }
 
 bool check_ip_address_validity(string_view ip_address, unsigned long &ip_key)
@@ -1185,8 +1253,14 @@ void convert_guid_key_to_country_name(const vector<geoip_data> &geo_data, string
                 player_data.country_name = geo_data.at(currentIndex).get_country_name();
                 if (strstr(player_data.country_name, "Russia") != nullptr)
                     player_data.country_name = "Russia";
+                else if (strcmp(player_data.country_name, "-") == 0)
+                    player_data.country_name = "Unknown";
                 player_data.region = geo_data.at(currentIndex).get_region();
+                if (strcmp(player_data.region, "-") == 0)
+                    player_data.region = "Unknown";
                 player_data.city = geo_data.at(currentIndex).get_city();
+                if (strcmp(player_data.city, "-") == 0)
+                    player_data.city = "Unknown";
                 player_data.country_code = geo_data.at(currentIndex).get_country_code();
                 is_found_match = true;
                 break;
@@ -1234,7 +1308,6 @@ void convert_guid_key_to_country_name(const vector<geoip_data> &geo_data, string
 size_t find_longest_player_country_city_info_length(const std::vector<player> &players,
                                                     const size_t number_of_players_to_process)
 {
-    // print_trace_message(__FILE__, __LINE__, __FUNCTION__);
     if (0 == number_of_players_to_process)
         return 0;
 
@@ -1320,15 +1393,12 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
             format("^1Exception ^3occurred while parsing tinyrcon.json file!\n^5{}", ex.what())};
         print_colored_text(app_handles.hwnd_re_messages_data, exception_message.c_str(),
                            is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-        // show_error(app_handles.hwnd_main_window, exception_message.c_str(), 0);
     }
     catch (...)
     {
         print_colored_text(app_handles.hwnd_re_messages_data,
                            "^3Unknown exception occurred while parsing tinyrcon.json file!",
                            is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
-        // show_error(app_handles.hwnd_main_window, "Exception occurred while
-        // parsing tinyrcon.json file!", 0);
     }
 
     string data_line;
@@ -1356,8 +1426,8 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
         for (size_t i{}; i < rcon_game_servers_json_array.size(); ++i)
         {
             auto &&json_object = rcon_game_servers_json_array[i];
-            if (json_object.contains("game_server_name") && json_object.contains("rcon_server_ip_address") &&
-                json_object.contains("rcon_port") && json_object.contains("rcon_password") &&
+            if (json_object.contains("game_server_name") && json_object.contains("game_server_ip_address") &&
+                json_object.contains("game_server_port") && json_object.contains("rcon_password") &&
                 json_object.contains("private_slot_password"))
             {
                 game_server gs{};
@@ -1365,11 +1435,11 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
                 strip_leading_and_trailing_quotes(data_line);
                 gs.set_server_name(std::move(data_line));
 
-                data_line = json_object["rcon_server_ip_address"];
+                data_line = json_object["game_server_ip_address"];
                 strip_leading_and_trailing_quotes(data_line);
                 gs.set_server_ip_address(std::move(data_line));
 
-                const int port_number{json_object["rcon_port"].template get<int>()};
+                const int port_number{json_object["game_server_port"].template get<int>()};
                 gs.set_server_port(static_cast<uint_least16_t>(port_number));
 
                 data_line = json_object["rcon_password"];
@@ -1404,9 +1474,9 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
             gs.set_server_name("TinyRcon game server");
         }
 
-        if (json_resource.contains("rcon_server_ip_address"))
+        if (json_resource.contains("game_server_ip_address"))
         {
-            data_line = json_resource["rcon_server_ip_address"];
+            data_line = json_resource["game_server_ip_address"];
             strip_leading_and_trailing_quotes(data_line);
             gs.set_server_ip_address(std::move(data_line));
         }
@@ -1416,9 +1486,9 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
             gs.set_server_ip_address("185.158.113.146");
         }
 
-        if (json_resource.contains("rcon_port"))
+        if (json_resource.contains("game_server_port"))
         {
-            const int port_number{json_resource["rcon_port"].template get<int>()};
+            const int port_number{json_resource["game_server_port"].template get<int>()};
             gs.set_server_port(static_cast<uint_least16_t>(port_number));
         }
         else
@@ -1687,9 +1757,9 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
     //	}
     //}
 
-    if (json_resource.contains("tiny_rcon_server_ip"))
+    if (json_resource.contains("tinyrcon_server_ip_address"))
     {
-        data_line = json_resource["tiny_rcon_server_ip"];
+        data_line = json_resource["tinyrcon_server_ip_address"];
         strip_leading_and_trailing_quotes(data_line);
         main_app.set_tiny_rcon_server_ip_address(std::move(data_line));
     }
@@ -1699,46 +1769,43 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
         main_app.set_tiny_rcon_server_ip_address("85.222.189.119");
     }
 
-    // if (json_resource.contains("tiny_rcon_server_port"))
-    // {
-    // 	const int port_number{json_resource["tiny_rcon_server_port"].template
-    // get<int>()};
-    // 	main_app.set_tiny_rcon_server_port(static_cast<uint_least16_t>(port_number));
-    // }
-    // else
-    // {
-    // 	found_missing_config_setting = true;
-    // 	main_app.set_tiny_rcon_server_port(27015);
-    // }
-
-    if (json_resource.contains("tiny_rcon_server_ip_for_players"))
+    if (json_resource.contains("tinyrcon_server_port"))
     {
-        data_line = json_resource["tiny_rcon_server_ip_for_players"];
-        strip_leading_and_trailing_quotes(data_line);
-        main_app.set_tiny_rcon_server_ip_address_for_players(std::move(data_line));
+        const int port_number{json_resource["tinyrcon_server_port"].template get<int>()};
+        main_app.set_tiny_rcon_server_port(static_cast<uint_least16_t>(port_number));
     }
     else
     {
         found_missing_config_setting = true;
-        main_app.set_tiny_rcon_server_ip_address_for_players("85.222.189.119");
+        main_app.set_tiny_rcon_server_port(27015);
     }
 
-    // if (json_resource.contains("tiny_rcon_server_port_for_players"))
-    // {
-    // 	const int
-    // port_number{json_resource["tiny_rcon_server_port_for_players"].template
-    // get<int>()};
-    // 	main_app.set_tiny_rcon_server_port_for_players(static_cast<uint_least16_t>(port_number));
-    // }
-    // else
-    // {
-    // 	found_missing_config_setting = true;
-    // 	main_app.set_tiny_rcon_server_port_for_players(27017);
-    // }
-
-    if (json_resource.contains("tiny_rcon_ftp_server_username"))
+    if (json_resource.contains("private_tinyrcon_server_ip_address"))
     {
-        data_line = json_resource["tiny_rcon_ftp_server_username"];
+        data_line = json_resource["private_tinyrcon_server_ip_address"];
+        strip_leading_and_trailing_quotes(data_line);
+        main_app.set_private_tiny_rcon_server_ip_address(std::move(data_line));
+    }
+    else
+    {
+        found_missing_config_setting = true;
+        main_app.set_private_tiny_rcon_server_ip_address("85.222.189.119");
+    }
+
+    if (json_resource.contains("private_tinyrcon_server_port"))
+    {
+        const int port_number{json_resource["private_tinyrcon_server_port"].template get<int>()};
+        main_app.set_private_tiny_rcon_server_port(static_cast<uint_least16_t>(port_number));
+    }
+    else
+    {
+        found_missing_config_setting = true;
+        main_app.set_private_tiny_rcon_server_port(27017);
+    }
+
+    if (json_resource.contains("tinyrcon_ftp_server_username"))
+    {
+        data_line = json_resource["tinyrcon_ftp_server_username"];
         strip_leading_and_trailing_quotes(data_line);
         main_app.set_tiny_rcon_ftp_server_username(std::move(data_line));
     }
@@ -1748,9 +1815,9 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
         main_app.set_tiny_rcon_ftp_server_username("tinyrcon");
     }
 
-    if (json_resource.contains("tiny_rcon_ftp_server_password"))
+    if (json_resource.contains("tinyrcon_ftp_server_password"))
     {
-        data_line = json_resource["tiny_rcon_ftp_server_password"];
+        data_line = json_resource["tinyrcon_ftp_server_password"];
         strip_leading_and_trailing_quotes(data_line);
         main_app.set_tiny_rcon_ftp_server_password(std::move(data_line));
     }
@@ -1814,6 +1881,50 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
     {
         found_missing_config_setting = true;
         main_app.set_is_use_original_admin_messages(true);
+    }
+
+    // user_defined_mute_message
+    if (json_resource.contains("user_defined_mute_message"))
+    {
+        if (!main_app.get_is_use_original_admin_messages())
+        {
+            data_line = json_resource["user_defined_mute_message"];
+            strip_leading_and_trailing_quotes(data_line);
+            main_app.get_admin_messages()["user_defined_mute_message"] = std::move(data_line);
+        }
+        else
+        {
+            main_app.get_admin_messages()["user_defined_mute_message"] =
+                "^7{PLAYERNAME} ^1you have been muted by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}";
+        }
+    }
+    else
+    {
+        found_missing_config_setting = true;
+        main_app.get_admin_messages()["user_defined_mute_message"] =
+            "^7{PLAYERNAME} ^1you have been muted by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}";
+    }
+
+    // user_defined_unmute_message
+    if (json_resource.contains("user_defined_unmute_message"))
+    {
+        if (!main_app.get_is_use_original_admin_messages())
+        {
+            data_line = json_resource["user_defined_unmute_message"];
+            strip_leading_and_trailing_quotes(data_line);
+            main_app.get_admin_messages()["user_defined_unmute_message"] = std::move(data_line);
+        }
+        else
+        {
+            main_app.get_admin_messages()["user_defined_unmute_message"] =
+                "^7{PLAYERNAME} ^1you have been unmuted by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}";
+        }
+    }
+    else
+    {
+        found_missing_config_setting = true;
+        main_app.get_admin_messages()["user_defined_unmute_message"] =
+            "^7{PLAYERNAME} ^1you have been unmuted by admin ^5{ADMINNAME}. ^3Reason: ^1{REASON}";
     }
 
     if (json_resource.contains("user_defined_warn_msg"))
@@ -2858,6 +2969,17 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
         main_app.set_images_data_md5("");
     }
 
+    if (json_resource.contains("spectate_time_delay"))
+    {
+        const size_t spectate_time_delay = json_resource["spectate_time_delay"].template get<int>();
+        main_app.set_spec_time_delay(spectate_time_delay);
+    }
+    else
+    {
+        found_missing_config_setting = true;
+        main_app.set_spec_time_delay(200);
+    }
+
     if (json_resource.contains("is_automatic_country_kick_enabled"))
     {
         main_app.set_is_automatic_country_kick_enabled(
@@ -3104,7 +3226,6 @@ void parse_banned_names_file(const char *file_path, std::vector<player> &banned_
 void parse_banned_ip_addresses_file(const char *file_path, std::vector<player> &banned_players,
                                     std::unordered_map<std::string, player> &ip_to_banned_player)
 {
-    // print_trace_message(__FILE__, __LINE__, __FUNCTION__);
     string property_key, property_value;
     ifstream input_file{file_path};
     if (!input_file)
@@ -3112,7 +3233,7 @@ void parse_banned_ip_addresses_file(const char *file_path, std::vector<player> &
         const size_t buffer_size{1024};
         char buffer[buffer_size];
         strerror_s(buffer, buffer_size, static_cast<int>(GetLastError()));
-        string errorMessage{"^3Couldn't open file at specified path ^1("s + string{file_path} + ")^3! "s + buffer};
+        string errorMessage{"^3Couldn't open file at specified path ^1("s + file_path + ")^3! "s + buffer};
         print_colored_text(app_handles.hwnd_re_messages_data, errorMessage.c_str());
         ofstream bannedIPsFileToWrite{file_path};
         if (!bannedIPsFileToWrite)
@@ -3152,7 +3273,7 @@ void parse_banned_ip_addresses_file(const char *file_path, std::vector<player> &
                 bannedPlayerData.banned_by_user_name = (parts.size() >= 6) ? parts[5] : main_app.get_username();
                 convert_guid_key_to_country_name(main_app.get_connection_manager().get_geoip_data(),
                                                  bannedPlayerData.ip_address, bannedPlayerData);
-                if (check_if_player_is_protected(bannedPlayerData, "^7enable ^1IP ban ^7for",
+                if (check_if_player_is_protected(bannedPlayerData, "^7enable ^1IP ban or ^1!mute ^7for",
                                                  information_about_protected_player))
                 {
                     print_colored_text(app_handles.hwnd_re_messages_data, information_about_protected_player.c_str());
@@ -3350,7 +3471,7 @@ void save_tempbans_to_file(const char *file_path, const std::vector<player> &tem
         {
             output << tb_player.ip_address << '\\' << tb_player.player_name << '\\' << tb_player.banned_date_time
                    << '\\' << tb_player.banned_start_time << '\\' << tb_player.ban_duration_in_hours << '\\'
-                   << remove_disallowed_character_in_string(tb_player.reason) << '\\' << tb_player.banned_by_user_name
+                   << remove_disallowed_characters_in_string(tb_player.reason) << '\\' << tb_player.banned_by_user_name
                    << '\n';
         }
 
@@ -3369,7 +3490,7 @@ void save_banned_ip_entries_to_file(const char *file_path, const std::vector<pla
         {
             output << banned_player.ip_address << '\\' << banned_player.guid_key << '\\' << banned_player.player_name
                    << '\\' << banned_player.banned_date_time << '\\'
-                   << remove_disallowed_character_in_string(banned_player.reason) << '\\'
+                   << remove_disallowed_characters_in_string(banned_player.reason) << '\\'
                    << banned_player.banned_by_user_name << '\n';
         }
 
@@ -3398,7 +3519,7 @@ void save_banned_ip_address_range_entries_to_file(const char *file_path,
             }
             output << ip << '\\' << banned_player.guid_key << '\\' << banned_player.player_name << '\\'
                    << banned_player.banned_date_time << '\\'
-                   << remove_disallowed_character_in_string(banned_player.reason) << '\\'
+                   << remove_disallowed_characters_in_string(banned_player.reason) << '\\'
                    << banned_player.banned_by_user_name << '\n';
         }
 
@@ -3436,6 +3557,55 @@ void save_banned_countries_to_file(const char *file_path, const std::set<std::st
 
         output << flush;
     }
+}
+
+bool mute_player_ip_address(player &pd)
+{
+
+    convert_guid_key_to_country_name(main_app.get_connection_manager().get_geoip_data(), pd.ip_address, pd);
+
+    if (pd.ip_hash_key == 0U)
+    {
+        const string error_message{
+            format("^3Cannot mute player ^7{} ^3who has an invalid ^1IP key: 0\n", pd.player_name)};
+        print_colored_text(app_handles.hwnd_re_messages_data, error_message.c_str());
+        return false;
+    }
+
+    char rcon_command_buffer[256]{};
+
+    pd.banned_start_time = get_current_time_stamp();
+    const string muted_date_time_str{get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", pd.banned_start_time)};
+    strcpy_s(pd.banned_date_time, std::size(pd.banned_date_time), muted_date_time_str.c_str());
+    pd.banned_by_user_name = main_app.get_username();
+
+    unsigned long ip_key{};
+    if (!check_ip_address_validity(pd.ip_address, ip_key))
+    {
+        return false;
+    }
+
+    if (pd.country_name == nullptr || len(pd.country_name) == 0)
+    {
+        convert_guid_key_to_country_name(main_app.get_connection_manager().get_geoip_data(), pd.ip_address, pd);
+    }
+
+    pd.is_muted = true;
+
+    main_app.get_muted_players_map()[pd.ip_address] = pd;
+    save_muted_players_data_to_file(main_app.get_muted_players_file_path(), main_app.get_muted_players_map());
+
+    constexpr const int64_t half_limit{1LL << 31};
+    constexpr const int64_t upper_limit{1LL << 32};
+    const long guid =
+        static_cast<long>(pd.ip_hash_key >= half_limit ? -(upper_limit - pd.ip_hash_key) : pd.ip_hash_key);
+
+    snprintf(rcon_command_buffer, std::size(rcon_command_buffer), "!rc js_mute_guid \"%ld\"", guid);
+    Edit_SetText(app_handles.hwnd_e_user_input, rcon_command_buffer);
+    get_user_input();
+    Sleep(250);
+    update_muted_guid_keys_server_setting();
+    return true;
 }
 
 bool temp_ban_player_ip_address(player &pd)
@@ -3484,7 +3654,7 @@ bool temp_ban_player_ip_address(player &pd)
 
         temp_banned_data_file_to_write << pd.ip_address << '\\' << pd.player_name << '\\' << pd.banned_date_time << '\\'
                                        << pd.banned_start_time << '\\' << pd.ban_duration_in_hours << '\\'
-                                       << remove_disallowed_character_in_string(pd.reason) << '\\'
+                                       << remove_disallowed_characters_in_string(pd.reason) << '\\'
                                        << main_app.get_username() << endl;
     }
     else
@@ -3492,7 +3662,7 @@ bool temp_ban_player_ip_address(player &pd)
 
         temp_banned_data_file_to_read << pd.ip_address << '\\' << pd.player_name << '\\' << pd.banned_date_time << '\\'
                                       << pd.banned_start_time << '\\' << pd.ban_duration_in_hours << '\\'
-                                      << remove_disallowed_character_in_string(pd.reason) << '\\'
+                                      << remove_disallowed_characters_in_string(pd.reason) << '\\'
                                       << main_app.get_username() << endl;
     }
 
@@ -3546,13 +3716,13 @@ bool global_ban_player_ip_address(player &pd)
         }
 
         bannedIPsFileToWrite << pd.ip_address << '\\' << pd.guid_key << '\\' << pd.player_name << '\\'
-                             << pd.banned_date_time << '\\' << remove_disallowed_character_in_string(pd.reason) << '\\'
+                             << pd.banned_date_time << '\\' << remove_disallowed_characters_in_string(pd.reason) << '\\'
                              << main_app.get_username() << endl;
     }
     else
     {
         bannedIPsFileToRead << pd.ip_address << '\\' << pd.guid_key << '\\' << pd.player_name << '\\'
-                            << pd.banned_date_time << '\\' << remove_disallowed_character_in_string(pd.reason) << '\\'
+                            << pd.banned_date_time << '\\' << remove_disallowed_characters_in_string(pd.reason) << '\\'
                             << main_app.get_username() << endl;
     }
 
@@ -3598,10 +3768,10 @@ std::pair<bool, player> remove_temp_banned_ip_address(const std::string &ip_addr
         {
             if (!is_automatic_temp_ban_remove)
             {
-                const string buffer{format("^7Admin ({}^7) has manually removed ^1temporarily banned IP address "
-                                           "^7for player {}. ^7Reason: ^1{}",
+                const string buffer{format("^1Admin ^7{} ^7has manually removed ^1temporarily banned IP address "
+                                           "^7for player {}^7. ^7Reason: ^1{}",
                                            main_app.get_username(), found_iter->player_name,
-                                           remove_disallowed_character_in_string(found_iter->reason))};
+                                           remove_disallowed_characters_in_string(found_iter->reason))};
                 message.assign(buffer);
             }
 
@@ -3802,10 +3972,10 @@ std::pair<bool, player> remove_permanently_banned_ip_address(std::string &ip_add
     {
         if (is_report_public_message)
         {
-            const string buffer{format("^7Admin ({}^7) has manually removed ^1permanently banned IP address "
-                                       "^7for player {}. ^7Reason: ^1{}",
+            const string buffer{format("^1Admin ^7{} ^7has manually removed ^1permanently banned IP address "
+                                       "^7for player {}^7. ^7Reason: ^1{}",
                                        main_app.get_username().c_str(), found_iter->player_name,
-                                       remove_disallowed_character_in_string(found_iter->reason))};
+                                       remove_disallowed_characters_in_string(found_iter->reason))};
             message.assign(buffer);
             /*const string inform_msg{ format("{}\\{}", main_app.get_username(),
       message) }; main_app.add_message_to_queue(message_t("inform-message",
@@ -4000,7 +4170,11 @@ void print_help_information(const std::vector<std::string> &input_parts)
  ^1!addip 123.123.123.123 n:Pro100Nik^2123 r:wh ^7-> ^5bans custom IP address ^1123.123.123.123
    ^5(of player named ^7Pro100Nik^2123^5) with specified reason: ^1wh
  ^1!rc custom_rcon_command [optional_parameters] ^7-> ^3sends ^1custom_rcon_command [optional_parameters] ^3to game server.
-   ^7Examples: ^1!rc map_restart ^7| ^1!rc fast_restart ^7| ^1!rc sv_iwdnames)"};
+   ^7Examples: ^1!rc map_restart ^7| ^1!rc fast_restart ^7| ^1!rc sv_iwdnames
+ ^1!spec 12 ^7-> ^5force your game to spectate player whose ^1pid number ^3is ^112.
+ ^1!nospec ^7-> ^3forces your game to ^1stop spectating ^3previously spectated player.
+ ^1!mute 12 ^7-> ^5mutes player whose ^1pid number ^5is ^112.
+ ^1!muted [25|all] ^7-> ^5displays the last ^125 ^5muted player entries ^5or ^1all ^5muted player entries, respectively.)"};
 
             print_colored_text(app_handles.hwnd_re_messages_data, help_message.c_str(),
                                is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
@@ -4184,10 +4358,11 @@ bool check_if_user_provided_argument_is_valid_for_specified_command(const char *
 {
     // print_trace_message(__FILE__, __LINE__, __FUNCTION__);
     int number{};
-    if ((str_compare_i(cmd, "!r") == 0) || (str_compare_i(cmd, "!report") == 0) || (str_compare_i(cmd, "!w") == 0) ||
-        (str_compare_i(cmd, "!warn") == 0) || (str_compare_i(cmd, "!k") == 0) || (str_compare_i(cmd, "!kick") == 0) ||
-        (str_compare_i(cmd, "clientkick") == 0) || (str_compare_i(cmd, "tempbanclient") == 0) ||
-        (str_compare_i(cmd, "!b") == 0) || (str_compare_i(cmd, "!ban") == 0) || (str_compare_i(cmd, "banclient") == 0))
+    if ((str_compare_i(cmd, "!spec") == 0) || (str_compare_i(cmd, "!r") == 0) || (str_compare_i(cmd, "!report") == 0) ||
+        (str_compare_i(cmd, "!w") == 0) || (str_compare_i(cmd, "!warn") == 0) || (str_compare_i(cmd, "!k") == 0) ||
+        (str_compare_i(cmd, "!kick") == 0) || (str_compare_i(cmd, "clientkick") == 0) ||
+        (str_compare_i(cmd, "tempbanclient") == 0) || (str_compare_i(cmd, "!b") == 0) ||
+        (str_compare_i(cmd, "!ban") == 0) || (str_compare_i(cmd, "banclient") == 0))
     {
         return is_valid_decimal_whole_number(arg, number) && check_if_user_provided_pid_is_valid(arg);
     }
@@ -4201,7 +4376,8 @@ bool check_if_user_provided_argument_is_valid_for_specified_command(const char *
 
     if ((str_compare_i(cmd, "!gb") == 0) || (str_compare_i(cmd, "!globalban") == 0) ||
         (str_compare_i(cmd, "!banip") == 0) || (str_compare_i(cmd, "!addip") == 0) ||
-        (str_compare_i(cmd, "!protectip") == 0) || (str_compare_i(cmd, "!unprotectip") == 0))
+        (str_compare_i(cmd, "!protectip") == 0) || (str_compare_i(cmd, "!unprotectip") == 0) ||
+        (str_compare_i(cmd, "!mute") == 0))
     {
         unsigned long ip_key{};
         return (is_valid_decimal_whole_number(arg, number) && check_if_user_provided_pid_is_valid(arg)) ||
@@ -4226,6 +4402,19 @@ bool check_if_user_provided_argument_is_valid_for_specified_command(const char *
         return ((is_valid_decimal_whole_number(arg, number) && number > 0 &&
                  number <= static_cast<int>(main_app.get_reported_players().size())) ||
                 check_ip_address_validity(arg, ip_key));
+    }
+
+    if (unsigned long ip_key{}; (str_compare_i(cmd, "!unmute") == 0))
+    {
+        if (int no{-1}; check_ip_address_validity(arg, ip_key) ||
+                        (is_valid_decimal_whole_number(arg, no) && check_if_user_provided_pid_is_valid(arg)))
+            return true;
+        return false;
+    }
+
+    if (str_compare_i(cmd, "!std") == 0)
+    {
+        return is_valid_decimal_whole_number(arg, number) && number >= 100 && number <= 2000;
     }
 
     if (str_compare_i(cmd, "!geoinfo") == 0)
@@ -4430,8 +4619,8 @@ void check_for_temp_banned_ip_addresses()
                 get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", tb.banned_start_time);
             main_app.get_tinyrcon_dict()["{TEMP_BAN_END_DATE}"] =
                 get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", ban_expires_time);
-            main_app.get_tinyrcon_dict()["{REASON}"] = remove_disallowed_character_in_string(tb.reason);
-            main_app.get_tinyrcon_dict()["{BANNED_BY}"] = remove_disallowed_character_in_string(tb.banned_by_user_name);
+            main_app.get_tinyrcon_dict()["{REASON}"] = remove_disallowed_characters_in_string(tb.reason);
+            main_app.get_tinyrcon_dict()["{BANNED_BY}"] = remove_disallowed_characters_in_string(tb.banned_by_user_name);
             build_tiny_rcon_message(message);
             auto [status, player]{remove_temp_banned_ip_address(tb.ip_address, message, true, true)};
             replace_br_with_new_line(message);
@@ -4492,9 +4681,9 @@ void check_for_temp_banned_ip_addresses()
                                 get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", pd.banned_start_time);
                             main_app.get_tinyrcon_dict()["{TEMP_BAN_END_DATE}"] =
                                 get_time_interval_info_string_for_seconds(ban_expires_time - now_in_seconds);
-                            main_app.get_tinyrcon_dict()["{REASON}"] = remove_disallowed_character_in_string(pd.reason);
+                            main_app.get_tinyrcon_dict()["{REASON}"] = remove_disallowed_characters_in_string(pd.reason);
                             main_app.get_tinyrcon_dict()["{BANNED_BY}"] =
-                                remove_disallowed_character_in_string(pd.banned_by_user_name);
+                                remove_disallowed_characters_in_string(pd.banned_by_user_name);
                             build_tiny_rcon_message(message);
                             replace_br_with_new_line(message);
                             const string private_msg{
@@ -4565,7 +4754,7 @@ void check_for_banned_ip_addresses()
             // rcon_say(public_message, true);
             const string private_message{
                 "^5Tiny^6Rcon ^2has successfully automatically executed command ^1!gb ^2on player ("s +
-                get_player_information(online_player.pid) + "^3)\n"s};
+                get_player_information(online_player.pid, false, "Banned IP address") + "^3)\n"s};
             // print_colored_text(app_handles.hwnd_re_messages_data,
             // private_message.c_str(), is_append_message_to_richedit_control::yes,
             // is_log_message::yes, is_log_datetime::yes);
@@ -4591,12 +4780,13 @@ void check_for_banned_ip_addresses()
                                                                                              &pd))
                 {
                     main_app.get_tinyrcon_dict()["{BAN_DATE}"] = pd.banned_date_time;
-                    pd.reason = remove_disallowed_character_in_string(pd.reason);
+                    pd.reason = remove_disallowed_characters_in_string(pd.reason);
                     main_app.get_tinyrcon_dict()["{REASON}"] = pd.reason;
                 }
                 build_tiny_rcon_message(message);
             }
-            const string banned_player_information{get_player_information(online_player.pid)};
+            const string banned_player_information{
+                get_player_information(online_player.pid, false, "Banned IP address")};
             const string msg{format("^1Automatic kick ^5for previously ^3banned IP: "
                                     "^1{} ^5| ^3Reason: ^1{}\n{}\n",
                                     online_player.ip_address, pd.reason, banned_player_information)};
@@ -4631,12 +4821,13 @@ void check_for_banned_ip_addresses()
                             online_player.ip_address, &pd))
                     {
                         main_app.get_tinyrcon_dict()["{BAN_DATE}"] = pd.banned_date_time;
-                        pd.reason = remove_disallowed_character_in_string(pd.reason);
+                        pd.reason = remove_disallowed_characters_in_string(pd.reason);
                         main_app.get_tinyrcon_dict()["{REASON}"] = pd.reason;
                     }
                     build_tiny_rcon_message(public_message);
                 }
-                const string banned_player_information{get_player_information(online_player.pid)};
+                const string banned_player_information{
+                    get_player_information(online_player.pid, false, "Banned IP address range")};
                 const string private_message{
                     format("^1Automatic kick ^5for player with an ^1IP address ^5from a "
                            "previously ^1banned IP address range: {}\n ^5| Reason: ^1{}\n{}\n",
@@ -4666,7 +4857,7 @@ void check_for_banned_ip_addresses()
                     main_app.get_tinyrcon_dict()["{CITY_NAME}"] = online_player.city;
                     build_tiny_rcon_message(message);
                 }
-                const string banned_player_information{get_player_information(online_player.pid)};
+                const string banned_player_information{get_player_information(online_player.pid, false, "Banned city")};
                 const string msg{format("^1Automatic kick ^5for player ^7{} ^5with a "
                                         "previously ^1banned city name: {}\n{}\n",
                                         online_player.player_name, online_player.city, banned_player_information)};
@@ -4694,7 +4885,7 @@ void check_for_banned_ip_addresses()
                     main_app.get_tinyrcon_dict()["{COUNTRY_NAME}"] = online_player.country_name;
                     build_tiny_rcon_message(message);
                 }
-                const string banned_player_information{get_player_information(online_player.pid)};
+                const string banned_player_information{get_player_information(online_player.pid, false, "Banned country")};
                 string msg{format("^1Automatic kick ^5for player ^7{} ^5with a "
                                   "previously ^1banned country name: {}\n{}\n",
                                   online_player.player_name, online_player.country_name, banned_player_information)};
@@ -4727,11 +4918,11 @@ void check_for_banned_ip_addresses()
                     main_app.get_tinyrcon_dict()["{PLAYERNAME}"] = online_player.player_name;
                     player &pd = banned_player_names[player_name];
                     main_app.get_tinyrcon_dict()["{BAN_DATE}"] = pd.banned_date_time;
-                    pd.reason = remove_disallowed_character_in_string(pd.reason);
+                    pd.reason = remove_disallowed_characters_in_string(pd.reason);
                     main_app.get_tinyrcon_dict()["{REASON}"] = pd.reason;
                     build_tiny_rcon_message(message);
                 }
-                const string banned_player_information{get_player_information(online_player.pid)};
+                const string banned_player_information{get_player_information(online_player.pid, false, "Banned player name")};
                 const string msg{format("^1Automatic kick ^5for previously ^3banned "
                                         "player name: ^1{} ^5| ^3Reason: ^1{}\n{}\n",
                                         player_name, main_app.get_tinyrcon_dict()["{REASON}"],
@@ -5034,9 +5225,16 @@ void process_user_command(const std::vector<string> &user_cmd)
     // print_trace_message(__FILE__, __LINE__, __FUNCTION__);
     if (!user_cmd.empty() && main_app.get_command_handlers().contains(user_cmd[0]))
     {
+
         const string re_msg{format("^2Executing user command: ^5{}\n", str_join(user_cmd, " "))};
-        print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(),
-                           is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+        const bool is_hide_information_message{re_msg.find("--silent") != string::npos ||
+                                               re_msg.find("/S") != string::npos};
+        if (!is_hide_information_message)
+        {
+            print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(),
+                               is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes,
+                               true, true);
+        }
         main_app.get_command_handlers().at(user_cmd[0])(user_cmd);
     }
     else
@@ -5053,8 +5251,15 @@ void process_rcon_command(const std::vector<string> &rcon_cmd)
     if (!rcon_cmd.empty() && rcon_commands_set.contains(rcon_cmd[0]))
     {
         const string re_msg{format("^2Executing rcon command: ^5{}\n", str_join(rcon_cmd, " "))};
+
+        const bool is_hide_information_message{re_msg.find("--silent") != string::npos ||
+                                               re_msg.find("/S") != string::npos};
+        if (!is_hide_information_message)
+        {
         print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(),
-                           is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
+                               is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes,
+                               true, true);            
+        }
         if (main_app.get_command_handlers().contains(rcon_cmd[0]))
         {
             main_app.get_command_handlers().at(rcon_cmd[0])(rcon_cmd);
@@ -5808,6 +6013,223 @@ void display_protected_entries(const char *table_title, const std::set<std::stri
     }
 }
 
+void display_muted_players_information(const size_t number_of_last_muted_players_to_display,
+                                       const bool is_save_data_to_log_file)
+{
+    size_t longest_name_length{12};
+    size_t longest_country_length{20};
+    auto &muted_players_map = main_app.get_muted_players_map();
+
+    const size_t number_of_entries_to_display{number_of_last_muted_players_to_display != string::npos &&
+                                                      number_of_last_muted_players_to_display < muted_players_map.size()
+                                                  ? number_of_last_muted_players_to_display
+                                                  : muted_players_map.size()};
+
+    vector<player> muted_players;
+    size_t start_pos{};
+
+    if (!muted_players_map.empty())
+    {
+        for (const auto &[k, v] : muted_players_map)
+        {
+            muted_players.emplace_back(v);
+        }
+
+        std::ranges::sort(muted_players, [](const player &p1, const player &p2) {
+            return p1.banned_start_time < p2.banned_start_time;
+        });
+        start_pos = muted_players.size() - number_of_entries_to_display;
+
+        longest_name_length =
+            std::max(longest_name_length,
+                     find_longest_player_name_length(cbegin(muted_players) + start_pos, cend(muted_players), false));
+        longest_country_length = std::max(
+            longest_country_length,
+            find_longest_player_country_city_info_length(cbegin(muted_players) + start_pos, cend(muted_players)));
+    }
+
+    ostringstream oss;
+    ostringstream log;
+
+    oss << format("\n^5Last ^1{} ^5muted {}:", number_of_entries_to_display,
+                  number_of_entries_to_display != 1 ? "players" : "player");
+    log << format("\nLast {} muted {}:", number_of_entries_to_display,
+                  number_of_entries_to_display != 1 ? "players" : "player");
+    const string decoration_line(122 + longest_name_length + longest_country_length, '=');
+    oss << "^5\n" << decoration_line << "\n";
+    oss << "^5| ";
+    if (is_save_data_to_log_file)
+    {
+        log << "\n"
+            << decoration_line << "\n"
+            << "| ";
+    }
+    oss << left << setw(5) << "No."
+        << " | " << left << setw(15) << "IP address"
+        << " | " << left << setw(longest_name_length) << "Player name"
+        << " | " << left << setw(longest_country_length) << "Country, city"
+        << " | " << left << setw(20) << "Date/time of mute"
+        << " | " << left << setw(29) << "Reason"
+        << " | " << left << setw(32) << "Muted by admin"
+        << "|";
+    if (is_save_data_to_log_file)
+    {
+        log << left << setw(5) << "No." << left << setw(15) << "IP address"
+            << " | " << left << setw(longest_name_length) << "Player name"
+            << " | " << left << setw(longest_country_length) << "Country, city"
+            << " | " << left << setw(20) << "Date/time of mute"
+            << " | " << left << setw(29) << "Reason"
+            << " | " << left << setw(32) << "Muted by admin"
+            << "|";
+    }
+    oss << "^5\n" << decoration_line << "\n";
+    if (is_save_data_to_log_file)
+    {
+        log << "\n" << decoration_line << "\n";
+    }
+    if (muted_players.empty())
+    {
+        const size_t message_len = stl::helper::len("| There are no muted player entries yet.");
+        oss << "^5| ^3There are no muted player entries yet.";
+        if (is_save_data_to_log_file)
+        {
+            log << "| There are no muted player entries yet.";
+        }
+
+        if (message_len + 2 < decoration_line.length())
+        {
+            oss << string(decoration_line.length() - 2 - message_len, ' ');
+            if (is_save_data_to_log_file)
+            {
+                log << string(decoration_line.length() - 2 - message_len, ' ');
+            }
+        }
+        oss << " ^5|\n";
+        if (is_save_data_to_log_file)
+        {
+            log << " |\n";
+        }
+    }
+    else
+    {
+        bool is_first_color{true};
+        size_t no{start_pos};
+        for (size_t i{start_pos}; i < muted_players.size(); ++i)
+        {
+            auto &bp = muted_players[i];
+            ++no;
+            const char *next_color{is_first_color ? "^3" : "^5"};
+            oss << "^5| " << next_color << left << setw(5) << no << " ^5| " << next_color << left << setw(15)
+                << bp.ip_address << " ^5| ^7";
+            if (is_save_data_to_log_file)
+            {
+                log << "| " << left << setw(5) << no << " | " << left << setw(15) << bp.ip_address << " | ";
+            }
+            stl::helper::trim_in_place(bp.player_name);
+            string name{bp.player_name};
+            remove_all_color_codes(name);
+            const size_t printed_name_char_count1{get_number_of_characters_without_color_codes(bp.player_name)};
+            const size_t printed_name_char_count2{name.length()};
+            if (printed_name_char_count1 < longest_name_length)
+            {
+                oss << left << setw(longest_name_length)
+                    << bp.player_name + string(longest_name_length - printed_name_char_count1, ' ');
+            }
+            else
+            {
+                oss << left << setw(longest_name_length) << bp.player_name;
+            }
+            if (is_save_data_to_log_file)
+            {
+                if (printed_name_char_count2 < longest_name_length)
+                {
+                    log << left << setw(longest_name_length)
+                        << name + string(longest_name_length - printed_name_char_count2, ' ');
+                }
+                else
+                {
+                    log << left << setw(longest_name_length) << name;
+                }
+            }
+            oss << " ^5| ";
+            if (is_save_data_to_log_file)
+            {
+                log << " | ";
+            }
+            char buffer2[256];
+            snprintf(buffer2, std::size(buffer2), "%s, %s", (len(bp.country_name) != 0 ? bp.country_name : bp.region),
+                     bp.city);
+            stl::helper::trim_in_place(bp.reason);
+            string reason{bp.reason};
+            oss << next_color << left << setw(longest_country_length) << buffer2 << " ^5| " << next_color << left
+                << setw(20) << bp.banned_date_time << " ^5| ";
+            const size_t printed_reason_char_count1{get_number_of_characters_without_color_codes(reason.c_str())};
+            if (printed_reason_char_count1 < 29)
+            {
+                oss << next_color << left << setw(29) << (reason + string(29 - printed_reason_char_count1, ' '));
+            }
+            else
+            {
+                oss << next_color << left << reason;
+            }
+            oss << " ^5| ";
+            stl::helper::trim_in_place(bp.banned_by_user_name);
+            string muted_by_admin{bp.banned_by_user_name};
+            const size_t printed_reason_char_count3{
+                get_number_of_characters_without_color_codes(muted_by_admin.c_str())};
+            if (printed_reason_char_count3 < 32)
+            {
+                oss << "^7" << left << setw(32) << (muted_by_admin + string(32 - printed_reason_char_count3, ' '));
+            }
+            else
+            {
+                oss << "^7" << next_color << left << muted_by_admin;
+            }
+            oss << "^5|\n";
+            if (is_save_data_to_log_file)
+            {
+                remove_all_color_codes(reason);
+                remove_all_color_codes(muted_by_admin);
+                log << left << setw(longest_country_length) << buffer2 << " | " << left << setw(20)
+                    << bp.banned_date_time << " | ";
+                const size_t printed_reason_char_count2{reason.length()};
+                if (printed_reason_char_count2 < 29)
+                {
+                    log << left << setw(29) << (reason + string(29 - printed_reason_char_count2, ' '));
+                }
+                else
+                {
+                    log << reason;
+                }
+                log << " | ";
+                const size_t printed_reason_char_count4{muted_by_admin.length()};
+                if (printed_reason_char_count4 < 32)
+                {
+                    log << left << setw(32) << (muted_by_admin + string(32 - printed_reason_char_count4, ' '));
+                }
+                else
+                {
+                    log << muted_by_admin;
+                }
+                log << "|\n";
+            }
+            is_first_color = !is_first_color;
+        }
+    }
+    oss << string{"^5"s + decoration_line + "\n\n"s};
+    if (is_save_data_to_log_file)
+    {
+        log << string{decoration_line + "\n\n"s};
+    }
+    const string message{oss.str()};
+    print_colored_text(app_handles.hwnd_re_messages_data, message.c_str(), is_append_message_to_richedit_control::yes,
+                       is_log_message::no, is_log_datetime::no, true, true);
+    if (is_save_data_to_log_file)
+    {
+        log_message(log.str(), is_log_datetime::yes);
+    }
+}
+
 void display_reported_players(const size_t number_of_last_reports_to_display, const bool is_save_data_to_log_file)
 {
     // print_trace_message(__FILE__, __LINE__, __FUNCTION__);
@@ -6015,6 +6437,7 @@ void display_reported_players(const size_t number_of_last_reports_to_display, co
         log_message(log.str(), is_log_datetime::yes);
     }
 }
+
 
 void display_permanently_banned_ip_addresses(const size_t number_of_last_bans_to_display,
                                              const bool is_save_data_to_log_file)
@@ -7278,27 +7701,94 @@ int get_selected_players_pid_number(const int selected_row_in_players_grid, cons
     if (check_if_selected_cell_indices_are_valid_for_players_grid(selected_row_in_players_grid,
                                                                   selected_col_in_players_grid))
     {
+
+        /*if (validate_admin_and_show_missing_admin_privileges_message(false, is_log_message::no, is_log_datetime::no,
+                                                                     false))
+        {*/
+
         string selected_pid_str{GetCellContents(app_handles.hwnd_players_grid, selected_row_in_players_grid, 0)};
         if (selected_pid_str.length() >= 2 && '^' == selected_pid_str[0] && is_decimal_digit(selected_pid_str[1]))
             selected_pid_str.erase(0, 2);
         if (int pid{}; is_valid_decimal_whole_number(selected_pid_str, pid) && pid >= 0 && pid < max_players_grid_rows)
             return pid;
     }
+    /*else
+    {
+        string selected_players_name{GetCellContents(app_handles.hwnd_players_grid, selected_row_in_players_grid, 3)};
+
+        if (read_all_online_players_pid_and_names_from_game_process(
+                main_app.get_current_game_server().get_number_of_players(),
+                main_app.get_online_players_information_in_game_process()))
+        {
+
+            if (!main_app.get_online_players_information_in_game_process().empty())
+            {
+                for (const auto &pd : main_app.get_online_players_information_in_game_process())
+                {
+                    if (selected_players_name == pd.name)
+                        return pd.pid;
+                }
+            }
+        }
+        else
+        {
+            string selected_pid_str{GetCellContents(app_handles.hwnd_players_grid, selected_row_in_players_grid, 0)};
+            if (selected_pid_str.length() >= 2 && '^' == selected_pid_str[0] && is_decimal_digit(selected_pid_str[1]))
+                selected_pid_str.erase(0, 2);
+            if (int pid{};
+                is_valid_decimal_whole_number(selected_pid_str, pid) && pid >= 0 && pid < max_players_grid_rows)
+                return pid;
+        }
+    }
+}*/
 
     return -1;
 }
 
 std::string get_player_name_for_pid(const int pid)
 {
-    // print_trace_message(__FILE__, __LINE__, __FUNCTION__);
+
+    // if (validate_admin_and_show_missing_admin_privileges_message(false, is_log_message::no, is_log_datetime::no,
+    // false))
+    //{
     const auto &players_data = main_app.get_current_game_server().get_players_data();
     for (size_t i{}; i < main_app.get_current_game_server().get_number_of_players(); ++i)
     {
         if (pid == players_data[i].pid)
             return players_data[i].player_name;
     }
+    //}
+    // if
+    // (read_all_online_players_pid_and_names_from_game_process(main_app.get_current_game_server().get_number_of_players(),
+    //                                                            main_app.get_online_players_information_in_game_process()))
+    //{
+    //    for (const auto &pd : main_app.get_online_players_information_in_game_process())
+    //    {
+    //        if (pid == pd.pid)
+    //            return pd.name;
+    //    }
+    //}
+    //
+    // const auto &players_data = main_app.get_current_game_server().get_players_data();
+    // for (size_t i{}; i < main_app.get_current_game_server().get_number_of_players(); ++i)
+    //{
+    //    if (pid == players_data[i].pid)
+    //        return players_data[i].player_name;
+    //}
 
-    return {"Unknown player"};
+    return "Unknown Soldier";
+}
+
+std::string get_player_ip_address_for_pid(const int pid)
+{
+    const auto &players_data = main_app.get_current_game_server().get_players_data();
+    for (size_t i{}; i < main_app.get_current_game_server().get_number_of_players(); ++i)
+    {
+        if (pid == players_data[i].pid)
+            return players_data[i].ip_address;
+    }
+
+    return "Unknown";
 }
 
 player &get_player_data_for_pid(const int pid)
@@ -7316,9 +7806,44 @@ player &get_player_data_for_pid(const int pid)
     return pd;
 }
 
-std::string get_player_information(const int pid, const bool is_every_property_on_new_line)
+// const char *get_player_name_for_pid(const int pid)
+//{
+//     if (validate_admin_and_show_missing_admin_privileges_message(false))
+//     {
+//         const auto &players_data = main_app.get_current_game_server().get_players_data();
+//         for (size_t i{}; i < main_app.get_current_game_server().get_number_of_players(); ++i)
+//         {
+//             if (pid == players_data[i].pid)
+//                 return players_data[i].player_name;
+//         }
+//     }
+//
+//     if (read_all_online_players_pid_and_names_from_game_process(
+//             main_app.get_current_game_server().get_number_of_players(),
+//             main_app.get_online_players_information_in_game_process()))
+//     {
+//         for (const auto &pd : main_app.get_online_players_information_in_game_process())
+//         {
+//             if (pid == pd.pid)
+//                 return pd.name;
+//         }
+//
+//         const auto &players_data = main_app.get_current_game_server().get_players_data();
+//         for (size_t i{}; i < main_app.get_current_game_server().get_number_of_players(); ++i)
+//         {
+//             if (pid == players_data[i].pid)
+//                 return players_data[i].player_name;
+//         }
+//
+//         return "Unknown Soldier";
+//     }
+//
+//     return "Unknown Soldier";
+// }
+
+std::string get_player_information(const int pid, const bool is_every_property_on_new_line,
+                                   std::string_view action_by_admin_message)
 {
-    // print_trace_message(__FILE__, __LINE__, __FUNCTION__);
     char buffer[512];
     const auto &players_data = main_app.get_current_game_server().get_players_data();
     for (size_t i{}; i < main_app.get_current_game_server().get_number_of_players(); ++i)
@@ -7327,15 +7852,13 @@ std::string get_player_information(const int pid, const bool is_every_property_o
         {
             const auto &p = players_data[i];
             (void)snprintf(buffer, std::size(buffer),
-                           "^3Player name: ^7%s %s ^3PID: ^1%d %s ^3GUID: ^1%s %s ^3Score: ^1%d "
-                           "%s ^3Ping: ^1%s\n ^3IP: ^1%s %s ^3Country, city: ^1%s",
+                           "^3Player name: ^7%s %s ^3PID: ^1%d %s ^3GUID: ^1%s %s ^3Score: ^1%d %s ^3Ping: ^1%s\n "
+                           "^3IP: ^1%s %s ^3Country, city: ^1%s, %s",
                            p.player_name, (is_every_property_on_new_line ? "\n" : "^5|"), p.pid,
-                           (is_every_property_on_new_line ? "\n" : "^5|"), (me->is_admin ? p.guid_key : "hidden"),
+                           (is_every_property_on_new_line ? "\n" : "^5|"), p.guid_key,
                            (is_every_property_on_new_line ? "\n" : "^5|"), p.score,
-                           (is_every_property_on_new_line ? "\n" : "^5|"), p.ping,
-                           (me->is_admin ? p.ip_address.c_str() : "hidden"),
-                           (is_every_property_on_new_line ? "\n" : "^5|"),
-                           (me->is_admin ? format("{}, {}", p.country_name, p.city).c_str() : p.geo_information));
+                           (is_every_property_on_new_line ? "\n" : "^5|"), p.ping, p.ip_address.c_str(),
+                           (is_every_property_on_new_line ? "\n" : "^5|"), p.country_name, p.city);
             string result{buffer};
             if (main_app.get_current_game_server().get_banned_ip_addresses_map().contains(p.ip_address) ||
                 main_app.get_current_game_server().get_temp_banned_ip_addresses_map().contains(p.ip_address) ||
@@ -7344,19 +7867,21 @@ std::string get_player_information(const int pid, const bool is_every_property_o
                 result += is_every_property_on_new_line ? "\n" : " ^5|";
                 if (main_app.get_current_game_server().get_banned_ip_addresses_map().contains(p.ip_address))
                 {
-                    result += format(" ^3Banned by admin: ^7{}", main_app.get_current_game_server()
-                                                                     .get_banned_ip_addresses_map()[p.ip_address]
-                                                                     .banned_by_user_name);
+                    result += format(" ^3{} by admin: ^7{}", action_by_admin_message,
+                                     main_app.get_current_game_server()
+                                         .get_banned_ip_addresses_map()[p.ip_address]
+                                         .banned_by_user_name);
                 }
                 else if (main_app.get_current_game_server().get_temp_banned_ip_addresses_map().contains(p.ip_address))
                 {
-                    result += format(" ^3Banned by admin: ^7{}", main_app.get_current_game_server()
-                                                                     .get_temp_banned_ip_addresses_map()[p.ip_address]
-                                                                     .banned_by_user_name);
+                    result += format(" ^3{} by admin: ^7{}", action_by_admin_message,
+                                     main_app.get_current_game_server()
+                                         .get_temp_banned_ip_addresses_map()[p.ip_address]
+                                         .banned_by_user_name);
                 }
                 else
                 {
-                    result += format(" ^3Banned by admin: ^7{}", p.banned_by_user_name);
+                    result += format(" ^3{} by admin: ^7{}", action_by_admin_message, p.banned_by_user_name);
                 }
             }
             return result;
@@ -7364,16 +7889,15 @@ std::string get_player_information(const int pid, const bool is_every_property_o
     }
 
     (void)snprintf(buffer, std::size(buffer),
-                   "^3Player name: ^5n/a %s ^1PID: ^1%d %s ^3Score: ^5n/a %s "
-                   "^3Ping: ^5n/a\n ^3IP: ^5n/a %s ^3Country, city: ^5n/a",
+                   "^3Player name: ^5n/a %s ^1PID: ^1%d %s ^3Score: ^5n/a %s ^3Ping: ^5n/a\n ^3IP: ^5n/a %s ^3Country, "
+                   "city: ^5n/a",
                    (is_every_property_on_new_line ? "\n" : "^3|"), pid, (is_every_property_on_new_line ? "\n" : "^3|"),
                    (is_every_property_on_new_line ? "\n" : "^3|"), (is_every_property_on_new_line ? "\n" : "^3|"));
     return buffer;
 }
 
-std::string get_player_information_for_player(player &p)
+std::string get_player_information_for_player(player &p, std::string_view action_by_admin_message)
 {
-    // print_trace_message(__FILE__, __LINE__, __FUNCTION__);
     char buffer[512];
     if (strlen(p.country_name) == 0 || strcmp(p.country_name, "n/a") == 0)
     {
@@ -7381,10 +7905,9 @@ std::string get_player_information_for_player(player &p)
     }
 
     (void)snprintf(buffer, std::size(buffer),
-                   "^3Player name: ^7%s ^5| ^3PID: ^1%d ^5| ^3Score: ^1%d ^5| ^3Ping: ^1%s\n "
-                   "^3GUID: ^1%s ^5| ^3IP: ^1%s ^5| ^3Country, city: ^1%s, %s",
-                   p.player_name, p.pid, p.score, p.ping, (me->is_admin ? p.guid_key : "hidden"),
-                   (me->is_admin ? p.ip_address.c_str() : "hidden"), p.country_name, p.city);
+                   "^3Player name: ^7%s ^5| ^3PID: ^1%d ^5| ^3Score: ^1%d ^5| ^3Ping: ^1%s\n ^3GUID: ^1%s ^5| ^3IP: "
+                   "^1%s ^5| ^3Country, city: ^1%s, %s",
+                   p.player_name, p.pid, p.score, p.ping, p.guid_key, p.ip_address.c_str(), p.country_name, p.city);
     string result{buffer};
 
     if (main_app.get_current_game_server().get_banned_ip_addresses_map().contains(p.ip_address) ||
@@ -7394,18 +7917,19 @@ std::string get_player_information_for_player(player &p)
         if (main_app.get_current_game_server().get_banned_ip_addresses_map().contains(p.ip_address))
         {
             result += format(
-                " ^5| ^3Banned by admin: ^7{}",
+                " ^5| ^3{} by admin: ^7{}", action_by_admin_message,
                 main_app.get_current_game_server().get_banned_ip_addresses_map()[p.ip_address].banned_by_user_name);
         }
         else if (main_app.get_current_game_server().get_temp_banned_ip_addresses_map().contains(p.ip_address))
         {
-            result += format(" ^5| ^3Banned by admin: ^7{}", main_app.get_current_game_server()
-                                                                 .get_temp_banned_ip_addresses_map()[p.ip_address]
-                                                                 .banned_by_user_name);
+            result += format(" ^5| ^3{} by admin: ^7{}", action_by_admin_message,
+                             main_app.get_current_game_server()
+                                 .get_temp_banned_ip_addresses_map()[p.ip_address]
+                                 .banned_by_user_name);
         }
         else
         {
-            result += format(" ^5| ^3Banned by admin: ^7{}", p.banned_by_user_name);
+            result += format(" ^5| ^3{} by admin: ^7{}", action_by_admin_message, p.banned_by_user_name);
         }
     }
     return result;
@@ -7419,7 +7943,7 @@ bool specify_reason_for_player_pid(const int pid, const std::string &reason)
     {
         if (pid == players_data[i].pid)
         {
-            players_data[i].reason = remove_disallowed_character_in_string(reason);
+            players_data[i].reason = remove_disallowed_characters_in_string(reason);
             return true;
         }
     }
@@ -8514,12 +9038,12 @@ const char *find_call_of_duty_2_installation_path(const bool is_show_browse_fold
     return exe_file_path;
 }
 
-bool check_if_call_of_duty_2_game_is_running(DWORD &pid)
+std::pair<bool, std::string> check_if_call_of_duty_2_game_is_running(DWORD &pid)
 {
     DWORD processes[1024]{}, processes_size{};
-    char buffer[512];
+    char buffer[512]{};
     pid = 0;
-    // print_trace_message(__FILE__, __LINE__, __FUNCTION__);
+    string running_process_file_path;
 
     if (EnumProcesses(processes, sizeof(processes), &processes_size))
         for (size_t i{}; i < processes_size; ++i)
@@ -8527,15 +9051,22 @@ bool check_if_call_of_duty_2_game_is_running(DWORD &pid)
             if (processes[i] == 0)
                 continue;
             auto ph = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, 0, processes[i]);
-            const auto n = GetModuleBaseName(ph, nullptr, buffer, sizeof(buffer));
-            CloseHandle(ph);
-            if (n == 0)
-                continue;
-            const string module_base_name{buffer};
-            if (str_index_of(module_base_name, "cod2mp_s.exe", 0, true) != string::npos)
+            if (ph)
             {
-                pid = processes[i];
-                return true;
+                const auto n = GetModuleBaseNameA(ph, nullptr, buffer, std::size(buffer));
+                if (n != 0)
+                {
+                    const string module_base_name{buffer};
+                    if (str_contains(module_base_name, "cod2mp_s.exe", 0, true))
+                    {
+                        pid = processes[i];
+                        DWORD buffer_len = std::size(buffer);
+                        if (QueryFullProcessImageNameA(ph, 0, buffer, &buffer_len))
+                            running_process_file_path.assign(buffer);
+                        return {true, running_process_file_path};
+                    }
+                }
+                CloseHandle(ph);
             }
         }
 
@@ -8556,7 +9087,7 @@ bool check_if_call_of_duty_2_game_is_running(DWORD &pid)
                                  reinterpret_cast<LPBYTE>(&is_steam_game_running), &cch);
 
         if (status == ERROR_SUCCESS && cod2_steam_appid == is_steam_game_running)
-            return true;
+            return {true, running_process_file_path};
     }
 
     RegCloseKey(game_installation_reg_key);
@@ -8574,12 +9105,12 @@ bool check_if_call_of_duty_2_game_is_running(DWORD &pid)
                                  reinterpret_cast<LPBYTE>(&is_steam_game_running), &cch);
 
         if (status == ERROR_SUCCESS && cod2_steam_appid == is_steam_game_running)
-            return true;
+            return {true, running_process_file_path};
     }
 
     RegCloseKey(game_installation_reg_key);
 
-    return false;
+    return {false, ""};
 }
 
 const char *find_call_of_duty_4_installation_path(const bool is_show_browse_folder_dialog)
@@ -9340,8 +9871,10 @@ bool connect_to_the_game_server(const std::string &server_ip_port_address, const
         }
         break;
 
-    case game_name_t::cod2:
-        if (check_if_call_of_duty_2_game_is_running(pid))
+    case game_name_t::cod2: {
+
+        const auto [is_running, exe_file_path] = check_if_call_of_duty_2_game_is_running(pid);
+        if (is_running)
         {
             terminate_running_game_instance(game_name_t::cod2);
             const string temporary_game_file{
@@ -9360,7 +9893,8 @@ bool connect_to_the_game_server(const std::string &server_ip_port_address, const
         {
             game_path = find_call_of_duty_2_installation_path();
         }
-        break;
+    }
+    break;
 
     case game_name_t::cod4:
         if (check_if_call_of_duty_4_game_is_running(pid))
@@ -10199,7 +10733,7 @@ void display_tempbanned_players_remaining_time_period()
 
     for (auto &pl : tembanned_players)
     {
-        pl.reason = remove_disallowed_character_in_string(pl.reason);
+        pl.reason = remove_disallowed_characters_in_string(pl.reason);
         const auto ban_expires_time = pl.banned_start_time + (pl.ban_duration_in_hours * 3600);
         if (ban_expires_time > now_in_seconds)
         {
@@ -10221,7 +10755,7 @@ void display_tempbanned_players_remaining_time_period()
             main_app.get_tinyrcon_dict()["{TEMP_BAN_END_DATE}"] =
                 get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", ban_expires_time);
             main_app.get_tinyrcon_dict()["{REASON}"] = pl.reason;
-            main_app.get_tinyrcon_dict()["{BANNED_BY}"] = remove_disallowed_character_in_string(pl.banned_by_user_name);
+            main_app.get_tinyrcon_dict()["{BANNED_BY}"] = remove_disallowed_characters_in_string(pl.banned_by_user_name);
             string message{main_app.get_automatic_remove_temp_ban_msg()};
             main_app.get_connection_manager_for_messages().process_and_send_message(
                 "remove-tempban",
@@ -10377,32 +10911,38 @@ void construct_tinyrcon_gui(HWND hWnd)
 
     app_handles.hwnd_button_view_ipbans =
         CreateWindowExA(NULL, "Button", "View IP bans", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD,
-                        650, screen_height - 118, 140, 30, hWnd, reinterpret_cast<HMENU>(ID_VIEWIPBANSBUTTON),
+                        650, screen_height - 118, 180, 30, hWnd, reinterpret_cast<HMENU>(ID_VIEWIPBANSBUTTON),
                         app_handles.hInstance, nullptr);
 
     app_handles.hwnd_button_view_adminsdata = CreateWindowExA(
         NULL, "Button", "View admins' data", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD,
-        screen_width / 2 + 170, screen_height - 175, 150, 25, hWnd, reinterpret_cast<HMENU>(ID_VIEWADMINSDATA),
+        screen_width / 2 + 175, screen_height - 175, 150, 25, hWnd, reinterpret_cast<HMENU>(ID_VIEWADMINSDATA),
         app_handles.hInstance, nullptr);
 
     app_handles.hwnd_connect_button = CreateWindowExA(
         NULL, "Button", "Join server", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 450,
         screen_height - 77, 180, 30, hWnd, reinterpret_cast<HMENU>(ID_CONNECTBUTTON), app_handles.hInstance, nullptr);
 
-    // app_handles.hwnd_connect_private_slot_button = CreateWindowEx(NULL,
-    // "Button", "Join server (private slot)", BS_PUSHBUTTON | BS_CENTER |
-    // BS_VCENTER | WS_VISIBLE | WS_CHILD, 450, screen_height - 77, 180, 30, hWnd,
-    // reinterpret_cast<HMENU>(ID_CONNECTPRIVATESLOTBUTTON),
-    // app_handles.hInstance, nullptr);
+    app_handles.hwnd_spectate_player_button = CreateWindowEx(
+        NULL, "Button", "Spectate player", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 650,
+        screen_height - 77, 180, 30, hWnd, reinterpret_cast<HMENU>(ID_SPECTATEPLAYER), app_handles.hInstance, nullptr);
+
+  app_handles.hwnd_mute_player_button = CreateWindowEx(
+        NULL, "Button", "Mute player", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 850,
+        screen_height - 118, 180, 30, hWnd, reinterpret_cast<HMENU>(ID_MUTE_PLAYER), app_handles.hInstance, nullptr);
+
+    app_handles.hwnd_unmute_player_button = CreateWindowEx(
+        NULL, "Button", "Unmute player", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 850,
+      screen_height - 77, 180, 30, hWnd, reinterpret_cast<HMENU>(ID_UNMUTE_PLAYER), app_handles.hInstance, nullptr);    
 
     app_handles.hwnd_say_button = CreateWindowExA(
         NULL, "Button", "Send public message", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD,
-        screen_width / 2 + 170, screen_height - 140, 150, 25, hWnd, reinterpret_cast<HMENU>(ID_SAY_BUTTON),
+        screen_width / 2 + 175, screen_height - 140, 150, 25, hWnd, reinterpret_cast<HMENU>(ID_SAY_BUTTON),
         app_handles.hInstance, nullptr);
 
     app_handles.hwnd_tell_button = CreateWindowExA(
         NULL, "Button", "Send private message", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD,
-        screen_width / 2 + 170, screen_height - 105, 150, 25, hWnd, reinterpret_cast<HMENU>(ID_TELL_BUTTON),
+        screen_width / 2 + 175, screen_height - 105, 150, 25, hWnd, reinterpret_cast<HMENU>(ID_TELL_BUTTON),
         app_handles.hInstance, nullptr);
 
     app_handles.hwnd_quit_button = CreateWindowExA(
@@ -10438,12 +10978,6 @@ void construct_tinyrcon_gui(HWND hWnd)
         CreateWindowExA(NULL, "Button", "Show servers", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD,
                         screen_width / 2 + 460, 45, 140, 28, hWnd, reinterpret_cast<HMENU>(ID_SHOWSERVERSBUTTON),
                         app_handles.hInstance, nullptr);
-
-    /*app_handles.hwnd_button_refresh_game_servers = CreateWindowExA(NULL,
-     * "Button", "Refresh servers", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER |
-     * WS_VISIBLE | WS_CHILD, screen_width / 2 + 620, 45, 120, 28, hWnd,
-     * reinterpret_cast<HMENU>(ID_REFRESHSERVERSBUTTON), app_handles.hInstance,
-     * nullptr);*/
 
     app_handles.hwnd_combo_box_sortmode = CreateWindowExA(
         NULL, "Combobox", nullptr, WS_GROUP | WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST | WS_VSCROLL | WS_HSCROLL,
@@ -10502,6 +11036,14 @@ void construct_tinyrcon_gui(HWND hWnd)
         ImageList_Add(hImageList, hbmp, nullptr);
     }
 
+    hImageListForChat = ImageList_Create(24, 24, ILC_COLOR32, unmuted_and_muted_image_index.size(), 1);
+    for (size_t i{}; i < unmuted_and_muted_image_index.size(); ++i)
+    {
+        auto hbmp = static_cast<HBITMAP>(LoadImage(app_handles.hInstance, MAKEINTRESOURCE(IDR_BMP_UNMUTED + i),
+                                                   IMAGE_BITMAP, 24, 24, LR_CREATEDIBSECTION | LR_DEFAULTSIZE));
+        ImageList_Add(hImageListForChat, hbmp, nullptr);
+    }
+
     if (app_handles.hwnd_servers_grid)
     {
         DestroyWindow(app_handles.hwnd_servers_grid);
@@ -10523,7 +11065,7 @@ void construct_tinyrcon_gui(HWND hWnd)
         CreateWindowExA(WS_EX_CLIENTEDGE, WC_SIMPLEGRIDA, "", WS_VISIBLE | WS_CHILD, 10, 85, screen_width / 2 + 135,
                         screen_height - 195, hWnd, reinterpret_cast<HMENU>(501), app_handles.hInstance, nullptr);
 
-    initialize_players_grid(app_handles.hwnd_players_grid, 7, max_players_grid_rows, true);
+    initialize_players_grid(app_handles.hwnd_players_grid, 8, max_players_grid_rows, true);
 
     for (const auto &[rcon_map_name, full_map_name] : main_app.get_available_rcon_to_full_map_names())
     {
@@ -10562,12 +11104,24 @@ void PutCell(HWND hgrid, const int row, const int col, const char *text)
 
 void display_country_flag(HWND hgrid, const int row, const int col, const char *country_code)
 {
-    // print_trace_message(__FILE__, __LINE__, __FUNCTION__);
     SGITEM item{};
     item.col = col;
     item.row = row;
+    if (!country_code || strlen(country_code) == 0u)
+        country_code = "xy";
     const int country_flag_index{flag_name_index.contains(country_code) ? flag_name_index.at(country_code) : 0};
     item.lpCurValue = (LPARAM)country_flag_index;
+    SimpleGrid_SetItemData(hgrid, &item);
+}
+
+void display_chat_image(HWND hgrid, const int row, const int col, const bool is_chat_muted)
+{
+    SGITEM item{};
+    item.col = col;
+    item.row = row;
+    const int chat_muted_image_index{
+        unmuted_and_muted_image_index.contains(is_chat_muted) ? unmuted_and_muted_image_index.at(is_chat_muted) : 0};
+    item.lpCurValue = (LPARAM)chat_muted_image_index;
     SimpleGrid_SetItemData(hgrid, &item);
 }
 
@@ -10585,7 +11139,7 @@ string GetCellContents(HWND hgrid, const int row, const int col)
 
 void initialize_players_grid(HWND hgrid, const size_t cols, const size_t rows, const bool is_for_rcon_status)
 {
-    // print_trace_message(__FILE__, __LINE__, __FUNCTION__);
+
     selected_player_row = 0;
     SimpleGrid_ResetContent(hgrid);
     SimpleGrid_SetAllowColResize(app_handles.hwnd_players_grid, TRUE);
@@ -10611,6 +11165,13 @@ void initialize_players_grid(HWND hgrid, const size_t cols, const size_t rows, c
             column.dwType = GCT_IMAGE;
             column.pOptional = hImageList;
         }
+
+        if (7 == col_id)
+        {
+            column.dwType = GCT_IMAGE;
+            column.pOptional = hImageListForChat;
+        }
+
         column.lpszHeader = is_for_rcon_status ? rcon_status_grid_column_header_titles.at(col_id).c_str()
                                                : get_status_grid_column_header_titles.at(col_id).c_str();
         SimpleGrid_AddColumn(app_handles.hwnd_players_grid, &column);
@@ -10633,6 +11194,14 @@ void initialize_players_grid(HWND hgrid, const size_t cols, const size_t rows, c
                 item.lpCurValue = (LPARAM)0;
                 SimpleGrid_SetItemData(hgrid, &item);
             }
+            else if (7 == j)
+            {
+                SGITEM item{};
+                item.row = i;
+                item.col = j;
+                item.lpCurValue = (LPARAM)1;
+                SimpleGrid_SetItemData(hgrid, &item);
+            }
             else
             {
                 PutCell(hgrid, i, j, "");
@@ -10652,15 +11221,15 @@ void initialize_players_grid(HWND hgrid, const size_t cols, const size_t rows, c
     if (is_for_rcon_status)
     {
         SimpleGrid_SetColWidth(hgrid, 4, 190);
-        SimpleGrid_SetColWidth(hgrid, 5, players_grid_width - 690);
+        SimpleGrid_SetColWidth(hgrid, 5, players_grid_width - 740);
         SimpleGrid_SetColWidth(hgrid, 6, 50);
+        SimpleGrid_SetColWidth(hgrid, 7, 50);
     }
     SimpleGrid_SetSelectionMode(app_handles.hwnd_players_grid, GSO_FULLROW);
 }
 
 void clear_players_data_in_players_grid(HWND hgrid, const size_t start_row, const size_t last_row, const size_t cols)
 {
-    // print_trace_message(__FILE__, __LINE__, __FUNCTION__);
     for (size_t i{start_row}; i < last_row; ++i)
     {
         for (size_t j{}; j < cols; ++j)
@@ -10669,11 +11238,16 @@ void clear_players_data_in_players_grid(HWND hgrid, const size_t start_row, cons
             {
                 display_country_flag(hgrid, i, 6, "xy");
             }
+            else if (7 == j)
+            {
+                display_chat_image(hgrid, i, 7, true);
+            }
             else
             {
                 PutCell(hgrid, i, j, "");
             }
         }
+
         displayed_players_data[i].pid[0] = '\0';
         displayed_players_data[i].score[0] = '\0';
         displayed_players_data[i].ping[0] = '\0';
@@ -10754,10 +11328,11 @@ void display_players_data_in_players_grid(HWND hgrid)
             PutCell(hgrid, i, 4, displayed_players_data[i].ip_address);
             PutCell(hgrid, i, 5, displayed_players_data[i].geo_info);
             display_country_flag(hgrid, i, 6, displayed_players_data[i].country_code);
+            display_chat_image(hgrid, i, 7, displayed_players_data[i].is_muted);
         }
     }
 
-    clear_players_data_in_players_grid(hgrid, number_of_players, max_players_grid_rows, 7);
+    clear_players_data_in_players_grid(hgrid, number_of_players, max_players_grid_rows, 8);
 
     const int players_grid_width{screen_width / 2 + 130};
     const int player_name_column_width{findLongestTextWidthInColumn(hgrid, 3, 0, number_of_players)};
@@ -10766,8 +11341,9 @@ void display_players_data_in_players_grid(HWND hgrid)
     SimpleGrid_SetColWidth(hgrid, 2, 60);
     SimpleGrid_SetColWidth(hgrid, 3, player_name_column_width);
     SimpleGrid_SetColWidth(hgrid, 4, 190);
-    SimpleGrid_SetColWidth(hgrid, 5, players_grid_width - (player_name_column_width + 420));
+    SimpleGrid_SetColWidth(hgrid, 5, players_grid_width - (player_name_column_width + 470));
     SimpleGrid_SetColWidth(hgrid, 6, 50);
+    SimpleGrid_SetColWidth(hgrid, 7, 50);
     SimpleGrid_EnableEdit(hgrid, FALSE);
 }
 
@@ -11211,8 +11787,8 @@ void update_game_server_setting(game_server &gs, std::string key, std::string va
     }
     else if (key == "hostname")
     {
-        // if (!is_rcon_game_server(gs))
-        gs.set_server_name(value);
+        if (!is_rcon_game_server(gs))
+            gs.set_server_name(value);
     }
     else if (key == "mapname")
     {
@@ -11300,8 +11876,8 @@ void update_game_server_setting(game_server &gs, std::string key, std::string va
     }
     else if (key == "sv_hostname")
     {
-        // if (!is_rcon_game_server(gs))
-        gs.set_server_name(value);
+        if (!is_rcon_game_server(gs))
+            gs.set_server_name(value);
     }
     else if (key == "sv_maxclients")
     {
@@ -11339,18 +11915,33 @@ std::pair<bool, game_name_t> check_if_specified_server_ip_port_and_rcon_password
     const char *ip_address, const uint_least16_t port_number, const char *rcon_password)
 {
     // print_trace_message(__FILE__, __LINE__, __FUNCTION__);
+    static constexpr const char *needle{"gamename\\"};
+    static constexpr size_t needle_len{stl::helper::len(needle)};
     connection_manager cm;
     string reply;
     main_app.get_connection_manager().send_and_receive_rcon_data(
-        "version", reply, ip_address, port_number, rcon_password, main_app.get_current_game_server(), true);
+        "version", reply, ip_address, port_number, rcon_password, main_app.get_current_game_server(), true, false);
 
     if (str_contains(reply, "Invalid password.", 0u, true) || str_contains(reply, "rconpassword", 0u, true) ||
         str_contains(reply, "Bad rcon", 0u, true))
     {
-        main_app.get_connection_manager().send_and_receive_non_rcon_data("getstatus", reply, ip_address, port_number,
-                                                                         main_app.get_current_game_server(), true);
-        const string &gn{main_app.get_current_game_server().get_game_name()};
-        return {false, game_name_to_game_name_t.contains(gn) ? game_name_to_game_name_t.at(gn) : game_name_t::unknown};
+        main_app.get_connection_manager().send_and_receive_non_rcon_data(
+            "getstatus", reply, ip_address, port_number, main_app.get_current_game_server(), true, false);
+        if (size_t game_name_start_pos{reply.find(needle)}; game_name_start_pos != string::npos)
+        {
+            game_name_start_pos += needle_len;
+            if (const size_t game_name_end_pos = reply.find('\\', game_name_start_pos);
+                game_name_end_pos != string::npos)
+            {
+                const string gn{reply.substr(game_name_start_pos, game_name_end_pos - game_name_start_pos)};
+                for (const auto &[key, value] : game_name_to_game_name_t)
+                {
+                    if (str_contains(key, gn, 0u, true))
+                        return {false, value};
+                }
+            }
+            return {false, game_name_t::unknown};
+        }
     }
 
     if (stl::helper::str_contains(reply, "CoD1", 0, true))
@@ -12990,6 +13581,8 @@ void prepare_players_data_for_display(game_server &gs, const bool is_log_status_
                              (strlen(p.country_name) != 0 ? p.country_name : p.region), p.city);
                     strcpy_s(displayed_players_data[i].geo_info, std::size(displayed_players_data[i].geo_info), buffer);
                     displayed_players_data[i].country_code = p.country_code;
+
+                    displayed_players_data[i].is_muted = p.is_muted;
                 }
 
                 if (is_log_status_table)
@@ -13050,7 +13643,6 @@ void prepare_players_data_for_display_for_regular_users(game_server &gs, const b
                 type_of_sort = sort_type::geo_asc;
                 ComboBox_SelectString(app_handles.hwnd_combo_box_sortmode, 0,
                                       sort_type_to_sort_names_dict.at(type_of_sort).c_str());
-                // process_sort_type_change_request(sort_type::geo_asc);
             }
 
             std::sort(std::begin(players), std::begin(players) + number_of_players,
@@ -13061,16 +13653,7 @@ void prepare_players_data_for_display_for_regular_users(game_server &gs, const b
                           to_lower_case_in_place(pl2_cleaned_geo);
                           return pl1_cleaned_geo < pl2_cleaned_geo;
                       });
-
-        } /*else if (type_of_sort == sort_type::geo_desc) {
-    std::sort(std::begin(players), std::begin(players) + number_of_players, [](const
-    player &pl1, const player &pl2) { string pl1_cleaned_geo{ pl1.geo_information };
-        string pl2_cleaned_geo{ pl2.geo_information };
-        to_lower_case_in_place(pl1_cleaned_geo);
-        to_lower_case_in_place(pl2_cleaned_geo);
-        return pl1_cleaned_geo > pl2_cleaned_geo;
-    });
-    }*/
+        }
 
         if (!players.empty())
         {
@@ -13153,7 +13736,7 @@ void prepare_players_data_for_display_for_regular_users(game_server &gs, const b
                 strcpy_s(displayed_players_data[i].player_name, std::size(displayed_players_data[i].player_name),
                          p.player_name);
 
-                snprintf(buffer, std::size(buffer), "%s%s", ipd.c_str(), p.ip_address.c_str());
+                snprintf(buffer, std::size(buffer), "%sUnknown", ipd.c_str());
                 const size_t no_of_chars_to_copy{std::min<size_t>(19, len(buffer))};
                 strncpy_s(displayed_players_data[i].ip_address, std::size(displayed_players_data[i].ip_address), buffer,
                           no_of_chars_to_copy);
@@ -13178,8 +13761,8 @@ void prepare_players_data_for_display_for_regular_users(game_server &gs, const b
                 log << " | ";
                 snprintf(buffer, std::size(buffer), "%s, %s", (strlen(p.country_name) != 0 ? p.country_name : p.region),
                          p.city);
-                log << left << setw(16) << p.ip_address << " | " << left << setw(longest_country_length) << buffer
-                    << "|" << '\n';
+                log << left << setw(16) << "Unknown"
+                    << " | " << left << setw(longest_country_length) << buffer << "|" << '\n';
             }
         }
     }
@@ -14101,7 +14684,7 @@ bool save_current_user_data_to_json_file(const char *file_path)
     main_app.get_user_ip_address());
     }*/
 
-    const string user_name{remove_disallowed_character_in_string(me->user_name)};
+    const string user_name{remove_disallowed_characters_in_string(me->user_name)};
     config_file << format(
         R"({}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{}\{})", user_name, (me->is_admin ? "true" : "false"),
         (me->is_logged_in ? "true" : "false"), (me->is_online ? "true" : "false"), me->ip_address, me->geo_information,
@@ -14210,20 +14793,25 @@ void load_tinyrcon_client_user_data(const char *file_path)
 
 bool validate_admin_and_show_missing_admin_privileges_message(const bool is_show_message_box,
                                                               const is_log_message log_message,
-                                                              const is_log_datetime log_date_time)
+                                                              const is_log_datetime log_date_time,
+                                                              const bool is_print_log_message)
 {
     // print_trace_message(__FILE__, __LINE__, __FUNCTION__);
     if (!me->is_admin)
     {
-        string warning_msg{format("^7{}^3, you need to have the correct ^1rcon password ^3to be able to "
-                                  "execute ^1admin-level ^3commands.\n",
-                                  main_app.get_username())};
-        print_colored_text(app_handles.hwnd_re_messages_data, warning_msg.c_str(),
-                           is_append_message_to_richedit_control::yes, log_message, log_date_time);
-        if (is_show_message_box)
+        if (is_print_log_message)
         {
-            remove_all_color_codes(warning_msg);
-            MessageBoxA(app_handles.hwnd_main_window, "Warning", warning_msg.c_str(), MB_ICONWARNING | MB_OK);
+
+            string warning_msg{format("^7{}^3, you need to have the correct ^1rcon password ^3to be able to "
+                                      "execute ^1admin-level ^3commands.\n",
+                                      main_app.get_username())};
+            print_colored_text(app_handles.hwnd_re_messages_data, warning_msg.c_str(),
+                               is_append_message_to_richedit_control::yes, log_message, log_date_time, false, true);
+            if (is_show_message_box)
+            {
+                remove_all_color_codes(warning_msg);
+                MessageBoxA(app_handles.hwnd_main_window, "Warning", warning_msg.c_str(), MB_ICONWARNING | MB_OK);
+            }
         }
         return false;
     }
@@ -14231,7 +14819,7 @@ bool validate_admin_and_show_missing_admin_privileges_message(const bool is_show
     return true;
 }
 
-void removed_disallowed_character_in_string(std::string &input)
+void removed_disallowed_characters_in_place(std::string &input)
 {
     // print_trace_message(__FILE__, __LINE__, __FUNCTION__);
     // const string disallowed_chars{ "\\/-[]\"'{|}%:;=+\b\f\n\r\t " };
@@ -14246,7 +14834,7 @@ void removed_disallowed_character_in_string(std::string &input)
     input = std::move(cleaned_input);
 }
 
-std::string remove_disallowed_character_in_string(const std::string &input)
+std::string remove_disallowed_characters_in_string(const std::string &input)
 {
     // print_trace_message(__FILE__, __LINE__, __FUNCTION__);
     // const string disallowed_chars{ "\\/-[]\"'{|}%:;=+\b\f\n\r\t " };
@@ -14301,7 +14889,7 @@ size_t ltrim_specified_characters(char *buffer, const size_t buffer_len, const c
 std::string get_cleaned_user_name(const std::string &name)
 {
     // print_trace_message(__FILE__, __LINE__, __FUNCTION__);
-    string admin_name{remove_disallowed_character_in_string(name)};
+    string admin_name{remove_disallowed_characters_in_string(name)};
     remove_all_color_codes(admin_name);
     trim_in_place(admin_name);
     to_lower_case_in_place(admin_name);
@@ -14440,7 +15028,7 @@ std::string find_users_player_name_for_installed_cod2_game(const std::shared_ptr
     {
         string cod2_game_folder{main_app.get_cod2mp_exe_path()};
         cod2_game_folder.erase(cbegin(cod2_game_folder) + cod2_game_folder.find_last_of("\\/"), cend(cod2_game_folder));
-        string current_path{cod2_game_folder + "\\main\\players\\active.txt"};
+        string current_path{cod2_game_folder + R"(\main\players\active.txt)"};
         if (check_if_file_path_exists(current_path.c_str()))
         {
             ifstream input_file1{current_path};
@@ -14450,7 +15038,7 @@ std::string find_users_player_name_for_installed_cod2_game(const std::shared_ptr
                 input_file1.close();
 
                 const string player_config_mp_file_path{
-                    format("{}\\{}\\players\\{}\\config_mp.cfg", cod2_game_folder, mod_folder_name, user_name_folder)};
+                    format(R"({}\{}\players\{}\config_mp.cfg)", cod2_game_folder, mod_folder_name, user_name_folder)};
 
                 if (check_if_file_path_exists(player_config_mp_file_path.c_str()))
                 {
@@ -14483,7 +15071,7 @@ std::string find_users_player_name_for_installed_cod2_game(const std::shared_ptr
                     }
 
                     const string player_config_mp_file_path_in_main{
-                        format("{}\\main\\players\\{}\\config_mp.cfg", cod2_game_folder, user_name_folder)};
+                        format(R"({}\main\players\{}\config_mp.cfg)", cod2_game_folder, user_name_folder)};
 
                     if (check_if_file_path_exists(player_config_mp_file_path_in_main.c_str()))
                     {
@@ -14524,7 +15112,13 @@ std::string find_users_player_name_for_installed_cod2_game(const std::shared_ptr
 
 std::string find_version_of_installed_cod2_game()
 {
-    // print_trace_message(__FILE__, __LINE__, __FUNCTION__);
+    DWORD pid{};
+    const auto [is_running, exe_file_path] = check_if_call_of_duty_2_game_is_running(pid);
+
+    const string input_exe_file_path = (is_running && pid > 0 && check_if_file_path_exists(exe_file_path.c_str()))
+                                           ? exe_file_path
+                                           : main_app.get_cod2mp_exe_path();
+
     static const vector<char> cod2_1_0_version_info{'C', 'o', 'D', '2', ' ', 'M', 'P', 0, '1', '.', '0', 0};
     static const vector<char> cod2_1_01_version_info{'C', 'o', 'D', '2', ' ', 'M', 'P', 0, '1', '.', '0', '1', 0};
     static const vector<char> cod2_1_2_version_info{'C', 'o', 'D', '2', ' ', 'M', 'P', 0, '1', '.', '2', 0};
@@ -14532,8 +15126,10 @@ std::string find_version_of_installed_cod2_game()
 
     string game_version;
 
-    const size_t file_size{get_file_size_in_bytes(main_app.get_cod2mp_exe_path().c_str())};
-    ifstream input{main_app.get_cod2mp_exe_path().c_str(), std::ios::binary};
+    const size_t file_size{get_file_size_in_bytes(input_exe_file_path.c_str())};
+    if (0 == file_size)
+        return "1.0";
+    ifstream input{input_exe_file_path, std::ios::binary};
     vector<char> file_buffer(file_size, 0);
     input.read(file_buffer.data(), file_size);
     auto found_iter =
@@ -15296,10 +15892,12 @@ bool terminate_running_game_instance(const game_name_t game_name)
             return false;
         break;
 
-    case game_name_t::cod2:
-        if (!check_if_call_of_duty_2_game_is_running(pid))
+    case game_name_t::cod2: {
+        const auto [is_running, exe_file_path] = check_if_call_of_duty_2_game_is_running(pid);
+        if (!is_running)
             return false;
-        break;
+    }
+    break;
 
     case game_name_t::cod4:
         if (!check_if_call_of_duty_4_game_is_running(pid))
@@ -15452,8 +16050,25 @@ void save_reported_players_to_file(const char *file_path, const std::vector<play
         {
             output << reported_player.player_name << '\\' << reported_player.ip_address << '\\'
                    << get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", reported_player.banned_start_time) << '\\'
-                   << remove_disallowed_character_in_string(reported_player.reason) << '\\'
+                   << remove_disallowed_characters_in_string(reported_player.reason) << '\\'
                    << reported_player.banned_by_user_name << '\n';
+        }
+
+        output << flush;
+    }
+}
+
+void save_muted_players_data_to_file(const char *file_path,
+                                     const std::unordered_map<std::string, player> &muted_players)
+{
+    ofstream output{file_path};
+    if (output)
+    {
+
+        for (const auto &[k, v] : muted_players)
+        {
+            output << v.ip_address << '\\' << v.guid_key << '\\' << v.player_name << '\\' << v.banned_date_time << '\\'
+                   << remove_disallowed_characters_in_string(v.reason) << '\\' << v.banned_by_user_name << '\n';
         }
 
         output << flush;
@@ -15493,10 +16108,10 @@ std::pair<bool, player> remove_reported_player(std::string &ip_address, std::str
         if (is_report_public_message)
         {
 
-            const string buffer{format("^7Admin ({}^7) has successfully removed previously ^1reported player "
-                                       "^7{}. ^7Reason: ^1{}",
+            const string buffer{format("^1Admin ^7{} ^7has successfully removed previously ^1reported player "
+                                       "^7{}^7. ^7Reason: ^1{}",
                                        main_app.get_username(), found_iter->player_name,
-                                       remove_disallowed_character_in_string(found_iter->reason))};
+                                       remove_disallowed_characters_in_string(found_iter->reason))};
             message.assign(buffer);
             // rcon_say(message, true);
         }
@@ -15744,8 +16359,8 @@ void execute_at_exit()
                 "request-logout-player",
                 format(R"({}\{}\{}\{}\{})", me->user_name, me->ip_address, current_ts, player_name,
                        main_app.get_game_version_number()),
-                true, main_app.get_tiny_rcon_server_ip_address_for_players(),
-                main_app.get_tiny_rcon_server_port_for_players(), false);
+                true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(),
+                false);
         }
         me->is_logged_in = false;
         me->last_logout_time_stamp = current_ts;
@@ -16002,21 +16617,34 @@ const std::string &get_current_map_image_name(const std::string &current_rcon_ma
     return unknown_rcon_map_name_image;
 }
 
+//void load_current_map_image(const std::string &rcon_map_name)
+//{
+//    static string current_rcon_map_name{"n/a"};
+//
+//    if (rcon_map_name != current_rcon_map_name)
+//    {
+//        current_rcon_map_name = rcon_map_name;
+//        g_hBitMap = main_app.get_bitmap_image_handler().get_bitmap_image(rcon_map_name);
+//        InvalidateRect(app_handles.hwnd_main_window, nullptr, FALSE);
+//    }
+//}
+
 void load_current_map_image(const std::string &rcon_map_name)
 {
-    static string current_rcon_map_name{"n/a"};
+    static string current_rcon_map_name;
+
+    if (rcon_map_name.empty() && current_rcon_map_name != "nomap")
+    {
+        current_rcon_map_name = "nomap";
+        g_hBitMap = main_app.get_bitmap_image_handler().get_bitmap_image("nomap");
+        InvalidateRect(app_handles.hwnd_main_window, nullptr, FALSE);
+        return;
+    }
 
     if (rcon_map_name != current_rcon_map_name)
     {
         current_rcon_map_name = rcon_map_name;
-        // const string& current_map_image_name =
-        // get_current_map_image_name(current_rcon_map_name); if (g_hBitMap != NULL)
-        // DeleteBitmap(g_hBitMap);
         g_hBitMap = main_app.get_bitmap_image_handler().get_bitmap_image(rcon_map_name);
-        /*if (NULL == g_hBitMap) {
-                g_hBitMap = LoadBitmapA(GetModuleHandle(NULL),
-        current_map_image_name.c_str());
-        }*/
         InvalidateRect(app_handles.hwnd_main_window, nullptr, FALSE);
     }
 }
@@ -16820,4 +17448,576 @@ bool is_rcon_game_server(const game_server &gs)
     }
 
     return false;
+}
+
+std::pair<bool, int> is_check_if_tinyrcon_user_is_online_and_get_their_pid_number(const std::string &ip_address)
+{
+    for (const auto &pd : main_app.get_current_game_server().get_players_data())
+    {
+
+        if (pd.ip_address == ip_address)
+            return {true, pd.pid};
+    }
+
+    return {false, -1};
+}
+
+void spectate_player_for_specified_pid(const int player_pid)
+{
+    DWORD cod2mp_s_exe_pid{};
+
+    const auto [is_tinyrcon_user_online, tinyrcon_user_pid] =
+        is_check_if_tinyrcon_user_is_online_and_get_their_pid_number(main_app.get_user_ip_address());
+
+    const auto [is_game_running, exe_file_path] = check_if_call_of_duty_2_game_is_running(cod2mp_s_exe_pid);
+
+    if (is_game_running && tinyrcon_user_pid != player_pid)
+    {
+
+        auto close_handle = [](HANDLE *handle) {
+            if (handle)
+            {
+                CloseHandle(*handle);
+            }
+        };
+
+        std::unique_ptr<HANDLE, decltype(close_handle)> smart_handle{};
+        HANDLE process{OpenProcess(PROCESS_VM_READ, FALSE, cod2mp_s_exe_pid)};
+        if (!process)
+            return;
+        smart_handle.reset(&process);
+        HWND game_window = FindWindowA("CoD2", "Call of Duty 2 Multiplayer");
+        if (!game_window)
+            return;
+
+        LPCVOID read_address{main_app.get_game_version_number() == "1.0" ? (LPVOID)0x8DC308 : (LPVOID)0x8DD308};
+
+        const auto online_players_pid{get_all_valid_online_pids(main_app.get_current_game_server())};
+
+        if (online_players_pid.size() == 1u)
+            return;
+
+        const auto first_pid_iter{online_players_pid.cbegin()};
+        const auto last_pid_iter{--online_players_pid.cend()};
+
+        selected_player = get_player_data_for_pid(player_pid);
+        if (selected_player.pid != -1)
+        {
+            is_player_being_spectated.store(true);
+            spectated_player_pid.store(player_pid);
+            if (button_id_to_label_text.contains(ID_SPECTATEPLAYER))
+                button_id_to_label_text.at(ID_SPECTATEPLAYER) = "Stop spectating player";
+            SetWindowText(app_handles.hwnd_spectate_player_button, "Stop spectating player");
+            const string warning_message{format("^7{} ^2started spectating player ^7{} ^5(^1pid = {}^5).\n^5Press the "
+                                                "^1Escape key ^5in the game to ^1stop spectating ^5the player.",
+                                                main_app.get_username(), selected_player.player_name,
+                                                selected_player.pid)};
+            print_colored_text(app_handles.hwnd_re_messages_data, warning_message.c_str(),
+                               is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes,
+                               true, true);
+        }
+        else
+            return;
+
+        POINT mouse_position{200, 200};
+        GetCursorPos(&mouse_position);
+        LPARAM lParam = MAKELPARAM(mouse_position.x, mouse_position.y);
+        if (std::abs(player_pid - *first_pid_iter) <= std::abs(*last_pid_iter - player_pid))
+        {
+            PostMessageA(game_window, WM_LBUTTONDOWN, MK_LBUTTON, lParam);
+            PostMessageA(game_window, WM_LBUTTONUP, NULL, lParam);
+        }
+        else
+        {
+            PostMessageA(game_window, WM_RBUTTONDOWN, MK_RBUTTON, lParam);
+            PostMessageA(game_window, WM_RBUTTONUP, NULL, lParam);
+        }
+
+        this_thread::sleep_for(std::chrono::milliseconds(main_app.get_spec_time_delay()));
+
+        bool is_press_left_mouse_button{true};
+
+        int current_pid{tinyrcon_user_pid};
+        unsigned char chunk[4]{};
+        SIZE_T bytesRead{};
+        if (ReadProcessMemory(process, read_address, &chunk[0], 4, &bytesRead))
+        {
+            current_pid = static_cast<int>(chunk[0]);
+            is_press_left_mouse_button = (current_pid <= player_pid) &&
+                                         (std::abs(player_pid - current_pid) <=
+                                          std::abs((current_pid - *first_pid_iter) + (*last_pid_iter - player_pid)));
+        }
+
+        while (is_player_being_spectated.load())
+        {
+
+            this_thread::sleep_for(std::chrono::milliseconds(main_app.get_spec_time_delay()));
+
+            bytesRead = 0u;
+            if (ReadProcessMemory(process, read_address, &chunk[0], 4, &bytesRead))
+            {
+                current_pid = static_cast<int>(chunk[0]);
+            }
+            else
+            {
+                continue;
+            }
+
+            if (player_pid != current_pid)
+            {
+
+                if (current_pid > player_pid && is_press_left_mouse_button)
+                {
+                    is_press_left_mouse_button = false;
+                    this_thread::sleep_for(1000ms);
+                    if (ReadProcessMemory(process, read_address, &chunk[0], 4, &bytesRead))
+                    {
+                        current_pid = static_cast<int>(chunk[0]);
+                        if (current_pid == tinyrcon_user_pid)
+                            is_press_left_mouse_button =
+                                std::abs(player_pid - *first_pid_iter) <= std::abs(*last_pid_iter - player_pid);
+                    }
+                    else
+                    {
+                        continue;
+                    }
+                }
+                else if (current_pid < player_pid && !is_press_left_mouse_button)
+                {
+                    is_press_left_mouse_button = true;
+                    this_thread::sleep_for(1000ms);
+                    if (ReadProcessMemory(process, read_address, &chunk[0], 4, &bytesRead))
+                    {
+                        current_pid = static_cast<int>(chunk[0]);
+                        if (current_pid == tinyrcon_user_pid)
+                            is_press_left_mouse_button =
+                                std::abs(player_pid - *first_pid_iter) <= std::abs(*last_pid_iter - player_pid);
+                    }
+                    else
+                    {
+                        continue;
+                    }
+                }
+
+                mouse_position = {200, 200};
+                GetCursorPos(&mouse_position);
+                lParam = MAKELPARAM(mouse_position.x, mouse_position.y);
+                if (is_press_left_mouse_button)
+                {
+                    PostMessageA(game_window, WM_LBUTTONDOWN, MK_LBUTTON, lParam);
+                    PostMessageA(game_window, WM_LBUTTONUP, NULL, lParam);
+                }
+                else
+                {
+                    PostMessageA(game_window, WM_RBUTTONDOWN, MK_RBUTTON, lParam);
+                    PostMessageA(game_window, WM_RBUTTONUP, NULL, lParam);
+                }
+            }
+            else
+            {
+                this_thread::sleep_for(1000ms);
+            }
+        }
+    }
+}
+
+class game_server;
+
+int get_minimum_valid_pid(const game_server &gs)
+{
+    int minimum_pid{64}; // 0 - 63
+    const auto &players{gs.get_players_data()};
+    for (size_t i{}; i < gs.get_number_of_players(); ++i)
+    {
+        if (players[i].pid < minimum_pid)
+            minimum_pid = players[i].pid;
+    }
+
+    return minimum_pid;
+}
+
+int get_maximum_valid_pid(const game_server &gs)
+{
+    int maximum_pid{-1}; // 0 - 63
+    const auto &players{gs.get_players_data()};
+    for (size_t i{}; i < gs.get_number_of_players(); ++i)
+    {
+        if (players[i].pid > maximum_pid)
+            maximum_pid = players[i].pid;
+    }
+
+    return maximum_pid;
+}
+
+std::set<int> get_all_valid_online_pids(const game_server &gs)
+{
+    std::set<int> valid_online_pids;
+    const auto &players_data{gs.get_players_data()};
+    for (size_t i{}; i < std::min<size_t>(gs.get_number_of_players(), players_data.size()); ++i)
+    {
+        valid_online_pids.emplace(players_data[i].pid);
+    }
+
+    return valid_online_pids;
+}
+
+LRESULT CALLBACK monitor_game_key_press_events(_In_ int nCode, _In_ WPARAM wParam, _In_ LPARAM lParam)
+{
+    if (nCode < 0)
+        return CallNextHookEx(nullptr, nCode, wParam, lParam);
+
+    if (!is_player_being_spectated.load())
+        return CallNextHookEx(nullptr, nCode, wParam, lParam);
+
+    auto pKeyBoard = (KBDLLHOOKSTRUCT *)lParam;
+    switch (wParam)
+    {
+    case WM_KEYDOWN:
+    case WM_KEYUP:
+        if (pKeyBoard->vkCode == VK_ESCAPE)
+        {
+            selected_player = get_player_data_for_pid(spectated_player_pid.load());
+            if (selected_player.pid != -1)
+            {
+                const string information_message{format("^7{} ^3stopped spectating player ^7{} ^3(^1pid = {}^3).\n",
+                                                        main_app.get_username(), selected_player.player_name,
+                                                        selected_player.pid)};
+                print_colored_text(app_handles.hwnd_re_messages_data, information_message.c_str(),
+                                   is_append_message_to_richedit_control::yes, is_log_message::yes,
+                                   is_log_datetime::yes, true, true);
+            }
+            is_player_being_spectated.store(false);
+            spectated_player_pid.store(-1);
+            if (button_id_to_label_text.contains(ID_SPECTATEPLAYER))
+                button_id_to_label_text.at(ID_SPECTATEPLAYER) = "Spectate player";
+            SetWindowText(app_handles.hwnd_spectate_player_button, "Spectate player");
+        }
+    }
+
+    return CallNextHookEx(nullptr, nCode, wParam, lParam);
+}
+
+// Returns the last Win32 error, in string format. Returns an empty string if there is no error.
+std::string get_last_error_as_string()
+{
+    const DWORD errorMessageID{::GetLastError()};
+    if (!errorMessageID)
+    {
+        return {};
+    }
+
+    LPSTR messageBuffer{};
+
+    // Ask Win32 to give us the string version of that message ID.
+    // The parameters we pass in, tell Win32 to create the buffer that holds the message for us (because we don't
+    // yet know how long the message string will be).
+    size_t size = FormatMessageA(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr,
+        errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&messageBuffer, 0, nullptr);
+
+    // Copy the error message into a std::string.
+    std::string message(messageBuffer, size);
+
+    // Free the Win32's string's buffer.
+    LocalFree(messageBuffer);
+
+    return message;
+}
+
+bool read_all_online_players_pid_and_names_from_game_process(
+    const size_t number_of_players, std::vector<player_information_in_game_process> &players_information)
+{
+    DWORD cod2mp_s_exe_pid{};
+
+    const auto [is_game_running, exe_file_path] = check_if_call_of_duty_2_game_is_running(cod2mp_s_exe_pid);
+
+    if (is_game_running)
+    {
+
+        auto close_handle = [](HANDLE *handle) {
+            if (handle)
+            {
+                CloseHandle(*handle);
+            }
+        };
+        std::unique_ptr<HANDLE, decltype(close_handle)> smart_handle{};
+        HANDLE process{OpenProcess(PROCESS_VM_READ, FALSE, cod2mp_s_exe_pid)};
+        if (!process)
+            return false;
+        smart_handle.reset(&process);
+        HWND game_window = FindWindowA("CoD2", "Call of Duty 2 Multiplayer");
+        if (!game_window)
+            return false;
+
+        std::vector<player_information_in_game_process> players_information_in_game_process;
+        const player_information_in_game_process *base_address =
+            main_app.get_game_version_number() == "1.0"
+                ? reinterpret_cast<const player_information_in_game_process *>(0x0138A6E4)
+                : reinterpret_cast<const player_information_in_game_process *>(0x0138BFE4);
+        for (size_t i{}; i != number_of_players; ++i)
+        {
+            player_information_in_game_process pi_data;
+            SIZE_T pi_data_size{sizeof(player_information_in_game_process)};
+            SIZE_T number_of_bytes_read{};
+
+            if (ReadProcessMemory(process, (LPCVOID)base_address, (LPVOID)&pi_data, pi_data_size,
+                                  &number_of_bytes_read))
+            {
+                if (number_of_bytes_read != pi_data_size ||
+                    (!players_information_in_game_process.empty() && pi_data.pid == 0) || pi_data.pid > 63)
+                    break;
+                players_information_in_game_process.emplace_back(pi_data);
+                ++base_address;
+            }
+        }
+        const bool is_read_success{!players_information_in_game_process.empty()};
+        players_information = std::move(players_information_in_game_process);
+        return is_read_success;
+    }
+    return false;
+}
+
+bool check_if_selected_player_has_my_ip_address()
+{
+    if (check_if_selected_cell_indices_are_valid_for_players_grid(selected_player_row, selected_player_col))
+    {
+        string selected_pid_str{GetCellContents(app_handles.hwnd_players_grid, selected_player_row, 0)};
+        if (selected_pid_str.length() >= 2 && '^' == selected_pid_str[0] && is_decimal_digit(selected_pid_str[1]))
+            selected_pid_str.erase(0, 2);
+        if (int pid{}; is_valid_decimal_whole_number(selected_pid_str, pid) && pid >= 0 && pid < max_players_grid_rows)
+        {
+            return main_app.get_user_ip_address() == get_player_ip_address_for_pid(pid);
+        }
+    }
+    return false;
+}
+
+// bool replace_incorrect_ip_addresses(std::vector<std::string> &player_data_lines)
+//{
+//
+//     bool is_modified{};
+//
+//     auto &player_pid_to_ip_address = main_app.get_current_game_server().get_players_pid_to_ip_address();
+//
+//     for (auto &player_line : player_data_lines)
+//     {
+//
+//         int j{}, i{3};
+//         int digit_count{};
+//         int player_pid{};
+//         while (is_ws(player_line[j]) && j < i)
+//             ++j;
+//         while (isdigit(player_line[j]) && j < i && digit_count < 2)
+//         {
+//             player_pid *= 10;
+//             player_pid += static_cast<int>(player_line[j] - '0');
+//             ++digit_count;
+//             ++j;
+//         }
+//
+//         if (player_pid >= 64)
+//         {
+//             player_pid /= 10;
+//         }
+//
+//         if (player_pid_to_ip_address.contains(player_pid))
+//         {
+//
+//             size_t player_name_end_pos{player_line.rfind("^7")};
+//
+//             if (size_t start{}; (start = player_line.rfind(player_pid_to_ip_address.at(player_pid))) != string::npos
+//             &&
+//                                 player_name_end_pos != string::npos && start > player_name_end_pos)
+//             {
+//                 --start;
+//                 if (!is_ws(player_line[start]))
+//                 {
+//                     player_line.insert(start, 1, ' ');
+//                     is_modified = true;
+//                 }
+//
+//                 player_pid_to_ip_address.erase(player_pid);
+//                 continue;
+//             }
+//
+//             size_t end_pos{player_line.rfind(':')};
+//
+//             if (end_pos != string::npos)
+//             {
+//                 size_t start_pos{end_pos - 1};
+//
+//                 while (!is_ws(player_line[start_pos]))
+//                     --start_pos;
+//
+//                 ++start_pos;
+//
+//                 player_line.replace(begin(player_line) + start_pos, begin(player_line) + end_pos,
+//                                     player_pid_to_ip_address.at(player_pid));
+//                 is_modified = true;
+//                 player_pid_to_ip_address.erase(player_pid);
+//             }
+//             else if (player_name_end_pos != string::npos)
+//             {
+//                 player_name_end_pos += 2;
+//                 while (is_ws(player_line[player_name_end_pos]))
+//                     ++player_name_end_pos;
+//
+//                 while (is_decimal_digit(player_line[player_name_end_pos]))
+//                     ++player_name_end_pos;
+//
+//                 while (is_ws(player_line[player_name_end_pos]))
+//                     ++player_name_end_pos;
+//
+//                 end_pos = player_name_end_pos + player_pid_to_ip_address.at(player_pid).length();
+//
+//                 player_line.replace(begin(player_line) + player_name_end_pos, begin(player_line) + end_pos,
+//                                     player_pid_to_ip_address.at(player_pid));
+//                 if (!is_ws(player_line[end_pos]) && player_line[end_pos] != ':')
+//                     player_line.insert(end_pos, 1, ' ');
+//
+//                 is_modified = true;
+//                 player_pid_to_ip_address.erase(player_pid);
+//             }
+//         }
+//     }
+//
+//     return is_modified;
+// }
+
+// void get_player_pid_to_guid_response()
+//{
+//     main_app.get_command_handler("!rc").second({"!rc", "js_pid_to_guid", "--silent"});
+// }
+//
+// void get_muted_guid_keys_response()
+//{
+//     main_app.get_command_handler("!rc").second({"!rc", "js_muted_guid_keys", "--silent"});
+// }
+
+//bool add_muted_ip_address(player &pd, vector<player> &muted_players_vector,
+//                          unordered_map<string, player> &muted_players_map)
+//{
+//    unsigned long guid_number{};
+//    if (!check_ip_address_validity(pd.ip_address, guid_number))
+//        return false;
+//
+//    muted_players_map[pd.ip_address] = pd;
+//    const auto found_iter = find_if(begin(muted_players_vector), end(muted_players_vector),
+//                                    [&pd](const player &p) {
+//        return p.ip_address == pd.ip_address; 
+//    });
+//
+//    if (found_iter != end(muted_players_vector))
+//    {
+//        *found_iter = pd;
+//    }
+//    else
+//    {
+//        muted_players_vector.push_back(std::move(pd));
+//    }
+//
+//    save_banned_ip_entries_to_file(main_app.get_muted_players_file_path(), muted_players_vector);
+//
+//    return true;
+//}
+
+std::pair<bool, player> remove_muted_ip_address(std::string &ip_address, std::string &message,
+                                                const bool is_report_public_message)
+{
+
+    if (int number{};
+        is_valid_decimal_whole_number(ip_address, number) && check_if_user_provided_pid_is_valid(ip_address))
+    {
+        ip_address = get_player_ip_address_for_pid(number);
+    }
+
+    player pd{};
+    pd.pid = -1;
+    strcpy_s(pd.player_name, std::size(pd.player_name), "John Doe");
+    pd.reason = "spam";
+
+    if (!main_app.get_muted_players_map().contains(ip_address))
+    {
+        pd.ip_address = ip_address;
+        // return { false, player{} };
+    }
+    else
+    {
+        pd = main_app.get_muted_players_map().at(ip_address);
+    }
+
+    if (main_app.get_muted_players_map().contains(ip_address))
+    {
+        main_app.get_muted_players_map().erase(ip_address);
+    }
+
+    convert_guid_key_to_country_name(main_app.get_connection_manager().get_geoip_data(), pd.ip_address, pd);
+
+    pd.is_muted = false;
+
+    if (pd.ip_hash_key == 0U)
+    {
+        const string error_message{
+            format("^3Cannot unmute player ^7{} ^3who has an invalid ^1IP key: 0\n", pd.player_name)};
+        print_colored_text(app_handles.hwnd_re_messages_data, error_message.c_str());
+        return {false, player{}};
+    }
+
+    if (is_report_public_message)
+    {
+        message = format("^1Admin ^7{} ^7has manually removed ^1muted IP address ^7of player {}^7.",
+                         main_app.get_username(), pd.player_name);
+        // rcon_say(message, true);
+    }
+
+    char rcon_command_buffer[256]{};
+
+    pd.banned_start_time = get_current_time_stamp();
+    const string unmuted_date_time_str{get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", pd.banned_start_time)};
+    strcpy_s(pd.banned_date_time, std::size(pd.banned_date_time), unmuted_date_time_str.c_str());
+    pd.banned_by_user_name = main_app.get_username();
+
+    constexpr const int64_t half_limit{1LL << 31};
+    constexpr const int64_t upper_limit{1LL << 32};
+    const long guid =
+        static_cast<long>(pd.ip_hash_key >= half_limit ? -(upper_limit - pd.ip_hash_key) : pd.ip_hash_key);
+
+    snprintf(rcon_command_buffer, std::size(rcon_command_buffer), "!rc js_unmute_guid \"%ld\"", guid);
+    Edit_SetText(app_handles.hwnd_e_user_input, rcon_command_buffer);
+    get_user_input();
+    Sleep(250);
+    update_muted_guid_keys_server_setting();
+    save_muted_players_data_to_file(main_app.get_muted_players_file_path(), main_app.get_muted_players_map());
+
+    return {true, pd};
+}
+
+void get_muted_guid_keys_server_setting()
+{
+    main_app.get_command_handler("!rc").second({"!rc", "g_muted_guids", "--silent"});
+}
+
+void update_muted_guid_keys_server_setting()
+{
+    std::ostringstream oss;
+    for (const auto &[k, v] : main_app.get_muted_players_map())
+    {
+        const long guid_key{convert_ip_address_to_guid(k).value_or(0L)};
+        if (guid_key != 0L)
+        {
+            oss << guid_key << ',';
+        }
+    }
+    string muted_guid_keys{oss.str()};
+    if (!muted_guid_keys.empty() && muted_guid_keys.back() == ',')
+    {
+        muted_guid_keys.pop_back();
+    }
+
+    static char rcon_command_buffer[2048];
+    snprintf(rcon_command_buffer, std::size(rcon_command_buffer), "!rc seta g_muted_guids \"%s\" --silent",
+             muted_guid_keys.c_str());
+    Edit_SetText(app_handles.hwnd_e_user_input, rcon_command_buffer);
+    get_user_input();
+    // main_app.get_command_handler("!rc").second({ "!rc", "seta", "g_muted_guids", muted_guid_keys, "--silent" });
 }

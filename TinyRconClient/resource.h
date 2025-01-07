@@ -346,6 +346,8 @@
 #define ID_VIEWBANNEDPLAYERNAMES        449
 #define ID_VIEWREPORTEDPLAYERS          450
 #define ID_REPORTPLAYER                 451
+#define IDR_BMP_UNMUTED 510
+#define IDR_BMP_MUTED 511
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
