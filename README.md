@@ -5,14 +5,14 @@ TinyRcon is a simple, easy to use graphical application developed using modern C
   the nlohmann custom json parser header only C++ library and the standalone version of the ASIO C++ networking library. 
   The overall TinyRcon application project is a Visual Studio solution which consists of 5 distinct projects: 
 
-  ![TinyRcon client for authorized public admins](/images/TinyRcon_client.jpg)  
+  ![TinyRcon client for authorized public admins](/screenshots/TinyRcon_client.jpg)  
  
   1. TinyRcon client which runs on an authorized game server admin's computer. It requires a correct rcon password to work with a running Call of duty game server 
    as well as to be able to log in to TinyRcon server. TinyRcon client communicates with both TinyRcon server and private TinyRcon server but it only needs the correct rcon password for sending rcon commands to configured game server and for communicating with TinyRcon server. An authorized regular admin cannot log in to TinyRcon server without the correct rcon password. Private TinyRcon server is used by regular (public) admins,  private admins and players for receiving additional information about maps, images, etc.).
 
    ---
 
-   ![Private TinyRcon client for authorized private admins](/images/Private_TinyRcon_client.jpg)
+   ![Private TinyRcon client for authorized private admins](/screenshots/Private_TinyRcon_client.jpg)
   
   2. Private TinyRcon client which runs on an authorized private admin's computer. This rcon tool doesn't need the correct rcon password at all to be able to execute admin level commands and send rcon commands to configured game server. It works without an actual rcon password by logging the private admin in to a private TinyRcon server using their unique username/password combination. The username/password information of registered private admin accounts is stored in a file named 'private_admins.cfg' which is located in the data folder of private TinyRcon server. Every private admin has their own username, country and unique password separated by \ characters on one line as shown in the following example:
 
@@ -21,7 +21,7 @@ TinyRcon is a simple, easy to use graphical application developed using modern C
 
    ---
 
-   ![Private TinyRcon client v2 for authorized private admins](/images/Private_TinyRcon_client_v2.jpg)
+   ![Private TinyRcon client v2 for authorized private admins](/screenshots/Private_TinyRcon_client_v2.jpg)
  
   3. Private TinyRcon client v2 (using a rich text edit control instead of a grid control) is identical to private TinyRcon client except for a couple of differences regarding its main graphical user interface. It runs on an authorized private admin's computer. This rcon tool doesn't need the correct rcon password at all to be able to execute admin level commands. It works without an actual rcon password by logging the private admin in to a private TinyRcon server using their unique username/password combination. The username/password information of registered private admin accounts is stored in a file named 'private_admins.cfg' which is located in the data folder of private TinyRcon server. Every private admin has their own username, country and unique password separated by \ characters on one line as shown in the following example:
 
@@ -30,7 +30,7 @@ TinyRcon is a simple, easy to use graphical application developed using modern C
 
    ---
 
-   ![TinyRcon server for allowing admin level access to authorized admins](/images/TinyRcon_server.jpg)
+   ![TinyRcon server for allowing admin level access to authorized admins](/screenshots/TinyRcon_server.jpg)
   
   4. TinyRcon server which can optionally be running on the same authorized public admin's computer as well, although that's not a requirement. 
      TinyRcon client connects to it and exchanges information with it. An authorized public admin needs the correct rcon password to be able to log in to TinyRcon server 
@@ -38,7 +38,7 @@ TinyRcon is a simple, easy to use graphical application developed using modern C
 
    ---
 
-   ![Private TinyRcon server for managing game server and allowing admin level access to authorized private admins](/images/Private_TinyRcon_server.jpg)
+   ![Private TinyRcon server for managing game server and allowing admin level access to authorized private admins](/screenshots/Private_TinyRcon_server.jpg)
   
   5. Private TinyRcon server which can optionally be running on the same authorized public admin's computer as well, although that's not a requirement. Both TinyRcon and private TinyRcon client exchange messages with private TinyRcon server. Private TinyRcon server looks almost identical to TinyRcon client. Apart from its main task of communicating with private TinyRcon clients and processing private admin level commands of logged in private admins as well as handling user level commands of players some of its additional services include processing custom user level commands like !s, !tp, !report, !unreport, !reports and sending available custom maps' relation information to both TinyRcon and private TinyRcon client as well.
     
