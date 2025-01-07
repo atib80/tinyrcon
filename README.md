@@ -1,7 +1,6 @@
 # TinyRcon server, private TinyRcon server, TinyRcon client, private TinyRcon client and private TinyRcon client v2
 
-TinyRcon is a simple, easy to use graphical application developed using modern C++ language features (cpp17, cpp
-20), the Win32 API, 
+TinyRcon is a simple, easy to use graphical application developed using modern C++ language features, the Win32 API, 
   the nlohmann custom json parser header only C++ library and the standalone version of the ASIO C++ networking library. 
   The overall TinyRcon application project is a Visual Studio solution which consists of 5 distinct projects: 
 
@@ -63,13 +62,15 @@ Every successfully built executable will be located in the root folder of the ap
 
 ---
 
-## Configuration
+## Configuration:
 
-1. Every TinyRcon client and TinyRcon server has a config folder which contains a json configuration file named 'tinyrcon.json'. 
-   Before launching any of the appropriate TinyRcon client applications (TinyRcon client, private TinyRcon client) and/or TinyRcon server applications 
+
+Every TinyRcon client and TinyRcon server has a config folder which contains a json configuration file named 'tinyrcon.json'. 
+Before launching any of the appropriate TinyRcon client applications (TinyRcon client, private TinyRcon client) and/or TinyRcon server applications 
    (TinyRcon server, private TinyRcon server) make sure to edit the appropriate 'tinyrcon.json' configuration file(s).
+   
 
-a. For TinyRcon client you need to configure the following important Call of duty 1/2/4/5 multiplayer game server and public/private TinyRcon server application related settings:
+a. For **TinyRcon client** you need to configure the following important Call of duty 1/2/4/5 multiplayer game server and public/private TinyRcon server application related settings:
 - your user name (username - change your user name from ^1Admin to your preferred user name. An authorized admin can still use the generic ^1Admin name but regular TinyRcon users/players without the correct rcon password should change their user name to their player name.)
 - game server's name (game_server_name - game server's sv_hostname value, it's an optional setting, you can leave it at its default value: "CoDHost")
 - game server's IP address (game_server_ip_address)
@@ -81,15 +82,17 @@ a. For TinyRcon client you need to configure the following important Call of dut
   Don't change it unless you need to. Leave it at its default value: 27015)
 - Private TinyRcon server's IP address (private_tiny_rcon_server_ip_address - it is used by admins and players to receive additional information 
   (custom message, images, information about available custom maps, players' stats data, top players' stats data, executing !report, !unreport, !reports, !s, !tp commands, etc.) 
-  for communicating with private TinyRcon server)
-- Private TinyRcon server's port number (private_tiny_rcon_server_port - it is used for communicating with private TinyRcon server.  Don't change it unless you need to. 
+  for communicating with private TinyRcon server) 
+  Private TinyRcon server's port number (private_tiny_rcon_server_port - it is used for communicating with private TinyRcon server.  Don't change it unless you need to. 
   Leave it at its default value: 27017)
   Regular users, players, too, can use TinyRcon client without having access to the game server's correct rcon_password. 
   They won't have access to any of the admin level user and rcon commands but they will still be able to execute regular user level commands.
   Players with no access to the correct rcon_password may use TinyRcon client as a general game server browser similar to Hlsw, CoD Rcon Tool, Mohaa's Autokick v1 
   or Call of duty's server browser game feature. 
   Players can execute all user level commands that don't need the correct rcon_password.
-b. For private TinyRcon client you need to configure the following important Call of duty 1/2/4/5 multiplayer game server and private TinyRcon server application related settings:
+  
+  ---
+ b. For **private TinyRcon client** you need to configure the following important Call of duty 1/2/4/5 multiplayer game server and private TinyRcon server application related settings:
 - your private admin account's user name (username - change your private admin account's user name from ^1Admin to your correct user name. An authorized private admin can log in to a private TinyRcon only if they use their unique private admin account's username and password credentials. In the example above a private admin's user name is pol78 and their password is "6SiLL}DjTUmTgYA9<zDjNAM2yTFzXF>f" without "") 
 - game server's name (game_server_name - game server's sv_hostname value, it's an optional setting, you can leave it at its default value "CoDHost")
 - game server's IP address (game_server_ip_address)
@@ -99,7 +102,9 @@ b. For private TinyRcon client you need to configure the following important Cal
 - Private TinyRcon server's IP address (private_tiny_rcon_server_ip_address - it is used for communicating with private TinyRcon server)
 - Private TinyRcon server's port number (private_tiny_rcon_server_port - it is used for communicating with private TinyRcon server. Don't change it unless you need to. 
   Leave it at its default value: 27017)
-c. For TinyRcon server you need to configure the following important Call of duty 1/2/4/5 multiplayer game server and TinyRcon server application related settings:
+  
+  ---
+ c. For **TinyRcon server** you need to configure the following important Call of duty 1/2/4/5 multiplayer game server and TinyRcon server application related settings:
 - user name (username - by default it is set to "^1Admin". You can leave it at its default value or change it to your preferred user name.)
 - game server's name (game_server_name - you can leave it at its default setting ("CoDHost) or set it to Call of duty game server's title (sv_hostname))
 - game server's IP address (game_server_ip_address - Call of duty game server's correct IP address)
@@ -111,7 +116,8 @@ c. For TinyRcon server you need to configure the following important Call of dut
   Don't change it unless you need to. Leave it at its default value: 27015)
 - Private TinyRcon server's IP address (private_tiny_rcon_server_ip_address - it is used for communicating with private TinyRcon server)
 - Private TinyRcon server's port number (private_tiny_rcon_server_port - it is used for communicating with private TinyRcon server.  Don't change it unless you need to. Leave it at its default value: 27017)
-d. For private TinyRcon server you need to configure the following important Call of duty 1/2/4/5 multiplayer game server and private TinyRcon server application related settings:
+---
+d. For **private TinyRcon server** you need to configure the following important Call of duty 1/2/4/5 multiplayer game server and private TinyRcon server application related settings:
 - user name (username - by default it is set to "^1Admin". You can leave it at its default value or change it to your preferred user name.)
 - game server's name (game_server_name - you can leave it at its default setting ("CoDHost) or set it to Call of duty game server's title (sv_hostname))
 - game server's IP address (game_server_server_ip_address - Call of duty game server's correct IP address)
@@ -153,5 +159,9 @@ The !mute pid and !unmute pid commands at the moment only work on Call of duty 2
 Private TinyRcon server which can be used as a regular TinyRcon client for managing game servers has one additional unique feature. It can detect and automatically kick players that try to connect to the game server using VPN/proxy IP addresses. By default this feature is disabled. You can enable it by setting "*enable_automatic_vpn_proxy_ip_address_detection*" to true in private TinyRcon server's tinyrcon.json file. 
 You can also change in private TinyRcon server's tinyrcon.json file the currently registered proxycheck.io key by signing up for a free or a premium account at *https://proxycheck.io/* and changing "*proxy_check_io_user_key*" to your custom key.
 
+---
+
 ### Important notes:
-For public TinyRcon and private TinyRcon servers to be able to communicate with TinyRcon and private TinyRcon clients you need to open in your router the following 2 ports for UDP communication: 27015, 27017. 
+- Public TinyRcon and private TinyRcon servers need the following 2 ports to be opened for UDP communication (Port Forwarding, Virtual Servers settings in Advanced Setup -> NAT): 27015 (UDP), 27017 (UDP).
+
+- First extract TinyRconServer.zip and TinyRconPrivateServer.zip to a custom location on your computer or a server machine, preferrably in a folder path with no spaces in it. After that go in the config folder of both applications and configure the most important settings of both TinyRcon server and private TinyRcon server by editing their tinyrcon.json configuration files as explained above.
