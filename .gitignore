@@ -29,20 +29,18 @@
 # *.lib
 
 # Executables
-*.exe
+#*.exe
 *.out
 *.app
 
 # custom folders to ignore
 Debug
-Release
 /build
 /debug
-/release
 /.idea
 /.metals
 /.vs
-/Release
+#/Release
 /Debug
 /X64
 /.vscode
