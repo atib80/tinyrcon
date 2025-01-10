@@ -1021,8 +1021,8 @@ bool write_tiny_rcon_json_settings_to_file(
   }
   config_file << "],\n";
 
-  config_file << R"("private_tinyrcon_server_ip_address": ")" << main_app.get_tiny_rcon_server_ip_address() << "\",\n";
-  config_file << "\"private_tinyrcon_server_port\": " << main_app.get_tiny_rcon_server_port() << ",\n";
+  config_file << R"("private_tinyrcon_server_ip_address": ")" << main_app.get_private_tiny_rcon_server_ip_address() << "\",\n";
+  config_file << "\"private_tinyrcon_server_port\": " << main_app.get_private_tiny_rcon_server_port() << ",\n";
   config_file << R"("tinyrcon_ftp_server_username": ")" << main_app.get_tiny_rcon_ftp_server_username() << "\",\n";
   config_file << R"("tinyrcon_ftp_server_password": ")" << main_app.get_tiny_rcon_ftp_server_password() << "\",\n";
   config_file << R"("game_executable_paths" : {)"
@@ -1493,10 +1493,10 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
   if (json_resource.contains("private_tinyrcon_server_ip_address")) {
     data_line = json_resource["private_tinyrcon_server_ip_address"];
     strip_leading_and_trailing_quotes(data_line);
-    main_app.set_tiny_rcon_server_ip_address(std::move(data_line));
+    main_app.set_private_tiny_rcon_server_ip_address(std::move(data_line));
   } else {
     found_missing_config_setting = true;
-    main_app.set_tiny_rcon_server_ip_address("85.222.189.119");
+    main_app.set_private_tiny_rcon_server_ip_address("85.222.189.119");
   }
 
   if (json_resource.contains("private_tinyrcon_server_port")) {
@@ -10740,8 +10740,8 @@ void execute_at_exit()
   main_app.get_connection_manager_for_messages().process_and_send_message("request-logout",
     format(R"({}\{}\{}\{}\{})", me->user_name, me->ip_address, current_ts, player_name, main_app.get_game_version_number()),
     true,
-    main_app.get_tiny_rcon_server_ip_address(),
-    main_app.get_tiny_rcon_server_port(),
+    main_app.get_private_tiny_rcon_server_ip_address(),
+    main_app.get_private_tiny_rcon_server_port(),
     false);
   me->is_logged_in = false;
   me->last_logout_time_stamp = current_ts;

@@ -23,7 +23,9 @@ connection_manager_for_messages::connection_manager_for_messages() : udp_socket_
 
         udp_socket_for_messages.open(ip::udp::v4());
         udp_socket_for_messages.set_option(rcv_timeout_option{700});
-        asio::ip::udp::endpoint local_endpoint{asio::ip::address::from_string("192.168.1.15"), 27015};
+        asio::ip::udp::endpoint local_endpoint{
+            asio::ip::address::from_string(main_app.get_tiny_rcon_server_ip_address()),
+            static_cast<asio::ip::port_type>(main_app.get_tiny_rcon_server_port())};
         udp_socket_for_messages.bind(local_endpoint);
     }
     catch (std::exception &ex)

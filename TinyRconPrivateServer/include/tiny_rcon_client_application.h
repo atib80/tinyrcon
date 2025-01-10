@@ -918,16 +918,14 @@ public:
     return name_to_user.at(cleaned_name);
   }
 
-  std::shared_ptr<tiny_rcon_client_user> &get_remote_user_for_name(const std::string &name, const string &ip_address)
+  std::shared_ptr<tiny_rcon_client_user> &get_remote_user_for_name(const std::string &name, std::string ip_address = "127.0.0.1")
   {
     const string cleaned_name{ get_cleaned_user_name(name) };
-    /*player pd{};
-    convert_guid_key_to_country_name(rcon_connection_manager.get_geoip_data(), ip_address, pd);*/
 
     if (!name_to_remote_user.contains(cleaned_name)) {
       remote_users.emplace_back(std::make_shared<tiny_rcon_client_user>());
       remote_users.back()->user_name = name;
-      remote_users.back()->ip_address = ip_address;
+      remote_users.back()->ip_address = std::move(ip_address);
       name_to_remote_user.emplace(cleaned_name, remote_users.back());
     }
 

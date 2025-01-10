@@ -477,7 +477,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
       string user_command{ str_join(cbegin(user_cmd), cend(user_cmd), " ") };
       trim_in_place(user_command);
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     }
   });
 
@@ -491,14 +491,14 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
       string user_command{ str_join(cbegin(user_cmd), cend(user_cmd), " ") };
       trim_in_place(user_command);
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     }
   });
 
   main_app.add_command_handler({ "reports", "!reports" }, [](const vector<string> &user_cmd) {
     string user_command{ str_join(cbegin(user_cmd), cend(user_cmd), " ") };
     trim_in_place(user_command);
-    main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+    main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
   });
 
   main_app.add_command_handler({ "!w", "!warn" }, [](const vector<string> &user_cmd) {
@@ -511,7 +511,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
       string user_command{ str_join(cbegin(user_cmd), cend(user_cmd), " ") };
       trim_in_place(user_command);
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     }
   });
 
@@ -530,7 +530,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         if (int pid{ -1 }; is_valid_decimal_whole_number(user_cmd[1], pid) || check_ip_address_validity(user_cmd[1], guid_key)) {
           string user_command{ str_join(cbegin(user_cmd), cend(user_cmd), " ") };
           trim_in_place(user_command);
-          main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+          main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
         } else {
           const string re_msg{ format("^3Provided IP address ^1{} ^3is not a ^1valid IP address or there isn't an online player whose ^1pid number is equal to ^1{}.\n", user_cmd[1], user_cmd[1]) };
           print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
@@ -553,7 +553,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       } else {
         string user_command{ str_join(cbegin(user_cmd), cend(user_cmd), " ") };
         trim_in_place(user_command);
-        main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+        main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
       }
     }
   });
@@ -568,7 +568,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     
       string user_command{ str_join(cbegin(user_cmd), cend(user_cmd), " ") };
       trim_in_place(user_command);
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     }
   });
 
@@ -581,7 +581,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       };
       string user_command{ str_join(cbegin(user_cmd), cend(user_cmd), " ") };
       trim_in_place(user_command);
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     }
   });
 
@@ -594,7 +594,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       };
       string user_command{ str_join(cbegin(user_cmd), cend(user_cmd), " ") };
       trim_in_place(user_command);
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     }
   });
 
@@ -607,7 +607,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       };
       string user_command{ str_join(cbegin(user_cmd), cend(user_cmd), " ") };
       trim_in_place(user_command);
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     }
   });
 
@@ -623,7 +623,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
       string user_command{ str_join(cbegin(user_cmd), cend(user_cmd), " ") };
       trim_in_place(user_command);
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     }
   });
 
@@ -638,7 +638,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
       string user_command{ str_join(cbegin(user_cmd), cend(user_cmd), " ") };
       trim_in_place(user_command);
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     }
   });
 
@@ -724,7 +724,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       }
       // const string information{ format("^2Sending rcon command ^1'{}' ^2to currently viewed ^3game server.\n", rcon_command) };
       // print_colored_text(app_handles.hwnd_re_messages_data, information.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes, true, true);
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", rcon_command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", rcon_command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     } });
 
   main_app.add_command_handler({ "!stats" }, [](const vector<string> &) {
@@ -734,14 +734,14 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       std::move(ex_msg)
     };
 
-    main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!stats", true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+    main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!stats", true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
   });
 
   main_app.add_command_handler({ "!protectip" }, [](const vector<string> &user_cmd) {
     if (user_cmd.size() > 1 && !user_cmd[1].empty()) {
       string user_command{ str_join(cbegin(user_cmd), cend(user_cmd), " ") };
       trim_in_place(user_command);
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     }
   });
 
@@ -754,7 +754,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       };
       string user_command{ str_join(cbegin(user_cmd), cend(user_cmd), " ") };
       trim_in_place(user_command);
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     }
   });
 
@@ -767,7 +767,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       };
       string user_command{ str_join(cbegin(user_cmd), cend(user_cmd), " ") };
       trim_in_place(user_command);
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     }
   });
 
@@ -780,7 +780,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       };
       string user_command{ str_join(cbegin(user_cmd), cend(user_cmd), " ") };
       trim_in_place(user_command);
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     }
   });
 
@@ -793,7 +793,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       };
       string user_command{ str_join(cbegin(user_cmd), cend(user_cmd), " ") };
       trim_in_place(user_command);
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     }
   });
 
@@ -806,7 +806,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       };
       string user_command{ str_join(cbegin(user_cmd), cend(user_cmd), " ") };
       trim_in_place(user_command);
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     }
   });
 
@@ -819,7 +819,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       };
       string user_command{ str_join(cbegin(user_cmd), cend(user_cmd), " ") };
       trim_in_place(user_command);
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     }
   });
 
@@ -832,7 +832,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       };
       string user_command{ str_join(cbegin(user_cmd), cend(user_cmd), " ") };
       trim_in_place(user_command);
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     }
   });
 
@@ -846,16 +846,16 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       };
       string user_command{ str_join(cbegin(user_cmd), cend(user_cmd), " ") };
       trim_in_place(user_command);
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     }
   });
 
   main_app.add_command_handler({ "!egb" }, [](const vector<string> &) {
-    main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!egb", true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+    main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!egb", true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
   });
 
   main_app.add_command_handler({ "!dgb" }, [](const vector<string> &) {
-    main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!dgb", true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+    main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!dgb", true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
   });
 
   main_app.add_command_handler({ "!bancity" }, [](const vector<string> &user_cmd) {
@@ -867,7 +867,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       };
       string user_command{ str_join(cbegin(user_cmd), cend(user_cmd), " ") };
       trim_in_place(user_command);
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     }
   });
   main_app.add_command_handler({ "!unbancity" }, [](const vector<string> &user_cmd) {
@@ -879,16 +879,16 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       };
       string user_command{ str_join(cbegin(user_cmd), cend(user_cmd), " ") };
       trim_in_place(user_command);
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     }
   });
 
   main_app.add_command_handler({ "!ecb" }, [](const vector<string> &) {
-    main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!ecb", true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+    main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!ecb", true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
   });
 
   main_app.add_command_handler({ "!dcb" }, [](const vector<string> &) {
-    main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!dcb", true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+    main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!dcb", true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
   });
 
   main_app.add_command_handler({ "!bancountry" }, [](const vector<string> &user_cmd) {
@@ -900,7 +900,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       };
       string user_command{ str_join(cbegin(user_cmd), cend(user_cmd), " ") };
       trim_in_place(user_command);
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     }
   });
 
@@ -913,7 +913,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       };
       string user_command{ str_join(cbegin(user_cmd), cend(user_cmd), " ") };
       trim_in_place(user_command);
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     }
   });
 
@@ -987,7 +987,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       number_of_entries_to_display.store(25);
     }
     const string user_command_to_send{ format("!muted {}", number_of_entries_to_display.load()) };
-    main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command_to_send, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+    main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command_to_send, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
   });
 
   main_app.add_command_handler({ "tempbans", "!tempbans" }, [](const vector<string> &user_cmd) {
@@ -998,7 +998,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       number_of_entries_to_display.store(25);
     }
     const string user_command_to_send{ format("!tempbans {}", number_of_entries_to_display.load()) };
-    main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command_to_send, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+    main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command_to_send, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
   });
 
   main_app.add_command_handler({ "bans", "!bans" }, [](const vector<string> &user_cmd) {
@@ -1009,7 +1009,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       number_of_entries_to_display.store(25);
     }
     const string user_command_to_send{ format("!bans {}", number_of_entries_to_display.load()) };
-    main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command_to_send, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+    main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command_to_send, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
   });
 
   main_app.add_command_handler({ "ranges", "!ranges" }, [](const vector<string> &user_cmd) {
@@ -1020,7 +1020,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       number_of_entries_to_display.store(25);
     }
     const string user_command_to_send{ format("!ranges {}", number_of_entries_to_display.load()) };
-    main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command_to_send, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+    main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command_to_send, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
   });
 
   main_app.add_command_handler({ "names", "!names" }, [](const vector<string> &user_cmd) {
@@ -1031,35 +1031,35 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       number_of_entries_to_display.store(25);
     }
     const string user_command_to_send{ format("!names {}", number_of_entries_to_display.load()) };
-    main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command_to_send, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+    main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command_to_send, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
   });
 
   main_app.add_command_handler({ "admins", "!admins" }, [](const vector<string> &) {
-    main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!admins", true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+    main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!admins", true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
   });
 
 
   main_app.add_command_handler({ "!bannedcities" }, [](const vector<string> &) {
-    main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!bannedcities", true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+    main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!bannedcities", true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
   });
 
   main_app.add_command_handler({ "!bannedcountries" }, [](const vector<string> &) {
-    main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!bannedcountries", true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+    main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!bannedcountries", true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
   });
 
   main_app.add_command_handler({ "!banned" }, [](const vector<string> &user_cmd) {
     if (user_cmd.size() == 2) {
       if (user_cmd[1] == "cities") {
-        main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!bannedcities", true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+        main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!bannedcities", true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
       } else if (user_cmd[1] == "countries") {
-        main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!bannedcountries", true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+        main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!bannedcountries", true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
       }
     }
   });
 
   main_app.add_command_handler({ "!s" }, [](const vector<string> &user_cmd) {
     if (user_cmd.size() >= 2 && !user_cmd[1].empty()) {
-      main_app.get_connection_manager_for_messages().process_and_send_message("request-topplayers", format("!s\\{}", user_cmd[1]), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("request-topplayers", format("!s\\{}", user_cmd[1]), true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     }
   });
 
@@ -1071,7 +1071,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       return 50;
     }();
 
-    main_app.get_connection_manager_for_messages().process_and_send_message("request-topplayers", format("!tp\\{}", number_of_top_players_to_display), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+    main_app.get_connection_manager_for_messages().process_and_send_message("request-topplayers", format("!tp\\{}", number_of_top_players_to_display), true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
   });
 
   main_app.add_command_handler({ "tpy", "!tpy" }, [](const vector<string> &user_cmd) {
@@ -1082,7 +1082,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       return 50;
     }();
 
-    main_app.get_connection_manager_for_messages().process_and_send_message("request-topplayers", format("!tpy\\{}", number_of_top_players_to_display), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+    main_app.get_connection_manager_for_messages().process_and_send_message("request-topplayers", format("!tpy\\{}", number_of_top_players_to_display), true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
   });
 
   main_app.add_command_handler({ "tpm", "!tpm" }, [](const vector<string> &user_cmd) {
@@ -1093,7 +1093,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       return 50;
     }();
 
-    main_app.get_connection_manager_for_messages().process_and_send_message("request-topplayers", format("!tpm\\{}", number_of_top_players_to_display), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+    main_app.get_connection_manager_for_messages().process_and_send_message("request-topplayers", format("!tpm\\{}", number_of_top_players_to_display), true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
   });
 
   main_app.add_command_handler({ "tpd", "!tpd" }, [](const vector<string> &user_cmd) {
@@ -1104,7 +1104,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       return 50;
     }();
 
-    main_app.get_connection_manager_for_messages().process_and_send_message("request-topplayers", format("!tpd\\{}", number_of_top_players_to_display), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+    main_app.get_connection_manager_for_messages().process_and_send_message("request-topplayers", format("!tpd\\{}", number_of_top_players_to_display), true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
   });
 
   main_app.add_command_handler({ "!ub", "!unban" }, [](const vector<string> &user_cmd) {
@@ -1115,7 +1115,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         std::move(ex_msg)
       };
       const string user_command{ str_join(cbegin(user_cmd), cend(user_cmd), " ") };
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     }
   });
 
@@ -1127,7 +1127,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         std::move(ex_msg)
       };
       const string user_command{ str_join(cbegin(user_cmd), cend(user_cmd), " ") };
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     }
   });
 
@@ -1156,7 +1156,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       const string map_name{ stl::helper::trim(user_cmd[1]) };
       const string game_type{ user_cmd.size() >= 3 ? stl::helper::trim(user_cmd[2]) : "ctf" };
       const string user_command{ str_join(cbegin(user_cmd), cend(user_cmd), " ") };
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", user_command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     }
   });
 
@@ -1177,7 +1177,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       if (!command.empty() && '!' == command[0])
         command.erase(0, 1);
       string reply;
-      main_app.get_connection_manager_for_messages().process_and_send_message("rcon-command", command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("rcon-command", command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     }
   });
 
@@ -1192,7 +1192,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       }
 
       string reply;
-      main_app.get_connection_manager_for_messages().process_and_send_message("rcon-command", command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("rcon-command", command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     }
   });
 
@@ -1204,7 +1204,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         std::move(ex_msg)
       };
       const string rcon_command{ str_join(cbegin(rcon_cmd), cend(rcon_cmd), " ") };
-      main_app.get_connection_manager_for_messages().process_and_send_message("rcon-command", rcon_command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("rcon-command", rcon_command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     }
   });
 
@@ -1217,7 +1217,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       };
 
       const string rcon_command{ str_join(cbegin(rcon_cmd), cend(rcon_cmd), " ") };
-      main_app.get_connection_manager_for_messages().process_and_send_message("rcon-command", rcon_command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("rcon-command", rcon_command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     }
   });
 
@@ -1229,14 +1229,14 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         std::move(ex_msg)
       };
       const string rcon_command{ str_join(cbegin(rcon_cmd), cend(rcon_cmd), " ") };
-      main_app.get_connection_manager_for_messages().process_and_send_message("rcon-command", rcon_command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("rcon-command", rcon_command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     }
   });
 
   main_app.add_command_handler({ "kick", "onlykick", "tempbanuser", "banuser" }, [](const vector<string> &rcon_cmd) {
     if (rcon_cmd.size() > 1 && !rcon_cmd[1].empty()) {
       const string rcon_command{ str_join(cbegin(rcon_cmd), cend(rcon_cmd), " ") };
-      main_app.get_connection_manager_for_messages().process_and_send_message("rcon-command", rcon_command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("rcon-command", rcon_command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     }
   });
 
@@ -1245,7 +1245,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     const string re_msg{ "^5Sending rcon command '"s + command + "' to the server.\n"s };
     print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
     string reply;
-    main_app.get_connection_manager_for_messages().process_and_send_message("rcon-command", command, true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+    main_app.get_connection_manager_for_messages().process_and_send_message("rcon-command", command, true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
   });
 
   main_app.add_message_handler("request-login", [](const string &, const time_t, const string &, bool) {
@@ -1453,7 +1453,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         me->country_code = pd.country_code;
       }
       me->is_logged_in = true;
-      main_app.get_connection_manager_for_messages().process_and_send_message("rcon-heartbeat", format("{}\\{}\\{}", main_app.get_username(), get_current_time_stamp(), me->ip_address), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("rcon-heartbeat", format("{}\\{}\\{}", main_app.get_username(), get_current_time_stamp(), me->ip_address), true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     }
   });
 
@@ -1515,9 +1515,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
       me->is_admin = true;
 
-      main_app.get_connection_manager_for_messages().process_and_send_message("rcon-heartbeat", format("{}\\{}\\{}", main_app.get_username(), get_current_time_stamp(), me->ip_address), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("rcon-heartbeat", format("{}\\{}\\{}", main_app.get_username(), get_current_time_stamp(), me->ip_address), true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
       this_thread::sleep_for(20ms);
-      main_app.get_connection_manager_for_messages().process_and_send_message("rcon-command", "rcon status", true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("rcon-command", "rcon status", true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
       load_current_map_image(main_app.get_current_game_server().get_current_map());
 
       string game_version_number{ "1.0" };
@@ -1568,9 +1568,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
             const auto time_elapsed_in_sec{ current_ts - main_app.get_connection_manager_for_messages().get_last_rcon_status_received() };
             if (game_server_index < main_app.get_rcon_game_servers_count() && time_elapsed_in_sec >= 10) {
               game_server &gs = game_servers[game_server_index];
-              main_app.get_connection_manager_for_messages().process_and_send_message("rcon-heartbeat", format("{}\\{}\\{}", main_app.get_username(), current_ts, me->ip_address), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+              main_app.get_connection_manager_for_messages().process_and_send_message("rcon-heartbeat", format("{}\\{}\\{}", main_app.get_username(), current_ts, me->ip_address), true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
               this_thread::sleep_for(20ms);
-              main_app.get_connection_manager_for_messages().process_and_send_message("rcon-command", "rcon status", true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+              main_app.get_connection_manager_for_messages().process_and_send_message("rcon-command", "rcon status", true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
               this_thread::sleep_for(20ms);
               main_app.get_connection_manager().send_and_receive_non_rcon_data("getstatus", rcon_reply, gs.get_server_ip_address().c_str(), gs.get_server_port(), gs, true, true);
             } else if (game_server_index >= main_app.get_rcon_game_servers_count() && game_server_index < main_app.get_game_servers_count()) {
@@ -1597,8 +1597,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
   std::thread remote_messaging_thread{
     [&]() {
-      const auto &tiny_rcon_server_ip = main_app.get_tiny_rcon_server_ip_address();
-      const auto tiny_rcon_server_port = static_cast<uint_least16_t>(main_app.get_tiny_rcon_server_port());
+      const auto &tiny_rcon_server_ip = main_app.get_private_tiny_rcon_server_ip_address();
+      const auto tiny_rcon_server_port = static_cast<uint_least16_t>(main_app.get_private_tiny_rcon_server_port());
 
       while (true) {
 
@@ -2149,7 +2149,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     ++counter;
 
     if (counter % 5 == 0) {
-      main_app.get_connection_manager_for_messages().process_and_send_message("rcon-heartbeat", format("{}\\{}\\{}", main_app.get_username(), get_current_time_stamp(), me->ip_address), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("rcon-heartbeat", format("{}\\{}\\{}", main_app.get_username(), get_current_time_stamp(), me->ip_address), true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
     }
 
     if (counter % 30 == 0) {
@@ -2518,7 +2518,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         stl::helper::to_upper_case_in_place(current_game_type);
         (void)snprintf(message_buffer, std::size(message_buffer), "^2Do you want to restart ^1(!rc map_restart) ^2current map ^3%s ^2in ^1%s ^2game type?\n", current_full_map_name.c_str(), current_game_type.c_str());
         if (show_user_confirmation_dialog(message_buffer, "Confirm your action")) {
-          main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!rc map_restart", true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+          main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!rc map_restart", true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
         }
       }
     } break;
@@ -2535,7 +2535,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         stl::helper::to_upper_case_in_place(current_game_type);
         (void)snprintf(message_buffer, std::size(message_buffer), "^2Do you want to restart ^1(!rc fast_restart) ^2current match ^3%s ^2in ^1%s ^2game type?\n", current_full_map_name.c_str(), current_game_type.c_str());
         if (show_user_confirmation_dialog(message_buffer, "Confirm your action")) {
-          main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!rc fast_restart", true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+          main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!rc fast_restart", true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
         }
       }
     } break;
@@ -2930,54 +2930,54 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     } break;
 
     case ID_VIEWMUTEDPLAYERS:
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!muted 25", true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!muted 25", true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
       break;
 
     case ID_VIEWREPORTEDPLAYERS:
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!reports 25", true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!reports 25", true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
       break;
 
 
     case ID_VIEWTEMPBANSBUTTON:
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!tempbans 25", true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!tempbans 25", true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
       break;
 
     case ID_VIEWIPBANSBUTTON:
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!bans 25", true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!bans 25", true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
       break;
 
     case ID_VIEWIPRANGEBANSBUTTON:
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!ranges 25", true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!ranges 25", true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
       break;
 
     case ID_VIEWBANNEDPLAYERNAMES:
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!names 25", true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!names 25", true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
       break;
 
     case ID_VIEWBANNEDCITIES:
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!bannedcities", true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!bannedcities", true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
       break;
 
     case ID_VIEWBANNEDCOUNTRIES:
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!bannedcountries", true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!bannedcountries", true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
       break;
 
     case ID_VIEWADMINSDATA: {
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!admins", true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!admins", true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
       display_online_admins_information();
     } break;
 
     case ID_VIEWPROTECTEDIPADDRESSES:
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!protectedipaddresses", true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!protectedipaddresses", true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
       break;
     case ID_VIEWPROTECTEDIPADDRESSRANGES:
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!protectedipaddressranges", true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!protectedipaddressranges", true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
       break;
     case ID_VIEWPROTECTEDCITIES:
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!protectedcities", true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!protectedcities", true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
       break;
     case ID_VIEWPROTECTEDCOUNTRIES:
-      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!protectedcountries", true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+      main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!protectedcountries", true, main_app.get_private_tiny_rcon_server_ip_address(), main_app.get_private_tiny_rcon_server_port(), false);
       break;
 
     case ID_SORT_PLAYERS_DATA_BY_PID:

@@ -229,7 +229,6 @@ class tiny_rcon_client_application
 
   auto_update_manager au;
   bitmap_image_handler bih;
-  asio::ip::tcp::iostream client_stream{ asio::ip::tcp::endpoint{ asio::ip::address::from_string("192.168.1.15"), 27017 } };
 
   connection_manager rcon_connection_manager;
   connection_manager_for_messages cm_for_messages;
@@ -488,10 +487,10 @@ public:
     return bih;
   }
 
-  inline asio::ip::tcp::iostream &get_client_stream() noexcept
+  /*inline asio::ip::tcp::iostream &get_client_stream() noexcept
   {
     return client_stream;
-  }
+  }*/
 
   inline size_t get_spec_time_delay() const noexcept
   {

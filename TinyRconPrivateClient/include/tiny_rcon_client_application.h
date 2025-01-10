@@ -230,7 +230,7 @@ class tiny_rcon_client_application
 
   auto_update_manager au;
   bitmap_image_handler bih;
-  asio::ip::tcp::iostream client_stream{ asio::ip::tcp::endpoint{ asio::ip::address::from_string("192.168.1.15"), 27017 } };
+  // asio::ip::tcp::iostream client_stream{ asio::ip::tcp::endpoint{ asio::ip::address::from_string(get_tiny_rcon_server_ip_address()), get_tiny_rcon_server_port() } };
 
   connection_manager rcon_connection_manager;
   connection_manager_for_messages cm_for_messages;
@@ -489,10 +489,10 @@ public:
     return bih;
   }
 
-  inline asio::ip::tcp::iostream &get_client_stream() noexcept
-  {
-    return client_stream;
-  }
+  //inline asio::ip::tcp::iostream &get_client_stream() noexcept
+  //{
+  //  return client_stream;
+  //}
 
   inline size_t get_game_servers_count() const noexcept
   {
@@ -1103,17 +1103,17 @@ public:
     tiny_rcon_ftp_server_password = std::move(new_tiny_rcon_ftp_server_password);
   }
 
-  const std::string &get_tiny_rcon_server_ip_address() const noexcept
+  const std::string &get_private_tiny_rcon_server_ip_address() const noexcept
   {
     return private_tiny_rcon_server_ip_address;
   }
 
-  void set_tiny_rcon_server_ip_address(string new_tiny_rcon_server_ip_address) noexcept
+  void set_private_tiny_rcon_server_ip_address(string new_tiny_rcon_server_ip_address) noexcept
   {
     private_tiny_rcon_server_ip_address = std::move(new_tiny_rcon_server_ip_address);
   }
 
-  uint_least16_t get_tiny_rcon_server_port() const noexcept
+  uint_least16_t get_private_tiny_rcon_server_port() const noexcept
   {
     return private_tiny_rcon_server_port;
   }

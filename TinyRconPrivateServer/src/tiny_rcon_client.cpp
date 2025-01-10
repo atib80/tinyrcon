@@ -3302,7 +3302,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       remove_disallowed_characters_in_string(send_to);
       if (is_private_admin(send_to)) {
         const string private_message{ format("{}\\{}\\{}", main_app.get_username(), send_to, stl::helper::str_join(cbegin(rcon_cmd) + 2, cend(rcon_cmd), " ")) };
-        main_app.get_connection_manager_for_remote_messages().process_and_send_message("remote-private-message", private_message, true, main_app.get_remote_user_for_name(send_to, "127.0.0.1"));
+        main_app.get_connection_manager_for_remote_messages().process_and_send_message("remote-private-message", private_message, true, main_app.get_remote_user_for_name(send_to));
       }
     }
   });
