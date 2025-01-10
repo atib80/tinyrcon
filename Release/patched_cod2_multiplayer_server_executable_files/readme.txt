@@ -1,5 +1,5 @@
 For TinyRcon's !mute and !unmute (Mute player, Unmute player buttons and context menu commands) admin-level commands 
-to work correctly you need to use the patched Call of duty 2 multiplayer game server files, 
+to work correctly you need to use one of my patched main Call of duty 2 multiplayer game server files (CoD2MP_s.exe), 
 in particular you need to use the appropriate version of CoD2MP_s_patched.exe from one of the v1.x folders
 for hosting your Call of duty 2 multiplayer v1.x game server.
 
