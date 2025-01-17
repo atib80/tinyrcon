@@ -1,5 +1,5 @@
 # cmake_minimum_required(VERSION 3.22)
-project(TinyRcon)
+project(TinyRconClient)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED 20)
@@ -48,8 +48,8 @@ src/stats.cpp
 src/tiny_rcon_client.cpp
 src/tiny_rcon_utility_functions.cpp)
 
-add_executable(TinyRcon ${src_files})
+add_executable(TinyRconClient ${src_files})
 
-target_include_directories(TinyRcon PUBLIC include deps/asio-1.26.0/include deps/bit7z/include)
-target_link_directories(TinyRcon PUBLIC deps/bit7z/lib)
-target_link_libraries(TinyRconPrivateClient PUBLIC kernel32 shell32 advapi32 user32 gdi32 comctl32 uxtheme urlmon version wininet ws2_32 bit7z.lib)
+target_include_directories(TinyRconClient PUBLIC include deps/asio-1.26.0/include deps/bit7z/include)
+target_link_directories(TinyRconClient PUBLIC deps/bit7z/lib)
+target_link_libraries(TinyRconClient PUBLIC kernel32 shell32 advapi32 user32 gdi32 comctl32 uxtheme urlmon version wininet ws2_32 bit7z.lib)

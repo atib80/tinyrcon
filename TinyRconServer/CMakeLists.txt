@@ -40,7 +40,6 @@ set(BOOST_ENABLE_CMAKE ON)
 set(src_files 
 src/connection_manager.cpp
 src/connection_manager_for_messages.cpp
-src/md5.cpp
 src/simple_grid.cpp
 src/stats.cpp
 src/tiny_rcon_server.cpp
