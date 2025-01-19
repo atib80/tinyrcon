@@ -702,6 +702,7 @@ public:
     return admin_messages;
   }
 
+
   inline const std::string &get_program_title() const noexcept
   {
     return program_title;
@@ -1021,6 +1022,14 @@ public:
     protected_ip_address_ranges_file_path.assign(format("{}{}", current_working_directory, protected_ip_address_ranges_file_path));
     protected_cities_file_path.assign(format("{}{}", current_working_directory, protected_cities_file_path));
     protected_countries_file_path.assign(format("{}{}", current_working_directory, protected_countries_file_path));*/
+  }
+
+  
+  const char *get_exe_file_path() const
+  {
+    static char exe_file_path[MAX_PATH]{};
+    GetModuleFileNameA(nullptr, exe_file_path, MAX_PATH);
+    return exe_file_path;
   }
 
   const char *get_tinyrcon_config_file_path() const noexcept

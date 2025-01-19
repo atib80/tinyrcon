@@ -1,27 +1,30 @@
 #pragma once
 #define WIN32_MEAN_AND_LEAN
 // clang-format off
-#include <Windows.h>
-#include <utility>
-#include <wininet.h>
+// #include <Windows.h>
+// #include <wininet.h>
 // clang-format on
+
+using BOOL = int;
+using HINTERNET = void*;
+extern "C" __declspec(dllimport) BOOL __stdcall InternetCloseHandle(HINTERNET hInternet);
 
 class internet_handle
 {
-    HINTERNET handle;
+    HINTERNET handle{};
 
   public:
-    internet_handle() noexcept : handle{}
+    internet_handle() = default;    
+    
+    explicit internet_handle(HINTERNET &&new_handle) noexcept : handle{new_handle}
     {
-    }
-    explicit internet_handle(HINTERNET &&new_handle) noexcept : handle{std::move(new_handle)}
-    {
+        new_handle = NULL;
     }
     internet_handle(const internet_handle &) = delete;
     internet_handle &operator=(const internet_handle &) = delete;
     internet_handle(internet_handle &&rhs) noexcept
     {
-        handle = std::move(rhs.handle);
+        handle = rhs.handle;
         rhs.handle = nullptr;
     }
 
@@ -29,20 +32,17 @@ class internet_handle
     {
         if (nullptr != handle)
         {
-            InternetCloseHandle(handle);
+            close();
         }
-        handle = std::move(rhs.handle);
+        handle = rhs.handle;
         rhs.handle = nullptr;
+
         return *this;
     }
 
     ~internet_handle() noexcept
     {
-        if (nullptr != handle)
-        {
-            InternetCloseHandle(handle);
-            handle = nullptr;
-        }
+        close();
     }
 
     constexpr explicit operator bool() const noexcept
@@ -54,12 +54,12 @@ class internet_handle
     {
         return handle;
     }
-
-    void set(HINTERNET &&new_handle) noexcept
+ 
+    void set(HINTERNET &&new_handle) noexcept 
     {
-        if (handle != nullptr)
-            InternetCloseHandle(handle);
-        handle = std::move(new_handle);
+        close();
+        handle = new_handle;
+        new_handle = nullptr;
     }
 
   private:

@@ -365,9 +365,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   find_call_of_duty_4_installation_path(false);
   find_call_of_duty_5_installation_path(false);
 
-  char exe_file_path[MAX_PATH]{};
-  GetModuleFileNameA(nullptr, exe_file_path, MAX_PATH);
-
   rcon_status_grid_column_header_titles[0] = main_app.get_header_player_pid_color() + "Pid"s;
   rcon_status_grid_column_header_titles[1] = main_app.get_header_player_score_color() + "Score"s;
   rcon_status_grid_column_header_titles[2] = main_app.get_header_player_ping_color() + "Ping"s;
@@ -5658,7 +5655,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
       version_data dest_version{};
       unsigned long version_number{};
-      main_app.get_auto_update_manager().get_file_version(exe_file_path, dest_version, version_number);
+      main_app.get_auto_update_manager().get_file_version(main_app.get_exe_file_path(), dest_version, version_number);
       const string version_information{ format("^2Current version of ^5Tiny^6Rcon ^2is ^5{}.{}.{}.{}\n", dest_version.major, dest_version.minor, dest_version.revision, dest_version.sub_revision) };
       print_colored_text(app_handles.hwnd_re_messages_data, version_information.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
       main_app.get_connection_manager_for_messages().process_and_send_message("tinyrcon-info", format("{}\\{}\\{}", main_app.get_username(), main_app.get_user_ip_address(), version_information), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);

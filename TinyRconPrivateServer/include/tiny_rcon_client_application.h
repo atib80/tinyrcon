@@ -1189,6 +1189,13 @@ public:
     protected_countries_file_path.assign(format("{}{}", current_working_directory, protected_countries_file_path));
   }
 
+  const char *get_exe_file_path() const
+  {
+    static char exe_file_path[MAX_PATH]{};
+    GetModuleFileNameA(nullptr, exe_file_path, MAX_PATH);
+    return exe_file_path;
+  }
+
   const char *get_tinyrcon_config_file_path() const
   {
     return tinyrcon_config_file_path.c_str();

@@ -6907,11 +6907,11 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
         ShowWindow(app_handles.hwnd_main_window, SW_MAXIMIZE);
         UpdateWindow(app_handles.hwnd_main_window);
 
-        char exe_file_path[MAX_PATH]{};
-        GetModuleFileName(nullptr, exe_file_path, MAX_PATH);
-
         version_data source_version{};
         unsigned long source_version_number{};
+
+        const char *exe_file_path{main_app.get_exe_file_path()};
+
         main_app.get_auto_update_manager().get_file_version(exe_file_path, source_version, source_version_number);
         const string version_information{format("^2Current version of ^5Tiny^6Rcon ^2is ^5{}.{}.{}.{}\n",
                                                 source_version.major, source_version.minor, source_version.revision,

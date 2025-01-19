@@ -937,6 +937,13 @@ class tiny_rcon_client_application : public disabled_copy_operations, public dis
         return muted_players_file_path.c_str();
     }
 
+    const char *get_exe_file_path() const
+    {
+        static char exe_file_path[MAX_PATH]{};
+        GetModuleFileNameA(nullptr, exe_file_path, MAX_PATH);
+        return exe_file_path;    
+    }
+
     std::unordered_map<int, std::pair<std::string, bool>> &get_pid_to_ip_address() noexcept
     {
         return pid_to_ip_address;

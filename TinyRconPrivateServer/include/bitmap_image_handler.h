@@ -18,8 +18,6 @@ class bitmap_image_handler : public disabled_copy_operations
 
 public:
   bitmap_image_handler() = default;
-  // DISABLE_COPY_SEMANTICS(bitmap_image_handler);
-  // DISABLE_MOVE_SEMANTICS(bitmap_image_handler);
 
   ~bitmap_image_handler()
   {
@@ -31,7 +29,7 @@ public:
     }
   }
 
-  [[maybe_unused]] bool set_bitmap_images_folder_path(std::string bitmap_images_folder_path)
+  bool set_bitmap_images_folder_path(std::string bitmap_images_folder_path)
   {
     if (!check_if_file_path_exists(bitmap_images_folder_path.c_str()))
       return false;
@@ -51,14 +49,13 @@ public:
     return bitmap_images_.contains(bitmap_image_name) ? bitmap_images_.at(bitmap_image_name) : (bitmap_images_.contains("nomap") ? bitmap_images_.at("nomap") : NULL);
   }
 
-  const std::unordered_map<std::string, HBITMAP> get_bitmap_images() const noexcept
+  const std::unordered_map<std::string, HBITMAP> &get_bitmap_images() const noexcept
   {
     return bitmap_images_;
   }
 
   bool load_bitmap_images()
   {
-    // const string bitmap_images_folder_path{ format("{}data\\images\\maps", main_app_->get_current_working_directory()) };
     if (!check_if_file_path_exists(bitmap_images_folder_path_.c_str())) {
       create_necessary_folders_and_files({ bitmap_images_folder_path_ });
       return false;
@@ -95,14 +92,13 @@ public:
 
   bool load_bitmap_image(const std::string &image_name)
   {
-    // const string bitmap_images_folder_path{ format("{}data\\images\\maps", main_app_->get_current_working_directory()) };
     if (!check_if_file_path_exists(bitmap_images_folder_path_.c_str())) {
       create_necessary_folders_and_files({ bitmap_images_folder_path_ });
     }
 
     const std::string bitmap_file_path{ format("{}\\{}.bmp", bitmap_images_folder_path_, image_name) };
-    if (!check_if_file_path_exists(bitmap_file_path.c_str())) {      
-      if (!download_bitmap_image_file(image_name.c_str(), bitmap_file_path.c_str()) || !check_if_file_path_exists(bitmap_file_path.c_str())) 
+    if (!check_if_file_path_exists(bitmap_file_path.c_str())) {
+      if (!download_bitmap_image_file(image_name.c_str(), bitmap_file_path.c_str()) || !check_if_file_path_exists(bitmap_file_path.c_str()))
         return false;
     }
 

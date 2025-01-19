@@ -1398,9 +1398,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       ShowWindow(app_handles.hwnd_main_window, SW_MAXIMIZE);
       UpdateWindow(app_handles.hwnd_main_window);
 
-      char exe_file_path[MAX_PATH]{};
-      GetModuleFileNameA(nullptr, exe_file_path, MAX_PATH);
-      main_app.get_auto_update_manager().check_for_updates(exe_file_path);
+      main_app.get_auto_update_manager().check_for_updates(main_app.get_exe_file_path());
 
       print_colored_text(app_handles.hwnd_re_messages_data, "^3Started importing geological data from ^1'geo.dat' ^3file.\n", is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
       // const string geo_dat_file_path{ main_app.get_current_working_directory() + "plugins\\geoIP\\IP2LOCATION-LITE-DB3.CSV" };
