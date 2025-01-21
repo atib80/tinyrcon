@@ -96,12 +96,20 @@ bool remove_permanently_banned_city(const std::string &city, std::set<std::strin
 bool remove_permanently_banned_country(const std::string &country, std::set<std::string> &banned_countries);
 std::pair<bool, std::string> remove_temp_banned_ip_address(const std::string &ip_address);
 std::pair<bool, std::string> remove_permanently_banned_ip_address(std::string &ip_address);
-
 size_t print_colored_text(HWND re_control, const char *text,
                           const is_append_message_to_richedit_control = is_append_message_to_richedit_control::yes,
-                          const is_log_message = is_log_message::yes, const is_log_datetime = is_log_datetime::yes,
+                          const is_log_message = is_log_message::yes, is_log_datetime = is_log_datetime::yes,
                           const bool is_prevent_auto_vertical_scrolling = false,
                           const bool is_remove_color_codes_for_log_message = true);
+size_t print_message(HWND re_control, const std::string &text, const is_log_message log_to_file = is_log_message::yes,
+                     is_log_datetime is_log_current_date_time = is_log_datetime::yes,
+                     const bool is_remove_color_codes_for_log_message = true);
+
+//size_t print_colored_text(HWND re_control, const char *text,
+//                          const is_append_message_to_richedit_control = is_append_message_to_richedit_control::yes,
+//                          const is_log_message = is_log_message::yes, const is_log_datetime = is_log_datetime::yes,
+//                          const bool is_prevent_auto_vertical_scrolling = false,
+//                          const bool is_remove_color_codes_for_log_message = true);
 
 size_t print_colored_text_to_grid_cell(HDC hdc, RECT &rect, const char *text, DWORD formatting_style);
 

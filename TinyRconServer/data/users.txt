@@ -1,0 +1,7 @@
+^5Marcus\true\false\false\85.222.189.119\Serbia, Subotica\1736949841\1736949850\293\0\33\0\0\0\0\0\0\0
+^3CPT FURY\true\false\false\101.53.228.37\Pakistan, Karachi\1732553863\1732558262\74\0\6\0\0\0\0\0\0\0
+^5Hauptmann^6B\true\false\false\217.235.16.100\Germany, Uenglingen\1731346488\1731346491\105\4\6\0\0\8\0\0\0\0
+NerdyNawaf\true\false\false\103.113.103.120\Pakistan, Rawalpindi\1732468698\1732472499\85\4\3\0\0\2\0\0\0\0
+pol78\true\false\false\79.166.36.79\Greece, Athens\1728158614\1728158870\5\0\0\0\0\0\0\0\0\0
+^2Yakub_^4CZE\true\false\false\85.193.34.9\Czechia, Brno\1729356273\1729361991\36\0\0\0\0\0\0\0\0\0
+^1Admin\true\false\false\79.167.191.30\Greece, Athens\1724871884\1724871891\2\0\0\0\0\0\0\0\0\0

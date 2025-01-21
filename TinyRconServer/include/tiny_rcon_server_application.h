@@ -255,6 +255,7 @@ class tiny_rcon_server_application
 
     std::queue<command_t> command_queue{};
     std::queue<message_t> message_queue{};
+    std::queue<print_message_t> tinyrcon_messages_to_print;
     std::vector<geoip_data> geoip_db;
 
     std::vector<std::shared_ptr<tiny_rcon_client_user>> users;
@@ -295,13 +296,15 @@ class tiny_rcon_server_application
     std::string ftp_bans_folder_path{"C:\\tinyrcon\\bans"};
     std::string ftp_download_file_pattern{R"(^_U_TinyRcon[\._-]?v?(\d{1,2}\.\d{1,2}\.\d{1,2}\.\d{1,2})\.exe$)"};
     std::string plugins_geoIP_geo_dat_md5;
+    std::string last_date_and_time_information;    
     std::ofstream log_file;
     std::mutex user_data_mutex{};
     std::recursive_mutex command_queue_mutex{};
+    std::recursive_mutex tinyrcon_messages_queue_mutex{};
     std::mutex message_queue_mutex{};
     std::string tiny_rcon_ftp_server_username;
     std::string tiny_rcon_ftp_server_password;
-    std::string tiny_rcon_server_ip_address;
+    std::string tiny_rcon_server_ip_address{"127.0.0.1"};
     int tiny_rcon_server_port{27015};
     tinyrcon_activities_stats tinyrcon_stats_data;
 
@@ -358,6 +361,16 @@ class tiny_rcon_server_application
     inline std::vector<geoip_data> &get_geoip_data() noexcept
     {
         return geoip_db;
+    }
+
+    inline const std::string &get_last_date_and_time_information() const noexcept
+    {
+        return last_date_and_time_information;
+    }
+
+    inline void set_last_date_and_time_information(std::string new_value) noexcept
+    {
+        last_date_and_time_information = std::move(new_value);
     }
 
     inline connection_manager &get_connection_manager() noexcept
@@ -841,6 +854,26 @@ class tiny_rcon_server_application
         std::lock_guard lg{message_queue_mutex};
         auto next_message = std::move(message_queue.front());
         message_queue.pop();
+        return next_message;
+    }
+
+    bool is_tinyrcon_message_queue_empty() noexcept
+    {
+        std::lock_guard lg{tinyrcon_messages_queue_mutex};
+        return tinyrcon_messages_to_print.empty();
+    }
+
+    inline void add_tinyrcon_message_to_queue(print_message_t message)
+    {
+        std::lock_guard lg{tinyrcon_messages_queue_mutex};
+        tinyrcon_messages_to_print.emplace(std::move(message));
+    }
+
+    inline print_message_t get_tinyrcon_message_from_queue()
+    {
+        std::lock_guard lg{tinyrcon_messages_queue_mutex};
+        auto next_message = std::move(tinyrcon_messages_to_print.front());
+        tinyrcon_messages_to_print.pop();
         return next_message;
     }
 

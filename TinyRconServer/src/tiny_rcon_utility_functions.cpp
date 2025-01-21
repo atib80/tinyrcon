@@ -1148,7 +1148,7 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
     else
     {
         found_missing_config_setting = true;
-        main_app.set_tiny_rcon_server_ip_address("85.222.189.119");
+        main_app.set_tiny_rcon_server_ip_address("127.0.0.1");
     }
 
     if (json_resource.contains("tinyrcon_server_port"))
@@ -5002,8 +5002,7 @@ bool check_if_file_path_exists(const char *file_path)
 
 size_t print_colored_text(HWND re_control, const char *text,
                           const is_append_message_to_richedit_control print_to_richedit_control,
-                          const is_log_message log_to_file, const is_log_datetime is_log_current_date_time,
-                          const bool is_prevent_auto_vertical_scrolling,
+                          const is_log_message log_to_file, is_log_datetime is_log_current_date_time, const bool,
                           const bool is_remove_color_codes_for_log_message)
 {
     const char *message{text};
@@ -5017,22 +5016,27 @@ size_t print_colored_text(HWND re_control, const char *text,
     if (print_to_richedit_control == is_append_message_to_richedit_control::yes)
     {
 
-        // lock_guard lg{ protect_messages_re_control };
-        cursor_to_bottom(re_control);
-        SETTEXTEX stx{};
-        stx.flags = ST_DEFAULT | ST_SELECTION | ST_NEWCHARS;
-        stx.codepage = 1251;
-
-        string msg;
-        COLORREF bg_color{color::black};
-        COLORREF fg_color{color::white};
-        set_rich_edit_control_colors(re_control, fg_color, bg_color);
+        if (re_control == app_handles.hwnd_re_messages_data)
+        {
+            main_app.add_tinyrcon_message_to_queue(
+                print_message_t{text, log_to_file, is_log_current_date_time, is_remove_color_codes_for_log_message});
+            return 0u;
+        }
 
         ostringstream os;
         string text_str;
         if (is_log_current_date_time == is_log_datetime::yes)
         {
-            os << get_date_and_time_for_time_t("^7{DD}.{MM}.{Y} {hh}:{mm}:\n");
+            string current_date_and_time_info{get_date_and_time_for_time_t("^7{DD}.{MM}.{Y} {hh}:{mm}:\n")};
+            if (main_app.get_last_date_and_time_information() != current_date_and_time_info)
+            {
+                main_app.set_last_date_and_time_information(std::move(current_date_and_time_info));
+                os << main_app.get_last_date_and_time_information();
+            }
+            else
+            {
+                is_log_current_date_time = is_log_datetime::no;
+            }
             os << text;
             text_str = os.str();
             text = text_str.c_str();
@@ -5040,6 +5044,19 @@ size_t print_colored_text(HWND re_control, const char *text,
             text_len = text_str.length();
             is_last_char_new_line = '\n' == text[text_len - 1];
         }
+
+        cursor_to_bottom(re_control);
+        // scroll_to_bottom(re_control);
+
+        SETTEXTEX stx{};
+        stx.flags = ST_DEFAULT | ST_SELECTION | ST_NEWCHARS;
+        stx.codepage = 1251;
+
+        COLORREF bg_color{color::black};
+        COLORREF fg_color{color::white};
+        set_rich_edit_control_colors(re_control, fg_color, bg_color);
+
+        string msg{};
 
         for (; *text; ++text)
         {
@@ -5091,13 +5108,134 @@ size_t print_colored_text(HWND re_control, const char *text,
             SendMessage(re_control, EM_SETTEXTEX, reinterpret_cast<WPARAM>(&stx), reinterpret_cast<LPARAM>("\n"));
             ++printed_chars_count;
         }
+
+        // cursor_to_bottom(re_control);
+        scroll_to_bottom(re_control);
     }
 
     if (log_to_file == is_log_message::yes)
     {
         string message_without_color_codes{message};
-        remove_all_color_codes(message_without_color_codes);
-        if (message_without_color_codes.length() > 0 && message_without_color_codes.back() != '\n')
+        if (is_remove_color_codes_for_log_message)
+        {
+            remove_all_color_codes(message_without_color_codes);
+        }
+        if (!message_without_color_codes.empty() && message_without_color_codes.back() != '\n')
+        {
+            message_without_color_codes.push_back('\n');
+        }
+        log_message(message_without_color_codes, is_log_current_date_time);
+    }
+
+    return printed_chars_count;
+}
+
+size_t print_message(HWND re_control, const std::string &msg, const is_log_message log_to_file,
+                     is_log_datetime is_log_current_date_time, const bool is_remove_color_codes_for_log_message)
+{
+    if (msg.empty())
+        return 0U;
+    size_t text_len{msg.length()};
+    const char *last = msg.c_str() + text_len;
+    size_t printed_chars_count{};
+    bool is_last_char_new_line{msg.back() == '\n'};
+
+    ostringstream os;
+    string text_str;
+    const char *text{msg.c_str()};
+    if (is_log_current_date_time == is_log_datetime::yes)
+    {
+        string current_date_and_time_info{get_date_and_time_for_time_t("^7{DD}.{MM}.{Y} {hh}:{mm}:\n")};
+        if (main_app.get_last_date_and_time_information() != current_date_and_time_info)
+        {
+            main_app.set_last_date_and_time_information(std::move(current_date_and_time_info));
+            os << main_app.get_last_date_and_time_information();
+        }
+        else
+        {
+            is_log_current_date_time = is_log_datetime::no;
+        }
+        os << msg;
+        text_str = os.str();
+        text = text_str.c_str();
+        last = text + text_str.length();
+        // text_len = text_str.length();
+        is_last_char_new_line = '\n' == text[text_str.length() - 1];
+    }
+
+    cursor_to_bottom(re_control);
+    // scroll_to_bottom(re_control);
+
+    SETTEXTEX stx{};
+    stx.flags = ST_DEFAULT | ST_SELECTION | ST_NEWCHARS;
+    stx.codepage = 1251;
+
+    COLORREF bg_color{color::black};
+    COLORREF fg_color{color::white};
+    set_rich_edit_control_colors(re_control, fg_color, bg_color);
+
+    string msg2{};
+
+    for (; *text; ++text)
+    {
+        if (text + 4 <= last && *text == '^' && *(text + 1) == '^' && (*(text + 2) >= '0' && *(text + 2) <= '9') &&
+            (*(text + 3) >= '0' && *(text + 3) <= '9') && *(text + 2) == *(text + 3))
+        {
+            text += 3;
+            if (!msg2.empty())
+            {
+                SendMessage(re_control, EM_SETTEXTEX, reinterpret_cast<WPARAM>(&stx),
+                            reinterpret_cast<LPARAM>(msg2.c_str()));
+                msg2.clear();
+            }
+
+            fg_color = rich_edit_colors.at(*text);
+            set_rich_edit_control_colors(re_control, fg_color, bg_color);
+            msg2.push_back('^');
+            msg2.push_back(*text);
+            printed_chars_count += 2;
+        }
+        else if (text + 2 <= last && *text == '^' && (*(text + 1) >= '0' && *(text + 1) <= '9'))
+        {
+            ++text;
+            if (!msg2.empty())
+            {
+                SendMessage(re_control, EM_SETTEXTEX, reinterpret_cast<WPARAM>(&stx),
+                            reinterpret_cast<LPARAM>(msg2.c_str()));
+                msg2.clear();
+            }
+            fg_color = rich_edit_colors.at(*text);
+            set_rich_edit_control_colors(re_control, fg_color, bg_color);
+        }
+        else
+        {
+            msg2.push_back(*text);
+            ++printed_chars_count;
+        }
+    }
+
+    if (!msg2.empty())
+    {
+        SendMessage(re_control, EM_SETTEXTEX, reinterpret_cast<WPARAM>(&stx), reinterpret_cast<LPARAM>(msg2.c_str()));
+    }
+
+    if (!is_last_char_new_line)
+    {
+        SendMessage(re_control, EM_SETTEXTEX, reinterpret_cast<WPARAM>(&stx), reinterpret_cast<LPARAM>("\n"));
+        ++printed_chars_count;
+    }
+
+    // cursor_to_bottom(re_control);
+    scroll_to_bottom(re_control);
+
+    if (log_to_file == is_log_message::yes)
+    {
+        string message_without_color_codes{msg};
+        if (is_remove_color_codes_for_log_message)
+        {
+            remove_all_color_codes(message_without_color_codes);
+        }
+        if (!message_without_color_codes.empty() && message_without_color_codes.back() != '\n')
         {
             message_without_color_codes.push_back('\n');
         }

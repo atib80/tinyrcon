@@ -14,6 +14,10 @@ using namespace asio;
 
 connection_manager_for_messages::connection_manager_for_messages() : udp_socket_for_messages{udp_service_for_messages}
 {
+}
+
+bool connection_manager_for_messages::open_socket_for_messages(const std::string &ip_address, const int port_number)
+{
     try
     {
         if (udp_socket_for_messages.is_open())
@@ -23,15 +27,26 @@ connection_manager_for_messages::connection_manager_for_messages() : udp_socket_
 
         udp_socket_for_messages.open(ip::udp::v4());
         udp_socket_for_messages.set_option(rcv_timeout_option{700});
-        asio::ip::udp::endpoint local_endpoint{
-            asio::ip::address::from_string(main_app.get_tiny_rcon_server_ip_address()),
-            static_cast<asio::ip::port_type>(main_app.get_tiny_rcon_server_port())};
+        asio::ip::udp::endpoint local_endpoint{asio::ip::address::from_string(ip_address),
+                                               static_cast<asio::ip::port_type>(port_number)};
         udp_socket_for_messages.bind(local_endpoint);
     }
     catch (std::exception &ex)
     {
         show_error(app_handles.hwnd_main_window, ex.what(), 0);
+        return false;
     }
+    catch (...)
+    {
+        const std::string information{
+            format("Unknown exception has been caught in connection_manager_for_message::open_socket_for_messages({}, "
+                   "{}) member function!\n",
+                   ip_address, port_number)};
+        show_error(app_handles.hwnd_main_window, information.c_str(), 2);
+        return false;
+    }
+
+    return true;
 }
 
 size_t connection_manager_for_messages::process_and_send_message(
@@ -233,7 +248,9 @@ bool connection_manager_for_messages::wait_for_and_process_response_message()
                        "^1{} ^5| ^3geoinfo: ^1{}^5) sent the following command: "
                        "^1'{}'\n^5Contents of message: ^1'{}'\n",
                        sender, sender_ip, parts[2], geo_information, message_handler_name, message_contents)};
-            print_colored_text(app_handles.hwnd_re_messages_data, unathorized_message_received.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes, false, true);
+            print_colored_text(app_handles.hwnd_re_messages_data, unathorized_message_received.c_str(),
+                               is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes,
+                               false, true);
         }
     }
     else

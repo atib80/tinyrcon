@@ -1766,7 +1766,7 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
     else
     {
         found_missing_config_setting = true;
-        main_app.set_tiny_rcon_server_ip_address("85.222.189.119");
+        main_app.set_tiny_rcon_server_ip_address("127.0.0.1");
     }
 
     if (json_resource.contains("tinyrcon_server_port"))
@@ -1789,7 +1789,7 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
     else
     {
         found_missing_config_setting = true;
-        main_app.set_private_tiny_rcon_server_ip_address("85.222.189.119");
+        main_app.set_private_tiny_rcon_server_ip_address("127.0.0.1");
     }
 
     if (json_resource.contains("private_tinyrcon_server_port"))
@@ -4620,7 +4620,8 @@ void check_for_temp_banned_ip_addresses()
             main_app.get_tinyrcon_dict()["{TEMP_BAN_END_DATE}"] =
                 get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", ban_expires_time);
             main_app.get_tinyrcon_dict()["{REASON}"] = remove_disallowed_characters_in_string(tb.reason);
-            main_app.get_tinyrcon_dict()["{BANNED_BY}"] = remove_disallowed_characters_in_string(tb.banned_by_user_name);
+            main_app.get_tinyrcon_dict()["{BANNED_BY}"] =
+                remove_disallowed_characters_in_string(tb.banned_by_user_name);
             build_tiny_rcon_message(message);
             auto [status, player]{remove_temp_banned_ip_address(tb.ip_address, message, true, true)};
             replace_br_with_new_line(message);
@@ -4681,7 +4682,8 @@ void check_for_temp_banned_ip_addresses()
                                 get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", pd.banned_start_time);
                             main_app.get_tinyrcon_dict()["{TEMP_BAN_END_DATE}"] =
                                 get_time_interval_info_string_for_seconds(ban_expires_time - now_in_seconds);
-                            main_app.get_tinyrcon_dict()["{REASON}"] = remove_disallowed_characters_in_string(pd.reason);
+                            main_app.get_tinyrcon_dict()["{REASON}"] =
+                                remove_disallowed_characters_in_string(pd.reason);
                             main_app.get_tinyrcon_dict()["{BANNED_BY}"] =
                                 remove_disallowed_characters_in_string(pd.banned_by_user_name);
                             build_tiny_rcon_message(message);
@@ -4885,7 +4887,8 @@ void check_for_banned_ip_addresses()
                     main_app.get_tinyrcon_dict()["{COUNTRY_NAME}"] = online_player.country_name;
                     build_tiny_rcon_message(message);
                 }
-                const string banned_player_information{get_player_information(online_player.pid, false, "Banned country")};
+                const string banned_player_information{
+                    get_player_information(online_player.pid, false, "Banned country")};
                 string msg{format("^1Automatic kick ^5for player ^7{} ^5with a "
                                   "previously ^1banned country name: {}\n{}\n",
                                   online_player.player_name, online_player.country_name, banned_player_information)};
@@ -4922,7 +4925,8 @@ void check_for_banned_ip_addresses()
                     main_app.get_tinyrcon_dict()["{REASON}"] = pd.reason;
                     build_tiny_rcon_message(message);
                 }
-                const string banned_player_information{get_player_information(online_player.pid, false, "Banned player name")};
+                const string banned_player_information{
+                    get_player_information(online_player.pid, false, "Banned player name")};
                 const string msg{format("^1Automatic kick ^5for previously ^3banned "
                                         "player name: ^1{} ^5| ^3Reason: ^1{}\n{}\n",
                                         player_name, main_app.get_tinyrcon_dict()["{REASON}"],
@@ -5256,9 +5260,9 @@ void process_rcon_command(const std::vector<string> &rcon_cmd)
                                                re_msg.find("/S") != string::npos};
         if (!is_hide_information_message)
         {
-        print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(),
+            print_colored_text(app_handles.hwnd_re_messages_data, re_msg.c_str(),
                                is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes,
-                               true, true);            
+                               true, true);
         }
         if (main_app.get_command_handlers().contains(rcon_cmd[0]))
         {
@@ -6437,7 +6441,6 @@ void display_reported_players(const size_t number_of_last_reports_to_display, co
         log_message(log.str(), is_log_datetime::yes);
     }
 }
-
 
 void display_permanently_banned_ip_addresses(const size_t number_of_last_bans_to_display,
                                              const bool is_save_data_to_log_file)
@@ -10755,7 +10758,8 @@ void display_tempbanned_players_remaining_time_period()
             main_app.get_tinyrcon_dict()["{TEMP_BAN_END_DATE}"] =
                 get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", ban_expires_time);
             main_app.get_tinyrcon_dict()["{REASON}"] = pl.reason;
-            main_app.get_tinyrcon_dict()["{BANNED_BY}"] = remove_disallowed_characters_in_string(pl.banned_by_user_name);
+            main_app.get_tinyrcon_dict()["{BANNED_BY}"] =
+                remove_disallowed_characters_in_string(pl.banned_by_user_name);
             string message{main_app.get_automatic_remove_temp_ban_msg()};
             main_app.get_connection_manager_for_messages().process_and_send_message(
                 "remove-tempban",
@@ -10927,13 +10931,13 @@ void construct_tinyrcon_gui(HWND hWnd)
         NULL, "Button", "Spectate player", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 650,
         screen_height - 77, 180, 30, hWnd, reinterpret_cast<HMENU>(ID_SPECTATEPLAYER), app_handles.hInstance, nullptr);
 
-  app_handles.hwnd_mute_player_button = CreateWindowEx(
+    app_handles.hwnd_mute_player_button = CreateWindowEx(
         NULL, "Button", "Mute player", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 850,
         screen_height - 118, 180, 30, hWnd, reinterpret_cast<HMENU>(ID_MUTE_PLAYER), app_handles.hInstance, nullptr);
 
     app_handles.hwnd_unmute_player_button = CreateWindowEx(
         NULL, "Button", "Unmute player", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD, 850,
-      screen_height - 77, 180, 30, hWnd, reinterpret_cast<HMENU>(ID_UNMUTE_PLAYER), app_handles.hInstance, nullptr);    
+        screen_height - 77, 180, 30, hWnd, reinterpret_cast<HMENU>(ID_UNMUTE_PLAYER), app_handles.hInstance, nullptr);
 
     app_handles.hwnd_say_button = CreateWindowExA(
         NULL, "Button", "Send public message", BS_PUSHBUTTON | BS_CENTER | BS_VCENTER | WS_VISIBLE | WS_CHILD,
@@ -16617,17 +16621,17 @@ const std::string &get_current_map_image_name(const std::string &current_rcon_ma
     return unknown_rcon_map_name_image;
 }
 
-//void load_current_map_image(const std::string &rcon_map_name)
+// void load_current_map_image(const std::string &rcon_map_name)
 //{
-//    static string current_rcon_map_name{"n/a"};
+//     static string current_rcon_map_name{"n/a"};
 //
-//    if (rcon_map_name != current_rcon_map_name)
-//    {
-//        current_rcon_map_name = rcon_map_name;
-//        g_hBitMap = main_app.get_bitmap_image_handler().get_bitmap_image(rcon_map_name);
-//        InvalidateRect(app_handles.hwnd_main_window, nullptr, FALSE);
-//    }
-//}
+//     if (rcon_map_name != current_rcon_map_name)
+//     {
+//         current_rcon_map_name = rcon_map_name;
+//         g_hBitMap = main_app.get_bitmap_image_handler().get_bitmap_image(rcon_map_name);
+//         InvalidateRect(app_handles.hwnd_main_window, nullptr, FALSE);
+//     }
+// }
 
 void load_current_map_image(const std::string &rcon_map_name)
 {
@@ -17894,32 +17898,32 @@ bool check_if_selected_player_has_my_ip_address()
 //     main_app.get_command_handler("!rc").second({"!rc", "js_muted_guid_keys", "--silent"});
 // }
 
-//bool add_muted_ip_address(player &pd, vector<player> &muted_players_vector,
-//                          unordered_map<string, player> &muted_players_map)
+// bool add_muted_ip_address(player &pd, vector<player> &muted_players_vector,
+//                           unordered_map<string, player> &muted_players_map)
 //{
-//    unsigned long guid_number{};
-//    if (!check_ip_address_validity(pd.ip_address, guid_number))
-//        return false;
+//     unsigned long guid_number{};
+//     if (!check_ip_address_validity(pd.ip_address, guid_number))
+//         return false;
 //
-//    muted_players_map[pd.ip_address] = pd;
-//    const auto found_iter = find_if(begin(muted_players_vector), end(muted_players_vector),
-//                                    [&pd](const player &p) {
-//        return p.ip_address == pd.ip_address; 
-//    });
+//     muted_players_map[pd.ip_address] = pd;
+//     const auto found_iter = find_if(begin(muted_players_vector), end(muted_players_vector),
+//                                     [&pd](const player &p) {
+//         return p.ip_address == pd.ip_address;
+//     });
 //
-//    if (found_iter != end(muted_players_vector))
-//    {
-//        *found_iter = pd;
-//    }
-//    else
-//    {
-//        muted_players_vector.push_back(std::move(pd));
-//    }
+//     if (found_iter != end(muted_players_vector))
+//     {
+//         *found_iter = pd;
+//     }
+//     else
+//     {
+//         muted_players_vector.push_back(std::move(pd));
+//     }
 //
-//    save_banned_ip_entries_to_file(main_app.get_muted_players_file_path(), muted_players_vector);
+//     save_banned_ip_entries_to_file(main_app.get_muted_players_file_path(), muted_players_vector);
 //
-//    return true;
-//}
+//     return true;
+// }
 
 std::pair<bool, player> remove_muted_ip_address(std::string &ip_address, std::string &message,
                                                 const bool is_report_public_message)

@@ -13,7 +13,10 @@ extern tiny_rcon_handles app_handles;
 using namespace asio;
 
 connection_manager_for_remote_messages::connection_manager_for_remote_messages() : udp_socket_for_messages{ udp_service_for_messages }
-{
+{  
+}
+
+bool connection_manager_for_remote_messages::open_socket_for_messages(const std::string& ip_address, const int port_number) {
   try {
     if (udp_socket_for_messages.is_open()) {
       udp_socket_for_messages.close();
@@ -26,8 +29,21 @@ connection_manager_for_remote_messages::connection_manager_for_remote_messages()
 
   } catch (std::exception &ex) {
     show_error(app_handles.hwnd_main_window, ex.what(), 0);
+    return false;
+  } catch (...) {
+    const std::string information{
+      format("Unknown exception has been caught in connection_manager_for_message::open_socket_for_messages({}, "
+             "{}) member function!\n",
+        ip_address,
+        port_number)
+    };
+    show_error(app_handles.hwnd_main_window, information.c_str(), 2);
+    return false;
   }
-}
+
+  return true;
+
+ }
 
 size_t connection_manager_for_remote_messages::process_and_send_message(const std::string &command_name, const std::string &data, const bool is_show_in_messages, const std::shared_ptr<tiny_rcon_client_user> &user) const
 {

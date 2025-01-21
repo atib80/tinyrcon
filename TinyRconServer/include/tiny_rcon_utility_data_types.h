@@ -89,6 +89,26 @@ struct message_t
     const bool is_show_in_messages;
 };
 
+struct print_message_t
+{
+    explicit print_message_t(std::string message, is_log_message log_to_file, is_log_datetime is_log_current_date_time,
+                             const bool is_remove_color_codes_for_log_message = true,
+                             const bool is_display_message_to_remote_user = true,
+                             const bool is_send_message_to_player = false)
+        : message_{std::move(message)}, log_to_file_{log_to_file}, is_log_current_date_time_{is_log_current_date_time},
+          is_remove_color_codes_for_log_message_{is_remove_color_codes_for_log_message},
+          is_display_message_to_remote_user_{is_display_message_to_remote_user},
+          is_send_message_to_player_{is_send_message_to_player}
+    {
+    }
+    std::string message_;
+    is_log_message log_to_file_;
+    is_log_datetime is_log_current_date_time_;
+    bool is_remove_color_codes_for_log_message_;
+    bool is_display_message_to_remote_user_;
+    bool is_send_message_to_player_;
+};
+
 enum class sort_type
 {
     unknown,

@@ -1577,7 +1577,7 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
     main_app.set_tiny_rcon_server_ip_address(std::move(data_line));
   } else {
     found_missing_config_setting = true;
-    main_app.set_tiny_rcon_server_ip_address("85.222.189.119");
+    main_app.set_tiny_rcon_server_ip_address("127.0.0.1");
   }
 
   if (json_resource["tinyrcon_server_port"].exists()) {
@@ -1594,7 +1594,7 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
     main_app.set_private_tiny_rcon_server_ip_address(std::move(data_line));
   } else {
     found_missing_config_setting = true;
-    main_app.set_private_tiny_rcon_server_ip_address("85.222.189.119");
+    main_app.set_private_tiny_rcon_server_ip_address("127.0.0.1");
   }
 
   if (json_resource["private_tinyrcon_server_port"].exists()) {

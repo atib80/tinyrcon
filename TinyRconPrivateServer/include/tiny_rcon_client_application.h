@@ -106,9 +106,9 @@ class tiny_rcon_client_application
   std::string images_data_md5;
   std::string tiny_rcon_ftp_server_username{ "tinyrcon" };
   std::string tiny_rcon_ftp_server_password{ "08021980" };
-  std::string tiny_rcon_server_ip_address{ "85.222.189.119" };
+  std::string tiny_rcon_server_ip_address{ "127.0.0.1" };
   std::string private_tiny_rcon_server_ip_address{
-    "85.222.189.119"
+    "127.0.0.1"
   };
   std::string cod2_master_server_ip_address{ "185.34.107.159" };
 

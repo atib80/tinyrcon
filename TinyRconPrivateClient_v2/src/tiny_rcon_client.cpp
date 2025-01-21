@@ -17,7 +17,7 @@ using namespace std::string_literals;
 using namespace std::chrono;
 using namespace std::filesystem;
 
-extern const string program_version{ "2.7.7.2" };
+extern const string program_version{ "2.7.7.3" };
 
 extern const std::regex ip_address_and_port_regex;
 extern const std::unordered_map<char, COLORREF> rich_edit_colors;
@@ -325,15 +325,15 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
   main_app.open_log_file("log\\commands_history.log");
 
-  std::thread print_messages_thread{
-    [&]() {
+  std::jthread print_messages_thread{
+    [&](stop_token st) {
       IsGUIThread(TRUE);
 
-      while (true) {
+      while (!st.stop_requested() && !is_terminate_program.load()) {
 
         try {
 
-          while (!is_terminate_program.load() && !main_app.is_tinyrcon_message_queue_empty()) {
+          while (!st.stop_requested() && !is_terminate_program.load() && !main_app.is_tinyrcon_message_queue_empty()) {
             print_message_t msg{ main_app.get_tinyrcon_message_from_queue() };
             print_message(app_handles.hwnd_re_messages_data, msg.message_, msg.log_to_file_, msg.is_log_current_date_time_, msg.is_remove_color_codes_for_log_message_);
           }
@@ -347,12 +347,10 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
           print_message(app_handles.hwnd_re_messages_data, error_message);
         }
 
-        Sleep(20);
+        Sleep(5);
       }
     }
   };
-
-  print_messages_thread.detach();
 
   parse_tinyrcon_tool_config_file(main_app.get_tinyrcon_config_file_path());
 
@@ -439,7 +437,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     }
   });
 
-    main_app.add_command_handler({ "!mute" }, [](const vector<string> &user_cmd) {
+  main_app.add_command_handler({ "!mute" }, [](const vector<string> &user_cmd) {
     if (user_cmd.size() > 1 && !user_cmd[1].empty()) {
       if (check_if_user_provided_argument_is_valid_for_specified_command(
             "!mute", user_cmd[1])) {
@@ -1198,40 +1196,37 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
   // receive-imagesdata
   main_app.add_message_handler("receive-imagesdata", [](const string &, const time_t, const string &data, bool) {
-			std::thread task{ [d = data]() {
-			auto parts = stl::helper::str_split(d, "\n", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::yes);
-			for (auto& part : parts) {
-			stl::helper::trim_in_place(part);
-			auto image_file_info_parts = stl::helper::str_split(part, ",", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::yes);
-			if (image_file_info_parts.size() >= 2) {
-				stl::helper::trim_in_place(image_file_info_parts[0]);
-				stl::helper::trim_in_place(image_file_info_parts[1]);
-				const string image_file_absolute_path{ format("{}{}", main_app.get_current_working_directory(), image_file_info_parts[0]) };
-				const bool is_download_file = [&]() {
-				if (!check_if_file_path_exists(image_file_absolute_path.c_str())) return true;
-				const auto image_file_md5 = calculate_md5_checksum_of_file(image_file_absolute_path.c_str());
-				return image_file_md5 != image_file_info_parts[1];
-				}();
+    auto task = std::async(std::launch::async, [d = data]() {
+      auto parts = stl::helper::str_split(d, "\n", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::yes);
+      for (auto &part : parts) {
+        stl::helper::trim_in_place(part);
+        auto image_file_info_parts = stl::helper::str_split(part, ",", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::yes);
+        if (image_file_info_parts.size() >= 2) {
+          stl::helper::trim_in_place(image_file_info_parts[0]);
+          stl::helper::trim_in_place(image_file_info_parts[1]);
+          const string image_file_absolute_path{ format("{}{}", main_app.get_current_working_directory(), image_file_info_parts[0]) };
+          const bool is_download_file = [&]() {
+            if (!check_if_file_path_exists(image_file_absolute_path.c_str())) return true;
+            const auto image_file_md5 = calculate_md5_checksum_of_file(image_file_absolute_path.c_str());
+            return image_file_md5 != image_file_info_parts[1];
+          }();
 
-				if (is_download_file) {
-					string ftp_download_link{ format("ftp://{}/{}/{}", main_app.get_ftp_download_site_ip_address(), main_app.get_ftp_download_folder_path(), image_file_info_parts[0]) };
-					replace_backward_slash_with_forward_slash(ftp_download_link);
-					const string image_file_name{ image_file_info_parts[0].substr(image_file_info_parts[0].rfind('/') + 1) };
-					const string information_before_download{ format("^3Starting to download missing map image file: ^5{}", image_file_name) };
-					print_colored_text(app_handles.hwnd_re_messages_data, information_before_download.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true, true);
-					if (main_app.get_auto_update_manager().download_file(ftp_download_link.c_str(), image_file_absolute_path.c_str())) {
-						const string information_after_download{ format("^2Finished downloading missing map image file: ^5{}", image_file_name) };
-						print_colored_text(app_handles.hwnd_re_messages_data, information_after_download.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true, true);
-						this_thread::sleep_for(50ms);
-					}
-				}
-			 }
-
-			}
-
-	  } };
-
-			task.detach(); });
+          if (is_download_file) {
+            string ftp_download_link{ format("ftp://{}/{}/{}", main_app.get_ftp_download_site_ip_address(), main_app.get_ftp_download_folder_path(), image_file_info_parts[0]) };
+            replace_backward_slash_with_forward_slash(ftp_download_link);
+            const string image_file_name{ image_file_info_parts[0].substr(image_file_info_parts[0].rfind('/') + 1) };
+            const string information_before_download{ format("^3Starting to download missing map image file: ^5{}", image_file_name) };
+            print_colored_text(app_handles.hwnd_re_messages_data, information_before_download.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true, true);
+            if (main_app.get_auto_update_manager().download_file(ftp_download_link.c_str(), image_file_absolute_path.c_str())) {
+              const string information_after_download{ format("^2Finished downloading missing map image file: ^5{}", image_file_name) };
+              print_colored_text(app_handles.hwnd_re_messages_data, information_after_download.c_str(), is_append_message_to_richedit_control::yes, is_log_message::no, is_log_datetime::yes, true, true);
+              this_thread::sleep_for(50ms);
+            }
+          }
+        }
+      }
+    });
+  });
 
   main_app.add_message_handler("receive-welcome-message", [](const string &, const time_t, const string &data, bool) {
     string message_to_display{ data };
@@ -1390,8 +1385,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   SetFocus(app_handles.hwnd_main_window);
   PostMessage(app_handles.hwnd_progress_bar, PBM_SETMARQUEE, (WPARAM)TRUE, (LPARAM)5);
 
-  std::thread task_thread{
-    [&]() {
+  std::jthread task_thread{
+    [&](stop_token st) {
       IsGUIThread(TRUE);
 
       SendMessageA(app_handles.hwnd_main_window, WM_SYSCOMMAND, SC_MAXIMIZE, 0);
@@ -1432,21 +1427,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       main_app.set_player_name(find_users_player_name_for_installed_cod2_game(me));
       try {
 
-        /*DWORD pid{};
-        if (check_if_call_of_duty_2_game_is_running(pid)) {
-          game_version_number = find_game_version_number_of_running_cod2mp_s_executable(pid);
-        } else if (!main_app.get_cod2mp_exe_path().empty() && check_if_file_path_exists(main_app.get_cod2mp_exe_path().c_str())) {
-          game_version_number = find_version_of_installed_cod2_game();
-        }
-
-        main_app.get_current_game_server().set_game_version_number(game_version_number);
-        main_app.set_game_version_number(game_version_number);*/
-        // string game_version_number{ "1.0" };
-
-        // if (!main_app.get_cod2mp_exe_path().empty() && check_if_file_path_exists(main_app.get_cod2mp_exe_path().c_str())) {
         game_version_number = find_version_of_installed_cod2_game();
         main_app.set_player_name(find_users_player_name_for_installed_cod2_game(me));
-        //}
         main_app.get_current_game_server().set_game_version_number(game_version_number);
         main_app.set_game_version_number(game_version_number);
 
@@ -1464,22 +1446,22 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       main_app.get_bitmap_image_handler().load_bitmap_images();
       check_if_exists_and_download_missing_custom_map_files_downloader();
 
-      while (true) {
+      while (!st.stop_requested() && !is_terminate_program.load()) {
         try {
 
           {
             unique_lock ul{ main_app.get_command_queue_mutex() };
             main_app.get_command_queue_cv().wait_for(ul, 20ms, [&]() {
-              return !main_app.is_command_queue_empty() || is_terminate_program.load();
+              return st.stop_requested() || is_terminate_program.load() || !main_app.is_command_queue_empty();
             });
           }
 
-          while (!is_terminate_program.load() && !main_app.is_command_queue_empty()) {
+          while (!st.stop_requested() && !is_terminate_program.load() && !main_app.is_command_queue_empty()) {
             auto cmd = main_app.get_command_from_queue();
             main_app.process_queue_command(std::move(cmd));
           }
 
-          if (!is_terminate_program.load() && is_refresh_players_data_event.load()) {
+          if (!st.stop_requested() && !is_terminate_program.load() && is_refresh_players_data_event.load()) {
 
             const size_t game_server_index{ main_app.get_game_server_index() };
 
@@ -1515,24 +1497,22 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     }
   };
 
-  task_thread.detach();
-
-  std::thread remote_messaging_thread{
-    [&]() {
+  std::jthread remote_messaging_thread{
+    [&](stop_token st) {
       const auto &tiny_rcon_server_ip = main_app.get_tiny_rcon_server_ip_address();
       const auto tiny_rcon_server_port = static_cast<uint_least16_t>(main_app.get_tiny_rcon_server_port());
 
-      while (true) {
+      while (!st.stop_requested() && !is_terminate_program.load()) {
 
         try {
 
-          while (!is_terminate_program.load() && !main_app.is_message_queue_empty()) {
+          while (!st.stop_requested() && !is_terminate_program.load() && !main_app.is_message_queue_empty()) {
             message_t message{ main_app.get_message_from_queue() };
             const bool is_call_message_handler{ message.command != "inform-message" && message.command != "public-message" };
             main_app.get_connection_manager_for_messages().process_and_send_message(message.command, message.data, message.is_show_in_messages, tiny_rcon_server_ip, tiny_rcon_server_port, is_call_message_handler);
           }
 
-          if (!is_terminate_program.load()) {
+          if (!st.stop_requested() && !is_terminate_program.load()) {
             main_app.get_connection_manager_for_messages().wait_for_and_process_response_message(tiny_rcon_server_ip, tiny_rcon_server_port);
           }
 
@@ -1545,12 +1525,10 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
           const string error_message{ format("^3A generic error was caught in message queue's thread!\n^1Exception: {}", buffer) };
           print_colored_text(app_handles.hwnd_re_messages_data, error_message.c_str());
         }
-        Sleep(20);
+        Sleep(5);
       }
     }
   };
-
-  remote_messaging_thread.detach();
 
   HHOOK hHook{ SetWindowsHookEx(WH_KEYBOARD_LL, monitor_game_key_press_events, GetModuleHandle(nullptr), 0) };
 
@@ -1638,26 +1616,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
         input_file.close();
 
-        /*std::thread th{
-          [&]() {
-            IsGUIThread(TRUE);
-            try {
-
-              refresh_game_servers_data(app_handles.hwnd_servers_grid);
-            } catch (std::exception &ex) {
-              const string error_message{ format("^3A specific exception was caught in refresh_game_servers_data(HWND) function's thread of execution!\n^1Exception: {}", ex.what()) };
-              print_colored_text(app_handles.hwnd_re_messages_data, error_message.c_str());
-            } catch (...) {
-              char buffer[512];
-              strerror_s(buffer, GetLastError());
-              const string error_message{ format("^3A generic error was caught in refresh_game_servers_data(HWND) function's thread of execution\n^1Exception: {}", buffer) };
-              print_colored_text(app_handles.hwnd_re_messages_data, error_message.c_str());
-            }
-          }
-        };
-
-        th.detach();*/
-
         is_tinyrcon_initialized = true;
 
         const auto current_ts{ get_current_time_stamp() };
@@ -1680,22 +1638,14 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       }
     }
 
-    /*const auto current_ts{ get_current_time_stamp() };
-    main_app.get_connection_manager_for_messages().process_and_send_message("request-logout", format("{}\\{}\\{}", me->user_name, me->ip_address, current_ts), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
-    me->is_logged_in = false;
-    me->last_logout_time_stamp = current_ts;
-    save_current_user_data_to_json_file(main_app.get_user_data_file_path());*/
-
     is_terminate_program.store(true);
-
-    // if (pr_info.hProcess != nullptr) CloseHandle(pr_info.hProcess);
-    // if (pr_info.hThread != nullptr) CloseHandle(pr_info.hThread);
+    print_messages_thread.request_stop();
+    task_thread.request_stop();
+    remote_messaging_thread.request_stop();
 
     log_message("Exiting TinyRcon program.", is_log_datetime::yes);
 
     DestroyAcceleratorTable(hAccel);
-    // const string geo_dat_file_path{ main_app.get_current_working_directory() + "plugins\\geoIP\\geo.dat" };
-    // export_geoip_data(main_app.get_connection_manager().get_geoip_data(), geo_dat_file_path.c_str());
 
     if (wcex.hbrBackground != nullptr)
       DeleteObject((HGDIOBJ)wcex.hbrBackground);
@@ -1703,7 +1653,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       DeleteBrush(red_brush);
     if (black_brush != nullptr)
       DeleteBrush(black_brush);
-    // if (font_for_players_grid_data != nullptr) DeleteFont(font_for_players_grid_data);
     if (hImageList)
       ImageList_Destroy(hImageList);
     UnregisterClass(wcex.lpszClassName, app_handles.hInstance);
@@ -2723,47 +2672,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         type_of_sort = sort_type::geo_asc;
       initiate_sending_rcon_status_command_now();
     } break;
-
-      /*case ID_SHOWSERVERSBUTTON: {
-          is_display_players_data.store(false);
-          ShowWindow(app_handles.hwnd_players_grid, SW_HIDE);
-          ShowWindow(app_handles.hwnd_servers_grid, SW_SHOWNORMAL);
-          const string current_rcon_game_rcon_server_name{ main_app.get_game_servers()[0].get_server_name() };
-          string window_title_message{ format("Rcon game server: {}:{} {}", main_app.get_game_servers()[0].get_server_ip_address(), main_app.get_game_servers()[0].get_server_port(), current_rcon_game_rcon_server_name) };
-          append_to_title(app_handles.hwnd_main_window, std::move(window_title_message));
-          std::thread th{
-            [&]() { IsGUIThread(TRUE); view_game_servers(app_handles.hwnd_servers_grid); }
-          };
-          th.detach();
-
-        } break;
-
-        case ID_REFRESHSERVERSBUTTON: {
-          is_display_players_data.store(false);
-          ShowWindow(app_handles.hwnd_players_grid, SW_HIDE);
-          ShowWindow(app_handles.hwnd_servers_grid, SW_SHOWNORMAL);
-
-          std::thread th{
-            [&]() {
-              IsGUIThread(TRUE);
-              try {
-
-                refresh_game_servers_data(app_handles.hwnd_servers_grid);
-              } catch (std::exception &ex) {
-                const string error_message{ format("^3A specific exception was caught in refresh_game_servers_data(HWND) function's thread of execution!\n^1Exception: {}", ex.what()) };
-                print_colored_text(app_handles.hwnd_re_messages_data, error_message.c_str());
-              } catch (...) {
-                char buffer[512];
-                strerror_s(buffer, GetLastError());
-                const string error_message{ format("^3A generic error was caught in refresh_game_servers_data(HWND) function's thread of execution\n^1Exception: {}", buffer) };
-                print_colored_text(app_handles.hwnd_re_messages_data, error_message.c_str());
-              }
-            }
-          };
-
-          th.detach();
-
-        } break;*/
 
     case ID_VIEWMUTEDPLAYERS:
       main_app.get_connection_manager_for_messages().process_and_send_message("user-command", "!muted 25", true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);

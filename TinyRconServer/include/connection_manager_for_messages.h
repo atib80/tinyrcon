@@ -23,6 +23,8 @@ class connection_manager_for_messages
         }
     };
 
+    bool open_socket_for_messages(const std::string &ip_address, const int port_number);
+
     size_t process_and_send_message(const std::string &command_name, const std::string &data,
                                     const bool is_show_in_messages,
                                     const std::shared_ptr<tiny_rcon_client_user> &user) const;

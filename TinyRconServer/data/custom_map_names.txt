@@ -1,0 +1,20 @@
+//mp_depot\CoD1 Depot, Germany\^7CoD1 ^2Depot, ^0Ge^1rma^3ny
+//mp_eye\EYE OF THE DEAD RELOADED\^4EYE OF THE DEAD ^3RELOADED
+//mp_factory\Factory, Poland\^7Factory, ^1Poland
+//mp_naout\Outpost, North Africa\^7Outpost, ^7North Africa
+//mp_tobruk\Tobruk, Libya\^7Tobruk, ^3Libya
+//mp_tripoli\Tripoli, Libya\^7Tripoli, ^3Libya
+//mp_sl2\Saint Lo v2\Saint Lo v2
+//mp_lflnchateau\Chateau\^5Chateau
+//mp_giantroom\Rat Room v3\Rat Room v3
+//gob_icestation\:[GOB]: Icestation\^1:[GOB]: ^5Icestation
+//mp_houn\Houn, Libya\^7Houn, ^3Libya
+//mp_farao\Farao\^3Farao
+//mp_bridge\The Bridge\^2The Bridge
+//canal2\Canal 2\^2Canal ^72
+//mp_kemptown\Currahee! Kemptown\^2Currahee! ^7Kemptown
+mp_tuscany\Tuscany, Italy\Tuscany, Italy
+mp_industry\Industry, Germany\Industry, Germany
+gob_rats\:[GoB]: Rats\:[GoB]: Rats
+mp_ohmy_marrakesh\OHMY Marrakesh\^1OHMY ^3Marrakesh^7
+mp_izmir\Izmir by (PHk) Schenk\^3Izmir ^1by ^7(^3P^4H^1k^7) ^3Schenk

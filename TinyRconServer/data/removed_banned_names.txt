@@ -1,0 +1,4 @@
+123.123.123.123\\test\24.12.2023 19:25\not specified\^5Marcus
+123.123.123.123\0\testing\24.12.2023 20:04\not specified\^5Marcus
+123.123.123.123\\hitler\24.12.2023 20:31\not specified\^5Marcus
+123.123.123.123\\1ibraheem1\15.07.2024 22:10\not specified\^5Marcus

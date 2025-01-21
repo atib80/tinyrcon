@@ -52,7 +52,6 @@ public:
   (/* [in] */ ULONG ulProgress, /* [in] */ ULONG ulProgressMax, /* [in] */ ULONG /*ulStatusCode*/, /* [in] */ LPCWSTR szStatusText)
   //{
   {
-    // wcout << ulProgress << L" of " << ulProgressMax << endl; Sleep(200);
     if (ulProgress != 0 && ulProgressMax != 0) {
       main_app.add_to_next_downloaded_data_in_bytes(ulProgress - previous_available_data);
       // main_app.update_download_and_upload_speed_statistics();

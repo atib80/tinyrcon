@@ -16,7 +16,7 @@ using namespace std::string_literals;
 using namespace std::chrono;
 using namespace std::filesystem;
 
-extern const string program_version{"2.7.7.7"};
+extern const string program_version{"2.7.7.8"};
 
 extern const std::regex ip_address_and_port_regex;
 extern const unordered_set<string> rcon_status_commands;
@@ -334,17 +334,17 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
 
     main_app.open_log_file("log\\commands_history.log");
 
-    std::thread print_messages_thread{[&]() {
+    std::jthread print_messages_thread{[&](stop_token st) {
         IsGUIThread(TRUE);
-        // HWND re_control{app_handles.hwnd_re_messages_data};
 
-        while (true)
+        while (!st.stop_requested() && !is_terminate_program.load())
         {
 
             try
             {
 
-                while (!is_terminate_program.load() && !main_app.is_tinyrcon_message_queue_empty())
+                while (!st.stop_requested() && !is_terminate_program.load() &&
+                       !main_app.is_tinyrcon_message_queue_empty())
                 {
                     print_message_t msg{main_app.get_tinyrcon_message_from_queue()};
                     print_message(app_handles.hwnd_re_messages_data, msg.message_.c_str(), msg.log_to_file_,
@@ -368,11 +368,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                 print_message(app_handles.hwnd_re_messages_data, error_message);
             }
 
-            Sleep(20);
+            Sleep(10);
         }
     }};
-
-    print_messages_thread.detach();
 
     parse_tinyrcon_tool_config_file(main_app.get_tinyrcon_config_file_path());
 
@@ -3464,7 +3462,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
         if ((user_cmd.size() >= 2u) && (is_valid_decimal_whole_number(user_cmd[1], number) || user_cmd[1] == "all"))
         {
             number_of_entries_to_display.store(user_cmd[1] == "all" || number <= 0 ? string::npos
-                                                                                : static_cast<size_t>(number));
+                                                                                   : static_cast<size_t>(number));
         }
         else
         {
@@ -3478,7 +3476,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
         if ((user_cmd.size() >= 2u) && (is_valid_decimal_whole_number(user_cmd[1], number) || user_cmd[1] == "all"))
         {
             number_of_entries_to_display.store(user_cmd[1] == "all" || number <= 0 ? string::npos
-                                                                                : static_cast<size_t>(number));
+                                                                                   : static_cast<size_t>(number));
         }
         else
         {
@@ -3492,7 +3490,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
         if ((user_cmd.size() >= 2u) && (is_valid_decimal_whole_number(user_cmd[1], number) || user_cmd[1] == "all"))
         {
             number_of_entries_to_display.store(user_cmd[1] == "all" || number <= 0 ? string::npos
-                                                                                : static_cast<size_t>(number));
+                                                                                   : static_cast<size_t>(number));
         }
         else
         {
@@ -3506,7 +3504,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
         if ((user_cmd.size() >= 2u) && (is_valid_decimal_whole_number(user_cmd[1], number) || user_cmd[1] == "all"))
         {
             number_of_entries_to_display.store(user_cmd[1] == "all" || number <= 0 ? string::npos
-                                                                                : static_cast<size_t>(number));
+                                                                                   : static_cast<size_t>(number));
         }
         else
         {
@@ -3520,7 +3518,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
         if ((user_cmd.size() >= 2u) && (is_valid_decimal_whole_number(user_cmd[1], number) || user_cmd[1] == "all"))
         {
             number_of_entries_to_display.store(user_cmd[1] == "all" || number <= 0 ? string::npos
-                                                                                : static_cast<size_t>(number));
+                                                                                   : static_cast<size_t>(number));
         }
         else
         {
@@ -4039,7 +4037,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                 main_app.get_current_game_server().get_rcon_password().c_str(), main_app.get_current_game_server(),
                 true, false);
 
-            if (!is_hide_information_message && reply.find("js_mute_guid") == string::npos && reply.find("js_unmute_guid") == string::npos)
+            if (!is_hide_information_message && reply.find("js_mute_guid") == string::npos &&
+                reply.find("js_unmute_guid") == string::npos)
             {
 
                 print_colored_text(app_handles.hwnd_re_messages_data, reply.c_str(),
@@ -4083,7 +4082,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                 }
                 main_app.get_pid_to_ip_address() = std::move(pid_to_ip_address);
             }
-            else*/ if (str_contains(reply, "g_muted_guids", 0U, true))
+            else*/
+            if (str_contains(reply, "g_muted_guids", 0U, true))
             {
                 size_t end_pos{reply.find("is:")};
                 if (string::npos == end_pos)
@@ -4900,42 +4900,13 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                 message += format("^2Game's version number: ^1{}\n", parts[4]);
             }
             print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
-
-            /*const string user_details{ format("{}\\{}\\{}",
-            current_user->user_name, current_user->ip_address, ts) };
-            main_app.add_remote_message_to_queue(message_t{
-            "request-admindata-player", current_user, true });
-            main_app.add_remote_message_to_queue(message_t{
-            "request-tempbans-player", user_details, true });
-            main_app.add_remote_message_to_queue(message_t{
-            "request-ipaddressbans-player", user_details, true });
-            main_app.add_remote_message_to_queue(message_t{
-            "request-ipaddressrangebans-player", user_details, true });
-            main_app.add_remote_message_to_queue(message_t{
-            "request-namebans-player", user_details, true });
-            main_app.add_remote_message_to_queue(message_t{
-            "request-citybans-player", user_details, true });
-            main_app.add_remote_message_to_queue(message_t{
-            "request-countrybans-player", user_details, true });
-            main_app.add_remote_message_to_queue(message_t{
-            "request-protectedipaddresses-player", user_details, true });
-            main_app.add_remote_message_to_queue(message_t{
-            "request-protectedipaddressranges-player", user_details, true });
-            main_app.add_remote_message_to_queue(message_t{
-            "request-protectedcities-player", user_details, true });
-            main_app.add_remote_message_to_queue(message_t{
-            "request-protectedcountries-player", user_details, true });
-            main_app.add_message_to_queue(message_t("request-mapnames",
-            user_details, true));
-            main_app.add_remote_message_to_queue(message_t("request-imagesdata",
-            user_details, true));*/
         }
     });
 
     // receive-imagesdata
     main_app.add_remote_message_handler("receive-imagesdata", [](const string &, const time_t, const string &data,
                                                                  bool) {
-        std::thread task{[d = data]() {
+        auto async_task = std::async(std::launch::async, [d = data]() {
             auto parts =
                 stl::helper::str_split(d, "\n", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::yes);
             for (auto &part : parts)
@@ -4982,9 +4953,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                     }
                 }
             }
-        }};
-
-        task.detach();
+        });
     });
 
     main_app.add_remote_message_handler("rcon-heartbeat-player", [](const string &, const time_t, const string &,
@@ -6900,7 +6869,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
     SetFocus(app_handles.hwnd_main_window);
     PostMessage(app_handles.hwnd_progress_bar, PBM_SETMARQUEE, (WPARAM)TRUE, (LPARAM)5);
 
-    std::thread task_thread{[&]() {
+    std::jthread task_thread{[&](stop_token st) {
         IsGUIThread(TRUE);
 
         SendMessageA(app_handles.hwnd_main_window, WM_SYSCOMMAND, SC_MAXIMIZE, 0);
@@ -6991,7 +6960,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
             main_app.get_connection_manager().send_and_receive_rcon_data(
                 "status", rcon_reply, gs.get_server_ip_address().c_str(), gs.get_server_port(),
                 gs.get_rcon_password().c_str(), gs, true, true);
-            load_current_map_image(main_app.get_current_game_server().get_current_map());            
+            load_current_map_image(main_app.get_current_game_server().get_current_map());
         }
 
         string game_version_number{"1.0"};
@@ -7035,24 +7004,25 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
 
         check_if_exists_and_download_missing_custom_map_files_downloader();
 
-        while (true)
+        while (!st.stop_requested() && !is_terminate_program.load())
         {
             try
             {
 
                 {
                     unique_lock ul{main_app.get_command_queue_mutex()};
-                    main_app.get_command_queue_cv().wait_for(
-                        ul, 20ms, [&]() { return !main_app.is_command_queue_empty() || is_terminate_program.load(); });
+                    main_app.get_command_queue_cv().wait_for(ul, 10ms, [&]() {
+                        return st.stop_requested() || is_terminate_program.load() || !main_app.is_command_queue_empty();
+                    });
                 }
 
-                while (!is_terminate_program.load() && !main_app.is_command_queue_empty())
+                while (!st.stop_requested() && !is_terminate_program.load() && !main_app.is_command_queue_empty())
                 {
                     auto cmd = main_app.get_command_from_queue();
                     main_app.process_queue_command(std::move(cmd));
                 }
 
-                if (!is_terminate_program.load() && is_refresh_players_data_event.load())
+                if (!st.stop_requested() && !is_terminate_program.load() && is_refresh_players_data_event.load())
                 {
 
                     const size_t game_server_index{main_app.get_game_server_index()};
@@ -7066,15 +7036,10 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                     {
                         if (me->is_admin)
                         {
-                            // get_player_pid_to_guid_response();
-                            // Sleep(500);
-                            // get_muted_guid_keys_response();
-                            // Sleep(500);
                             game_server &rcon_gs = game_servers[0];
                             main_app.get_connection_manager().send_and_receive_rcon_data(
                                 "status", rcon_reply, rcon_gs.get_server_ip_address().c_str(),
                                 rcon_gs.get_server_port(), rcon_gs.get_rcon_password().c_str(), rcon_gs, true, true);
-                            Sleep(100);
                         }
                         else
                         {
@@ -7093,32 +7058,17 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                                     "getstatus", rcon_reply, rcon_gs.get_server_ip_address().c_str(),
                                     rcon_gs.get_server_port(), rcon_gs, true, true);
                             }
-                            /*this_thread::sleep_for(50ms);
-                            auto [status, game_name] =
-                            check_if_specified_server_ip_port_and_rcon_password_are_valid(rcon_gs.get_server_ip_address().c_str(),
-                            rcon_gs.get_server_port(), rcon_gs.get_rcon_password().c_str());
-                            rcon_gs.set_is_connection_settings_valid(status);*/
                         }
                     }
                     else
                     {
                         if (me->is_admin)
                         {
-                            // get_player_pid_to_guid_response();
-                            // Sleep(500);
-                            // get_muted_guid_keys_response();
-                            // Sleep(500);
                             game_server &rcon_gs = game_servers[0];
                             main_app.get_connection_manager().send_and_receive_rcon_data(
                                 "status", rcon_reply, rcon_gs.get_server_ip_address().c_str(),
                                 rcon_gs.get_server_port(), rcon_gs.get_rcon_password().c_str(), rcon_gs, true, true);
-
-                        } /*else {
-                          auto [status, game_name] =
-                        check_if_specified_server_ip_port_and_rcon_password_are_valid(rcon_gs.get_server_ip_address().c_str(),
-                        rcon_gs.get_server_port(), rcon_gs.get_rcon_password().c_str());
-                          rcon_gs.set_is_connection_settings_valid(status);
-                        }*/
+                        }
 
                         game_server &gs = game_servers[game_server_index];
                         if (!is_rcon_game_server(gs))
@@ -7152,20 +7102,17 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
         }
     }};
 
-    task_thread.detach();
-
-    std::thread messaging_thread{[&]() {
+    std::jthread messaging_thread{[&](stop_token st) {
         IsGUIThread(TRUE);
         const auto &tiny_rcon_server_ip = main_app.get_tiny_rcon_server_ip_address();
         const auto tiny_rcon_server_port = static_cast<uint_least16_t>(main_app.get_tiny_rcon_server_port());
 
-        while (true)
+        while (!st.stop_requested() && !is_terminate_program.load())
         {
-
             try
             {
 
-                while (!is_terminate_program.load() && !main_app.is_message_queue_empty())
+                while (!st.stop_requested() && !is_terminate_program.load() && !main_app.is_message_queue_empty())
                 {
                     message_t message{main_app.get_message_from_queue()};
                     const bool is_call_message_handler{message.command != "inform-message" &&
@@ -7175,7 +7122,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                         tiny_rcon_server_port, is_call_message_handler);
                 }
 
-                if (!is_terminate_program.load())
+                if (!st.stop_requested() && !is_terminate_program.load())
                 {
                     main_app.get_connection_manager_for_messages().wait_for_and_process_response_message(
                         tiny_rcon_server_ip, tiny_rcon_server_port);
@@ -7198,23 +7145,22 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                 print_colored_text(app_handles.hwnd_re_messages_data, error_message.c_str());
             }
 
-            Sleep(20);
+            Sleep(10);
         }
     }};
 
-    messaging_thread.detach();
-
-    std::thread remote_messaging_thread{[&]() {
+    std::jthread remote_messaging_thread{[&](stop_token st) {
         IsGUIThread(TRUE);
         const auto &private_tiny_rcon_server_ip = main_app.get_private_tiny_rcon_server_ip_address();
         const auto private_tiny_rcon_server_port = main_app.get_private_tiny_rcon_server_port();
-        while (true)
+        while (!st.stop_requested() && !is_terminate_program.load())
         {
 
             try
             {
 
-                while (!is_terminate_program.load() && !main_app.is_remote_message_queue_empty())
+                while (!st.stop_requested() && !is_terminate_program.load() &&
+                       !main_app.is_remote_message_queue_empty())
                 {
                     message_t message{main_app.get_remote_message_from_queue()};
                     const bool is_call_message_handler{message.command != "inform-message" &&
@@ -7224,7 +7170,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                         private_tiny_rcon_server_port, is_call_message_handler);
                 }
 
-                if (!is_terminate_program.load())
+                if (!st.stop_requested() && !is_terminate_program.load())
                 {
                     main_app.get_connection_manager_for_rcon_messages().wait_for_and_process_response_message(
                         private_tiny_rcon_server_ip, private_tiny_rcon_server_port);
@@ -7246,11 +7192,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                                                   buffer)};
                 print_colored_text(app_handles.hwnd_re_messages_data, error_message.c_str());
             }
-            Sleep(20);
+            Sleep(10);
         }
     }};
-
-    remote_messaging_thread.detach();
 
     HHOOK hHook{SetWindowsHookEx(WH_KEYBOARD_LL, monitor_game_key_press_events, GetModuleHandle(nullptr), 0)};
 
@@ -7487,6 +7431,10 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
         execute_at_exit();
 
         is_terminate_program.store(true);
+        print_messages_thread.request_stop();
+        task_thread.request_stop();
+        messaging_thread.request_stop();
+        remote_messaging_thread.request_stop();
 
         log_message("Exiting TinyRcon program.", is_log_datetime::yes);
 
@@ -7675,6 +7623,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     HMENU hPopupMenu;
     PAINTSTRUCT ps;
     static int counter{};
+    static size_t rcon_status_sent_counter{};
     /*static const int counter_max =
             std::max<size_t>({ 60u,
        main_app.get_time_period_in_minutes_for_displaying_top_players_stats_data_in_game_chat(),
@@ -8232,7 +8181,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 is_first_left_mouse_button_click_in_prompt_edit_control = false;
             }
 
-            is_refresh_players_data_event.store(true);
+            ++rcon_status_sent_counter;
+        }
+        else if (rcon_status_sent_counter >= 12)
+        {
+            get_muted_guid_keys_server_setting();
+            rcon_status_sent_counter = 0u;
         }
 
         if (is_refreshed_players_data_ready_event.load())
@@ -8629,35 +8583,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 SetClipboardData(CF_TEXT, hMem);
                 CloseClipboard();
             }
-            // INPUT ip;
-            // ip.type = INPUT_KEYBOARD;
-            // ip.ki.wScan = 0;
-            // ip.ki.time = 0;
-            // ip.ki.dwExtraInfo = 0;
-            //// Press the "Ctrl" key
-            // ip.ki.wVk = VK_CONTROL;
-            // ip.ki.dwFlags = 0;// 0 for key press
-            // SendInput(1, &ip, sizeof(INPUT));
-
-            //// Press the "C" key
-            // ip.ki.wVk = 'C';
-            // ip.ki.dwFlags = 0;// 0 for key press
-            // SendInput(1, &ip, sizeof(INPUT));
-
-            //// Release the "C" key
-            // ip.ki.wVk = 'C';
-            // ip.ki.dwFlags = KEYEVENTF_KEYUP;
-            // SendInput(1, &ip, sizeof(INPUT));
-
-            //// Release the "Ctrl" key
-            // ip.ki.wVk = VK_CONTROL;
-            // ip.ki.dwFlags = KEYEVENTF_KEYUP;
-            // SendInput(1, &ip, sizeof(INPUT));
         }
         break;
 
         case IDC_PASTE: {
-            // SetFocus(app_handles.hwnd_e_user_input);
             if (IsClipboardFormatAvailable(CF_TEXT) && OpenClipboard(app_handles.hwnd_main_window))
             {
 
@@ -8671,37 +8600,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 GlobalUnlock(hglb);
                 CloseClipboard();
             }
-
-            // INPUT ip;
-            // ip.type = INPUT_KEYBOARD;
-            // ip.ki.wScan = 0;
-            // ip.ki.time = 0;
-            // ip.ki.dwExtraInfo = 0;
-            //// Press the "Ctrl" key
-            // ip.ki.wVk = VK_CONTROL;
-            // ip.ki.dwFlags = 0;// 0 for key press
-            // SendInput(1, &ip, sizeof(INPUT));
-
-            //// Press the "V" key
-            // ip.ki.wVk = 'V';
-            // ip.ki.dwFlags = 0;// 0 for key press
-            // SendInput(1, &ip, sizeof(INPUT));
-
-            //// Release the "V" key
-            // ip.ki.wVk = 'V';
-            // ip.ki.dwFlags = KEYEVENTF_KEYUP;
-            // SendInput(1, &ip, sizeof(INPUT));
-
-            //// Release the "Ctrl" key
-            // ip.ki.wVk = VK_CONTROL;
-            // ip.ki.dwFlags = KEYEVENTF_KEYUP;
-            // SendInput(1, &ip, sizeof(INPUT));
         }
         break;
 
         case ID_QUITBUTTON:
-            // execute_at_exit();
-            // is_terminate_program.store(true);
             PostQuitMessage(0);
             break;
 

@@ -1,11 +1,6 @@
 #include "framework.h"
 #include "resource.h"
-// #include "stack_trace_element.h"
 #include <CommCtrl.h>
-
-// #include "framework.h"
-// #include "resource.h"
-// #include "stack_trace_element.h"
 
 #undef min
 
@@ -22,7 +17,7 @@ using namespace std::string_literals;
 using namespace std::chrono;
 using namespace std::filesystem;
 
-extern const string program_version{"1.3.0.0"};
+extern const string program_version{"1.3.0.1"};
 
 extern std::atomic<bool> is_terminate_program;
 extern volatile std::atomic<bool> is_terminate_tinyrcon_settings_configuration_dialog_window;
@@ -224,6 +219,10 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
     }
 
     parse_tinyrcon_tool_config_file(main_app.get_tinyrcon_config_file_path());
+
+    main_app.get_connection_manager_for_messages().open_socket_for_messages(main_app.get_tiny_rcon_server_ip_address(),
+                                                                            main_app.get_tiny_rcon_server_port());
+
     load_available_map_names(custom_map_names_file_path.c_str());
 
     if (main_app.get_is_enable_players_stats_feature())
@@ -2392,6 +2391,42 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
         main_app.get_game_server().get_header_player_geoinfo_color() + "Country bans"s;
     users_table_column_header_titles[18] = main_app.get_game_server().get_header_player_geoinfo_color() + "Name bans"s;
 
+    std::jthread print_messages_thread{[&](stop_token st) {
+        IsGUIThread(TRUE);
+
+        while (!st.stop_requested() && !is_terminate_program.load())
+        {
+
+            try
+            {
+
+                while (!st.stop_requested() && !is_terminate_program.load() &&
+                       !main_app.is_tinyrcon_message_queue_empty())
+                {
+                    print_message_t msg{main_app.get_tinyrcon_message_from_queue()};
+                    print_message(app_handles.hwnd_re_messages_data, msg.message_, msg.log_to_file_,
+                                  msg.is_log_current_date_time_, msg.is_remove_color_codes_for_log_message_);
+                }
+            }
+            catch (std::exception &ex)
+            {
+                const string error_message{
+                    format("^3A specific exception was caught in print_messages_thread!\n^1Exception: {}", ex.what())};
+                print_message(app_handles.hwnd_re_messages_data, error_message);
+            }
+            catch (...)
+            {
+                char buffer[512];
+                strerror_s(buffer, GetLastError());
+                const string error_message{
+                    format("^3A generic error was caught in print_messages_thread!\n^1Exception: {}", buffer)};
+                print_message(app_handles.hwnd_re_messages_data, error_message);
+            }
+
+            Sleep(20);
+        }
+    }};
+
     main_app.open_log_file("log/commands_history.log");
     construct_tinyrcon_gui(app_handles.hwnd_main_window);
 
@@ -2403,7 +2438,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
 
     SetFocus(app_handles.hwnd_e_user_input);
 
-    std::thread task_thread{[&]() {
+    std::jthread task_thread{[&](stop_token st) {
         IsGUIThread(TRUE);
         print_colored_text(app_handles.hwnd_re_messages_data, "^3Started parsing ^1tinyrcon.json ^3file.\n",
                            is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes);
@@ -2500,28 +2535,24 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
 
         is_main_window_constructed = true;
 
-        while (true)
+        while (!st.stop_requested() && !is_terminate_program.load())
         {
-
             try
             {
 
                 {
                     unique_lock ul{mu};
-                    exit_flag.wait_for(ul, 20ms, [&]() { return is_terminate_program.load(); });
+                    exit_flag.wait_for(ul, 20ms, [&]() { return st.stop_requested() || is_terminate_program.load(); });
                 }
 
-                if (is_terminate_program.load())
-                    break;
-
-                while (!main_app.is_command_queue_empty())
+                while (!st.stop_requested() && !is_terminate_program.load() && !main_app.is_command_queue_empty())
                 {
                     auto cmd = main_app.get_command_from_queue();
                     main_app.process_queue_command(std::move(cmd));
                 }
 
-                if (!is_terminate_program.load() && main_app.get_is_enable_players_stats_feature() &&
-                    is_refresh_players_data_event.load())
+                if (!st.stop_requested() && !is_terminate_program.load() && !is_terminate_program.load() &&
+                    main_app.get_is_enable_players_stats_feature() && is_refresh_players_data_event.load())
                 {
                     string rcon_reply;
 
@@ -2552,17 +2583,15 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
         }
     }};
 
-    task_thread.detach();
-
-    std::thread messaging_thread{[&]() {
-        while (true)
+    std::jthread messaging_thread{[&](stop_token st) {
+        while (!st.stop_requested() && !is_terminate_program.load())
         {
             try
             {
 
                 main_app.get_connection_manager_for_messages().wait_for_and_process_response_message();
 
-                while (!main_app.is_message_queue_empty())
+                while (!st.stop_requested() && !is_terminate_program.load() && !main_app.is_message_queue_empty())
                 {
                     message_t message{main_app.get_message_from_queue()};
                     main_app.get_connection_manager_for_messages().process_and_send_message(
@@ -2587,8 +2616,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
             }
         }
     }};
-
-    messaging_thread.detach();
 
     MSG msg{};
     try
@@ -2671,6 +2698,10 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
         save_tinyrcon_statistics_data("data\\data_stats.json");
 
         is_terminate_program.store(true);
+        print_messages_thread.request_stop();
+        task_thread.request_stop();
+        messaging_thread.request_stop();
+
         exit_flag.notify_all();
 
         if (pr_info.hProcess != nullptr)

@@ -118,8 +118,8 @@ class tiny_rcon_client_application : public disabled_copy_operations, public dis
     std::ofstream log_file;
     std::string tiny_rcon_ftp_server_username{"tinyrcon"};
     std::string tiny_rcon_ftp_server_password{"08021980"};
-    std::string tiny_rcon_server_ip_address{"85.222.189.119"};
-    std::string private_tiny_rcon_server_ip_address{"85.222.189.119"};
+    std::string tiny_rcon_server_ip_address{"127.0.0.1"};
+    std::string private_tiny_rcon_server_ip_address{"127.0.0.1"};
     std::string cod2_master_server_ip_address{"185.34.107.159"};
 
     string current_match_info{"^3Map: {MAP_FULL_NAME} ^1({MAP_RCON_NAME}^1) ^3| Gametype: "
