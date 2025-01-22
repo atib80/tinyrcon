@@ -40,7 +40,7 @@ Debug
 /.idea
 /.metals
 /.vs
-#/Release
+/Release
 /Debug
 /X64
 /.vscode
