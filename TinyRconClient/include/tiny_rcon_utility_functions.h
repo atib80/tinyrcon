@@ -596,3 +596,4 @@ bool check_if_selected_player_has_my_ip_address();
                           // std::unordered_map<std::string, player> &muted_players_map);
 std::pair<bool, player> remove_muted_ip_address(std::string &ip_address, std::string &message,
                                                 const bool is_report_public_message = true);
+void display_game_server_offline_message_and_clear_players_table(game_server &gs);

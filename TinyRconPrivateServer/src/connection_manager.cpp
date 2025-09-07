@@ -153,6 +153,8 @@ is_process_reply={})",
       }
     } else if (str_starts_with(received_reply, "statusresponse", true)) {
 
+      main_app.get_connection_manager().get_last_get_status_received() = get_current_time_stamp();
+
       const size_t first_sep_pos{ received_reply.find('\\') };
       if (first_sep_pos == string::npos)
         return noOfAllReceivedBytes;
@@ -358,6 +360,8 @@ size_t connection_manager::receive_rcon_reply_from_server(
             main_app.set_is_connection_settings_valid(true);
             set_admin_actions_buttons_active(TRUE);
           }
+
+          main_app.get_connection_manager().get_last_rcon_status_received() = get_current_time_stamp();
 
           start = received_reply.c_str() + 5;
           last = start;

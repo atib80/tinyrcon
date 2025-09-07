@@ -18025,3 +18025,12 @@ void update_muted_guid_keys_server_setting()
     get_user_input();
     // main_app.get_command_handler("!rc").second({ "!rc", "seta", "g_muted_guids", muted_guid_keys, "--silent" });
 }
+
+void display_game_server_offline_message_and_clear_players_table(game_server& gs) {
+    const string warning_message{"^3Warning: No 'getstatus' response received from the game server for more than "
+                                 "^110 seconds^3! Attempting to reinitialize players data...\n"};
+
+    print_colored_text(app_handles.hwnd_re_messages_data, warning_message.c_str());
+    initialize_elements_of_container_to_specified_value(gs.get_players_data(), player{}, 0);
+    clear_players_data_in_players_grid(app_handles.hwnd_players_grid, 0, max_players_grid_rows, 8);
+}

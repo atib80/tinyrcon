@@ -116,7 +116,7 @@
       <EnableModules>false</EnableModules>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
       <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)deps\bit7z\include\;$(SolutionDir)deps\asio-1.26.0\include</AdditionalIncludeDirectories>
-      <FloatingPointModel>Fast</FloatingPointModel>
+      <FloatingPointModel>Default</FloatingPointModel>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
     </ClCompile>
     <Link>
@@ -146,7 +146,7 @@
       <StringPooling>true</StringPooling>
       <EnableModules>false</EnableModules>
       <AdditionalIncludeDirectories>$(ProjectDir)include;$(SolutionDir)deps\bit7z\include\;$(SolutionDir)deps\asio-1.26.0\include</AdditionalIncludeDirectories>
-      <FloatingPointModel>Fast</FloatingPointModel>
+      <FloatingPointModel>Default</FloatingPointModel>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
@@ -175,7 +175,7 @@
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <EnableModules>false</EnableModules>
       <AdditionalIncludeDirectories>include;$(SolutionDir)deps\asio-1.26.0\include;</AdditionalIncludeDirectories>
-      <FloatingPointModel>Fast</FloatingPointModel>
+      <FloatingPointModel>Default</FloatingPointModel>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>
@@ -196,7 +196,7 @@
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <EnableModules>false</EnableModules>
       <AdditionalIncludeDirectories>include;$(SolutionDir)deps\asio-1.26.0\include;$(ProjectDir)include</AdditionalIncludeDirectories>
-      <FloatingPointModel>Fast</FloatingPointModel>
+      <FloatingPointModel>Default</FloatingPointModel>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
     </ClCompile>
     <Link>

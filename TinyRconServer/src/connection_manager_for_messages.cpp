@@ -138,11 +138,9 @@ bool connection_manager_for_messages::wait_for_and_process_response_message()
 
         if (message_handler_name == "query-request")
         {
-            // const string information{ format("Received query-request from user {}
-            // (IP: {} geoinfo: {})\nMessage contents: {}\n", sender, sender_ip,
-            // geo_information, message_contents) };
-            // print_colored_text(app_handles.hwnd_re_messages_data,
-            // information.c_str());
+            const string information { format("Received query-request from user {} (IP: {} geoinfo: {})\nMessage contents: {}\n", 
+                sender, sender_ip, geo_information, message_contents) };
+            print_colored_text(app_handles.hwnd_re_messages_data, information.c_str());
 
             if (size_t start{}; (start = message_contents.find("is_user_admin?")) != string::npos)
             {

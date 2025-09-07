@@ -16,7 +16,7 @@ using namespace std::string_literals;
 using namespace std::chrono;
 using namespace std::filesystem;
 
-extern const string program_version{"2.7.7.8"};
+extern const string program_version{"2.7.8.2"};
 
 extern const std::regex ip_address_and_port_regex;
 extern const unordered_set<string> rcon_status_commands;
@@ -6955,11 +6955,19 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
         string rcon_reply;
         if (main_app.get_game_servers_count() != 0)
         {
-
             auto &gs = main_app.get_game_servers()[0];
-            main_app.get_connection_manager().send_and_receive_rcon_data(
-                "status", rcon_reply, gs.get_server_ip_address().c_str(), gs.get_server_port(),
-                gs.get_rcon_password().c_str(), gs, true, true);
+
+            if (me->is_admin)
+            {
+                main_app.get_connection_manager().send_and_receive_rcon_data(
+                    "status", rcon_reply, gs.get_server_ip_address().c_str(), gs.get_server_port(),
+                    gs.get_rcon_password().c_str(), gs, true, true);
+            }
+            else
+            {
+                main_app.get_connection_manager().send_and_receive_non_rcon_data(
+                    "getstatus", rcon_reply, gs.get_server_ip_address().c_str(), gs.get_server_port(), gs, true, true);
+            }
             load_current_map_image(main_app.get_current_game_server().get_current_map());
         }
 
@@ -7032,32 +7040,48 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                         main_app.set_game_server_index(0U);
                     }
 
+                    const auto current_ts = get_current_time_stamp();
+                    const auto time_elapsed_in_sec_since_last_status_message{
+                        current_ts - main_app.get_connection_manager().get_last_rcon_status_received()};
+                    const auto time_elapsed_in_sec_since_last_getstatus_message{
+                        current_ts - main_app.get_connection_manager().get_last_get_status_received()};
+
                     if (game_server_index < main_app.get_rcon_game_servers_count())
                     {
+                        game_server &rcon_gs = game_servers[game_server_index];                       
+
                         if (me->is_admin)
                         {
-                            game_server &rcon_gs = game_servers[0];
+
+                            if (time_elapsed_in_sec_since_last_status_message > 10)
+                            {
+                                display_game_server_offline_message_and_clear_players_table(rcon_gs);
+                            }
+
                             main_app.get_connection_manager().send_and_receive_rcon_data(
                                 "status", rcon_reply, rcon_gs.get_server_ip_address().c_str(),
                                 rcon_gs.get_server_port(), rcon_gs.get_rcon_password().c_str(), rcon_gs, true, true);
                         }
                         else
                         {
-                            game_server &rcon_gs = game_servers[game_server_index];
-                            const auto current_ts = get_current_time_stamp();
-                            const auto time_elapsed_in_sec{
-                                current_ts - main_app.get_connection_manager().get_last_rcon_status_received()};
-                            if (time_elapsed_in_sec >= 10)
+
+                            if (time_elapsed_in_sec_since_last_status_message > 10)
                             {
                                 main_app.get_connection_manager_for_rcon_messages().process_and_send_message(
                                     "rcon-heartbeat-player",
                                     format("{}\\{}\\{}", main_app.get_username(), current_ts, me->ip_address), true,
                                     main_app.get_private_tiny_rcon_server_ip_address(),
                                     main_app.get_private_tiny_rcon_server_port(), false);
-                                main_app.get_connection_manager().send_and_receive_non_rcon_data(
-                                    "getstatus", rcon_reply, rcon_gs.get_server_ip_address().c_str(),
-                                    rcon_gs.get_server_port(), rcon_gs, true, true);
                             }
+
+                            if (time_elapsed_in_sec_since_last_getstatus_message > 10)
+                            {
+                                display_game_server_offline_message_and_clear_players_table(rcon_gs);
+                            }
+
+                            main_app.get_connection_manager().send_and_receive_non_rcon_data(
+                                "getstatus", rcon_reply, rcon_gs.get_server_ip_address().c_str(),
+                                rcon_gs.get_server_port(), rcon_gs, true, true);
                         }
                     }
                     else
@@ -7071,8 +7095,13 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                         }
 
                         game_server &gs = game_servers[game_server_index];
+                        
                         if (!is_rcon_game_server(gs))
                         {
+                            if (time_elapsed_in_sec_since_last_getstatus_message > 10)
+                            {
+                                display_game_server_offline_message_and_clear_players_table(gs);
+                            }
 
                             main_app.get_connection_manager().send_and_receive_non_rcon_data(
                                 "getstatus", rcon_reply, gs.get_server_ip_address().c_str(), gs.get_server_port(), gs,
@@ -7196,7 +7225,20 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
         }
     }};
 
-    HHOOK hHook{SetWindowsHookEx(WH_KEYBOARD_LL, monitor_game_key_press_events, GetModuleHandle(nullptr), 0)};
+    struct release_HHOOK_callback_type
+    {
+        void operator()(HHOOK *h) const
+        {
+            if (h != nullptr)
+            {
+                UnhookWindowsHookEx(*h);
+            }
+        }
+    };
+
+    auto hHook{SetWindowsHookExA(WH_KEYBOARD_LL, monitor_game_key_press_events, GetModuleHandle(nullptr), 0)};
+
+    std::unique_ptr<HHOOK, release_HHOOK_callback_type> hook_ptr{&hHook};
 
     SetTimer(app_handles.hwnd_main_window, ID_TIMER, 1000, nullptr);
     MSG win32_msg{};
@@ -7464,8 +7506,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                                           "execution!\n^1Exception: {}",
                                           ex.what())};
         print_colored_text(app_handles.hwnd_re_messages_data, error_message.c_str());
-        if (hHook)
-            UnhookWindowsHookEx(hHook);
+        // if (hHook) UnhookWindowsHookEx(hHook);
     }
     catch (...)
     {
@@ -7475,12 +7516,10 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                                           "execution\n^1Exception: {}",
                                           buffer)};
         print_colored_text(app_handles.hwnd_re_messages_data, error_message.c_str());
-        if (hHook)
-            UnhookWindowsHookEx(hHook);
+        // if (hHook) UnhookWindowsHookEx(hHook);
     }
 
-    if (hHook)
-        UnhookWindowsHookEx(hHook);
+    // if (hHook) UnhookWindowsHookEx(hHook);
     return static_cast<int>(win32_msg.wParam);
 }
 

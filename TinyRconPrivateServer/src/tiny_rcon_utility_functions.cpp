@@ -3563,9 +3563,9 @@ std::pair<bool, player> remove_muted_ip_address(std::string &ip_address, std::st
 
   if (is_report_public_message) {
     message = format("^1Admin ^7{} ^7has manually removed ^1muted IP address ^7of player {}^7.",
-        main_app.get_username(),
-        pd.player_name);
-        // rcon_say(message, true);
+      main_app.get_username(),
+      pd.player_name);
+    // rcon_say(message, true);
   }
 
   char rcon_command_buffer[256]{};
@@ -14361,16 +14361,16 @@ const std::string &get_current_map_image_name(const std::string &current_rcon_ma
   return unknown_rcon_map_name_image;
 }
 
-//void load_current_map_image(const std::string &rcon_map_name)
+// void load_current_map_image(const std::string &rcon_map_name)
 //{
-//  static string current_rcon_map_name{ "n/a" };
+//   static string current_rcon_map_name{ "n/a" };
 //
-//  if (rcon_map_name != current_rcon_map_name) {
-//    current_rcon_map_name = rcon_map_name;
-//    g_hBitMap = main_app.get_bitmap_image_handler().get_bitmap_image(rcon_map_name);
-//    InvalidateRect(app_handles.hwnd_main_window, nullptr, FALSE);
-//  }
-//}
+//   if (rcon_map_name != current_rcon_map_name) {
+//     current_rcon_map_name = rcon_map_name;
+//     g_hBitMap = main_app.get_bitmap_image_handler().get_bitmap_image(rcon_map_name);
+//     InvalidateRect(app_handles.hwnd_main_window, nullptr, FALSE);
+//   }
+// }
 
 void load_current_map_image(const std::string &rcon_map_name)
 {
@@ -14870,7 +14870,6 @@ bool is_ip_address_proxy_or_vpn(const char *player_name, const std::string &prev
       return true;
   }
 
-
   char command_to_run[512];
 
   const string output_file_name{ format("get_response_{}.json", ip_key) };
@@ -15015,7 +15014,7 @@ bool is_vpn_proxy_ip_address_detected(const int pid)
 bool check_if_ip_address_is_similar_to_previous_ip_address(const std::string &current_ip_address, const std::string &previous_ip_address)
 {
   unsigned long ip_key{};
-  const bool is_previous_ip_address_valid{ check_ip_address_validity(current_ip_address, ip_key) };
+  const bool is_previous_ip_address_valid{ check_ip_address_validity(previous_ip_address, ip_key) };
   const bool is_current_ip_address_valid{ check_ip_address_validity(current_ip_address, ip_key) };
   if ((!is_previous_ip_address_valid && is_current_ip_address_valid) || (is_previous_ip_address_valid && !is_current_ip_address_valid) || (!is_previous_ip_address_valid && !is_current_ip_address_valid)) return false;
 
@@ -15368,4 +15367,16 @@ void update_muted_guid_keys_server_setting()
   snprintf(rcon_command_buffer, std::size(rcon_command_buffer), "!rc seta g_muted_guids \"%s\" --silent", muted_guid_keys.c_str());
   Edit_SetText(app_handles.hwnd_e_user_input, rcon_command_buffer);
   get_user_input();
+}
+
+void display_game_server_offline_message_and_clear_players_table(game_server &gs)
+{
+  const string warning_message{
+    "^3Warning: No 'getstatus' response received from the game server for more than "
+    "^110 seconds^3!\n^5Attempting to reinitialize players data...\n"
+  };
+
+  print_colored_text(app_handles.hwnd_re_messages_data, warning_message.c_str());
+  initialize_elements_of_container_to_specified_value(gs.get_players_data(), player{}, 0);
+  clear_players_data_in_players_grid(app_handles.hwnd_players_grid, 0, max_players_grid_rows, 8);
 }
