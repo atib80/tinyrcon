@@ -17,7 +17,7 @@ using namespace std::string_literals;
 using namespace std::chrono;
 using namespace std::filesystem;
 
-extern const string program_version{ "2.7.8.0" };
+extern const string program_version{ "2.7.8.1" };
 
 extern const std::regex ip_address_and_port_regex;
 extern const unordered_set<string> rcon_status_commands;
@@ -59,7 +59,67 @@ std::recursive_mutex welcome_messages_mutex_for_players;
 std::recursive_mutex welcome_messages_mutex_for_admins;
 
 std::once_flag synchronize_bans_flag{};
-static int operation_completed_flag[6]{};
+static std::mutex ban_entries_synchronized_for_admins_flags_mutex{};
+static std::mutex ban_entries_synchronized_for_players_flags_mutex{};
+
+enum ban_entry_type {
+  temp_bans = 0,
+  ip_bans,
+  ip_range_bans,
+  banned_countries,
+  banned_cities,
+  banned_names,
+  count
+};
+
+static constinit std::array<int, ban_entry_type::count> ban_entries_synchronized_for_admins_flag{};
+static constinit std::array<int, ban_entry_type::count> ban_entries_synchronized_for_players_flag{};
+
+bool is_ban_entries_synchronized_for_admins()
+{
+  return ban_entry_type::count == std::accumulate(cbegin(ban_entries_synchronized_for_admins_flag), cend(ban_entries_synchronized_for_admins_flag), 0);
+}
+
+bool is_ban_entries_synchronized_for_players()
+{
+  return ban_entry_type::count == std::accumulate(cbegin(ban_entries_synchronized_for_players_flag), cend(ban_entries_synchronized_for_players_flag), 0);
+}
+
+void clear_operation_completed_flags_for_admins()
+{
+  std::scoped_lock lk{ ban_entries_synchronized_for_admins_flags_mutex };
+  std::ranges::fill(ban_entries_synchronized_for_admins_flag, 0);
+  main_app.set_is_ban_entries_synchronized_for_admins(false);
+}
+
+void clear_operation_completed_flags_for_players()
+{
+  std::scoped_lock lk{ ban_entries_synchronized_for_players_flags_mutex };
+  std::ranges::fill(ban_entries_synchronized_for_players_flag, 0);
+  main_app.set_is_ban_entries_synchronized_for_players(false);
+}
+
+void set_operation_completed_flag_for_admins(const size_t index)
+{
+  if (index >= 0 && index < std::size(ban_entries_synchronized_for_admins_flag)) {
+    std::scoped_lock lk{ ban_entries_synchronized_for_admins_flags_mutex };
+    ban_entries_synchronized_for_admins_flag[index] = 1;
+    if (is_ban_entries_synchronized_for_admins()) {
+      main_app.set_is_ban_entries_synchronized_for_admins(true);
+    }
+  }
+}
+
+void set_operation_completed_flag_for_players(const size_t index)
+{
+  if (index >= 0 && index < std::size(ban_entries_synchronized_for_players_flag)) {
+    std::scoped_lock lk{ ban_entries_synchronized_for_players_flags_mutex };
+    ban_entries_synchronized_for_players_flag[index] = 1;
+    if (is_ban_entries_synchronized_for_players()) {
+      main_app.set_is_ban_entries_synchronized_for_players(true);
+    }
+  }
+}
 
 extern const int screen_width{ GetSystemMetrics(SM_CXSCREEN) };
 extern const int screen_height{ GetSystemMetrics(SM_CYSCREEN) - 30 };
@@ -3787,12 +3847,15 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     });
 
     save_tempbans_to_file(main_app.get_temp_bans_file_path(), main_app.get_current_game_server().get_temp_banned_ip_addresses_vector());
-    operation_completed_flag[0] = 1;
-    if (6 == std::accumulate(operation_completed_flag, operation_completed_flag + 6, 0)) {
-      // const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
-      // print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
-      main_app.set_is_bans_synchronized(true);
-    }
+    set_operation_completed_flag_for_admins(ban_entry_type::temp_bans);
+    // if (is_ban_entries_synchronized_for_admins())
+    //{
+    //     /*const string message{ "^2Received updated ^1ban entries ^2from
+    //     ^5Tiny^6Rcon ^5server." };
+    //     print_colored_text(app_handles.hwnd_re_messages_data,
+    //     message.c_str());*/
+    //     main_app.set_is_bans_synchronized(true);
+    // }
   });
 
   // receive-ipaddressbans
@@ -3821,12 +3884,15 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     });
 
     save_banned_ip_entries_to_file(main_app.get_ip_bans_file_path(), main_app.get_current_game_server().get_banned_ip_addresses_vector());
-    operation_completed_flag[1] = 1;
-    if (6 == std::accumulate(operation_completed_flag, operation_completed_flag + 6, 0)) {
-      // const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
-      // print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
-      main_app.set_is_bans_synchronized(true);
-    }
+    set_operation_completed_flag_for_admins(ban_entry_type::ip_bans);
+    // if (is_ban_entries_synchronized_for_admins())
+    //{
+    //     /*const string message{ "^2Received updated ^1ban entries ^2from
+    //     ^5Tiny^6Rcon ^5server." };
+    //     print_colored_text(app_handles.hwnd_re_messages_data,
+    //     message.c_str());*/
+    //     main_app.set_is_bans_synchronized(true);
+    // }
   });
 
   // receive-ipaddressrangebans
@@ -3857,12 +3923,15 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     });
 
     save_banned_ip_address_range_entries_to_file(main_app.get_ip_range_bans_file_path(), main_app.get_current_game_server().get_banned_ip_address_ranges_vector());
-    operation_completed_flag[2] = 1;
-    if (6 == std::accumulate(operation_completed_flag, operation_completed_flag + 6, 0)) {
-      // const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
-      // print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
-      main_app.set_is_bans_synchronized(true);
-    }
+    set_operation_completed_flag_for_admins(ban_entry_type::ip_range_bans);
+    // if (is_ban_entries_synchronized_for_admins())
+    //{
+    //     /*const string message{ "^2Received updated ^1ban entries ^2from
+    //     ^5Tiny^6Rcon ^5server." };
+    //     print_colored_text(app_handles.hwnd_re_messages_data,
+    //     message.c_str());*/
+    //     main_app.set_is_bans_synchronized(true);
+    // }
   });
 
   // receive-namebans
@@ -3894,12 +3963,15 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     });
 
     save_banned_ip_entries_to_file(main_app.get_banned_names_file_path(), main_app.get_current_game_server().get_banned_names_vector());
-    operation_completed_flag[5] = 1;
-    if (6 == std::accumulate(operation_completed_flag, operation_completed_flag + 6, 0)) {
-      // const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
-      // print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
-      main_app.set_is_bans_synchronized(true);
-    }
+    set_operation_completed_flag_for_admins(ban_entry_type::banned_names);
+    // if (is_ban_entries_synchronized_for_admins())
+    //{
+    //     /*const string message{ "^2Received updated ^1ban entries ^2from
+    //     ^5Tiny^6Rcon ^5server." };
+    //     print_colored_text(app_handles.hwnd_re_messages_data,
+    //     message.c_str());*/
+    //     main_app.set_is_bans_synchronized(true);
+    // }
   });
 
   // receive-citybans
@@ -3919,12 +3991,15 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     }
 
     save_banned_cities_to_file(main_app.get_banned_cities_file_path(), main_app.get_current_game_server().get_banned_cities_set());
-    operation_completed_flag[3] = 1;
-    if (6 == std::accumulate(operation_completed_flag, operation_completed_flag + 6, 0)) {
-      // const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
-      // print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
-      main_app.set_is_bans_synchronized(true);
-    }
+    set_operation_completed_flag_for_admins(ban_entry_type::banned_cities);
+    // if (is_ban_entries_synchronized_for_admins())
+    //{
+    //     /*const string message{ "^2Received updated ^1ban entries ^2from
+    //     ^5Tiny^6Rcon ^5server." };
+    //     print_colored_text(app_handles.hwnd_re_messages_data,
+    //     message.c_str());*/
+    //     main_app.set_is_bans_synchronized(true);
+    // }
   });
 
   // receive-countrybans
@@ -3946,12 +4021,15 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     }
 
     save_banned_countries_to_file(main_app.get_banned_countries_file_path(), main_app.get_current_game_server().get_banned_countries_set());
-    operation_completed_flag[4] = 1;
-    if (6 == std::accumulate(operation_completed_flag, operation_completed_flag + 6, 0)) {
-      // const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
-      // print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
-      main_app.set_is_bans_synchronized(true);
-    }
+    set_operation_completed_flag_for_admins(ban_entry_type::banned_countries);
+    // if (is_ban_entries_synchronized_for_admins())
+    //{
+    //     /*const string message{ "^2Received updated ^1ban entries ^2from
+    //     ^5Tiny^6Rcon ^5server." };
+    //     print_colored_text(app_handles.hwnd_re_messages_data,
+    //     message.c_str());*/
+    //     main_app.set_is_bans_synchronized(true);
+    // }
   });
 
   //**********************************************************************************************
@@ -4291,7 +4369,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
         print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
 
-        main_app.set_is_bans_synchronized(true);
+        main_app.set_is_ban_entries_synchronized_for_admins(true);
       }
     }
   });
@@ -4310,28 +4388,28 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       if (download_file_from_ftp_server(main_app.get_tiny_rcon_server_ip_address().c_str(), main_app.get_tiny_rcon_ftp_server_username().c_str(), main_app.get_tiny_rcon_ftp_server_password().c_str(), files_to_compress.at(file_name_key).c_str(), data.c_str())) {
         if (file_name_key == "tempbans") {
           parse_tempbans_data_file(main_app.get_temp_bans_file_path(), main_app.get_current_game_server().get_temp_banned_ip_addresses_vector(), main_app.get_current_game_server().get_temp_banned_ip_addresses_map());
-          operation_completed_flag[0] = 1;
+          set_operation_completed_flag_for_admins(ban_entry_type::temp_bans);
         } else if (file_name_key == "bans") {
           parse_banned_ip_addresses_file(main_app.get_ip_bans_file_path(), main_app.get_current_game_server().get_banned_ip_addresses_vector(), main_app.get_current_game_server().get_banned_ip_addresses_map());
-          operation_completed_flag[1] = 1;
+          set_operation_completed_flag_for_admins(ban_entry_type::ip_bans);
         } else if (file_name_key == "ip_range_bans") {
           parse_banned_ip_address_ranges_file(main_app.get_ip_range_bans_file_path(), main_app.get_current_game_server().get_banned_ip_address_ranges_vector(), main_app.get_current_game_server().get_banned_ip_address_ranges_map());
-          operation_completed_flag[2] = 1;
+          set_operation_completed_flag_for_admins(ban_entry_type::ip_range_bans);
         } else if (file_name_key == "banned_cities") {
           parse_banned_cities_file(main_app.get_banned_cities_file_path(), main_app.get_current_game_server().get_banned_cities_set());
-          operation_completed_flag[3] = 1;
+          set_operation_completed_flag_for_admins(ban_entry_type::banned_cities);
         } else if (file_name_key == "banned_countries") {
           parse_banned_countries_file(main_app.get_banned_countries_file_path(), main_app.get_current_game_server().get_banned_countries_set());
-          operation_completed_flag[4] = 1;
+          set_operation_completed_flag_for_admins(ban_entry_type::banned_countries);
         } else if (file_name_key == "banned_names") {
           parse_banned_names_file(main_app.get_banned_names_file_path(), main_app.get_current_game_server().get_banned_names_vector(), main_app.get_current_game_server().get_banned_names_map());
-          operation_completed_flag[5] = 1;
+          set_operation_completed_flag_for_admins(ban_entry_type::banned_names);
         }
-        if (6 == std::accumulate(operation_completed_flag, operation_completed_flag + 6, 0)) {
-          // const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
-          // print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
-          main_app.set_is_bans_synchronized(true);
-        }
+        // if (is_ban_entries_synchronized_for_admins()) {
+        //   // const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
+        //   // print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
+        //   main_app.set_is_bans_synchronized(true);
+        // }
       }
     }
   });
@@ -6074,7 +6152,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
             unsigned long guid_number{};
 
             const string compressed_bans_file_name{ format("bans_{}_{}.7z", get_random_number(), check_ip_address_validity(main_app.get_user_ip_address(), guid_number) ? remove_disallowed_characters_in_ip_address(main_app.get_user_ip_address()) : to_string(get_random_number())) };
-            std::fill(operation_completed_flag, operation_completed_flag + 6, 0);
+            // clear_operation_completed_flags_for_admins();
             main_app.add_message_to_queue(message_t{ "upload-bans-compressed", compressed_bans_file_name, true });
           }
 
@@ -6533,11 +6611,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
       main_app.add_message_to_queue(message_t{ "request-admindata", format("{}\\{}\\{}", me->user_name, me->ip_address, current_ts), true });
       save_current_user_data_to_json_file(main_app.get_user_data_file_path());
 
-      if (!main_app.get_is_bans_synchronized()) {
+      if (!main_app.get_is_ban_entries_synchronized_for_admins()) {
 
         call_once(synchronize_bans_flag, [&]() {
           unsigned long guid_number{};
-          std::fill(operation_completed_flag, operation_completed_flag + 6, 0);
+          // clear_operation_completed_flags_for_admins();
 
           const string data_for_tempbans{ format("tempbans{}_{}.txt", get_random_number(), check_ip_address_validity(me->ip_address, guid_number) ? remove_disallowed_characters_in_ip_address(me->ip_address) : to_string(get_random_number())) };
           main_app.add_message_to_queue(message_t{ "upload-bans", data_for_tempbans, true });
@@ -6561,13 +6639,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     }
 
     if (counter % 30 == 0) {
-      // const auto current_ts{ get_current_time_stamp() };
-      // if (main_app.get_is_connection_settings_valid()) {
-      /*main_app.add_message_to_queue(message_t{ "request-admindata", format("{}\\{}\\{}", me->user_name, me->ip_address, current_ts), true });
-      save_current_user_data_to_json_file(main_app.get_user_data_file_path());*/
 
-      if (!main_app.get_is_bans_synchronized()) {
-        std::fill(operation_completed_flag, operation_completed_flag + 6, 0);
+      if (!main_app.get_is_ban_entries_synchronized_for_admins()) {
+        // clear_operation_completed_flags_for_admins();
         const string user_details{ format("{}\\{}\\{}", me->user_name, me->ip_address, get_current_time_stamp()) };
         main_app.add_message_to_queue(message_t{ "request-tempbans", user_details, true });
         main_app.add_message_to_queue(message_t{ "request-ipaddressbans", user_details, true });
@@ -6576,7 +6650,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         main_app.add_message_to_queue(message_t{ "request-citybans", user_details, true });
         main_app.add_message_to_queue(message_t{ "request-countrybans", user_details, true });
       }
-      //}
     }
 
     if (counter % 60 == 0) {
@@ -6587,12 +6660,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
           main_app.get_connection_manager_for_messages().process_and_send_message("query-request", format("is_user_admin?{}\\{}", me->user_name, rcon_game_server.get_rcon_password()), true, main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
           const auto status = check_if_specified_server_ip_port_and_rcon_password_are_valid(rcon_game_server.get_server_ip_address().c_str(), rcon_game_server.get_server_port(), rcon_game_server.get_rcon_password().c_str());
           me->is_admin = status.first;
-          /*if (main_app.get_is_enable_automatic_vpn_proxy_ip_address_detection()) {
-            lock_guard lk{ protect_ip_address_processing };
-            main_app.get_stats_data().set_stop_time_stamp();
-            save_ip_v4_addresses_list("data\\allowed_ip_addresses.txt", main_app.get_allowed_ip_v4_addresses());
-            save_ip_v4_addresses_list("data\\disallowed_ip_addresses.txt", main_app.get_disallowed_ip_v4_addresses());
-          }*/
         }
       };
       tasks.detach();

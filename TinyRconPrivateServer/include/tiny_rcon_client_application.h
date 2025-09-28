@@ -46,7 +46,8 @@ class tiny_rcon_client_application
   bool is_enable_automatic_vpn_proxy_ip_address_detection{ true };
   bool is_enable_automatic_connection_flood_ip_ban{ true };
   bool is_connection_settings_valid{ true };
-  bool is_bans_synchronized{ false };
+  bool is_ban_entries_synchronized_for_admins_flag{ false };
+  bool is_ban_entries_synchronized_for_players_flag{ false };
   size_t spec_time_delay{ 250 };// in milliseconds
   size_t game_server_index{};
   size_t game_servers_count{};
@@ -61,6 +62,8 @@ class tiny_rcon_client_application
   std::condition_variable command_queue_cv{};
   std::condition_variable player_pid_queue_cv{};
   std::mutex command_mutex{};
+  std::mutex ban_entries_synchronized_for_admins_mutex{};
+  std::mutex ban_entries_synchronized_for_players_mutex{};
   std::recursive_mutex player_pid_queue_mutex{};
   std::recursive_mutex command_queue_mutex{};
   std::recursive_mutex message_queue_mutex{};
@@ -347,14 +350,26 @@ public:
     return is_connection_settings_valid;
   }
 
-  void set_is_bans_synchronized(const bool new_value) noexcept
+  void set_is_ban_entries_synchronized_for_admins(const bool new_value)
   {
-    is_bans_synchronized = new_value;
+    std::scoped_lock lk{ ban_entries_synchronized_for_admins_mutex };
+    is_ban_entries_synchronized_for_admins_flag = new_value;
   }
 
-  bool get_is_bans_synchronized() const noexcept
+  bool get_is_ban_entries_synchronized_for_admins() const noexcept
   {
-    return is_bans_synchronized;
+    return is_ban_entries_synchronized_for_admins_flag;
+  }
+
+  void set_is_ban_entries_synchronized_for_players(const bool new_value)
+  {
+    std::scoped_lock lk{ ban_entries_synchronized_for_players_mutex };
+    is_ban_entries_synchronized_for_players_flag = new_value;
+  }
+
+  bool get_is_ban_entries_synchronized_for_players() const noexcept
+  {
+    return is_ban_entries_synchronized_for_players_flag;
   }
 
   // is_enable_automatic_vpn_proxy_ip_address_detection
@@ -1228,11 +1243,12 @@ public:
     return muted_players_file_path.c_str();
   }
 
-  std::unordered_map<int, std::pair<std::string, bool>>& get_pid_to_ip_address() noexcept {
+  std::unordered_map<int, std::pair<std::string, bool>> &get_pid_to_ip_address() noexcept
+  {
     return pid_to_ip_address;
   }
 
-  const std::unordered_map<int, std::pair<std::string, bool>>& get_pid_to_ip_address() const noexcept
+  const std::unordered_map<int, std::pair<std::string, bool>> &get_pid_to_ip_address() const noexcept
   {
     return pid_to_ip_address;
   }
@@ -1240,8 +1256,9 @@ public:
   /*std::vector<player>& get_muted_players_vector() noexcept {
     return muted_players_vector;
   }*/
-  
-  std::unordered_map<std::string, player>& get_muted_players_map() noexcept {
+
+  std::unordered_map<std::string, player> &get_muted_players_map() noexcept
+  {
     return muted_players_map;
   }
 

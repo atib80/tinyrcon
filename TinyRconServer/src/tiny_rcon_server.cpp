@@ -17,7 +17,7 @@ using namespace std::string_literals;
 using namespace std::chrono;
 using namespace std::filesystem;
 
-extern const string program_version{"1.3.0.1"};
+extern const string program_version{"1.3.0.2"};
 
 extern std::atomic<bool> is_terminate_program;
 extern volatile std::atomic<bool> is_terminate_tinyrcon_settings_configuration_dialog_window;
@@ -29,7 +29,6 @@ sort_type type_of_sort{sort_type::geo_asc};
 PROCESS_INFORMATION pr_info{};
 condition_variable exit_flag{};
 mutex mu{};
-// mutex inform_message_mutex{};
 
 volatile std::atomic<size_t> atomic_counter{0U};
 volatile std::atomic<bool> is_refresh_players_data_event{false};

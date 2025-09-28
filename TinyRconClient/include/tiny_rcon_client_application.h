@@ -47,7 +47,8 @@ class tiny_rcon_client_application : public disabled_copy_operations, public dis
     bool is_automatic_city_kick_enabled{false};
     bool is_automatic_country_kick_enabled{false};
     bool is_enable_automatic_connection_flood_ip_ban{true};
-    bool is_bans_synchronized{false};
+    bool is_ban_entries_synchronized_for_admins_flag{false};
+    bool is_ban_entries_synchronized_for_players_flag{false};
     bool is_enable_automatic_program_updates{true};
     bool is_enable_automatic_missing_map_image_download{true};
     /*bool is_enable_players_stats_feature{false};
@@ -75,6 +76,8 @@ class tiny_rcon_client_application : public disabled_copy_operations, public dis
     uint_least16_t private_tiny_rcon_server_port{27017};
     game_name_t game_name{game_name_t::unknown};
     std::condition_variable command_queue_cv{};
+    std::mutex ban_entries_synchronized_for_admins_mutex{};
+    std::mutex ban_entries_synchronized_for_players_mutex{};
     std::mutex command_mutex{};
     std::recursive_mutex command_queue_mutex{};
     std::recursive_mutex message_queue_mutex{};
@@ -356,14 +359,26 @@ class tiny_rcon_client_application : public disabled_copy_operations, public dis
         is_installed_cod2_game_steam_version = new_value;
     }
 
-    void set_is_bans_synchronized(const bool new_value) noexcept
+    void set_is_ban_entries_synchronized_for_admins(const bool new_value)
     {
-        is_bans_synchronized = new_value;
+        std::scoped_lock lk{ban_entries_synchronized_for_admins_mutex};
+        is_ban_entries_synchronized_for_admins_flag = new_value;
     }
 
-    bool get_is_bans_synchronized() const noexcept
+    bool get_is_ban_entries_synchronized_for_admins() const noexcept
     {
-        return is_bans_synchronized;
+        return is_ban_entries_synchronized_for_admins_flag;
+    }
+
+    void set_is_ban_entries_synchronized_for_players(const bool new_value)
+    {
+        std::scoped_lock lk{ban_entries_synchronized_for_players_mutex};
+        is_ban_entries_synchronized_for_players_flag = new_value;
+    }
+
+    bool get_is_ban_entries_synchronized_for_players() const noexcept
+    {
+        return is_ban_entries_synchronized_for_players_flag;
     }
 
     bool get_is_enable_automatic_connection_flood_ip_ban() const noexcept
@@ -941,7 +956,7 @@ class tiny_rcon_client_application : public disabled_copy_operations, public dis
     {
         static char exe_file_path[MAX_PATH]{};
         GetModuleFileNameA(nullptr, exe_file_path, MAX_PATH);
-        return exe_file_path;    
+        return exe_file_path;
     }
 
     std::unordered_map<int, std::pair<std::string, bool>> &get_pid_to_ip_address() noexcept
@@ -1396,22 +1411,20 @@ class tiny_rcon_client_application : public disabled_copy_operations, public dis
         return tiny_rcon_server_port;
     }
 
-     void set_tiny_rcon_server_port(const int new_tiny_rcon_server_port)
-     noexcept
-     {
-     	tiny_rcon_server_port =
-     static_cast<uint_least16_t>(new_tiny_rcon_server_port);
-     }
+    void set_tiny_rcon_server_port(const int new_tiny_rcon_server_port) noexcept
+    {
+        tiny_rcon_server_port = static_cast<uint_least16_t>(new_tiny_rcon_server_port);
+    }
 
     uint_least16_t get_private_tiny_rcon_server_port() const noexcept
     {
         return private_tiny_rcon_server_port;
     }
 
-     void set_private_tiny_rcon_server_port(const int new_private_tiny_rcon_server_port) noexcept
-     {
-     	private_tiny_rcon_server_port = static_cast<uint_least16_t>(new_private_tiny_rcon_server_port);
-     }
+    void set_private_tiny_rcon_server_port(const int new_private_tiny_rcon_server_port) noexcept
+    {
+        private_tiny_rcon_server_port = static_cast<uint_least16_t>(new_private_tiny_rcon_server_port);
+    }
 
     inline size_t get_spec_time_delay() const noexcept
     {

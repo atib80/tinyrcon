@@ -5569,10 +5569,10 @@ void initialize_users_grid(HWND hgrid, const size_t cols, const size_t rows, con
     SimpleGrid_ResetContent(hgrid);
     SimpleGrid_SetAllowColResize(app_handles.hwnd_users_table, TRUE);
     SimpleGrid_Enable(app_handles.hwnd_users_table, TRUE);
-    SimpleGrid_ExtendLastColumn(app_handles.hwnd_users_table, TRUE);
+    // SimpleGrid_ExtendLastColumn(app_handles.hwnd_users_table, TRUE);
     SimpleGrid_SetColAutoWidth(app_handles.hwnd_users_table, TRUE);
     SimpleGrid_SetDoubleBuffer(app_handles.hwnd_users_table, TRUE);
-    SimpleGrid_SetEllipsis(app_handles.hwnd_users_table, TRUE);
+    // SimpleGrid_SetEllipsis(app_handles.hwnd_users_table, TRUE);
     SimpleGrid_SetGridLineColor(app_handles.hwnd_users_table,
                                 colors.at(main_app.get_game_server().get_border_line_color()[1]));
     SimpleGrid_SetTitleHeight(app_handles.hwnd_users_table, 0);
@@ -5722,7 +5722,7 @@ void display_users_data_in_users_table(HWND hgrid)
     }
 
     clear_data_in_users_table(hgrid, users.size(), max_users_grid_rows, 18);
-    SimpleGrid_SetColWidth(hgrid, 0, 160);
+    /*SimpleGrid_SetColWidth(hgrid, 0, 160);
     SimpleGrid_SetColWidth(hgrid, 1, 100);
     SimpleGrid_SetColWidth(hgrid, 2, 100);
     SimpleGrid_SetColWidth(hgrid, 3, 100);
@@ -5739,7 +5739,7 @@ void display_users_data_in_users_table(HWND hgrid)
     SimpleGrid_SetColWidth(hgrid, 14, 90);
     SimpleGrid_SetColWidth(hgrid, 15, 90);
     SimpleGrid_SetColWidth(hgrid, 16, 90);
-    SimpleGrid_SetColWidth(hgrid, 17, 90);
+    SimpleGrid_SetColWidth(hgrid, 17, 90);*/
     SimpleGrid_EnableEdit(hgrid, FALSE);
 }
 
