@@ -1,6 +1,12 @@
 # Prerequisites
 *.d
 
+# Executable files
+*.exe
+
+# Portable debugging symbol files
+*.pdb
+
 # Compiled Object files
 *.slo
 *.lo

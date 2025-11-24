@@ -1984,7 +1984,6 @@ static LRESULT CALLBACK Edit_Proc(HWND hEdit, UINT msg, WPARAM wParam, LPARAM lP
     case VK_LEFT:
     case VK_RIGHT:
       if (str_compare_i(CHECKED, (const char *)GetPropA(hEdit, EDITMODE)) == 0) break;// DWM 1.7: Added
-      // else fallthrough
     case VK_NEXT:
     case VK_PRIOR:
     case VK_DOWN:
@@ -2650,7 +2649,6 @@ static void Grid_OnKeyDown(HWND hwnd, UINT vk, BOOL, int cRepeat, UINT flags)
       break;
     }
     // Everything else
-    // FALL THROUGH
   case VK_LEFT: {
     int k = GetAdjacentCol(g_lpInst->cursorcol, VK_RIGHT == vk);
 
@@ -2769,7 +2767,7 @@ static VOID Grid_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
         String_Replace(lpi->lpszCurValue, combobox_buffer);
       }
       // adjust the column width if COLAUTOWIDTH==TRUE
-      if ((lpi != nullptr && g_lpInst->COLAUTOWIDTH) || (0 == g_lpInst->cursorrow)) {
+      if (lpi != nullptr && (g_lpInst->COLAUTOWIDTH || 0 == g_lpInst->cursorrow)) {
         AdjustParentColWidth(hwnd, g_lpInst->cursorcol, g_lpInst->cursorrow, lpi->lpszCurValue);
       }
       ShowWindow(hwndCtl, SW_HIDE);
@@ -3755,7 +3753,6 @@ static LRESULT Grid_OnSetItemData(HWND hwnd, WPARAM, LPARAM lParam)
   case GCT_BUTTON:// Make sure that the button text is the same as the cell if updated
     if (NULL != g_lpInst->hwndControl)
       SetWindowText(g_lpInst->hwndControl, (LPTSTR)lpSGitem->lpCurValue);
-    // Fall through
   case GCT_EDIT:
   case GCT_COMBO:
   case GCT_LINK:
@@ -3846,7 +3843,7 @@ static LRESULT Grid_OnGetItemDataLength(HWND, WPARAM wParam, LPARAM lParam)
       INT iLen = 0;
       // Walk the buffer to find the terminating empty string.
       for (const char *p = lpgi->lpszCurValue; *p;
-           (p += strlen(p) + 1, iLen = p - lpgi->lpszCurValue));
+        (p += strlen(p) + 1, iLen = p - lpgi->lpszCurValue));
 
       return iLen;
     }
@@ -3903,7 +3900,7 @@ static LRESULT Grid_OnGetItemData(HWND, WPARAM, LPARAM lParam)
 
     // Walk the buffer to find the terminating empty string.
     for (const char *p = lpgi->lpszCurValue; *p;
-         (p += strlen(p) + 1, iLen = p - lpgi->lpszCurValue));
+      (p += strlen(p) + 1, iLen = p - lpgi->lpszCurValue));
 
     memcpy((char *)lpSGitem->lpCurValue, lpgi->lpszCurValue, iLen + 1);// copy the terminating null also
     return iLen;

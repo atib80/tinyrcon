@@ -16,7 +16,7 @@ using namespace std::string_literals;
 using namespace std::chrono;
 using namespace std::filesystem;
 
-extern const string program_version{"2.7.8.4"};
+extern const string program_version{"2.7.8.5"};
 
 extern const std::regex ip_address_and_port_regex;
 extern const unordered_set<string> rcon_status_commands;
@@ -75,15 +75,13 @@ static constinit std::array<int, ban_entry_type::count> ban_entries_synchronized
 bool is_ban_entries_synchronized_for_admins()
 {
     return ban_entry_type::count == std::accumulate(cbegin(ban_entries_synchronized_for_admins_flag),
-                                                    cend(ban_entries_synchronized_for_admins_flag),
-                                                    0);
+                                                    cend(ban_entries_synchronized_for_admins_flag), 0);
 }
 
 bool is_ban_entries_synchronized_for_players()
 {
     return ban_entry_type::count == std::accumulate(cbegin(ban_entries_synchronized_for_players_flag),
-                                                    cend(ban_entries_synchronized_for_players_flag),
-                                                    0);
+                                                    cend(ban_entries_synchronized_for_players_flag), 0);
 }
 
 void clear_operation_completed_flags_for_admins()
@@ -7111,9 +7109,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
 
                     const auto current_ts = get_current_time_stamp();
                     const auto time_elapsed_in_sec_since_last_status_message{
-                        current_ts - main_app.get_connection_manager().get_last_rcon_status_received()};
+                        current_ts - main_app.get_connection_manager().get_last_rcon_status_received().load()};
                     const auto time_elapsed_in_sec_since_last_getstatus_message{
-                        current_ts - main_app.get_connection_manager().get_last_get_status_received()};
+                        current_ts - main_app.get_connection_manager().get_last_get_status_received().load()};
 
                     if (game_server_index < main_app.get_rcon_game_servers_count())
                     {
@@ -7122,9 +7120,12 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                         if (me->is_admin)
                         {
 
-                            if (time_elapsed_in_sec_since_last_status_message > 10)
+                            if (time_elapsed_in_sec_since_last_status_message >
+                                main_app.get_display_warning_message_after_no_status_received_for_seconds())
                             {
-                                display_game_server_offline_message_and_clear_players_table(rcon_gs);
+                                display_game_server_offline_message_and_clear_players_table(
+                                    rcon_gs,
+                                    main_app.get_display_warning_message_after_no_status_received_for_seconds());
                             }
 
                             main_app.get_connection_manager().send_and_receive_rcon_data(
@@ -7134,7 +7135,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                         else
                         {
 
-                            if (time_elapsed_in_sec_since_last_status_message > 10)
+                            if (time_elapsed_in_sec_since_last_status_message >
+                                main_app.get_display_warning_message_after_no_status_received_for_seconds())
                             {
                                 main_app.get_connection_manager_for_rcon_messages().process_and_send_message(
                                     "rcon-heartbeat-player",
@@ -7143,9 +7145,12 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                                     main_app.get_private_tiny_rcon_server_port(), false);
                             }
 
-                            if (time_elapsed_in_sec_since_last_getstatus_message > 10)
+                            if (time_elapsed_in_sec_since_last_getstatus_message >
+                                main_app.get_display_warning_message_after_no_status_received_for_seconds())
                             {
-                                display_game_server_offline_message_and_clear_players_table(rcon_gs);
+                                display_game_server_offline_message_and_clear_players_table(
+                                    rcon_gs,
+                                    main_app.get_display_warning_message_after_no_status_received_for_seconds());
                             }
 
                             main_app.get_connection_manager().send_and_receive_non_rcon_data(
@@ -7167,9 +7172,11 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
 
                         if (!is_rcon_game_server(gs))
                         {
-                            if (time_elapsed_in_sec_since_last_getstatus_message > 10)
+                            if (time_elapsed_in_sec_since_last_getstatus_message >
+                                main_app.get_display_warning_message_after_no_status_received_for_seconds())
                             {
-                                display_game_server_offline_message_and_clear_players_table(gs);
+                                display_game_server_offline_message_and_clear_players_table(
+                                    gs, main_app.get_display_warning_message_after_no_status_received_for_seconds());
                             }
 
                             main_app.get_connection_manager().send_and_receive_non_rcon_data(

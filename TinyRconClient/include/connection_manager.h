@@ -1,6 +1,7 @@
 #pragma once
 
 #include <asio.hpp>
+#include <atomic>
 #include <string>
 
 class game_server;
@@ -59,19 +60,19 @@ class connection_manager
         return geoip_db;
     }
 
-    inline time_t &get_last_get_status_received()
+    inline std::atomic<time_t> &get_last_get_status_received()
     {
         return last_get_status_received;
     }
 
-    inline time_t &get_last_rcon_status_received()
+    inline std::atomic<time_t> &get_last_rcon_status_received()
     {
         return last_rcon_status_received;
     }
 
   private:
-    time_t last_get_status_received{};
-    time_t last_rcon_status_received{};
+    std::atomic<time_t> last_get_status_received{0};
+    std::atomic<time_t> last_rcon_status_received{0};
     inline static std::size_t number_of_sent_non_rcon_commands{};
     inline static std::size_t number_of_sent_rcon_commands{};
     inline static std::size_t rcon_status_sent_counter{};

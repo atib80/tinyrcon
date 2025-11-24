@@ -549,4 +549,4 @@ LRESULT CALLBACK monitor_game_key_press_events(
   _In_ WPARAM wParam,
   _In_ LPARAM lParam);
 bool check_if_selected_player_has_my_ip_address();
-void display_game_server_offline_message_and_clear_players_table(game_server &gs);
+void display_game_server_offline_message_and_clear_players_table(game_server &gs, const size_t time_delay);

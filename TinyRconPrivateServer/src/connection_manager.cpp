@@ -361,7 +361,7 @@ size_t connection_manager::receive_rcon_reply_from_server(
             set_admin_actions_buttons_active(TRUE);
           }
 
-          main_app.get_connection_manager().get_last_rcon_status_received() = get_current_time_stamp();
+          main_app.get_connection_manager().get_last_rcon_status_received().store(get_current_time_stamp());
 
           start = received_reply.c_str() + 5;
           last = start;

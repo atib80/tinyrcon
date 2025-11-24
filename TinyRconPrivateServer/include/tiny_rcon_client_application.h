@@ -49,6 +49,8 @@ class tiny_rcon_client_application
   bool is_ban_entries_synchronized_for_admins_flag{ false };
   bool is_ban_entries_synchronized_for_players_flag{ false };
   size_t spec_time_delay{ 250 };// in milliseconds
+  size_t display_top_players_time_period{ 900u };// in seconds
+  size_t display_warning_message_after_no_status_received_for_seconds{ 60u };
   size_t game_server_index{};
   size_t game_servers_count{};
   size_t rcon_game_servers_count{};
@@ -621,17 +623,6 @@ public:
     rcon_game_servers_count = new_value <= game_servers.size() ? new_value : 0;
   }
 
-  /*inline size_t get_rcon_server_index() const
-  {
-    return rcon_server_index;
-  }
-
-  void set_rcon_server_index(const size_t new_rcon_server_index)
-  {
-    if (new_rcon_server_index < rcon_game_servers.size())
-      rcon_server_index = new_rcon_server_index;
-  }*/
-
   inline size_t get_spec_time_delay() const noexcept
   {
     return spec_time_delay;
@@ -642,6 +633,32 @@ public:
     if (new_value < 100 || new_value > 2000)
       new_value = 100;
     spec_time_delay = new_value;
+  }
+
+  // display_top_players_time_period
+  inline size_t get_display_top_players_time_period() const noexcept
+  {
+    return display_top_players_time_period;
+  }
+
+  void set_display_top_players_time_period(size_t new_value)
+  {
+    if (new_value < 30 || new_value > 3600)
+      new_value = 900;
+    display_top_players_time_period = new_value;
+  }
+
+  // display_warning_message_after_no_status_received_for_seconds
+  inline size_t get_display_warning_message_after_no_status_received_for_seconds() const noexcept
+  {
+    return display_warning_message_after_no_status_received_for_seconds;
+  }
+
+  void set_display_warning_message_after_no_status_received_for_seconds(size_t new_value)
+  {
+    if (new_value < 10 || new_value > 3600)
+      new_value = 60;
+    display_warning_message_after_no_status_received_for_seconds = new_value;
   }
 
   inline size_t get_game_server_index() const

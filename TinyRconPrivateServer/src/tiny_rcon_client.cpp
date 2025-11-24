@@ -17,7 +17,7 @@ using namespace std::string_literals;
 using namespace std::chrono;
 using namespace std::filesystem;
 
-extern const string program_version{ "2.7.8.1" };
+extern const string program_version{ "2.7.8.2" };
 
 extern const std::regex ip_address_and_port_regex;
 extern const unordered_set<string> rcon_status_commands;
@@ -643,11 +643,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
   });
 
   main_app.add_message_handler("query-response", [](const string &, const time_t, const string &data, bool) {
-    // print_colored_text(app_handles.hwnd_re_messages_data, format("Received query response from ^5Tiny^6Rcon ^5server!\nMessage contents: '^5{}^7'\n", data).c_str());
-    // static constexpr const char *needle{ "is_user_admin?" };
-    // static constexpr size_t needle_len{ len(needle) };
-    /*if (size_t start{}, end; ((start = data.find(needle)) != string::npos) && ((end = data.rfind('=')) != string::npos)) {
-      const string username{ trim(data.substr(start + needle_len, end - (start + needle_len))) };*/
     const string reply{ trim(data.substr(data.rfind('=') + 1)) };
     if (data.find(me->user_name) != string::npos && data.find(main_app.get_game_servers()[0].get_rcon_password()) != string::npos && reply == "yes") {
       me->is_admin = true;
@@ -4405,11 +4400,11 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
           parse_banned_names_file(main_app.get_banned_names_file_path(), main_app.get_current_game_server().get_banned_names_vector(), main_app.get_current_game_server().get_banned_names_map());
           set_operation_completed_flag_for_admins(ban_entry_type::banned_names);
         }
-        // if (is_ban_entries_synchronized_for_admins()) {
-        //   // const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
-        //   // print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
-        //   main_app.set_is_bans_synchronized(true);
-        // }
+        if (is_ban_entries_synchronized_for_admins()) {
+          const string message{ "^2Received updated ^1ban entries ^2from ^5Tiny^6Rcon ^5server." };
+          print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
+          // main_app.set_is_bans_synchronized(true);
+        }
       }
     }
   });
@@ -5771,7 +5766,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       parse_protected_entries_file(main_app.get_protected_countries_file_path(), main_app.get_current_game_server().get_protected_countries());
 
       load_reported_players_to_file(main_app.get_reported_players_file_path(), main_app.get_reported_players());
-      // parse_banned_ip_addresses_file(main_app.get_muted_players_file_path(), main_app.get_muted_players_vector(), main_app.get_muted_players_map());
       parse_tempbans_data_file(main_app.get_temp_bans_file_path(), main_app.get_current_game_server().get_temp_banned_ip_addresses_vector(), main_app.get_current_game_server().get_temp_banned_ip_addresses_map());
       parse_banned_ip_addresses_file(main_app.get_ip_bans_file_path(), main_app.get_current_game_server().get_banned_ip_addresses_vector(), main_app.get_current_game_server().get_banned_ip_addresses_map());
       parse_banned_ip_address_ranges_file(main_app.get_ip_range_bans_file_path(), main_app.get_current_game_server().get_banned_ip_address_ranges_vector(), main_app.get_current_game_server().get_banned_ip_address_ranges_map());
@@ -5838,10 +5832,10 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
             const auto current_ts = get_current_time_stamp();
             const auto time_elapsed_in_sec_since_last_status_message{
-              current_ts - main_app.get_connection_manager().get_last_rcon_status_received()
+              current_ts - main_app.get_connection_manager().get_last_rcon_status_received().load()
             };
             const auto time_elapsed_in_sec_since_last_getstatus_message{
-              current_ts - main_app.get_connection_manager().get_last_get_status_received()
+              current_ts - main_app.get_connection_manager().get_last_get_status_received().load()
             };
 
             if (game_server_index < main_app.get_rcon_game_servers_count()) {
@@ -5849,16 +5843,16 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
               if (me->is_admin) {
 
-                if (time_elapsed_in_sec_since_last_status_message > 10) {
-                  display_game_server_offline_message_and_clear_players_table(rcon_gs);
+                if (time_elapsed_in_sec_since_last_status_message > main_app.get_display_warning_message_after_no_status_received_for_seconds()) {
+                  display_game_server_offline_message_and_clear_players_table(rcon_gs, main_app.get_display_warning_message_after_no_status_received_for_seconds());
                 }
 
                 main_app.get_connection_manager().send_and_receive_rcon_data(
                   "status", rcon_reply, rcon_gs.get_server_ip_address().c_str(), rcon_gs.get_server_port(), rcon_gs.get_rcon_password().c_str(), rcon_gs, true, true);
               } else {
 
-                if (time_elapsed_in_sec_since_last_getstatus_message > 10) {
-                  display_game_server_offline_message_and_clear_players_table(rcon_gs);
+                if (time_elapsed_in_sec_since_last_getstatus_message > main_app.get_display_warning_message_after_no_status_received_for_seconds()) {
+                  display_game_server_offline_message_and_clear_players_table(rcon_gs, main_app.get_display_warning_message_after_no_status_received_for_seconds());
                 }
 
                 main_app.get_connection_manager().send_and_receive_non_rcon_data(
@@ -5874,8 +5868,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
               game_server &gs = game_servers[game_server_index];
 
               if (!is_rcon_game_server(gs)) {
-                if (time_elapsed_in_sec_since_last_getstatus_message > 10) {
-                  display_game_server_offline_message_and_clear_players_table(gs);
+                if (time_elapsed_in_sec_since_last_getstatus_message > main_app.get_display_warning_message_after_no_status_received_for_seconds()) {
+                  display_game_server_offline_message_and_clear_players_table(gs, main_app.get_display_warning_message_after_no_status_received_for_seconds());
                 }
 
                 main_app.get_connection_manager().send_and_receive_non_rcon_data(
@@ -6708,7 +6702,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     }
 
 
-    if (counter % 2700 == 0) {
+    if (counter % main_app.get_display_top_players_time_period() == 0) {
       counter = 0;
       std::thread task{ rcon_say_top_players, "^5Top 10 players:"s };
       task.detach();

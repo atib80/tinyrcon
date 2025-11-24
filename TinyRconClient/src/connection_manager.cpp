@@ -157,7 +157,7 @@ size_t connection_manager::receive_non_rcon_reply_from_server(const char *remote
         }
         else if (str_starts_with(received_reply, "statusresponse", true))
         {
-            main_app.get_connection_manager().get_last_get_status_received() = get_current_time_stamp();
+            main_app.get_connection_manager().get_last_get_status_received().store(get_current_time_stamp());
 
             const size_t first_sep_pos{received_reply.find('\\')};
             if (first_sep_pos == string::npos)
@@ -380,7 +380,7 @@ size_t connection_manager::receive_rcon_reply_from_server(const char *remote_ip,
                     set_admin_actions_buttons_active(TRUE);
                 }
 
-                main_app.get_connection_manager().get_last_rcon_status_received() = get_current_time_stamp();
+                main_app.get_connection_manager().get_last_rcon_status_received().store(get_current_time_stamp());
 
                 start = received_reply.c_str() + 5;
                 last = start;
@@ -874,7 +874,7 @@ size_t connection_manager::process_rcon_status_messages(game_server &gs, const s
 {
     if (received_reply.length() > 0)
     {
-        main_app.get_connection_manager().get_last_rcon_status_received() = get_current_time_stamp();
+        main_app.get_connection_manager().get_last_rcon_status_received().store(get_current_time_stamp());
 
         auto lines = str_split(received_reply, "\n", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::yes);
         if (lines.empty())

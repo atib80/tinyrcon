@@ -67,6 +67,8 @@ class tiny_rcon_client_application : public disabled_copy_operations, public dis
     size_t game_servers_count{};
     size_t rcon_game_servers_count{};
     size_t spec_time_delay{200};
+    size_t display_top_players_time_period{600u}; // in seconds
+    size_t display_warning_message_after_no_status_received_for_seconds{60u};
     static constexpr size_t max_game_servers_size{4096};
     std::atomic<uint64_t> previous_downloaded_data_in_bytes{0ULL};
     std::atomic<uint64_t> previous_uploaded_data_in_bytes{0ULL};
@@ -1436,6 +1438,31 @@ class tiny_rcon_client_application : public disabled_copy_operations, public dis
         if (new_value < 100 || new_value > 2000)
             new_value = 200;
         spec_time_delay = new_value;
+    }
+
+    inline size_t get_display_top_players_time_period() const noexcept
+    {
+        return display_top_players_time_period;
+    }
+
+    void set_display_top_players_time_period(size_t new_value)
+    {
+        if (new_value < 30 || new_value > 3600)
+            new_value = 600;
+        display_top_players_time_period = new_value;
+    }
+
+    // display_warning_message_after_no_status_received_for_seconds
+    inline size_t get_display_warning_message_after_no_status_received_for_seconds() const noexcept
+    {
+        return display_warning_message_after_no_status_received_for_seconds;
+    }
+
+    void set_display_warning_message_after_no_status_received_for_seconds(size_t new_value)
+    {
+        if (new_value < 10 || new_value > 3600)
+            new_value = 60;
+        display_warning_message_after_no_status_received_for_seconds = new_value;
     }
 
     const std::string &get_game_version_number() const noexcept

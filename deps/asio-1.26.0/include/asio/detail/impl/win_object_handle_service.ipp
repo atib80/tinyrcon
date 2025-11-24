@@ -102,7 +102,7 @@ void win_object_handle_service::move_construct(
   lock.unlock();
 
   if (impl.wait_handle_ != INVALID_HANDLE_VALUE)
-    ::UnregisterWaitEx(impl.wait_handle_, INVALID_HANDLE_VALUE);
+    (void)::UnregisterWaitEx(impl.wait_handle_, INVALID_HANDLE_VALUE);
 
   if (!impl.op_queue_.empty())
     register_wait_callback(impl, lock);

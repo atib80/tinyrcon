@@ -1107,7 +1107,10 @@ bool write_tiny_rcon_json_settings_to_file(const char *file_path)
                 << (main_app.get_is_enable_automatic_program_updates() ? "true" : "false") << ",\n";
     config_file << R"("enable_automatic_missing_map_image_download": )"
                 << (main_app.get_is_enable_automatic_missing_map_image_download() ? "true" : "false") << ",\n";
-    config_file << "\"spectate_time_delay\": " << main_app.get_spec_time_delay() << "\n";
+    config_file << "\"spectate_time_delay\": " << main_app.get_spec_time_delay() << ",\n";
+    config_file << "\"display_top_players_time_period\": " << main_app.get_display_top_players_time_period() << ",\n";
+    config_file << "\"display_warning_message_after_no_status_received_for_seconds\": "
+                << main_app.get_display_warning_message_after_no_status_received_for_seconds() << "\n";
     config_file << "}" << flush;
     return true;
 }
@@ -2980,6 +2983,31 @@ void parse_tinyrcon_tool_config_file(const char *configFileName)
         main_app.set_spec_time_delay(200);
     }
 
+    if (json_resource.contains("display_top_players_time_period"))
+    {
+        const size_t display_top_players_time_period =
+            json_resource["display_top_players_time_period"].template get<int>();
+        main_app.set_display_top_players_time_period(display_top_players_time_period);
+    }
+    else
+    {
+        found_missing_config_setting = true;
+        main_app.set_display_top_players_time_period(600);
+    }
+
+    if (json_resource.contains("display_warning_message_after_no_status_received_for_seconds"))
+    {
+        const size_t display_warning_message_after_no_status_received_for_seconds =
+            json_resource["display_warning_message_after_no_status_received_for_seconds"].template get<int>();
+        main_app.set_display_warning_message_after_no_status_received_for_seconds(
+            display_warning_message_after_no_status_received_for_seconds);
+    }
+    else
+    {
+        found_missing_config_setting = true;
+        main_app.set_display_warning_message_after_no_status_received_for_seconds(60);
+    }
+
     if (json_resource.contains("is_automatic_country_kick_enabled"))
     {
         main_app.set_is_automatic_country_kick_enabled(
@@ -3572,8 +3600,6 @@ bool mute_player_ip_address(player &pd)
         return false;
     }
 
-    char rcon_command_buffer[256]{};
-
     pd.banned_start_time = get_current_time_stamp();
     const string muted_date_time_str{get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", pd.banned_start_time)};
     strcpy_s(pd.banned_date_time, std::size(pd.banned_date_time), muted_date_time_str.c_str());
@@ -3600,8 +3626,8 @@ bool mute_player_ip_address(player &pd)
     const long guid =
         static_cast<long>(pd.ip_hash_key >= half_limit ? -(upper_limit - pd.ip_hash_key) : pd.ip_hash_key);
 
-    snprintf(rcon_command_buffer, std::size(rcon_command_buffer), "!rc js_mute_guid \"%ld\"", guid);
-    Edit_SetText(app_handles.hwnd_e_user_input, rcon_command_buffer);
+    const std::string rcon_command_buffer{std::format("!rc js_mute_guid \"{}\"", guid)};
+    Edit_SetText(app_handles.hwnd_e_user_input, rcon_command_buffer.c_str());
     get_user_input();
     Sleep(250);
     update_muted_guid_keys_server_setting();
@@ -17974,8 +18000,6 @@ std::pair<bool, player> remove_muted_ip_address(std::string &ip_address, std::st
         // rcon_say(message, true);
     }
 
-    char rcon_command_buffer[256]{};
-
     pd.banned_start_time = get_current_time_stamp();
     const string unmuted_date_time_str{get_date_and_time_for_time_t("{DD}.{MM}.{Y} {hh}:{mm}", pd.banned_start_time)};
     strcpy_s(pd.banned_date_time, std::size(pd.banned_date_time), unmuted_date_time_str.c_str());
@@ -17986,8 +18010,8 @@ std::pair<bool, player> remove_muted_ip_address(std::string &ip_address, std::st
     const long guid =
         static_cast<long>(pd.ip_hash_key >= half_limit ? -(upper_limit - pd.ip_hash_key) : pd.ip_hash_key);
 
-    snprintf(rcon_command_buffer, std::size(rcon_command_buffer), "!rc js_unmute_guid \"%ld\"", guid);
-    Edit_SetText(app_handles.hwnd_e_user_input, rcon_command_buffer);
+    const std::string rcon_command_buffer{std::format("!rc js_unmute_guid \"{}\"", guid)};
+    Edit_SetText(app_handles.hwnd_e_user_input, rcon_command_buffer.c_str());
     get_user_input();
     Sleep(250);
     update_muted_guid_keys_server_setting();
@@ -18018,17 +18042,17 @@ void update_muted_guid_keys_server_setting()
         muted_guid_keys.pop_back();
     }
 
-    static char rcon_command_buffer[2048];
-    snprintf(rcon_command_buffer, std::size(rcon_command_buffer), "!rc seta g_muted_guids \"%s\" --silent",
-             muted_guid_keys.c_str());
-    Edit_SetText(app_handles.hwnd_e_user_input, rcon_command_buffer);
+    const std::string rcon_command_buffer{std::format("!rc seta g_muted_guids \"{}\" --silent", muted_guid_keys)};
+    Edit_SetText(app_handles.hwnd_e_user_input, rcon_command_buffer.c_str());
     get_user_input();
-    // main_app.get_command_handler("!rc").second({ "!rc", "seta", "g_muted_guids", muted_guid_keys, "--silent" });
 }
 
-void display_game_server_offline_message_and_clear_players_table(game_server& gs) {
-    const string warning_message{"^3Warning: No 'getstatus' response received from the game server for more than "
-                                 "^110 seconds^3! Attempting to reinitialize players data...\n"};
+void display_game_server_offline_message_and_clear_players_table(game_server &gs, const size_t time_delay)
+{
+    const string warning_message{
+        std::format("^3Warning: No 'getstatus' response received from the game server for more than "
+                    "^1{} seconds^3! Attempting to reinitialize players data...\n",
+                    time_delay)};
 
     print_colored_text(app_handles.hwnd_re_messages_data, warning_message.c_str());
     initialize_elements_of_container_to_specified_value(gs.get_players_data(), player{}, 0);
