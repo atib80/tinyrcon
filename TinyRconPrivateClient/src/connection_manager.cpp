@@ -4,8 +4,6 @@
 #include <utility>
 #include <regex>
 #include "tiny_rcon_client_application.h"
-// #include "simple_grid.h"
-
 
 using namespace std;
 using namespace stl::helper;

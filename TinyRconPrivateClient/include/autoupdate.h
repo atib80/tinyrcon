@@ -1,12 +1,11 @@
 #pragma once
 
-#include <SDKDDKVer.h>
+#define WIN32_LEAN_AND_MEAN
+#include "internet_handle.h"
 #include <atlbase.h>
-#include <Wininet.h>
 #include <string>
 #include <vector>
-#include "internet_handle.h"
-#include "tiny_rcon_utility_functions.h"
+
 
 DWORD WINAPI worker_function1(void *);
 DWORD WINAPI worker_function2(void *);

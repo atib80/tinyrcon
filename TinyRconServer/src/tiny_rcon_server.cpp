@@ -1,6 +1,7 @@
 #include "framework.h"
 #include "resource.h"
 #include <CommCtrl.h>
+#include <execution>
 
 #undef min
 
@@ -355,7 +356,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
         is_display_temporarily_banned_players_data_event.store(true);
     });
 
-    main_app.add_command_handler({"!restart"}, [](const vector<string> &user_cmd) {
+    main_app.add_command_handler({"!restart"}, [](const vector<string> &) {
         for (const auto &u : main_app.get_users())
         {
             unsigned long ip_key{};
@@ -408,8 +409,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
             if (size_t start, next; (start = cleaned_message.find("expires in ")) != string::npos &&
                                     (next = cleaned_message.rfind("Date of ban:")) != string::npos)
             {
-                const size_t dot_pos{cleaned_message.find('.', start + stl::helper::len("expires in "))};
-                if (dot_pos != string::npos)
+                if (const size_t dot_pos{cleaned_message.find('.', start + stl::helper::len("expires in "))}; dot_pos != string::npos)
                 {
                     cleaned_message.erase(begin(cleaned_message) + start + stl::helper::len("expires in "),
                                           begin(cleaned_message) + dot_pos);
@@ -422,13 +422,13 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                                           end(cleaned_message));
                 }
             }
-            else if (size_t next{}; (start = cleaned_message.find("[start date:")) != string::npos &&
-                                    (next = cleaned_message.find("expired on")) != string::npos)
+            else if (size_t next2; (start = cleaned_message.find("[start date:")) != string::npos &&
+                                    (next2 = cleaned_message.find("expired on")) != string::npos)
             {
-                const size_t last{cleaned_message.find(']', next + stl::helper::len("expired on"))};
-                if (last != string::npos)
+                const size_t lst{cleaned_message.find(']', next2 + stl::helper::len("expired on"))};
+                if (lst != string::npos)
                 {
-                    cleaned_message.erase(begin(cleaned_message) + start, begin(cleaned_message) + last + 1);
+                    cleaned_message.erase(begin(cleaned_message) + start, begin(cleaned_message) + lst + 1);
                 }
             }
 
@@ -948,11 +948,12 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                     if (!tiny_rcon_server_tempbanned_players_map.contains(pd.ip_address))
                     {
                         tiny_rcon_server_tempbanned_players_map.emplace(pd.ip_address, pd);
-                        tiny_rcon_server_tempbanned_players_vector.push_back(std::move(pd));
+                        tiny_rcon_server_tempbanned_players_vector.emplace_back(std::move(pd));
                     }
                 }
 
                 std::sort(
+                    std::execution::par, 
                     std::begin(tiny_rcon_server_tempbanned_players_vector),
                     std::end(tiny_rcon_server_tempbanned_players_vector),
                     [](const player &pd1, const player &pd2) { return pd1.banned_start_time < pd2.banned_start_time; });
@@ -976,11 +977,12 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                     if (!tiny_rcon_server_banned_ip_addresses_map.contains(pd.ip_address))
                     {
                         tiny_rcon_server_banned_ip_addresses_map.emplace(pd.ip_address, pd);
-                        tiny_rcon_server_banned_ip_addresses_vector.push_back(std::move(pd));
+                        tiny_rcon_server_banned_ip_addresses_vector.emplace_back(std::move(pd));
                     }
                 }
 
                 std::sort(
+                    std::execution::par, 
                     std::begin(tiny_rcon_server_banned_ip_addresses_vector),
                     std::end(tiny_rcon_server_banned_ip_addresses_vector),
                     [](const player &pd1, const player &pd2) { return pd1.banned_start_time < pd2.banned_start_time; });
@@ -1008,11 +1010,12 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                     if (!tiny_rcon_server_banned_ip_address_ranges_map.contains(pd.ip_address))
                     {
                         tiny_rcon_server_banned_ip_address_ranges_map.emplace(pd.ip_address, pd);
-                        tiny_rcon_server_banned_ip_address_ranges_vector.push_back(std::move(pd));
+                        tiny_rcon_server_banned_ip_address_ranges_vector.emplace_back(std::move(pd));
                     }
                 }
 
                 std::sort(
+                    std::execution::par, 
                     std::begin(tiny_rcon_server_banned_ip_address_ranges_vector),
                     std::end(tiny_rcon_server_banned_ip_address_ranges_vector),
                     [](const player &pd1, const player &pd2) { return pd1.banned_start_time < pd2.banned_start_time; });
@@ -1074,11 +1077,11 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                     if (!tiny_rcon_server_banned_names_map.contains(pd.player_name))
                     {
                         tiny_rcon_server_banned_names_map.emplace(pd.player_name, pd);
-                        tiny_rcon_server_banned_names_vector.push_back(std::move(pd));
+                        tiny_rcon_server_banned_names_vector.emplace_back(std::move(pd));
                     }
                 }
 
-                std::sort(
+                std::sort(std::execution::par, 
                     std::begin(tiny_rcon_server_banned_names_vector), std::end(tiny_rcon_server_banned_names_vector),
                     [](const player &pd1, const player &pd2) { return pd1.banned_start_time < pd2.banned_start_time; });
 
@@ -1107,38 +1110,32 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
         }
         const string temp_folder_path{format("{}temp\\", main_app.get_current_working_directory())};
 
-        const string temp_tempbans_file_path{format("{}tempbans.txt", temp_folder_path)};
-        if (check_if_file_path_exists(temp_tempbans_file_path.c_str()))
+        if (const string temp_tempbans_file_path{format("{}tempbans.txt", temp_folder_path)}; check_if_file_path_exists(temp_tempbans_file_path.c_str()))
         {
             DeleteFileA(temp_tempbans_file_path.c_str());
         }
 
-        const string temp_bans_file_path{format("{}bans.txt", temp_folder_path)};
-        if (check_if_file_path_exists(temp_bans_file_path.c_str()))
+        if (const string temp_bans_file_path{format("{}bans.txt", temp_folder_path)}; check_if_file_path_exists(temp_bans_file_path.c_str()))
         {
             DeleteFileA(temp_bans_file_path.c_str());
         }
 
-        const string temp_ip_range_bans_file_path{format("{}ip_range_bans.txt", temp_folder_path)};
-        if (check_if_file_path_exists(temp_ip_range_bans_file_path.c_str()))
+        if (const string temp_ip_range_bans_file_path{format("{}ip_range_bans.txt", temp_folder_path)}; check_if_file_path_exists(temp_ip_range_bans_file_path.c_str()))
         {
             DeleteFileA(temp_ip_range_bans_file_path.c_str());
         }
 
-        const string temp_banned_cities_file_path{format("{}banned_cities.txt", temp_folder_path)};
-        if (check_if_file_path_exists(temp_banned_cities_file_path.c_str()))
+        if (const string temp_banned_cities_file_path{format("{}banned_cities.txt", temp_folder_path)}; check_if_file_path_exists(temp_banned_cities_file_path.c_str()))
         {
             DeleteFileA(temp_banned_cities_file_path.c_str());
         }
 
-        const string temp_banned_countries_file_path{format("{}banned_countries.txt", temp_folder_path)};
-        if (check_if_file_path_exists(temp_banned_countries_file_path.c_str()))
+        if (const string temp_banned_countries_file_path{format("{}banned_countries.txt", temp_folder_path)}; check_if_file_path_exists(temp_banned_countries_file_path.c_str()))
         {
             DeleteFileA(temp_banned_countries_file_path.c_str());
         }
 
-        const string temp_banned_names_file_path{format("{}banned_names.txt", temp_folder_path)};
-        if (check_if_file_path_exists(temp_banned_names_file_path.c_str()))
+        if (const string temp_banned_names_file_path{format("{}banned_names.txt", temp_folder_path)}; check_if_file_path_exists(temp_banned_names_file_path.c_str()))
         {
             DeleteFileA(temp_banned_names_file_path.c_str());
         }
@@ -1154,9 +1151,10 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
             return;
         }
 
-        const string admins_tempbans_file_path{
-            format("{}temp\\tempbans.txt", main_app.get_current_working_directory())};
-        if (check_if_file_path_exists(admins_tempbans_file_path.c_str()))
+        
+        if (const string admins_tempbans_file_path{
+                format("{}temp\\tempbans.txt", main_app.get_current_working_directory())};
+            check_if_file_path_exists(admins_tempbans_file_path.c_str()))
         {
             vector<player> admins_tempbanned_ip_addresses_data;
             unordered_map<string, player> admins_tempbanned_ip_to_player_data;
@@ -1171,11 +1169,11 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                 if (!tiny_rcon_server_tempbanned_players_map.contains(pd.ip_address))
                 {
                     tiny_rcon_server_tempbanned_players_map.emplace(pd.ip_address, pd);
-                    tiny_rcon_server_tempbanned_players_vector.push_back(std::move(pd));
+                    tiny_rcon_server_tempbanned_players_vector.emplace_back(std::move(pd));
                 }
             }
 
-            std::sort(std::begin(tiny_rcon_server_tempbanned_players_vector),
+            std::sort(std::execution::par, std::begin(tiny_rcon_server_tempbanned_players_vector),
                       std::end(tiny_rcon_server_tempbanned_players_vector), [](const player &pd1, const player &pd2) {
                           return pd1.banned_start_time < pd2.banned_start_time;
                       });
@@ -1184,8 +1182,9 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
             save_tempbans_to_file(main_app.get_temp_bans_file_path(), tiny_rcon_server_tempbanned_players_vector);
         }
 
-        const string admins_ip_bans_file_path{format("{}temp\\bans.txt", main_app.get_current_working_directory())};
-        if (check_if_file_path_exists(admins_ip_bans_file_path.c_str()))
+        
+        if (const string admins_ip_bans_file_path{format("{}temp\\bans.txt", main_app.get_current_working_directory())};
+            check_if_file_path_exists(admins_ip_bans_file_path.c_str()))
         {
             vector<player> admins_banned_ip_addresses_data;
             unordered_map<string, player> admins_banned_ip_to_player_data;
@@ -1199,11 +1198,11 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                 if (!tiny_rcon_server_banned_ip_addresses_map.contains(pd.ip_address))
                 {
                     tiny_rcon_server_banned_ip_addresses_map.emplace(pd.ip_address, pd);
-                    tiny_rcon_server_banned_ip_addresses_vector.push_back(std::move(pd));
+                    tiny_rcon_server_banned_ip_addresses_vector.emplace_back(std::move(pd));
                 }
             }
 
-            std::sort(std::begin(tiny_rcon_server_banned_ip_addresses_vector),
+            std::sort(std::execution::par, std::begin(tiny_rcon_server_banned_ip_addresses_vector),
                       std::end(tiny_rcon_server_banned_ip_addresses_vector), [](const player &pd1, const player &pd2) {
                           return pd1.banned_start_time < pd2.banned_start_time;
                       });
@@ -1214,10 +1213,10 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                                            tiny_rcon_server_banned_ip_addresses_vector);
         }
 
-        // process admin's banned IP address range entries
-        const string admins_ip_range_bans_file_path{
-            format("{}temp\\ip_range_bans.txt", main_app.get_current_working_directory())};
-        if (check_if_file_path_exists(admins_ip_range_bans_file_path.c_str()))
+        // process admin's banned IP address range entries        
+        if (const string admins_ip_range_bans_file_path{
+                format("{}temp\\ip_range_bans.txt", main_app.get_current_working_directory())};
+            check_if_file_path_exists(admins_ip_range_bans_file_path.c_str()))
         {
             vector<player> admins_banned_ip_address_ranges_data;
             unordered_map<string, player> admins_banned_ip_range_to_player_data;
@@ -1233,11 +1232,12 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                 if (!tiny_rcon_server_banned_ip_address_ranges_map.contains(pd.ip_address))
                 {
                     tiny_rcon_server_banned_ip_address_ranges_map.emplace(pd.ip_address, pd);
-                    tiny_rcon_server_banned_ip_address_ranges_vector.push_back(std::move(pd));
+                    tiny_rcon_server_banned_ip_address_ranges_vector.emplace_back(std::move(pd));
                 }
             }
 
             std::sort(
+                std::execution::par,
                 std::begin(tiny_rcon_server_banned_ip_address_ranges_vector),
                 std::end(tiny_rcon_server_banned_ip_address_ranges_vector),
                 [](const player &pd1, const player &pd2) { return pd1.banned_start_time < pd2.banned_start_time; });
@@ -1248,10 +1248,10 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                                                          tiny_rcon_server_banned_ip_address_ranges_vector);
         }
 
-        // process admin's banned city entries
-        const string admins_banned_cities_file_path{
-            format("{}temp\\banned_cities.txt", main_app.get_current_working_directory())};
-        if (check_if_file_path_exists(admins_banned_cities_file_path.c_str()))
+        // process admin's banned city entries        
+        if (const string admins_banned_cities_file_path{
+                format("{}temp\\banned_cities.txt", main_app.get_current_working_directory())};
+            check_if_file_path_exists(admins_banned_cities_file_path.c_str()))
         {
             set<string> admins_banned_cities_set;
             parse_banned_cities_file(admins_banned_cities_file_path.c_str(), admins_banned_cities_set);
@@ -1268,10 +1268,10 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
             save_banned_cities_to_file(main_app.get_banned_cities_file_path(), tiny_rcon_server_banned_cities_set);
         }
 
-        // process admin's banned country entries
-        const string admins_banned_countries_file_path{
-            format("{}temp\\banned_countries.txt", main_app.get_current_working_directory())};
-        if (check_if_file_path_exists(admins_banned_countries_file_path.c_str()))
+        // process admin's banned country entries        
+        if (const string admins_banned_countries_file_path{
+                format("{}temp\\banned_countries.txt", main_app.get_current_working_directory())};
+            check_if_file_path_exists(admins_banned_countries_file_path.c_str()))
         {
             set<string> admins_banned_countries_set;
             parse_banned_countries_file(admins_banned_countries_file_path.c_str(), admins_banned_countries_set);
@@ -1290,9 +1290,10 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                                           tiny_rcon_server_banned_countries_set);
         }
 
-        const string admins_banned_names_file_path{
-            format("{}temp\\banned_names.txt", main_app.get_current_working_directory())};
-        if (check_if_file_path_exists(admins_banned_names_file_path.c_str()))
+        
+        if (const string admins_banned_names_file_path{
+                format("{}temp\\banned_names.txt", main_app.get_current_working_directory())};
+            check_if_file_path_exists(admins_banned_names_file_path.c_str()))
         {
             vector<player> admins_banned_names_vector;
             unordered_map<string, player> admins_banned_names_map;
@@ -1305,11 +1306,11 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                 if (!tiny_rcon_server_banned_names_map.contains(pd.player_name))
                 {
                     tiny_rcon_server_banned_names_map.emplace(pd.player_name, pd);
-                    tiny_rcon_server_banned_names_vector.push_back(std::move(pd));
+                    tiny_rcon_server_banned_names_vector.emplace_back(std::move(pd));
                 }
             }
 
-            std::sort(
+            std::sort(std::execution::par,
                 std::begin(tiny_rcon_server_banned_names_vector), std::end(tiny_rcon_server_banned_names_vector),
                 [](const player &pd1, const player &pd2) { return pd1.banned_start_time < pd2.banned_start_time; });
 
@@ -1331,7 +1332,15 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
             format("{}temp\\banned_cities.txt", main_app.get_current_working_directory()),
             format("{}temp\\banned_countries.txt", main_app.get_current_working_directory()),
             format("{}temp\\banned_names.txt", main_app.get_current_working_directory())};
-        create_7z_file_file_at_specified_path(files_to_compress, admins_bans_compressed_file_path);
+        auto [success, error_message] = create_7z_file_file_at_specified_path(files_to_compress, admins_bans_compressed_file_path);
+        if (!success)
+        {
+            print_colored_text(app_handles.hwnd_re_messages_data,
+                               format("^3Error creating ^1admin's ^3(^7{}^3) ^3compressed file at ^1{}\n^3Error message: ^1{}",
+                                      user, admins_bans_compressed_file_path, error_message)
+                                   .c_str());
+            return;
+        }
 
         // 3. send "receive-bans" message to tinyrcon client
         const auto &sender_user = main_app.get_user_for_name(user, sender_ip);

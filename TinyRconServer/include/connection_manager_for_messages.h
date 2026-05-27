@@ -1,8 +1,11 @@
 #pragma once
-// #define ASIO_STANDALONE
 #include "tiny_rcon_client_user.h"
-#include <asio.hpp>
-#include <string>
+#include "asio.h"
+
+namespace std {
+template<typename CharT, typename Traits, typename Allocator>
+class basic_string;
+}
 
 using namespace asio;
 using ip::tcp;

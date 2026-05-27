@@ -1,9 +1,5 @@
 #pragma once
 #define WIN32_MEAN_AND_LEAN
-// clang-format off
-// #include <Windows.h>
-// #include <wininet.h>
-// clang-format on
 
 using BOOL = int;
 using HINTERNET = void*;
@@ -18,7 +14,7 @@ class internet_handle
     
     explicit internet_handle(HINTERNET &&new_handle) noexcept : handle{new_handle}
     {
-        new_handle = NULL;
+        new_handle = nullptr;
     }
     internet_handle(const internet_handle &) = delete;
     internet_handle &operator=(const internet_handle &) = delete;

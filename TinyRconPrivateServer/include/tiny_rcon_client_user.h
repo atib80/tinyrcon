@@ -1,7 +1,7 @@
 #pragma once
 
+#include "asio.h"
 #include <string>
-#include <asio.hpp>
 
 struct tiny_rcon_client_user
 {

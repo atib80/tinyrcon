@@ -1,5 +1,8 @@
 ﻿#pragma once
 
+#include "player.h"
+#include "tiny_rcon_utility_functions.h"
+
 #include <map>
 #include <set>
 #include <string>
@@ -7,7 +10,6 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
-#include "player.h"
 
 using std::map;
 using std::unordered_map;

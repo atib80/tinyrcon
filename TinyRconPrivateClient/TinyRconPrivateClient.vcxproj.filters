@@ -221,6 +221,12 @@
     <ClInclude Include="include\tiny_rcon_utility_functions.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\asio.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\tiny_rcon_utility_data_types.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="TinyRconPrivateClient.rc">
@@ -247,6 +253,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\tiny_rcon_utility_functions.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\stack_trace_element.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

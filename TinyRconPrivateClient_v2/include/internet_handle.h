@@ -1,9 +1,4 @@
 #pragma once
-#define WIN32_MEAN_AND_LEAN
-// clang-format off
-// #include <Windows.h>
-// #include <wininet.h>
-// clang-format on
 
 using BOOL = int;
 using HINTERNET = void *;

@@ -22,6 +22,35 @@ using namespace asio;
 
 using stl::helper::strstr;
 
+bool connection_manager::receive_from_endpoint(const asio::error_code &ec, size_t bytes_received)
+{
+    char incoming_data_buffer[receive_buffer_size];
+    size_t noOfReceivedBytes{}, noOfAllReceivedBytes{};
+
+    received_reply.clear();
+    const char *start_needle_to_search_for{"print\n"};
+    const auto start_needle_to_search_for_len{stl::helper::len("print\n")};
+
+    while (true)
+    {
+        const ip::udp::endpoint expected_remote_endpoint{ip::address::from_string(remote_ip), remote_port};
+        ip::udp::endpoint remote_endpoint{};
+        asio::error_code erc{};
+
+        noOfReceivedBytes = udp_socket_for_rcon_commands.receive_from(buffer(incoming_data_buffer, receive_buffer_size),
+                                                                      remote_endpoint, 0, erc);
+
+    while (!ec)
+    {
+        udp_socket_for_rcon_commands.async_receive_from(
+            buffer(incoming_data_buffer, receive_buffer_size), remote_endpoint_for_rcon_commands, 0,
+            receive_from_endpoint
+           ); 
+        
+    }
+}
+
+
 connection_manager::connection_manager()
     : udp_socket_for_rcon_commands{udp_service_for_rcon_commands},
       udp_socket_for_non_rcon_commands{udp_service_for_non_rcon_commands}
@@ -71,6 +100,208 @@ size_t connection_manager::send_non_rcon_command(const string &outgoing_data, co
     return sent_bytes;
 }
 
+//size_t connection_manager::receive_non_rcon_reply_from_server(const char *remote_ip, const uint_least16_t remote_port,
+//                                                              game_server &gs, std::string &received_reply,
+//                                                              const bool is_process_reply) const
+//{
+//    // string ex_msg{ format(R"(^1Exception ^3thrown from ^1size_t
+//    // connection_manager::receive_non_rcon_reply_from_server("{}", {}, "{}",
+//    // {}))", remote_ip, remote_port, received_reply, is_process_reply ? "true" :
+//    // "false") }; stack_trace_element ste1{
+//    //   app_handles.hwnd_re_messages_data,
+//    //   std::move(ex_msg)
+//    // };
+//
+//    char incoming_data_buffer[receive_buffer_size];
+//    size_t noOfReceivedBytes{}, noOfAllReceivedBytes{};
+//
+//    received_reply.clear();
+//
+//    while (true)
+//    {
+//        const ip::udp::endpoint expected_remote_endpoint{ip::address::from_string(remote_ip), remote_port};
+//        ip::udp::endpoint remote_endpoint{};
+//        asio::error_code erc{};
+//
+//        noOfReceivedBytes = udp_socket_for_non_rcon_commands.receive_from(
+//            buffer(incoming_data_buffer, receive_buffer_size), remote_endpoint, 0, erc);
+//
+//        if (erc)
+//            break;
+//
+//        incoming_data_buffer[noOfReceivedBytes] = '\0';
+//
+//        if (noOfReceivedBytes > 0U)
+//            main_app.add_to_next_downloaded_data_in_bytes(noOfReceivedBytes);
+//
+//        if (remote_endpoint != ip::udp::endpoint{} && expected_remote_endpoint != remote_endpoint)
+//            return 0;
+//
+//        if (noOfReceivedBytes > 0U)
+//        {
+//            noOfAllReceivedBytes += noOfReceivedBytes;
+//
+//            string udp_packet(incoming_data_buffer, incoming_data_buffer + noOfReceivedBytes);
+//            ltrim_in_place(udp_packet, " \t\n\xFF");
+//            if (str_starts_with(udp_packet,
+//                                string_view{"getServersResponse\n", stl::helper::len("getServersResponse\n")}, true))
+//            {
+//
+//                if (udp_packet.ends_with("\\EOT"))
+//                    udp_packet.erase(udp_packet.length() - 4, 4);
+//
+//                if (str_starts_with(received_reply,
+//                                    string_view{"getServersResponse\n", stl::helper::len("getServersResponse\n")},
+//                                    true))
+//                {
+//                    udp_packet.erase(0, stl::helper::len("getServersResponse\n") + 1);
+//                }
+//
+//                received_reply.append(udp_packet);
+//
+//                if (received_reply.ends_with("\\EOF"))
+//                {
+//                    break;
+//                }
+//            }
+//            else
+//            {
+//                received_reply.append(udp_packet);
+//                if (stl::helper::str_starts_with(
+//                        received_reply, string_view{"infoResponse\n", stl::helper::len("infoResponse\n")}, true))
+//                    break;
+//            }
+//        }
+//    }
+//
+//    if (!is_process_reply)
+//        return noOfAllReceivedBytes;
+//
+//    if (noOfAllReceivedBytes > 0)
+//    {
+//
+//        if (str_starts_with(received_reply, "inforesponse", true))
+//        {
+//
+//            trim_in_place(received_reply);
+//            const size_t start{received_reply.find('\\')};
+//            if (start == string::npos)
+//                return noOfAllReceivedBytes;
+//
+//            received_reply.erase(cbegin(received_reply), cbegin(received_reply) + start + 1);
+//            print_colored_text(app_handles.hwnd_re_messages_data, received_reply.c_str());
+//            vector<string> parsedData{
+//                str_split(received_reply, "\\", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::no)};
+//            for (size_t i{}; i + 1 < parsedData.size(); i += 2)
+//            {
+//                update_game_server_setting(gs, parsedData[i], parsedData[i + 1]);
+//            }
+//        }
+//        else if (str_starts_with(received_reply, "statusresponse", true))
+//        {
+//
+//            const size_t first_sep_pos{received_reply.find('\\')};
+//            if (first_sep_pos == string::npos)
+//                return noOfAllReceivedBytes;
+//
+//            received_reply.erase(cbegin(received_reply), cbegin(received_reply) + first_sep_pos + 1);
+//            size_t new_line_pos{received_reply.find('\n')};
+//            if (string::npos == new_line_pos)
+//                new_line_pos = received_reply.length();
+//            const string server_info{cbegin(received_reply), cbegin(received_reply) + new_line_pos};
+//            vector<string> parsedData{
+//                str_split(server_info, "\\", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::no)};
+//            for (size_t i{}; i + 1 < parsedData.size(); i += 2)
+//            {
+//                update_game_server_setting(gs, std::move(parsedData[i]), std::move(parsedData[i + 1]));
+//            }
+//
+//            int player_num{};
+//            int number_of_online_players{};
+//            int number_of_offline_players{};
+//            const char *start{received_reply.c_str() + new_line_pos + 1}, *last{start};
+//            auto &players_data = gs.get_players_data();
+//            const char *current{start};
+//
+//            while (current < received_reply.c_str() + received_reply.length() && *current)
+//            {
+//                while (*last != '\n')
+//                    ++last;
+//                current = last + 1;
+//                const string playerDataLine{start, last};
+//
+//                start = last = playerDataLine.c_str();
+//
+//                // Extracting player's score value from received UDP data packet for
+//                // getstatus command
+//                while (' ' == *start)
+//                    ++start;
+//                last = start;
+//                while (*last != ' ')
+//                    ++last;
+//                string temp_score{start, last};
+//                stl::helper::trim_in_place(temp_score);
+//                int64_t player_score;
+//                if (!is_valid_decimal_whole_number(temp_score, player_score))
+//                    player_score = 0;
+//
+//                // Extracting player's ping value from received UDP data packet for
+//                // getstatus command
+//                start = last;
+//                while (' ' == *start)
+//                    ++start;
+//                last = start;
+//                while (*last != ' ')
+//                    ++last;
+//
+//                string player_ping{start, last};
+//                stl::helper::trim_in_place(player_ping);
+//                if ("999" == player_ping || "-1" == player_ping || "CNCT" == player_ping || "ZMBI" == player_ping)
+//                {
+//                    ++number_of_offline_players;
+//                }
+//                else
+//                {
+//                    ++number_of_online_players;
+//                }
+//
+//                // Extracting player_name information from received UDP data packet
+//                // for getstatus command
+//                start = last;
+//                while (*start != '"')
+//                    ++start;
+//                last = ++start;
+//                while (*last != '"')
+//                    ++last;
+//
+//                players_data[player_num].pid = player_num;
+//                players_data[player_num].score = static_cast<int>(player_score);
+//                strcpy_s(players_data[player_num].ping, std::size(players_data[player_num].ping), player_ping.c_str());
+//                const size_t no_of_chars_to_copy = static_cast<size_t>(last - start);
+//                strncpy_s(players_data[player_num].player_name, std::size(players_data[player_num].player_name), start,
+//                          no_of_chars_to_copy);
+//                players_data[player_num].player_name[no_of_chars_to_copy] = '\0';
+//                stl::helper::trim_in_place(players_data[player_num].player_name);
+//                players_data[player_num].player_name_index =
+//                    get_cleaned_user_name(players_data[player_num].player_name);
+//                players_data[player_num].country_name = "Unknown";
+//                players_data[player_num].region = "Unknown";
+//                players_data[player_num].city = "Unknown";
+//                players_data[player_num].country_code = "xy";
+//                ++player_num;
+//                start = last = current;
+//            }
+//
+//            gs.set_number_of_players(player_num);
+//            gs.set_number_of_online_players(number_of_online_players);
+//            gs.set_number_of_offline_players(number_of_offline_players);
+//            prepare_players_data_for_display_of_getstatus_response(gs, false);
+//        }
+//    }
+//
+//    return noOfAllReceivedBytes;
+//}
+
 size_t connection_manager::receive_non_rcon_reply_from_server(const char *remote_ip, const uint_least16_t remote_port,
                                                               game_server &gs, std::string &received_reply,
                                                               const bool is_process_reply) const
@@ -94,11 +325,16 @@ size_t connection_manager::receive_non_rcon_reply_from_server(const char *remote
         ip::udp::endpoint remote_endpoint{};
         asio::error_code erc{};
 
-        noOfReceivedBytes = udp_socket_for_non_rcon_commands.receive_from(
-            buffer(incoming_data_buffer, receive_buffer_size), remote_endpoint, 0, erc);
+        udp_socket_for_non_rcon_commands.async_receive_from(
+            buffer(incoming_data_buffer, receive_buffer_size), remote_endpoint,
+            [&](const asio::error_code &error, std::size_t noOfReceivedBytes) 
+            {
+               
+                    
+            
+            });
 
-        if (erc)
-            break;
+      
 
         incoming_data_buffer[noOfReceivedBytes] = '\0';
 

@@ -1,8 +1,9 @@
 #include "autoupdate.h"
 #include "md5.h"
+#include "tiny_rcon_utility_functions.h"
 #include "tiny_rcon_client_application.h"
 
-#include <cstring>
+#include <Wininet.h>
 #include <filesystem>
 #include <fstream>
 #include <iostream>

@@ -1,9 +1,15 @@
 #pragma once
 
-#include <asio.hpp>
+#include "asio.h"
+#include "tiny_rcon_utility_data_types.h"
 #include <atomic>
-#include <string>
-#include "tiny_rcon_utility_functions.h"
+
+namespace std {
+template<typename CharT, typename Traits, typename Allocator>
+class basic_string;
+}
+
+class game_server;
 
 using namespace asio;
 

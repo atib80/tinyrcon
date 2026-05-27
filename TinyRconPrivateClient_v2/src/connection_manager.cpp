@@ -1,11 +1,10 @@
 // #define WINVER 0x0502
 
 #include "connection_manager.h"
+#include "tiny_rcon_client_application.h"
+
 #include <utility>
 #include <regex>
-#include "tiny_rcon_client_application.h"
-// #include "simple_grid.h"
-
 
 using namespace std;
 using namespace stl::helper;

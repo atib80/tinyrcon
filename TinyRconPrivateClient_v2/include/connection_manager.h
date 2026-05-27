@@ -1,10 +1,15 @@
 #pragma once
-// #define ASIO_STANDALONE
-#include <asio.hpp>
-#include <string>
-#include "tiny_rcon_utility_functions.h"
+#include "asio.h"
+#include "tiny_rcon_utility_data_types.h"
+
+namespace std {
+template<typename CharT, typename Traits, typename Allocator>
+class basic_string;
+}
 
 using namespace asio;
+
+class game_server;
 
 class connection_manager
 {

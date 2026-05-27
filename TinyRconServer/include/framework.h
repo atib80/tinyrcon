@@ -5,7 +5,6 @@
 #pragma once
 
 #include "targetver.h"
-#include <asio.hpp>
 #define WIN32_LEAN_AND_MEAN
 #define _CRT_SECURE_NO_WARNINGS
 // #define ASIO_STANDALONE

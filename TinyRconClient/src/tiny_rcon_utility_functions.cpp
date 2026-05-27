@@ -13,6 +13,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
+#include <random>
 #include <Psapi.h>
 #include <regex>
 #include <Shlobj.h>
@@ -15000,7 +15001,7 @@ void restart_tinyrcon_client(const char *file_path_to_tinyrcon_exe, const string
 size_t get_random_number()
 {
     // print_trace_message(__FILE__, __LINE__, __FUNCTION__);
-    static random_device rd{};
+    static std::random_device rd{};
     static std::mt19937_64 rand_engine(rd());
     static std::uniform_int_distribution<size_t> number_range(1000ULL, std::numeric_limits<size_t>::max());
     return number_range(rand_engine);

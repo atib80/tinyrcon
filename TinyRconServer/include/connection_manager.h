@@ -1,9 +1,11 @@
 #pragma once
-// #define ASIO_STANDALONE
+#include "asio.h"
 #include "game_server.h"
-#include <asio.hpp>
-#include <string>
-// #include "tiny_rcon_utility_functions.h"
+
+namespace std {
+template<typename CharT, typename Traits, typename Allocator>
+class basic_string;
+}
 
 using namespace asio;
 
@@ -51,6 +53,8 @@ class connection_manager
     void send_and_receive_rcon_data(const char *command_to_send, std::string &reply_buffer, const char *remote_ip,
                                     const uint_least16_t remote_port, const char *rcon_password, game_server &gs,
                                     const bool is_wait_for_reply = true, const bool is_process_reply = true) const;
+
+    bool receive_from_endpoint(const asio::error_code &ec, size_t bytes_received);
 
   private:
     inline static std::size_t number_of_sent_non_rcon_commands{};

@@ -1,10 +1,12 @@
 #pragma once
 // #define ASIO_STANDALONE
-#include "tiny_rcon_utility_functions.h"
 
-#include <asio.hpp>
+#include "asio.h"
 
-#include <string>
+namespace std {
+template<typename CharT, typename Traits, typename Allocator>
+class basic_string;
+}
 
 using namespace asio;
 

@@ -1,7 +1,11 @@
 #pragma once
 
-#include <asio.hpp>
-#include <string>
+#include "asio.h"
+
+namespace std {
+template<typename CharT, typename Traits, typename Allocator>
+class basic_string;
+}
 
 using namespace asio;
 

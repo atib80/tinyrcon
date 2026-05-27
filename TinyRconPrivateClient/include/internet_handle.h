@@ -18,7 +18,7 @@ public:
 
   explicit internet_handle(HINTERNET &&new_handle) noexcept : handle{ new_handle }
   {
-    new_handle = NULL;
+    new_handle = nullptr;
   }
   internet_handle(const internet_handle &) = delete;
   internet_handle &operator=(const internet_handle &) = delete;

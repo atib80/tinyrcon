@@ -2,9 +2,9 @@
 // clang-format off
 #include "tiny_rcon_utility_data_types.h"
 
-#include <CommCtrl.h>
+// #include <CommCtrl.h>
 #include <Richedit.h>
-#include <regex>
+// #include <regex>
 #include <set>
 // clang-format on
 

@@ -1,5 +1,7 @@
 #include "framework.h"
 #include "resource.h"
+#include <atlwin.h>
+#include <Commctrl.h>
 
 #undef min
 

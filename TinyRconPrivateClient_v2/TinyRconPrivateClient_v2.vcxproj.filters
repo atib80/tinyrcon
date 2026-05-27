@@ -210,6 +210,12 @@
     <ClInclude Include="include\tiny_rcon_utility_classes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\asio.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\tiny_rcon_utility_data_types.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\tiny_rcon_client.cpp">
@@ -232,6 +238,9 @@
     </ClCompile>
     <ClCompile Include="include\connection_manager_for_messages.h">
       <Filter>Header Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\stack_trace_element.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

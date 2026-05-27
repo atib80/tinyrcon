@@ -95,7 +95,7 @@ string online_admins_information;
 string g_online_admins_information;
 string g_message_data_contents;
 string previous_map;
-string match_information;
+// string match_information;
 
 HIMAGELIST hImageList{};
 // row_of_player_data_to_display displayed_players_data[64]{};
@@ -2524,10 +2524,10 @@ void parse_banned_ip_addresses_file(const char *file_path, std::vector<player> &
                     continue;
                 }
                 ip_to_banned_player.emplace(bannedPlayerData.ip_address, bannedPlayerData);
-                banned_players.push_back(std::move(bannedPlayerData));
+                banned_players.emplace_back(std::move(bannedPlayerData));
             }
         }
-        sort(begin(banned_players), end(banned_players),
+        sort(std::execution::par, begin(banned_players), end(banned_players),
              [](const player &p1, const player &p2) { return p1.banned_start_time < p2.banned_start_time; });
     }
 }
@@ -2652,10 +2652,10 @@ void parse_banned_ip_address_ranges_file(const char *file_path, std::vector<play
                 }
                 bannedPlayerData.ip_address = parts[0].c_str();
                 ip_address_range_to_banned_player.emplace(parts[0], bannedPlayerData);
-                banned_ip_address_ranges.push_back(std::move(bannedPlayerData));
+                banned_ip_address_ranges.emplace_back(std::move(bannedPlayerData));
             }
         }
-        sort(begin(banned_ip_address_ranges), end(banned_ip_address_ranges),
+        sort(std::execution::par, begin(banned_ip_address_ranges), end(banned_ip_address_ranges),
              [](const player &p1, const player &p2) { return p1.banned_start_time < p2.banned_start_time; });
     }
 }
@@ -6807,10 +6807,10 @@ void parse_banned_names_file(const char *file_path, std::vector<player> &banned_
                     continue;
                 }
                 banned_names_map.emplace(bannedPlayerData.player_name, bannedPlayerData);
-                banned_names_vector.push_back(std::move(bannedPlayerData));
+                banned_names_vector.emplace_back(std::move(bannedPlayerData));
             }
         }
-        sort(begin(banned_names_vector), end(banned_names_vector),
+        std::sort(std::execution::par, begin(banned_names_vector), end(banned_names_vector),
              [](const player &p1, const player &p2) { return p1.banned_start_time < p2.banned_start_time; });
     }
 }
@@ -6818,7 +6818,6 @@ void parse_banned_names_file(const char *file_path, std::vector<player> &banned_
 bool add_permanently_banned_player_name(player &pd, vector<player> &banned_players_names_vector,
                                         unordered_map<string, player> &banned_players_names_map)
 {
-    unsigned long guid_number{};
     if (stl::helper::len(pd.player_name) == 0 || banned_players_names_map.contains(pd.player_name))
         return false;
 
@@ -6834,7 +6833,7 @@ bool add_permanently_banned_player_name(player &pd, vector<player> &banned_playe
     }
 
     banned_players_names_map.emplace(pd.player_name, pd);
-    banned_players_names_vector.push_back(std::move(pd));
+    banned_players_names_vector.emplace_back(std::move(pd));
 
     save_banned_ip_entries_to_file(main_app.get_banned_names_file_path(), banned_players_names_vector);
 
@@ -7433,7 +7432,8 @@ void sort_players_data(std::vector<player> &players_data, const sort_type sort_m
         {
             std::sort(std::begin(players_data), std::begin(players_data) + number_of_players,
                       [](const player &pl1, const player &pl2) {
-                          unsigned long ip_key1{}, ip_key2{};
+                          unsigned long ip_key1{};
+                          unsigned long ip_key2{};
                           if (!check_ip_address_validity(pl1.ip_address, ip_key1))
                               return true;
                           if (!check_ip_address_validity(pl2.ip_address, ip_key2))
@@ -7448,7 +7448,8 @@ void sort_players_data(std::vector<player> &players_data, const sort_type sort_m
         {
             std::sort(std::begin(players_data), std::begin(players_data) + number_of_players,
                       [](const player &pl1, const player &pl2) {
-                          unsigned long ip_key1{}, ip_key2{};
+                          unsigned long ip_key1{};
+                          unsigned long ip_key2{};
                           if (!check_ip_address_validity(pl1.ip_address, ip_key1))
                               return false;
                           if (!check_ip_address_validity(pl2.ip_address, ip_key2))

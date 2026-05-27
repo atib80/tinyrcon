@@ -1,14 +1,14 @@
 #pragma once
 
 // clang-format off
-#include <SDKDDKVer.h>
+#define WIN32_LEAN_AND_MEAN
+#include "internet_handle.h"
 #include <atlbase.h>
-#include <Wininet.h>
+
 #include <string>
 #include <vector>
 
-#include "internet_handle.h"
-#include "tiny_rcon_utility_functions.h"
+
 // clang-format on
 
 DWORD WINAPI worker_function1(void *);

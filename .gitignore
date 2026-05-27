@@ -1,12 +1,6 @@
 # Prerequisites
 *.d
 
-# Executable files
-*.exe
-
-# Portable debugging symbol files
-*.pdb
-
 # Compiled Object files
 *.slo
 *.lo
@@ -21,8 +15,11 @@
 *.a
 *.so
 *.dylib
-# *.lib
-# *.dll
+*.lib
+*.dll
+
+# MS Visual C++ program database files
+*.pdb
 
 # Fortran module files
 *.mod
@@ -32,10 +29,10 @@
 *.lai
 *.la
 *.a
-# *.lib
+*.lib
 
 # Executables
-#*.exe
+*.exe
 *.out
 *.app
 
