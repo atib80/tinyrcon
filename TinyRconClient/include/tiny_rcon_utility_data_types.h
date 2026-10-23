@@ -330,13 +330,9 @@ inline std::ostream &operator<<(std::ostream &os, const text_element &te)
 
 template <typename T>
 concept string_convertible = requires(const T &value) {
-    {
-        to_string(value)
-    } -> std::convertible_to<std::string>;
+    { to_string(value) } -> std::convertible_to<std::string>;
 } || requires(const T &value) {
-    {
-        value.to_string()
-    } -> std::convertible_to<std::string>;
+    { value.to_string() } -> std::convertible_to<std::string>;
 };
 
 struct player_stats

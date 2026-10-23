@@ -258,6 +258,8 @@ void strip_leading_and_trailing_quotes(std::wstring &);
 
 void replace_all_escaped_new_lines_with_new_lines(std::string &);
 
+std::string convert_rcon_map_name_to_full_map_name(std::string_view rcon_map_name);
+
 bool change_server_setting(const std::vector<std::string> &);
 
 void log_message(const std::string &, const is_log_datetime = is_log_datetime::yes);

@@ -119,7 +119,7 @@
       <FloatingPointModel>Fast</FloatingPointModel>
       <DisableLanguageExtensions>false</DisableLanguageExtensions>
       <DebugInformationFormat>OldStyle</DebugInformationFormat>
-      <AdditionalOptions>/Zc:preprocessor /experimental:module- %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/Zc:preprocessor %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -153,6 +153,7 @@
       <LanguageStandard_C>stdclatest</LanguageStandard_C>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
       <MinimalRebuild>false</MinimalRebuild>
+      <AdditionalOptions>/Zc:preprocessor %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -274,6 +275,7 @@
     <ClInclude Include="include\stack_trace_element.h" />
     <ClInclude Include="include\stats.h" />
     <ClInclude Include="include\stl_helper_functions.hpp" />
+    <ClInclude Include="include\tiny_rcon_client_sqlite_database.h" />
     <ClInclude Include="include\tiny_rcon_client_user.h" />
     <ClInclude Include="include\tiny_rcon_utility_classes.h" />
     <ClInclude Include="include\tiny_rcon_utility_data_types.h" />

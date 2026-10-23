@@ -322,7 +322,7 @@ size_t connection_manager::receive_rcon_reply_from_server(const char *remote_ip,
                 received_reply.assign(incoming_data_buffer + start_needle_pos + version_is_needle_len,
                                       incoming_data_buffer + noOfReceivedBytes);
                 break;
-            }            
+            }
 
             start_needle_pos = stl::helper::str_index_of(incoming_data_buffer, start_needle_to_search_for);
             if (start_needle_pos != string::npos)
@@ -334,9 +334,8 @@ size_t connection_manager::receive_rcon_reply_from_server(const char *remote_ip,
             {
                 received_reply.append(incoming_data_buffer, incoming_data_buffer + noOfReceivedBytes);
             }
-            const bool is_check_for_two_new_line_characters{received_reply.find("map_rotate...\n\n") == string::npos &&
-                                                            received_reply.find("==== ShutdownGame ====") ==
-                                                                string::npos};
+            const bool is_check_for_two_new_line_characters{!received_reply.contains("map_rotate...\n\n") &&
+                                                            !received_reply.contains("==== ShutdownGame ====")};
 
             noOfAllReceivedBytes += noOfReceivedBytes;
 
@@ -369,12 +368,11 @@ size_t connection_manager::receive_rcon_reply_from_server(const char *remote_ip,
             auto [rcon_status_response_needle1, rcon_status_response_needle2] =
                 get_appropriate_rcon_status_response_header(main_app.get_game_name());
 
-            if (received_reply.find(rcon_status_response_needle1) != string::npos ||
-                (rcon_status_response_needle2 != nullptr &&
-                 received_reply.find(rcon_status_response_needle2) != string::npos))
+            if (received_reply.contains(rcon_status_response_needle1) ||
+                (rcon_status_response_needle2 != nullptr && received_reply.contains(rcon_status_response_needle2)))
             {
                 if (!main_app.get_current_game_server().get_is_connection_settings_valid())
-                {                    
+                {
                     main_app.get_current_game_server().set_is_connection_settings_valid(true);
                     set_admin_actions_buttons_active(TRUE);
                 }
@@ -393,6 +391,20 @@ size_t connection_manager::receive_rcon_reply_from_server(const char *remote_ip,
                     initialize_elements_of_container_to_specified_value(gs.get_players_data(), player{}, 0);
                     // initialize_elements_of_container_to_specified_value(gs.get_previous_players_data(), player{}, 0);
                     clear_players_data_in_players_grid(app_handles.hwnd_players_grid, 0, max_players_grid_rows, 8);
+
+                    if (!current_map.empty() && main_app.get_available_rcon_to_full_map_names().contains(current_map))
+                    {
+                        SendMessage(app_handles.hwnd_combo_box_map, CB_SELECTSTRING, static_cast<WPARAM>(-1),
+                                    reinterpret_cast<LPARAM>(
+                                        main_app.get_available_rcon_to_full_map_names().at(current_map).first.c_str()));
+                    }
+                    else if (main_app.get_available_rcon_to_full_map_names().contains("mp_toujane"))
+                    {
+                        SendMessage(
+                            app_handles.hwnd_combo_box_map, CB_SELECTSTRING, static_cast<WPARAM>(-1),
+                            reinterpret_cast<LPARAM>(
+                                main_app.get_available_rcon_to_full_map_names().at("mp_toujane").first.c_str()));
+                    }
                 }
 
                 gs.set_current_map(current_map);
@@ -730,7 +742,7 @@ size_t connection_manager::receive_rcon_reply_from_server(const char *remote_ip,
                         {
                             players_data[pl_index].is_muted = true;
                         }
-                        
+
                         convert_guid_key_to_country_name(geoip_db, players_data[pl_index].ip_address,
                                                          players_data[pl_index]);
 

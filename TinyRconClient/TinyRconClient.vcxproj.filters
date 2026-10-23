@@ -225,6 +225,9 @@
     <ClInclude Include="include\tiny_rcon_utility_classes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\tiny_rcon_client_sqlite_database.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\tiny_rcon_client.cpp">

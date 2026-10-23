@@ -2,6 +2,7 @@
 #include "resource.h"
 #include <atlwin.h>
 #include <Commctrl.h>
+#include <iostream>
 
 #undef min
 
@@ -18,7 +19,7 @@ using namespace std::string_literals;
 using namespace std::chrono;
 using namespace std::filesystem;
 
-extern const string program_version{"2.7.8.5"};
+extern const string program_version{"2.7.8.6"};
 
 extern const std::regex ip_address_and_port_regex;
 extern const unordered_set<string> rcon_status_commands;
@@ -4048,12 +4049,11 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
         }
     });
 
-    main_app.add_command_handler({"!rc"}, [](const vector<string> &user_cmd) {
+    main_app.add_command_handler({"rc", "!rc"}, [](const vector<string> &user_cmd) {
         using namespace stl::helper;
 
         if (user_cmd.size() >= 2 && !user_cmd[1].empty())
         {
-            // if (!me->is_admin) return;
             if (!validate_admin_and_show_missing_admin_privileges_message(false))
                 return;
             string rcon_command{stl::helper::to_lower_case(
@@ -4096,7 +4096,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                     rcon_command.erase(start_pos2, needle_len2);
                 }
 
-                trim_in_place(rcon_command);
+                stl::helper::trim_in_place(rcon_command);
             }
 
             string reply;
@@ -4181,7 +4181,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                     str_split(reply, ",", nullptr, split_on_whole_needle_t::yes, ignore_empty_string_t::yes);
                 if (!guid_segments.empty())
                 {
-                    // std::unordered_set<std::string> muted_ip_addresses;
                     bool is_save_muted_players_data_to_file{};
                     for (auto &guid_key : guid_segments)
                     {
@@ -4203,19 +4202,70 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                             pd.ip_address = std::move(ip_address);
                             convert_guid_key_to_country_name(main_app.get_connection_manager().get_geoip_data(),
                                                              pd.ip_address, pd);
-                            // main_app.get_muted_players_vector().emplace_back(pd);
                             main_app.get_muted_players_map()[pd.ip_address] = pd;
                             is_save_muted_players_data_to_file = true;
                         }
-                        // muted_ip_addresses.emplace(convert_guid_to_ip_address(stol(guid_key)));
                     }
                     if (is_save_muted_players_data_to_file)
                     {
                         save_muted_players_data_to_file(main_app.get_muted_players_file_path(),
                                                         main_app.get_muted_players_map());
                     }
-                    // main_app.get_current_game_server().get_muted_ip_addresses() = std::move(muted_ip_addresses);
                 }
+            }
+            else if (str_contains(reply, "Directory of maps/mp d3dbsp", 0U, true))
+            {
+                std::istringstream iss{reply};
+                std::string line;
+                getline(iss, line);
+                getline(iss, line);
+
+                auto &rcon_map_names_to_full_map_names = main_app.get_available_rcon_to_full_map_names();
+                auto &full_map_names_to_rcon_map_names = main_app.get_available_full_map_to_rcon_map_names();
+
+                size_t custom_maps_count{};
+
+                while (getline(iss, line))
+                {
+                    stl::helper::trim_in_place(line);
+                    line = line.substr(0, line.rfind('.'));
+
+                    if (!rcon_map_names_to_full_map_names.contains(line))
+                    {
+                        std::string full_map_name{convert_rcon_map_name_to_full_map_name(line)};
+                        rcon_map_names_to_full_map_names[line] = std::make_pair(full_map_name, full_map_name);
+                        full_map_names_to_rcon_map_names[std::move(full_map_name)] = std::move(line);
+                        ++custom_maps_count;
+                    }
+                }
+
+                const string received_mapnames_message{
+                    format("^5Received information about ^1{} ^5custom maps.\n^2Available maps to play:\n^5",
+                           custom_maps_count)};
+                print_colored_text(app_handles.hwnd_re_messages_data, received_mapnames_message.c_str());
+                display_all_available_maps();
+
+                ComboBox_ResetContent(app_handles.hwnd_combo_box_map);
+                for (const auto &[rcon_map_name, full_map_name] : main_app.get_available_rcon_to_full_map_names())
+                {
+                    ComboBox_AddString(app_handles.hwnd_combo_box_map, full_map_name.first.c_str());
+                }
+
+                if (const auto &current_map{main_app.get_current_game_server().get_current_map()};
+                    !current_map.empty() && main_app.get_available_rcon_to_full_map_names().contains(current_map))
+                {
+                    SendMessage(app_handles.hwnd_combo_box_map, CB_SELECTSTRING, static_cast<WPARAM>(-1),
+                                reinterpret_cast<LPARAM>(
+                                    main_app.get_available_rcon_to_full_map_names().at(current_map).first.c_str()));
+                }
+                else if (main_app.get_available_rcon_to_full_map_names().contains("mp_toujane"))
+                {
+                    SendMessage(app_handles.hwnd_combo_box_map, CB_SELECTSTRING, static_cast<WPARAM>(-1),
+                                reinterpret_cast<LPARAM>(
+                                    main_app.get_available_rcon_to_full_map_names().at("mp_toujane").first.c_str()));
+                }
+
+                main_app.set_is_custom_map_names_message_received(true);
             }
         }
     });
@@ -5803,7 +5853,15 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
         {
             ComboBox_AddString(app_handles.hwnd_combo_box_map, full_map_name.first.c_str());
         }
-        if (main_app.get_available_rcon_to_full_map_names().contains("mp_toujane"))
+
+        if (const auto &current_map{main_app.get_current_game_server().get_current_map()};
+            !current_map.empty() && main_app.get_available_rcon_to_full_map_names().contains(current_map))
+        {
+            SendMessage(app_handles.hwnd_combo_box_map, CB_SELECTSTRING, static_cast<WPARAM>(-1),
+                        reinterpret_cast<LPARAM>(
+                            main_app.get_available_rcon_to_full_map_names().at(current_map).first.c_str()));
+        }
+        else if (main_app.get_available_rcon_to_full_map_names().contains("mp_toujane"))
         {
             SendMessage(app_handles.hwnd_combo_box_map, CB_SELECTSTRING, static_cast<WPARAM>(-1),
                         reinterpret_cast<LPARAM>(
@@ -7112,8 +7170,8 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                     const auto current_ts = get_current_time_stamp();
                     const auto time_elapsed_in_sec_since_last_status_message{
                         current_ts - main_app.get_connection_manager().get_last_rcon_status_received().load()};
-                    const auto time_elapsed_in_sec_since_last_getstatus_message{
-                        current_ts - main_app.get_connection_manager().get_last_get_status_received().load()};
+                    // const auto time_elapsed_in_sec_since_last_getstatus_message{
+                    //     current_ts - main_app.get_connection_manager().get_last_get_status_received().load()};
 
                     if (game_server_index < main_app.get_rcon_game_servers_count())
                     {
@@ -7122,13 +7180,13 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                         if (me->is_admin)
                         {
 
-                            if (time_elapsed_in_sec_since_last_status_message >
-                                main_app.get_display_warning_message_after_no_status_received_for_seconds())
-                            {
-                                display_game_server_offline_message_and_clear_players_table(
-                                    rcon_gs,
-                                    main_app.get_display_warning_message_after_no_status_received_for_seconds());
-                            }
+                            // if (time_elapsed_in_sec_since_last_status_message >
+                            //     main_app.get_display_warning_message_after_no_status_received_for_seconds())
+                            //{
+                            //     display_game_server_offline_message_and_clear_players_table(
+                            //         rcon_gs,
+                            //         main_app.get_display_warning_message_after_no_status_received_for_seconds());
+                            // }
 
                             main_app.get_connection_manager().send_and_receive_rcon_data(
                                 "status", rcon_reply, rcon_gs.get_server_ip_address().c_str(),
@@ -7147,13 +7205,13 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                                     main_app.get_private_tiny_rcon_server_port(), false);
                             }
 
-                            if (time_elapsed_in_sec_since_last_getstatus_message >
-                                main_app.get_display_warning_message_after_no_status_received_for_seconds())
-                            {
-                                display_game_server_offline_message_and_clear_players_table(
-                                    rcon_gs,
-                                    main_app.get_display_warning_message_after_no_status_received_for_seconds());
-                            }
+                            // if (time_elapsed_in_sec_since_last_getstatus_message >
+                            //     main_app.get_display_warning_message_after_no_status_received_for_seconds())
+                            //{
+                            //     display_game_server_offline_message_and_clear_players_table(
+                            //         rcon_gs,
+                            //         main_app.get_display_warning_message_after_no_status_received_for_seconds());
+                            // }
 
                             main_app.get_connection_manager().send_and_receive_non_rcon_data(
                                 "getstatus", rcon_reply, rcon_gs.get_server_ip_address().c_str(),
@@ -7174,12 +7232,12 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
 
                         if (!is_rcon_game_server(gs))
                         {
-                            if (time_elapsed_in_sec_since_last_getstatus_message >
-                                main_app.get_display_warning_message_after_no_status_received_for_seconds())
-                            {
-                                display_game_server_offline_message_and_clear_players_table(
-                                    gs, main_app.get_display_warning_message_after_no_status_received_for_seconds());
-                            }
+                            // if (time_elapsed_in_sec_since_last_getstatus_message >
+                            //     main_app.get_display_warning_message_after_no_status_received_for_seconds())
+                            //{
+                            //     display_game_server_offline_message_and_clear_players_table(
+                            //         gs, main_app.get_display_warning_message_after_no_status_received_for_seconds());
+                            // }
 
                             main_app.get_connection_manager().send_and_receive_non_rcon_data(
                                 "getstatus", rcon_reply, gs.get_server_ip_address().c_str(), gs.get_server_port(), gs,
@@ -7527,7 +7585,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE, _In_ LPSTR, _
                         message_t{"request-protectedcountries-player", user_details, true});
                 }
 
-                main_app.add_message_to_queue(message_t("request-mapnames", user_details, true));
+                // main_app.add_message_to_queue(message_t("request-mapnames", user_details, true));
                 main_app.add_remote_message_to_queue(message_t("request-imagesdata", user_details, true));
 
                 main_app.get_connection_manager_for_messages().process_and_send_message(
@@ -8106,6 +8164,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 main_app.get_connection_manager_for_messages().process_and_send_message(
                     "heartbeat", format("{}\\{}", main_app.get_username(), current_ts), true,
                     main_app.get_tiny_rcon_server_ip_address(), main_app.get_tiny_rcon_server_port(), false);
+
+                if (!main_app.get_is_custom_map_names_message_received())
+                {
+                    main_app.add_command_to_queue({"!rc", "dir", "maps/mp", "d3dbsp", "--silent"}, command_type::user,
+                                                  true);
+                    // Edit_SetText(app_handles.hwnd_e_user_input, "!rc dir maps/mp d3dbsp --silent");
+                    // get_user_input();
+                }
             }
         }
 

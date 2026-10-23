@@ -375,6 +375,14 @@ size_t connection_manager::receive_rcon_reply_from_server(
             // initialize_elements_of_container_to_specified_value(gs.get_previous_players_data(), player{}, 0);
             main_app.get_stats_data().get_previous_player_score_and_timestamp().clear();
             clear_players_data_in_players_grid(app_handles.hwnd_players_grid, 0, max_players_grid_rows, 8);
+
+            if (!current_map.empty() && main_app.get_available_rcon_to_full_map_names().contains(current_map)) {
+              SendMessage(app_handles.hwnd_combo_box_map, CB_SELECTSTRING, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>(main_app.get_available_rcon_to_full_map_names().at(current_map).first.c_str()));
+            } else if (main_app.get_available_rcon_to_full_map_names().contains("mp_toujane")) {
+              SendMessage(
+                app_handles.hwnd_combo_box_map, CB_SELECTSTRING, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>(main_app.get_available_rcon_to_full_map_names().at("mp_toujane").first.c_str()));
+            }
+
           }
 
           gs.set_current_map(current_map);

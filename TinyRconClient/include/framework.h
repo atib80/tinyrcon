@@ -12,7 +12,6 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define ASIO_STANDALONE
 #define WIN32_LEAN_AND_MEAN
-// Windows Header Files
 #include "autoupdate.h"
 #include "simple_grid.h"
 #include "stack_trace_element.h"

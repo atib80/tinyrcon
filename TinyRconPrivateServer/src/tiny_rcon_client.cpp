@@ -17,7 +17,7 @@ using namespace std::string_literals;
 using namespace std::chrono;
 using namespace std::filesystem;
 
-extern const string program_version{ "2.7.8.2" };
+extern const string program_version{ "2.7.8.3" };
 
 extern const std::regex ip_address_and_port_regex;
 extern const unordered_set<string> rcon_status_commands;
@@ -3122,7 +3122,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
 
 
     if (user_cmd.size() >= 2 && !user_cmd[1].empty()) {
-      // if (!me->is_admin) return;
+
       if (!validate_admin_and_show_missing_admin_privileges_message(me, false)) return;
       string rcon_command{ stl::helper::to_lower_case(stl::helper::trim(stl::helper::str_join(cbegin(user_cmd) + 1, cend(user_cmd), " "))) };
       if (rcon_command.find("rcon_password") != string::npos || rcon_command.find("sv_privatepassword") != string::npos) {
@@ -3130,7 +3130,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
         print_colored_text(app_handles.hwnd_re_messages_data, warning_msg.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes, true, true);
         return;
       }
-      const bool is_hide_information_message{ rcon_command.find("--silent") != string::npos || rcon_command.find("/S") != string::npos };
+      const bool is_hide_information_message{ rcon_command.contains("--silent") || rcon_command.contains("/S") };
       if (!is_hide_information_message) {
 
         const string information{
@@ -3158,7 +3158,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       main_app.get_connection_manager().send_and_receive_rcon_data(
         rcon_command.c_str(), reply, main_app.get_current_game_server().get_server_ip_address().c_str(), main_app.get_current_game_server().get_server_port(), main_app.get_current_game_server().get_rcon_password().c_str(), main_app.get_current_game_server(), true, false);
 
-      if (!is_hide_information_message && reply.find("js_mute_guid") == string::npos && reply.find("js_unmute_guid") == string::npos) {
+      if (!is_hide_information_message && !reply.contains("js_mute_guid") && !reply.contains("js_unmute_guid")) {
         print_colored_text(app_handles.hwnd_re_messages_data, reply.c_str(), is_append_message_to_richedit_control::yes, is_log_message::yes, is_log_datetime::yes, true, true);
       }
 
@@ -3211,6 +3211,49 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
             save_muted_players_data_to_file(main_app.get_muted_players_file_path(), main_app.get_muted_players_map());
           }
         }
+      } else if (str_contains(reply, "Directory of maps/mp d3dbsp", 0U, true)) {
+        std::istringstream iss{ reply };
+        std::string line;
+        getline(iss, line);
+        getline(iss, line);
+
+        auto &rcon_map_names_to_full_map_names = main_app.get_available_rcon_to_full_map_names();
+        auto &full_map_names_to_rcon_map_names = main_app.get_available_full_map_to_rcon_map_names();
+
+        size_t custom_maps_count{};
+
+        while (getline(iss, line)) {
+          stl::helper::trim_in_place(line);
+          line = line.substr(0, line.rfind('.'));
+
+          if (!rcon_map_names_to_full_map_names.contains(line)) {
+            std::string full_map_name{ convert_rcon_map_name_to_full_map_name(line) };
+            rcon_map_names_to_full_map_names[line] = std::make_pair(full_map_name, full_map_name);
+            full_map_names_to_rcon_map_names[std::move(full_map_name)] = std::move(line);
+            ++custom_maps_count;
+          }
+        }
+
+        const string received_mapnames_message{
+          format("^5Received information about ^1{} ^5custom maps.\n^2Available maps to play:\n^5",
+            custom_maps_count)
+        };
+        print_colored_text(app_handles.hwnd_re_messages_data, received_mapnames_message.c_str());
+        display_all_available_maps();
+
+        ComboBox_ResetContent(app_handles.hwnd_combo_box_map);
+        for (const auto &[rcon_map_name, full_map_name] : main_app.get_available_rcon_to_full_map_names()) {
+          ComboBox_AddString(app_handles.hwnd_combo_box_map, full_map_name.first.c_str());
+        }
+
+        if (const auto &current_map{ main_app.get_current_game_server().get_current_map() };
+          !current_map.empty() && main_app.get_available_rcon_to_full_map_names().contains(current_map)) {
+          SendMessage(app_handles.hwnd_combo_box_map, CB_SELECTSTRING, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>(main_app.get_available_rcon_to_full_map_names().at(current_map).first.c_str()));
+        } else if (main_app.get_available_rcon_to_full_map_names().contains("mp_toujane")) {
+          SendMessage(app_handles.hwnd_combo_box_map, CB_SELECTSTRING, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>(main_app.get_available_rcon_to_full_map_names().at("mp_toujane").first.c_str()));
+        }
+
+        main_app.set_is_custom_map_names_message_received(true);
       }
     }
   });
@@ -3656,7 +3699,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
       save_current_user_data_to_json_file(main_app.get_user_data_file_path());
       const string message{ format("^7{} ^2has ^1logged in ^2to ^5Tiny^6Rcon ^2server.\n^2Number of logins: ^1{}", me->user_name, me->no_of_logins) };
       print_colored_text(app_handles.hwnd_re_messages_data, message.c_str());
-      main_app.add_message_to_queue(message_t("request-mapnames", format(R"({}\{}\{})", me->user_name, me->ip_address, get_current_time_stamp()), true));
+      // main_app.add_message_to_queue(message_t("request-mapnames", format(R"({}\{}\{})", me->user_name, me->ip_address, get_current_time_stamp()), true));
     }
   });
 
@@ -4281,7 +4324,11 @@ int APIENTRY WinMain(_In_ HINSTANCE hInstance,
     for (const auto &[rcon_map_name, full_map_name] : main_app.get_available_rcon_to_full_map_names()) {
       ComboBox_AddString(app_handles.hwnd_combo_box_map, full_map_name.first.c_str());
     }
-    if (main_app.get_available_rcon_to_full_map_names().contains("mp_toujane")) {
+
+    if (const auto &current_map{ main_app.get_current_game_server().get_current_map() };
+      !current_map.empty() && main_app.get_available_rcon_to_full_map_names().contains(current_map)) {
+      SendMessage(app_handles.hwnd_combo_box_map, CB_SELECTSTRING, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>(main_app.get_available_rcon_to_full_map_names().at(current_map).first.c_str()));
+    } else if (main_app.get_available_rcon_to_full_map_names().contains("mp_toujane")) {
       SendMessage(app_handles.hwnd_combo_box_map, CB_SELECTSTRING, static_cast<WPARAM>(-1), reinterpret_cast<LPARAM>(main_app.get_available_rcon_to_full_map_names().at("mp_toujane").first.c_str()));
     }
 
@@ -6590,6 +6637,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
           u->is_logged_in = false;
           main_app.get_connection_manager_for_remote_messages().process_and_send_message("rcon-heartbeat-player", format("{}\\{}\\{}", u->user_name, current_ts, u->ip_address), true, u);
         }
+      }
+
+      if (!main_app.get_is_custom_map_names_message_received()) {
+        main_app.add_command_to_queue({ "!rc", "dir", "maps/mp", "d3dbsp", "--silent" }, command_type::user, true);
+        // Edit_SetText(app_handles.hwnd_e_user_input, "!rc dir maps/mp d3dbsp --silent");
+        // get_user_input();
       }
     }
 

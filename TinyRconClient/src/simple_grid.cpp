@@ -72,7 +72,7 @@
 #define NOMINMAX
 #include "simple_grid.h"
 
-#include <commctrl.h>
+// #include <commctrl.h>
 #include <shellapi.h>
 #include <tchar.h>
 #include <uxtheme.h>

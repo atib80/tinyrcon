@@ -391,6 +391,7 @@ extern const unordered_set<string> user_commands_set{"list",
                                                      "gs",
                                                      "!gs",
                                                      "!getstatus",
+                                                     "rc",
                                                      "!rc",
                                                      "!mute",
                                                      "!unmute",
@@ -522,6 +523,10 @@ extern const unordered_set<string> rcon_commands_wait_for_reply{
     "map_rotate",   "map_restart",    "map",
     "fast_restart", "getinfo",        "mapname",
     "g_gametype",   "sv_maprotation", "sv_maprotationcurrent"};
+
+extern const unordered_set<string> user_commands_wait_for_reply{
+    "rc",      "!rc"
+};
 
 // extern const unordered_set<string> non_rcon_commands_wait_for_reply{ "gs",
 // "!gs", "getstatus", "!getstatus", "getinfo" };
@@ -5239,7 +5244,9 @@ void process_user_input(std::string &user_input)
             }
             else if (user_commands_set.find(command_parts[0]) != cend(user_commands_set))
             {
-                main_app.add_command_to_queue(std::move(command_parts), command_type::user, false);
+                const bool is_wait_for_reply{user_commands_wait_for_reply.find(command_parts[0]) !=
+                                             std::cend(user_commands_wait_for_reply)};
+                main_app.add_command_to_queue(std::move(command_parts), command_type::user, is_wait_for_reply);
             }
             else if (rcon_commands_set.find(command_parts[0]) != cend(rcon_commands_set))
             {
@@ -7113,24 +7120,24 @@ void display_all_available_maps()
     // print_trace_message(__FILE__, __LINE__, __FUNCTION__);
     ostringstream oss;
     size_t index{1};
-    if (str_compare_i(main_app.get_current_game_server().get_current_game_type().c_str(), "cod2") == 0)
-    {
+    //if (str_compare_i(main_app.get_current_game_server().get_current_game_type().c_str(), "cod2") == 0)
+    //{
         for (const auto &[rcon_map_name, full_map_name] : main_app.get_available_rcon_to_full_map_names())
         {
-            oss << "^2" << rcon_map_name << " ^5-> " << full_map_name.second << '\n';
+            oss << "^1" << rcon_map_name << " ^7-> ^3" << full_map_name.second << '\n';
             ++index;
         }
-    }
-    else
-    {
-        const auto &rcon_map_names_to_full_map_names =
-            get_rcon_map_names_to_full_map_names_for_specified_game_name(main_app.get_game_name());
-        for (const auto &[rcon_map_name, full_map_name] : rcon_map_names_to_full_map_names)
-        {
-            oss << "^2" << rcon_map_name << " ^5-> " << full_map_name << '\n';
-            ++index;
-        }
-    }
+    //}
+    //else
+    //{
+    //    const auto &rcon_map_names_to_full_map_names =
+    //        get_rcon_map_names_to_full_map_names_for_specified_game_name(main_app.get_game_name());
+    //    for (const auto &[rcon_map_name, full_map_name] : rcon_map_names_to_full_map_names)
+    //    {
+    //        oss << "^2" << rcon_map_name << " ^5-> " << full_map_name << '\n';
+    //        ++index;
+    //    }
+    //}
     print_colored_text(app_handles.hwnd_re_messages_data, oss.str().c_str(), is_append_message_to_richedit_control::yes,
                        is_log_message::yes, is_log_datetime::yes, false, true);
 }
@@ -18058,4 +18065,25 @@ void display_game_server_offline_message_and_clear_players_table(game_server &gs
     print_colored_text(app_handles.hwnd_re_messages_data, warning_message.c_str());
     initialize_elements_of_container_to_specified_value(gs.get_players_data(), player{}, 0);
     clear_players_data_in_players_grid(app_handles.hwnd_players_grid, 0, max_players_grid_rows, 8);
+}
+
+std::string convert_rcon_map_name_to_full_map_name(std::string_view rcon_map_name)
+{
+
+    std::string full_map_name{rcon_map_name.starts_with("mp_") ? rcon_map_name.substr(3) : rcon_map_name};
+    for (bool is_uppercase_letter{true}; auto &ch : full_map_name)
+    {
+        if ('_' == ch)
+        {
+            ch = ' ';
+            is_uppercase_letter = true;
+        }
+        else if (is_uppercase_letter)
+        {
+            ch = static_cast<char>(std::toupper(ch));
+            is_uppercase_letter = false;
+        }
+    }
+
+    return full_map_name;
 }
